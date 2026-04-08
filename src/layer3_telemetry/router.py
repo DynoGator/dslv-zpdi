@@ -1,7 +1,4 @@
-"""
-SPEC-007 | Trust Tier: Routed (Layer 3)
-Dual-Stream Protocol enforcer. Primary stream = institutional HDF5 only.
-"""
+"""SPEC-007 | Trust Tier: Routed (Layer 3)"""
 from typing import Optional
 from dataclasses import dataclass
 from ..layer2_core.wiring import wire_to_coherence
@@ -21,22 +18,21 @@ class DualStreamRouter:
         self.stats = {"routed_primary": 0, "routed_secondary": 0}
         
     def route(self, json_payload: str) -> RoutingDecision:
-        """SPEC-007.3a — Route a single packet to primary or secondary stream."""
-        coherence_packet = wire_to_coherence(json_payload)
-
-        if coherence_packet is None:
+        """SPEC-007.3a — Route single packet."""
+        pkt = wire_to_coherence(json_payload)
+        if pkt is None:
             self.stats["routed_secondary"] += 1
             return RoutingDecision("SECONDARY", "wiring_rejected", None, "SECONDARY_QUARANTINED")
 
-        if coherence_packet.r_smooth >= 0.40 and coherence_packet.event_window_id:
-            coherence_packet.trust_state = "PRIMARY_ACCEPTED"
+        if pkt.r_smooth >= 0.40 and pkt.event_window_id:
+            pkt.trust_state = "PRIMARY_ACCEPTED"
             self.stats["routed_primary"] += 1
-            return RoutingDecision("PRIMARY", "confirmed_event", coherence_packet, "PRIMARY_ACCEPTED")
-        elif coherence_packet.r_smooth >= 0.15:
-            coherence_packet.trust_state = "PRIMARY_CANDIDATE"
+            return RoutingDecision("PRIMARY", "confirmed_event", pkt, "PRIMARY_ACCEPTED")
+        elif pkt.r_smooth >= 0.15:
+            pkt.trust_state = "PRIMARY_CANDIDATE"
             self.stats["routed_secondary"] += 1
-            return RoutingDecision("PRIMARY_CANDIDATE", "structured_background", coherence_packet, "PRIMARY_CANDIDATE")
-        else:
-            coherence_packet.trust_state = "SECONDARY_QUARANTINED"
-            self.stats["routed_secondary"] += 1
-            return RoutingDecision("SECONDARY", "below_threshold", coherence_packet, "SECONDARY_QUARANTINED")
+            return RoutingDecision("PRIMARY_CANDIDATE", "structured_background", pkt, "PRIMARY_CANDIDATE")
+        
+        pkt.trust_state = "SECONDARY_QUARANTINED"
+        self.stats["routed_secondary"] += 1
+        return RoutingDecision("SECONDARY", "below_threshold", pkt, "SECONDARY_QUARANTINED")
