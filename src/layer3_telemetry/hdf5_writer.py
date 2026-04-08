@@ -1,87 +1,155 @@
-import h5py
 import json
 import hmac
 import hashlib
 import time
+import subprocess
+import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 from .router import DualStreamRouter, RoutingDecision
+from ..layer2_core.coherence import CoherencePacket
+
+try:
+    import h5py
+    HDF5_AVAILABLE = True
+except ImportError:
+    HDF5_AVAILABLE = False
+
+logger = logging.getLogger("dslv-zpdi.hdf5")
+FILE_VERSION = "3.1"
+MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
 class HDF5Writer:
-    """SPEC-007 — Institutional telemetry persistence."""
-    def __init__(self, output_path: str = "./output/primary", hardware_enclave_key: Optional[bytes] = None):
+    """SPEC-007 — Institutional telemetry persistence with cryptographic attestation."""
+
+    def __init__(self, output_path="./output/primary", secondary_path="./output/secondary",
+                 hardware_enclave_key: Optional[bytes] = None):
+        """SPEC-007.1 — Initialize writer with output paths and attestation key."""
         self.output_dir = Path(output_path)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.secondary_dir = Path(secondary_path)
+        self.secondary_dir.mkdir(parents=True, exist_ok=True)
         self.router = DualStreamRouter()
-        self.key = hardware_enclave_key or b'dev_key_placeholder'
-        self.current_file: Optional[h5py.File] = None
-        self.file_rotation_size = 500 * 1024 * 1024 
-        
-    def ingest(self, json_payload: str) -> bool:
-        """SPEC-007 — Process single packet through router."""
+        self.key = hardware_enclave_key or b"dev_key_replace_before_field_deploy"
+        self.current_file = None
+        self.current_filepath: Optional[Path] = None
+        self.event_count = 0
+        self.stats: Dict[str, int] = {"primary_written": 0, "secondary_logged": 0, "rejected": 0}
+
+    def ingest(self, json_payload: str) -> RoutingDecision:
+        """SPEC-007 — Process single packet through router and persist."""
         decision = self.router.route(json_payload)
-        if decision.stream == "PRIMARY":
-            self._write_packet(decision.packet)
-            return True
-        elif decision.stream == "SECONDARY":
+        if decision.stream == "PRIMARY" and decision.packet is not None:
+            self._write_primary(decision.packet, json_payload)
+            self.stats["primary_written"] += 1
+        elif decision.stream in ("SECONDARY", "PRIMARY_CANDIDATE"):
             self._log_secondary(json_payload, decision)
-            return False
-        return False
-    
-    def _write_packet(self, packet):
-        """SPEC-007 — Write to HDF5 with cryptographic attestation."""
-        if not self.current_file or self._file_size_exceeded():
+            self.stats["secondary_logged"] += 1
+        else:
+            self.stats["rejected"] += 1
+        return decision
+
+    def _write_primary(self, packet: CoherencePacket, original_json: str):
+        """SPEC-007 — Write institutional-grade packet to HDF5 with attestation."""
+        if not HDF5_AVAILABLE:
+            logger.warning("h5py not installed — primary write skipped")
+            return
+        if self.current_file is None or self._file_size_exceeded():
             self._rotate_file()
-        
-        grp = self.current_file.create_group(f"event_{packet.payload_uuid}")
+
+        group_name = f"event_{self.event_count:08d}_{packet.payload_uuid[:8]}"
+        grp = self.current_file.create_group(group_name)
         grp.create_dataset("r_local", data=packet.r_local)
         grp.create_dataset("r_smooth", data=packet.r_smooth)
         grp.create_dataset("r_global", data=packet.r_global)
-        grp.create_dataset("timestamp", data=packet.timestamp)
-        
-        meta = {
+        grp.create_dataset("payload_uuid", data=packet.payload_uuid)
+
+        try:
+            payload_dict = json.loads(original_json)
+            event_timestamp = payload_dict.get("timestamp_utc", time.time())
+        except (json.JSONDecodeError, TypeError):
+            event_timestamp = time.time()
+        grp.create_dataset("timestamp_utc", data=event_timestamp)
+
+        attestation = {
             "node_id": packet.node_id,
             "modality": packet.modality,
             "trust_state": packet.trust_state,
-            "event_window_id": packet.event_window_id,
-            "written_at": time.time(),
-            "file_version": "3.2"
+            "event_window_id": packet.event_window_id or "",
+            "written_at_utc": time.time(),
+            "file_version": FILE_VERSION,
+            "chronyc_tracking": self._get_chronyc_state(),
         }
-        
-        sig = hmac.new(self.key, json.dumps(meta).encode(), hashlib.sha256).hexdigest()
-        meta['hmac_sha256'] = sig
-        grp.attrs.update(meta)
-    
+
+        content_bytes = json.dumps({
+            "r_local": packet.r_local, "r_smooth": packet.r_smooth,
+            "r_global": packet.r_global, "payload_uuid": packet.payload_uuid,
+            "timestamp_utc": event_timestamp,
+        }, sort_keys=True).encode()
+        attestation["content_sha256"] = hashlib.sha256(content_bytes).hexdigest()
+
+        attestation_json = json.dumps(attestation, sort_keys=True)
+        attestation["hmac_sha256"] = hmac.new(self.key, attestation_json.encode(), hashlib.sha256).hexdigest()
+
+        for k, v in attestation.items():
+            grp.attrs[k] = v if isinstance(v, (int, float, str)) else str(v)
+
+        self.event_count += 1
+        logger.info(f"PRIMARY WRITE: {group_name} (r_smooth={packet.r_smooth:.4f})")
+
     def _log_secondary(self, json_payload: str, decision: RoutingDecision):
-        """SPEC-007 — Append to secondary exploratory log."""
-        quarantine_path = self.output_dir.parent / "secondary" / "quarantine.jsonl"
-        quarantine_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(quarantine_path, 'a') as f:
-            log_entry = {
-                "timestamp": time.time(),
-                "reason": decision.reason,
-                "trust_state": decision.trust_state,
-                "payload_snippet": json_payload[:200] 
-            }
-            f.write(json.dumps(log_entry) + '\n')
-    
+        """SPEC-007 — Append quarantined packet to secondary exploratory JSONL stream."""
+        quarantine_file = self.secondary_dir / "quarantine.jsonl"
+        log_entry = {
+            "timestamp_utc": time.time(),
+            "stream": decision.stream,
+            "reason": decision.reason,
+            "trust_state": decision.trust_state,
+            "payload_snippet": json_payload[:500],
+        }
+        if decision.packet is not None:
+            log_entry["r_smooth"] = decision.packet.r_smooth
+            log_entry["node_id"] = decision.packet.node_id
+        with open(quarantine_file, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+
     def _rotate_file(self):
         """SPEC-007 — Rotate HDF5 file to prevent unbounded growth."""
-        if self.current_file:
+        if self.current_file is not None:
             self.current_file.close()
-        filename = f"dspl_zpdi_{time.strftime('%Y%m%d_%H%M%S')}.h5"
-        filepath = self.output_dir / filename
-        self.current_file = h5py.File(filepath, 'w')
-        self.current_file.attrs['system'] = 'DSLV-ZPDI'
-        self.current_file.attrs['rev'] = '3.2'
-    
+        filename = f"dslv_zpdi_{time.strftime('%Y%m%d_%H%M%S')}.h5"
+        self.current_filepath = self.output_dir / filename
+        self.current_file = h5py.File(self.current_filepath, "w")
+        self.current_file.attrs["system"] = "DSLV-ZPDI"
+        self.current_file.attrs["file_version"] = FILE_VERSION
+        self.current_file.attrs["created_utc"] = time.time()
+        self.event_count = 0
+
     def _file_size_exceeded(self) -> bool:
-        """SPEC-007 — Size check for rotation."""
-        if not self.current_file:
+        """SPEC-007 — Size check for rotation trigger."""
+        if self.current_file is None:
             return True
-        return self.current_file.id.get_filesize() > self.file_rotation_size
-    
+        try:
+            return self.current_file.id.get_filesize() > MAX_FILE_SIZE_BYTES
+        except Exception:
+            return False
+
+    def _get_chronyc_state(self) -> str:
+        """SPEC-004A.1 — Capture chronyc tracking state for timing attestation chain of custody."""
+        try:
+            result = subprocess.run(["chronyc", "tracking"], capture_output=True, text=True, timeout=2)
+            if result.returncode == 0:
+                return result.stdout.strip()[:500]
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            pass
+        return "unavailable"
+
     def close(self):
         """SPEC-007 — Safely close current HDF5 file."""
-        if self.current_file:
+        if self.current_file is not None:
             self.current_file.close()
+            self.current_file = None
+
+    def get_stats(self) -> Dict[str, int]:
+        """SPEC-007 — Return pipeline statistics."""
+        return {**self.stats, **self.router.stats}
