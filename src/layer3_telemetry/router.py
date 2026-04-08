@@ -1,20 +1,22 @@
 """
-DSLV-ZPDI Layer 3 — Dual-Stream Router
-SPEC-005C | Trust Tier: Rendered (Tier 3)
+SPEC-007 | Trust Tier: Routed (Layer 3) — Rev 3.1
 """
+from typing import Optional
+from ..layer2_core.wiring import wire_to_coherence
+from ..layer2_core.coherence import CoherencePacket
 
-class DualStreamRouter:
-    """SPEC-005C.1 — Dual-Stream Routing Engine"""
-    
-    def route(self, scored_result: dict) -> str:
-        """SPEC-005C.1 — Determine if data goes to Primary or Secondary stream"""
-        if scored_result.get('hardware_tier', 2) != 1:
-            return 'SECONDARY'
-            
-        if not scored_result.get('gps_locked', False):
-            return 'SECONDARY'
-            
-        if not scored_result.get('calibration_valid', False):
-            return 'SECONDARY'
-            
-        return 'PRIMARY'
+def route_packet(json_payload: str) -> dict:
+    """SPEC-007.1 — Route a single packet to primary or secondary stream."""
+    coherence_packet = wire_to_coherence(json_payload)
+    if coherence_packet is None:
+        return {"stream": "SECONDARY", "reason": "wiring_rejected", "packet": None}
+
+    if coherence_packet.r_smooth >= 0.40 and coherence_packet.event_window_id:
+        coherence_packet.trust_state = "PRIMARY_ACCEPTED"
+        return {"stream": "PRIMARY", "reason": "confirmed_event", "packet": coherence_packet}
+    elif coherence_packet.r_smooth >= 0.15:
+        coherence_packet.trust_state = "PRIMARY_CANDIDATE"
+        return {"stream": "PRIMARY_CANDIDATE", "reason": "structured_background", "packet": coherence_packet}
+    else:
+        coherence_packet.trust_state = "SECONDARY_QUARANTINED"
+        return {"stream": "SECONDARY", "reason": "below_threshold", "packet": coherence_packet}
