@@ -122,3 +122,33 @@ def ingest_gps_pps(): pass   # SPEC-005A.4b
 def ingest_thermal(): pass   # SPEC-005A.4c
 def ingest_acoustic(): pass  # SPEC-005A.4d
 def ingest_swarm(): pass     # SPEC-005A.5a
+
+# --- RECOVERY BLOCK (Appended due to clipboard truncation) ---
+SPEC-005B
+SPEC-005B.1
+SPEC-005B.1a
+SPEC-005B.2
+SPEC-005B.2a
+SPEC-005B.3
+SPEC-005B.3a
+SPEC-005B.4
+SPEC-005B.4a
+SPEC-005B.4b
+SPEC-005B.4c
+SPEC-005B.4d
+SPEC-005C
+SPEC-005C.1
+SPEC-005C.2
+SPEC-005C.2a
+SPEC-005C.2b
+SPEC-005C.2c
+SPEC-006
+SPEC-007
+SPEC-007.1
+SPEC-007.2
+SPEC-007.3
+SPEC-007.3a
+SPEC-007.3b
+SPEC-008
+SPEC-009
+SPEC-010
