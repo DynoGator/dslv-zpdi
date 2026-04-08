@@ -1,0 +1,54 @@
+version: 1
+project: DSLV-ZPDI
+environment: field
+
+paths:
+  primary_output: ./output/primary
+  secondary_output: ./output/secondary
+  state_dir: ./output/state
+  baseline_state: ./output/state/baseline_state.json
+
+clock_discipline:
+  ptp_required: true
+  phc_device: /dev/ptp0
+  chrony_tracking_required: true
+  max_pps_jitter_ns: 10000
+  max_total_jitter_ns: 50
+  gps_lock_required: true
+
+health_thresholds:
+  max_calibration_drift_percent: 20.0
+  min_confirming_nodes: 4
+  confirmation_window_ms: 300
+  router_candidate_floor: 0.15
+
+spec009:
+  baseline_duration_hours: 72
+  min_baseline_samples: 240
+  persist_state: true
+  block_primary_while_learning: true
+  adaptive_threshold:
+    percentile_anchor: p95
+    std_multiplier: 2.0
+    skew_multiplier: 1.0
+    positive_kurtosis_multiplier: 0.5
+
+nodes:
+  tier1_anchor_defaults:
+    hardware_tier: 1
+    role: institutional_anchor
+    timing_source: gnss_ptp_phc
+    baseline_learning_enabled: true
+    allow_primary_output: true
+  tier2_swarm_defaults:
+    hardware_tier: 2
+    role: heuristic_swarm
+    baseline_learning_enabled: false
+    allow_primary_output: false
+
+env:
+  DSLV_PRIMARY_OUTPUT_DIR: ./output/primary
+  DSLV_SECONDARY_OUTPUT_DIR: ./output/secondary
+  DSLV_BASELINE_STATE_PATH: ./output/state/baseline_state.json
+  DSLV_BASELINE_HOURS: "72"
+  DSLV_MIN_BASELINE_SAMPLES: "240"
