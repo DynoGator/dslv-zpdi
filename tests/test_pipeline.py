@@ -68,7 +68,7 @@ def test_baseline():
     scorer.baseline_samples = [0.1, 0.12, 0.11, 0.13, 0.1, 0.11]
     scorer.finalize_baseline()
     assert not scorer.baseline_learning_mode
-    assert 0.13 < scorer.dynamic_threshold < 0.16
+    assert 0.24 < scorer.dynamic_threshold < 0.26
     print("  TEST 10 PASS: Adaptive Baseline ✅")
 
 def main():

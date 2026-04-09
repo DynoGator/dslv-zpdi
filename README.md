@@ -1,13 +1,31 @@
-# DSLV-ZPDI: Distributed Sensor Locational Vectoring & Zero-Point Data Integration
+# DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
-![Status](https://img.shields.io/badge/Status-Active_R%26D-blue)
-![Architecture](https://img.shields.io/badge/Architecture-Intent_Driven-success)
-![Data Standard](https://img.shields.io/badge/Format-HDF5-orange)
+**Project Phase:** Phase 2A (Hardware Hardening)  
+**Revision:** Rev 3.4.2  
+**Status:** Software Airtight. Proceeding to Hardware.
 
-**DSLV-ZPDI** is a multi-modal, hardware-agnostic Signals Intelligence (SIGINT) network designed to capture environmental electromagnetic, optical, thermal, and acoustic phenomena and translate them into strictly standardized, GPS-disciplined, institutional-grade telemetry.
+## Overview
+DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
 
-Read the [MASTER_SPEC.md](./MASTER_SPEC.md) before interacting with this codebase.
+## Architecture
+- **Layer 1 (Ingestion):** Hardware drivers (SDR, GPS/PPS) and phase extraction.
+- **Layer 2 (Core):** KCET-ATLAS Kuramoto coherence engine and statistical outlier detection.
+- **Layer 3 (Telemetry):** Dual-stream routing, HDF5 persistence, and cryptographic attestation.
 
-*Lead Developer: Joseph R. Fross (Resonant Genesis LLC)*
+## Installation
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
 
-Read the [V3_DSLV-ZPDI_LIVING_MASTER.md](V3_DSLV-ZPDI_LIVING_MASTER.md) first for the authoritative human-facing canon. `MASTER_SPEC.md` remains in the repo as a sanitized compatibility mirror.
+## Pre-Flight Check (Validation)
+```bash
+# Run core test suite (10/10)
+python tests/test_pipeline.py
+
+# Verify SPEC-ID compliance
+python tools/orphan_checker.py
+```
+
+## Hardware Deployment (Phase 2A)
+Refer to `PHASE_2A_HARDWARE_BUILD_LIST.md` for precision timing (i210-T1) and supercapacitor power (Tier 2) specifications.
