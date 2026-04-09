@@ -53,14 +53,14 @@ from src.layer3_telemetry.hdf5_writer import HDF5Writer
 
 def run_golden_sample():
     print("--- INITIATING VIRTUAL HDF5 GOLDEN SAMPLE ---")
-    writer = HDF5Writer("./output/primary", b'DSLV_ZPDI_KEY')
+    writer = HDF5Writer("./output/primary", hardware_enclave_key=b'DSLV_ZPDI_KEY')
     perfect_packet = MockPacket()
     
     print(f"[*] Feeding Event {perfect_packet.payload_uuid} to Writer...")
-    writer._write_packet(perfect_packet)
+    writer._write_primary(perfect_packet, "{}")
     writer.close()
 
-    files = sorted(list(Path("./output/primary").glob("dspl_zpdi_*.h5")))
+    files = sorted(list(Path("./output/primary").glob("dslv_zpdi_*.h5")))
     if not files:
         print("[!] ERROR: No HDF5 file generated.")
         return False
@@ -71,7 +71,7 @@ def run_golden_sample():
     print("\n--- VERIFYING CRYPTOGRAPHIC ATTESTATION ---")
     import h5py 
     with h5py.File(golden_file, 'r') as f:
-        grp = f.groups.get(f"event_{perfect_packet.payload_uuid}")
+        grp = f.groups.get(f"event_{0:08d}_{perfect_packet.payload_uuid[:8]}")
         if grp:
             print(f"[*] Found Institutional Event Group!")
             print(f"    -> Hardware Node: {grp.attrs.get('node_id')}")
