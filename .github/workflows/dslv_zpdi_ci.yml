@@ -31,6 +31,6 @@ jobs:
 
     - name: 🧪 Run 10-Test Regression Suite
       env:
-        PYTHONPATH: .
+        PYTHONPATH: src:.
         DEV_SIMULATOR: 1
       run: python tests/test_pipeline.py

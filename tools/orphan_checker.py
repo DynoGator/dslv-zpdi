@@ -69,9 +69,11 @@ def analyze_codebase(src_dir: Path):
         except SyntaxError:
             continue
 
-        for parent in ast.walk(tree):
-            for child in ast.iter_child_nodes(parent):
-                child.parent = parent
+        # Build parent map
+        parent_map = {}
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                parent_map[child] = node
 
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -82,9 +84,9 @@ def analyze_codebase(src_dir: Path):
                 if (
                     not has_spec
                     and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    and isinstance(getattr(node, "parent", None), ast.ClassDef)
+                    and isinstance(parent_map.get(node), ast.ClassDef)
                 ):
-                    has_spec = _node_has_spec(node.parent, lines)
+                    has_spec = _node_has_spec(parent_map[node], lines)
 
                 if not has_spec:
                     rogue_nodes.append((str(filepath), node.lineno, ntype, name))

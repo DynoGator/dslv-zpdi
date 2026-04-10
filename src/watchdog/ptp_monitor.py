@@ -4,7 +4,6 @@ SPEC-004A.2 — Continuous PTP Health Monitoring
 
 import logging
 import subprocess
-import time
 from threading import Event, Thread
 
 logger = logging.getLogger("dslv-zpdi.ptp")
@@ -75,10 +74,9 @@ class PTPMonitor:
                             val_str = parts[1].strip().split()[0]
                             return float(val_str) * 1e9
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError, ValueError):
-            pass
+            pass  # Expected if chronyc is not running or output is unparsable
         return float("inf")
 
     def _trigger_timing_quarantine(self):
         """Emit signal to quarantine all Tier 1 data until timing recovers."""
         # Integration point with MVIP-6 watchdog - to be refined in Phase 2B
-        pass

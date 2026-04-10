@@ -2,6 +2,17 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.0.2.4] - 2026-04-10
+
+### Added
+- **Architectural Hardening:** Implemented SPEC-010 (Packet Integrity), SPEC-009.1 (Atomic Baseline Persistence), SPEC-008.2 (Temporal Freshness), SPEC-005A.5 (Immutable IQ Digest), and SPEC-004A.2 (PTP Watchdog).
+- **Build Documentation:** Integrated `PHASE_2A_TIER_1_BUILD_SHEET.md` with explicit date/pricing disclaimers.
+
+### Fixed
+- **CI Reliability:** Resolved race condition in `orphan_checker.py` via robust parent-child mapping.
+- **Test Environment:** Fixed `PYTHONPATH` and `sys.path` discrepancies in GitHub Actions and regression suite.
+- **Code Integrity:** Resolved `E0602` (undefined logger) and multiple styling violations in core modules.
+
 ## [4.0.2] - 2026-04-09
 
 ### Added

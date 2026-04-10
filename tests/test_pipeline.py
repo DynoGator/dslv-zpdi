@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys, os, json, math, uuid, time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from layer1_ingestion.payload import IngestionPayload, SensorModality
 from layer2_core.coherence import CoherenceScorer
