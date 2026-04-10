@@ -24,6 +24,7 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: 🛡️ Run Pre-Commit Orphan Checker
       run: python tools/orphan_checker.py
@@ -31,4 +32,5 @@ jobs:
     - name: 🧪 Run 10-Test Regression Suite
       env:
         PYTHONPATH: .
+        DEV_SIMULATOR: 1
       run: python tests/test_pipeline.py
