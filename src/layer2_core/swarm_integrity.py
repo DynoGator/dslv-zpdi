@@ -3,6 +3,7 @@ SPEC-008 | Trust Tier: Swarm Validation
 """
 
 import math
+import time
 from typing import List
 
 SPEED_OF_LIGHT_M_S = 299_792_458.0
@@ -17,9 +18,18 @@ class SwarmIntegrityMonitor:
         self.regional_baselines: dict = {}
 
     def evaluate_swarm_trigger(self, swarm_packets: List[dict]) -> tuple:
-        """SPEC-008.1 — Evaluate Trigger Propagation and Consistency"""
+        """SPEC-008.2 — Enhanced with temporal freshness check."""
         if len(swarm_packets) < 2:
             return True, "single_node_trigger"
+
+        # New: Check timestamp freshness (prevent stale trigger replay)
+        now = time.time()
+        max_age_seconds = 300  # 5-minute window
+        for packet in swarm_packets:
+            pkt_time = packet.get("timestamp_utc", 0)
+            if now - pkt_time > max_age_seconds:
+                return False, "POISONED: stale_trigger_replay"
+
         for i in range(len(swarm_packets) - 1):
             p1, p2 = swarm_packets[i], swarm_packets[i + 1]
             dist_m = (

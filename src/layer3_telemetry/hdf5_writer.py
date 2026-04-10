@@ -183,3 +183,26 @@ class HDF5Writer:
     def get_stats(self) -> Dict[str, int]:
         """SPEC-007 — Return pipeline statistics."""
         return {**self.stats, **self.router.stats}
+
+    def verify_packet_integrity(
+        self, packet: CoherencePacket, original_json: str
+    ) -> bool:
+        """SPEC-010 — Verify payload checksum before persistence."""
+        try:
+            payload_dict = json.loads(original_json)
+            stored_checksum = payload_dict.get("payload_checksum", "")
+
+            # Recompute checksum
+            d = payload_dict.copy()
+            d["payload_checksum"] = ""
+            clean_json = json.dumps(d, sort_keys=True)
+            computed_checksum = hashlib.sha256(clean_json.encode()).hexdigest()
+
+            if stored_checksum != computed_checksum:
+                logger.error(
+                    "SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid
+                )
+                return False
+            return True
+        except (json.JSONDecodeError, KeyError):
+            return False

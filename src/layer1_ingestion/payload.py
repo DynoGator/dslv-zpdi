@@ -59,21 +59,25 @@ class IngestionPayload:
         return "ASSEMBLED", None
 
     def to_json(self) -> str:
-        """SPEC-005A.4 — Serialize to JSON with in-place checksum update."""
-        # SPEC-005A.2b: Limit massive IQ arrays in JSON payloads.
-        if "iq_samples" in self.raw_value:
-            iq = self.raw_value["iq_samples"]
+        """SPEC-005A.5 — Serialize to JSON with immutable digest handling."""
+        # Create shallow copy to avoid mutating original state
+        raw_copy = self.raw_value.copy() if isinstance(self.raw_value, dict) else {}
+
+        # Digest IQ samples if present
+        if "iq_samples" in raw_copy:
+            iq = raw_copy["iq_samples"]
             if isinstance(iq, list) and len(iq) > 512:
                 iq_bytes = json.dumps(iq).encode()
-                self.raw_value["iq_digest"] = hashlib.sha256(iq_bytes).hexdigest()
-                self.raw_value["iq_preview"] = iq[:64]
-                del self.raw_value["iq_samples"]
+                raw_copy["iq_digest"] = hashlib.sha256(iq_bytes).hexdigest()
+                raw_copy["iq_preview"] = iq[:64]
+                del raw_copy["iq_samples"]
 
+        # Build dict with digested copy
         d = asdict(self)
-        d["payload_checksum"] = ""  # Clear before hashing
-        clean_json = json.dumps(d, sort_keys=True)
+        d["raw_value"] = raw_copy
+        d["payload_checksum"] = ""
 
-        # SPEC-005A.2c: Full SHA-256 for institutional attestation
+        clean_json = json.dumps(d, sort_keys=True)
         self.payload_checksum = hashlib.sha256(clean_json.encode()).hexdigest()
         d["payload_checksum"] = self.payload_checksum
 

@@ -86,21 +86,34 @@ class CoherenceScorer:
         }
 
     def _save_baseline_state(self):
-        """SPEC-006.6 — Persist baseline state to disk."""
-        if self.baseline_state_path:
-            try:
-                with open(self.baseline_state_path, "w", encoding="utf-8") as f:
-                    json.dump(
-                        {
-                            "ready": not self.baseline_learning_mode,
-                            "threshold": self.dynamic_threshold,
-                            "samples": self.baseline_samples,
-                            "started_utc": self.baseline_started_utc,
-                        },
-                        f,
-                    )
-            except (IOError, OSError):
-                pass
+        """SPEC-009.1 — Atomic baseline persistence with write verification."""
+        if not self.baseline_state_path:
+            return
+
+        temp_path = self.baseline_state_path + ".tmp"
+        try:
+            # Write to temp file first
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "ready": not self.baseline_learning_mode,
+                        "threshold": self.dynamic_threshold,
+                        "samples": self.baseline_samples,
+                        "started_utc": self.baseline_started_utc,
+                        "schema_version": "3.1",
+                    },
+                    f,
+                )
+                f.flush()
+                os.fsync(f.fileno())  # Force disk write
+
+            # Atomic rename
+            os.replace(temp_path, self.baseline_state_path)
+
+        except (IOError, OSError) as e:
+            logger.error("Baseline persistence failed: %s", e)
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
 
     def compute_local_r(self, phases: List[float]) -> float:
         """SPEC-006.1 — Compute Kuramoto order parameter r(t)."""
