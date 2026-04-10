@@ -1,4 +1,0 @@
-layer1_ingestion
-layer2_core
-layer3_telemetry
-watchdog
