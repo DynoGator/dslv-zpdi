@@ -13,3 +13,5 @@ data/
 *.json
 *.log
 config/local_*.yaml
+*.egg-info/
+.pytest_cache/
