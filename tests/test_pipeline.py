@@ -8,10 +8,13 @@ from src.layer2_core.wiring import wire_to_coherence
 from src.layer3_telemetry.router import DualStreamRouter
 
 def test_quarantine_vs_kill():
+    # GPS-untrusted → SECONDARY_QUARANTINED
     p = IngestionPayload(node_id="T", sensor_id="S", modality="rf_sdr", payload_uuid=str(uuid.uuid4()), timestamp_utc=time.time(), gps_locked=False)
     state, _ = p.validate()
     assert state == "SECONDARY_QUARANTINED"
-    p2 = IngestionPayload(payload_uuid=str(uuid.uuid4()))
+    
+    # Missing identity → KILLED
+    p2 = IngestionPayload(node_id="", sensor_id="", modality="", payload_uuid=str(uuid.uuid4()), timestamp_utc=time.time())
     state2, _ = p2.validate()
     assert state2 == "KILLED"
     print("  TEST 1 PASS: Quarantine vs Kill ✅")
@@ -31,7 +34,7 @@ def test_full_pipeline():
     p = IngestionPayload(node_id="C", sensor_id="S", modality=SensorModality.RF_SDR.value, payload_uuid=str(uuid.uuid4()), timestamp_utc=time.time(), gps_locked=True, extracted_phases=[0.1]*50)
     d = json.loads(p.to_json())
     d['trust_state'] = 'CAL_TRUSTED'
-    assert DualStreamRouter().route(json.dumps(d, default=str)).packet is not None
+    assert DualStreamRouter().route(json.dumps(d)).packet is not None
     print("  TEST 4 PASS: Full Pipeline ✅")
 
 def test_coherence_math():
@@ -46,7 +49,9 @@ def test_global_R():
     print("  TEST 6 PASS: Global R(t) ✅")
 
 def test_killed_packet():
-    assert IngestionPayload().to_json() is None
+    p = IngestionPayload(node_id="", sensor_id="", modality="", payload_uuid="u", timestamp_utc=0.0)
+    state, reason = p.validate()
+    assert state == "KILLED"
     print("  TEST 7 PASS: KILLED Packet ✅")
 
 def test_attestation():

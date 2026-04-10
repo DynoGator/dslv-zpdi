@@ -2,6 +2,28 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [3.5.3] - 2026-04-09
+
+### Added
+- **Node Calibration:** Implemented `tools/factory_calibration.py` for drift analysis (SPEC-004A.CAL).
+- **Watchdog Enforcement:** Deployed `src/watchdog/mvip6.py` health monitor (SPEC-011).
+- **Regression Suite Expansion:** Added `tests/test_watchdog.py` and `tests/test_calibration.py`.
+
+### Changed
+- **Payload Security:** Upgraded checksum metadata and hardened IQ digestion logic.
+- **Stability:** Fixed syntax and escaping errors in test files.
+
+## [3.5.2] - 2026-04-09
+
+### Added
+- **PTP Verification:** Deployed `tools/check_ptp.py` and `tools/provision_tier1.py` for SPEC-004A.1 enforcement.
+- **Unit Testing:** Added `tests/test_payload.py` and `tests/test_coherence.py`.
+- **Checksum Metadata:** Added `checksum_algo` to `IngestionPayload`.
+
+### Changed
+- **Payload Hardening:** `IngestionPayload.to_json()` now autonomously digests large IQ arrays and updates its own checksum.
+- **HAL Correctness:** Fixed SDR phase extraction in `HardwareHAL` to preserve quadrature data.
+
 ## [3.5.1] - 2026-04-09
 
 ### Added

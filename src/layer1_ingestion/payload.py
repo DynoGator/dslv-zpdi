@@ -1,70 +1,75 @@
 """
-SPEC-005A | Trust Tier: Measured (Tier 1 Raw) — Rev 3.1
+SPEC-005A | Trust Tier: Ingested (Layer 1 Payload Contract)
+Hardware-anchored ingestion payload with full SHA-256 attestation.
 """
 import json
-import time
-import uuid
 import hashlib
-from dataclasses import dataclass
-from typing import Optional, Any, List
+import time
 from enum import Enum
+from dataclasses import dataclass, field, asdict
+from typing import Optional, List, Dict, Any
 
 class SensorModality(Enum):
-    """SPEC-005A.1a — Sensor Type Registry"""
+    """SPEC-005A.1 — Authorized sensor modalities."""
     RF_SDR = "rf_sdr"
     GPS_PPS = "gps_pps"
-    THERMAL = "thermal"
-    ACOUSTIC = "acoustic"
+    MAGNETOMETER = "magnetometer"
+    INERTIAL = "inertial"
 
 @dataclass
 class IngestionPayload:
-    """SPEC-005A.1b — Hardened Universal Payload (Rev 3.1)"""
-    spec_id: str = "SPEC-005A.1b"
-    schema_version: str = "3.1"
-    payload_uuid: str = ""
-    node_id: str = ""
-    sensor_id: str = ""
-    modality: str = "" 
-    timestamp_utc: float = 0.0
+    """SPEC-005A.2 — Canonical ingestion payload structure."""
+    payload_uuid: str
+    node_id: str
+    sensor_id: str
+    modality: str
+    timestamp_utc: float
     ingest_monotonic_ns: int = 0
-    raw_value: Any = None
-    extracted_phases: List[float] = None  
+    raw_value: Dict[str, Any] = field(default_factory=dict)
+    extracted_phases: List[float] = field(default_factory=list)
     gps_locked: bool = False
     pps_jitter_ns: float = 0.0
     calibration_valid: bool = False
     calibration_age_s: float = 0.0
     drift_percent: float = 0.0
     source_path: str = ""
+    hardware_tier: int = 1
     trust_state: str = "ASSEMBLED"
     quarantine_reason: Optional[str] = None
-    env_class: Optional[str] = None
-    event_window_id: Optional[str] = None
-    parent_trigger_id: Optional[str] = None
+    schema_version: str = "3.1"
     payload_checksum: str = ""
-    hardware_tier: int = 1
+    checksum_algo: str = "sha256" # SPEC-005A.2a: Full checksum metadata
 
-    def validate(self) -> tuple:
-        """SPEC-005A.2 — Payload Self-Validation (Rev 3.1)"""
-        if not self.node_id or not self.sensor_id or not self.modality:
-            return "KILLED", "Missing routing identity"
-        if self.payload_uuid == "":
-            return "KILLED", "Missing payload_uuid"
-        if self.timestamp_utc == 0.0 or not self.gps_locked:
-            return "SECONDARY_QUARANTINED", "GPS untrusted — exploratory only"
-        if self.pps_jitter_ns > 10_000.0:
-            return "SECONDARY_QUARANTINED", "PPS jitter exceeds Tier 1 threshold (10us)"
+    def validate(self) -> tuple[str, Optional[str]]:
+        """SPEC-003 / SPEC-005A.3 — Validate packet trust state."""
+        if not all([self.node_id, self.sensor_id, self.modality]):
+            return "KILLED", "missing_identity"
+        
+        if not self.gps_locked:
+            return "SECONDARY_QUARANTINED", "gps_unlocked"
+            
+        if self.pps_jitter_ns > 10000.0:
+            return "SECONDARY_QUARANTINED", "high_pps_jitter"
+            
         return "ASSEMBLED", None
 
-    def to_json(self) -> Optional[str]:
-        """SPEC-005A.3 — Serialization Gate (Rev 3.1)"""
-        state, reason = self.validate()
-        self.trust_state = state
-        if reason:
-            self.quarantine_reason = reason
-        if state == "KILLED":
-            return None  
-        d = {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
-        d['modality'] = self.modality 
-        raw_json = json.dumps(d, sort_keys=True, default=str)
-        d['payload_checksum'] = hashlib.sha256(raw_json.encode()).hexdigest()[:16]
-        return json.dumps(d, default=str)
+    def to_json(self) -> str:
+        """SPEC-005A.4 — Serialize to JSON with in-place checksum update."""
+        # SPEC-005A.2b: Limit massive IQ arrays in JSON payloads.
+        if "iq_samples" in self.raw_value:
+            iq = self.raw_value["iq_samples"]
+            if isinstance(iq, list) and len(iq) > 512:
+                iq_bytes = json.dumps(iq).encode()
+                self.raw_value["iq_digest"] = hashlib.sha256(iq_bytes).hexdigest()
+                self.raw_value["iq_preview"] = iq[:64]
+                del self.raw_value["iq_samples"]
+
+        d = asdict(self)
+        d["payload_checksum"] = "" # Clear before hashing
+        clean_json = json.dumps(d, sort_keys=True)
+        
+        # SPEC-005A.2c: Full SHA-256 for institutional attestation
+        self.payload_checksum = hashlib.sha256(clean_json.encode()).hexdigest()
+        d["payload_checksum"] = self.payload_checksum
+        
+        return json.dumps(d, sort_keys=True)

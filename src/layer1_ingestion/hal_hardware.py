@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL-HW | Hardware Implementation (Rev 3.4)
+SPEC-005A.HAL-HW | Hardware Implementation (Rev 3.5.2)
 Concrete implementation of the HAL for physical CM5 + i210-T1 hardware.
 """
 import os
@@ -10,7 +10,6 @@ import rtlsdr
 import time
 import uuid
 import numpy as np
-from scipy.signal import hilbert
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
 
@@ -42,19 +41,22 @@ class HardwareHAL(BaseHAL):
         except (OSError, IOError):
             pps_jitter_ns = float('inf') 
 
-        ser = serial.Serial(serial_port, baud, timeout=2)
-        nmea_data = {}
-        for _ in range(20):
-            line = ser.readline().decode("ascii", errors="replace").strip()
-            if line.startswith("$GPRMC") or line.startswith("$GNRMC"):
-                parts = line.split(",")
-                nmea_data["sentence"] = line
-                nmea_data["status"] = parts[2] if len(parts) > 2 else "V"
-                nmea_data["utc_time"] = parts[1] if len(parts) > 1 else ""
-                nmea_data["lat"] = parts[3] if len(parts) > 3 else ""
-                nmea_data["lon"] = parts[5] if len(parts) > 5 else ""
-                break
-        ser.close()
+        try:
+            ser = serial.Serial(serial_port, baud, timeout=2)
+            nmea_data = {}
+            for _ in range(20):
+                line = ser.readline().decode("ascii", errors="replace").strip()
+                if line.startswith("$GPRMC") or line.startswith("$GNRMC"):
+                    parts = line.split(",")
+                    nmea_data["sentence"] = line
+                    nmea_data["status"] = parts[2] if len(parts) > 2 else "V"
+                    nmea_data["utc_time"] = parts[1] if len(parts) > 1 else ""
+                    nmea_data["lat"] = parts[3] if len(parts) > 3 else ""
+                    nmea_data["lon"] = parts[5] if len(parts) > 5 else ""
+                    break
+            ser.close()
+        except Exception as e:
+            nmea_data = {"error": str(e)}
 
         gps_locked = nmea_data.get("status") == "A"
 
@@ -99,18 +101,26 @@ class HardwareHAL(BaseHAL):
         pps_jitter_ns: float = 500.0,
         calibration_valid: bool = True,
     ) -> IngestionPayload:
-        """SPEC-005A.4b — SDR IQ Live Ingestion (Rev 3.2 Signal Integrity Fix)"""
+        """SPEC-005A.4b — SDR IQ Live Ingestion (Rev 3.5.2 Robustness Fix)"""
         mono_ns = time.monotonic_ns()
-        sdr = rtlsdr.RtlSdr()
-        sdr.center_freq = center_freq
-        sdr.sample_rate = sample_rate
-        sdr.gain = "auto"
-
-        iq_raw = sdr.read_samples(num_samples)
-        sdr.close()
-
-        analytic = hilbert(np.real(iq_raw))
-        phases = np.angle(analytic).tolist()[:512]
+        try:
+            sdr = rtlsdr.RtlSdr()
+            sdr.center_freq = center_freq
+            sdr.sample_rate = sample_rate
+            sdr.gain = "auto"
+            iq_raw = sdr.read_samples(num_samples)
+            sdr.close()
+            
+            # SPEC-005 Correctness: iq_raw is complex, compute phases directly
+            phases = np.angle(iq_raw).tolist()[:512]
+            raw_val = {
+                "iq_samples": iq_raw[:512].tolist(),
+                "center_freq": center_freq,
+                "sample_rate": sample_rate,
+            }
+        except Exception as e:
+            phases = []
+            raw_val = {"error": str(e)}
 
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),
@@ -119,11 +129,7 @@ class HardwareHAL(BaseHAL):
             modality=SensorModality.RF_SDR.value,
             timestamp_utc=time.time(),
             ingest_monotonic_ns=mono_ns,
-            raw_value={
-                "iq_samples": iq_raw[:512].tolist(),
-                "center_freq": center_freq,
-                "sample_rate": sample_rate,
-            },
+            raw_value=raw_val,
             extracted_phases=phases,
             gps_locked=gps_locked,
             pps_jitter_ns=pps_jitter_ns,
@@ -139,7 +145,7 @@ class HardwareHAL(BaseHAL):
         payload.trust_state = state
         if reason:
             payload.quarantine_reason = reason
-        if state == "ASSEMBLED":
+        if state == "ASSEMBLED" and not raw_val.get("error"):
             payload.trust_state = "TIME_TRUSTED"
             if payload.calibration_valid:
                 payload.trust_state = "CAL_TRUSTED"
