@@ -46,7 +46,7 @@ class MVIP6Watchdog:
 
 
 def main():
-    """Example usage for MVIP6Watchdog."""
+    """SPEC-011 — Example usage for MVIP6Watchdog."""
     wd = MVIP6Watchdog()
     mock_payload = {"gps_locked": True, "pps_jitter_ns": 120.0, "drift_percent": 0.05}
     is_healthy = wd.evaluate_node_health(mock_payload)
