@@ -6,8 +6,9 @@ Rev 3.2 — enum rehydration, trust gating, phase extraction handoff, baseline s
 import json
 from typing import Optional
 
-from layer1_ingestion.payload import SensorModality
-from .coherence import CoherencePacket, CoherenceScorer
+from dslv_zpdi.core.states import TrustState
+from dslv_zpdi.layer1_ingestion.payload import SensorModality
+from dslv_zpdi.layer2_core.coherence import CoherencePacket, CoherenceScorer
 
 coherence_engine = CoherenceScorer()
 
@@ -29,9 +30,9 @@ def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
         return None
 
     trust_state = str(payload_dict.get("trust_state", "")).strip()
-    if trust_state in {"SECONDARY_QUARANTINED", "KILLED"}:
+    if trust_state in {TrustState.SECONDARY_QUARANTINED.value, TrustState.KILLED.value}:
         return None
-    if trust_state not in {"TIME_TRUSTED", "CAL_TRUSTED"}:
+    if trust_state not in {TrustState.TIME_TRUSTED.value, TrustState.CAL_TRUSTED.value}:
         return None
 
     phases = payload_dict.get("extracted_phases")
@@ -42,5 +43,5 @@ def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
         phases = []
 
     packet = coherence_engine.update(payload_dict, phases)
-    packet.trust_state = "CORE_PROCESSED"
+    packet.trust_state = TrustState.CORE_PROCESSED.value
     return packet

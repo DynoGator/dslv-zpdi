@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Hardening)  
-**Revision:** Rev 4.0.2  
+**Revision:** Rev 4.0.2.4  
 **Status:** Software Airtight. Automated Installer Deployed.
 
 ## Overview

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI installer / validator
-# Revision: 4.0.2-CORRECTED
-# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.0.2)
+# Revision: 4.0.2.4-CORRECTED
+# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.0.2.4)
 # Date: 2026-04-09
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.0.2"
+SCRIPT_REV="Rev 4.0.2.4"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
@@ -196,6 +196,9 @@ required_paths=(
     "specs"
     "tests/test_pipeline.py"
     "tools/orphan_checker.py"
+    "tools/check_version_sync.py"
+    "tools/repo_guard.py"
+    "repo_manifest.yaml"
 )
 
 # Conditional validation for Tier 1 tools
@@ -251,6 +254,14 @@ if [[ "$SKIP_TESTS" -eq 0 ]]; then
     log_info "Running SPEC orphan checker"
     run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/orphan_checker.py" \
         || log_fail "SPEC orphan checker failed"
+
+    log_info "Running version synchronization check"
+    run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/check_version_sync.py" \
+        || log_fail "Version sync check failed"
+
+    log_info "Running repository guard"
+    run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/repo_guard.py" \
+        || log_fail "Repo guard failed"
 
     log_ok "Validation suite passed"
 else

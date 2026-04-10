@@ -4,8 +4,8 @@ import tempfile
 import time
 import uuid
 
-from layer2_core.coherence import CoherenceScorer
-from layer3_telemetry.router import DualStreamRouter
+from dslv_zpdi.layer2_core.coherence import CoherenceScorer
+from dslv_zpdi.layer3_telemetry.router import DualStreamRouter
 
 
 def test_baseline_lifecycle_and_persistence():
@@ -31,7 +31,7 @@ def test_baseline_lifecycle_and_persistence():
 
 
 def test_router_blocks_primary_during_baseline_learning():
-    from layer2_core.wiring import coherence_engine
+    from dslv_zpdi.layer2_core.wiring import coherence_engine
 
     coherence_engine.start_baseline()
 

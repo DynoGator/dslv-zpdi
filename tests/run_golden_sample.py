@@ -78,7 +78,7 @@ class MockPacket:
         self.event_window_id = f"EVT-GOLDEN-{int(time.time())}"
 
 
-from layer3_telemetry.hdf5_writer import HDF5Writer
+from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
 
 def run_golden_sample():

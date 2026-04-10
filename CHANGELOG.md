@@ -60,7 +60,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 ### Changed
 - **Router Logic:** Integrated `SwarmIntegrityMonitor` into `DualStreamRouter` (SPEC-008).
 - **Core Optimization:** Migrated `coherence.py` to NumPy-based vector operations.
-- **Test Alignment:** Synchronized `test_pipeline.py` and auxiliary scripts with Rev 4.0.2/3.5 implementation.
+- **Test Alignment:** Synchronized `test_pipeline.py` and auxiliary scripts with Rev 4.0.2.4/3.5 implementation.
 
 ### Fixed
 - Resolved API mismatches in `HDF5Writer` constructor and method names.

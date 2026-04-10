@@ -2,7 +2,7 @@
 
 import json
 import hashlib
-from layer1_ingestion.payload import IngestionPayload
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 
 
 def test_payload_validation():

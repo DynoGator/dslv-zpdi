@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-import sys, os, json, math, uuid, time
+import json
+import math
+import uuid
+import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from layer1_ingestion.payload import IngestionPayload, SensorModality
-from layer2_core.coherence import CoherenceScorer
-from layer2_core.wiring import wire_to_coherence
-from layer3_telemetry.router import DualStreamRouter
+from dslv_zpdi.core.states import TrustState, RouteStream
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
+from dslv_zpdi.layer2_core.coherence import CoherenceScorer
+from dslv_zpdi.layer2_core.wiring import wire_to_coherence
+from dslv_zpdi.layer3_telemetry.router import DualStreamRouter
 
 
 def test_quarantine_vs_kill():
@@ -20,7 +22,7 @@ def test_quarantine_vs_kill():
         gps_locked=False,
     )
     state, _ = p.validate()
-    assert state == "SECONDARY_QUARANTINED"
+    assert state == TrustState.SECONDARY_QUARANTINED.value
 
     # Missing identity → KILLED
     p2 = IngestionPayload(
@@ -31,7 +33,7 @@ def test_quarantine_vs_kill():
         timestamp_utc=time.time(),
     )
     state2, _ = p2.validate()
-    assert state2 == "KILLED"
+    assert state2 == TrustState.KILLED.value
     print("  TEST 1 PASS: Quarantine vs Kill ✅")
 
 
@@ -74,7 +76,7 @@ def test_full_pipeline():
         extracted_phases=[0.1] * 50,
     )
     d = json.loads(p.to_json())
-    d["trust_state"] = "CAL_TRUSTED"
+    d["trust_state"] = TrustState.CAL_TRUSTED.value
     assert DualStreamRouter().route(json.dumps(d)).packet is not None
     print("  TEST 4 PASS: Full Pipeline ✅")
 
@@ -102,13 +104,13 @@ def test_killed_packet():
         node_id="", sensor_id="", modality="", payload_uuid="u", timestamp_utc=0.0
     )
     state, reason = p.validate()
-    assert state == "KILLED"
+    assert state == TrustState.KILLED.value
     print("  TEST 7 PASS: KILLED Packet ✅")
 
 
 def test_attestation():
     import hmac, hashlib
-    from layer3_telemetry.hdf5_writer import HDF5Writer
+    from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
     w = HDF5Writer(hardware_enclave_key=b"key")
     tp = json.dumps({"t": "d"}).encode()
@@ -120,7 +122,7 @@ def test_attestation():
 
 
 def test_rotation():
-    from layer3_telemetry.hdf5_writer import HDF5Writer
+    from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
     assert HDF5Writer()._file_size_exceeded() is True
 
@@ -138,7 +140,7 @@ def test_baseline():
 
 
 def main():
-    print("=" * 40 + "\nDSLV-ZPDI Rev 4.0.2 Tests\n" + "=" * 40)
+    print("=" * 40 + "\nDSLV-ZPDI Rev 4.0.2.4 Tests\n" + "=" * 40)
     for t in [
         test_quarantine_vs_kill,
         test_serialization_roundtrip,

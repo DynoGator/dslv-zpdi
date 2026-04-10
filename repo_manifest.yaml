@@ -1,0 +1,49 @@
+repo_name: dslv-zpdi
+canonical_dependency_authority: pyproject.toml
+canonical_validation_contract:
+  - editable_install
+  - pip_check
+  - pytest
+  - orphan_checker
+  - version_sync
+  - repo_guard
+
+legal_source_roots:
+  - src
+legal_test_roots:
+  - tests
+legal_tool_roots:
+  - tools
+legal_spec_roots:
+  - specs
+
+required_files:
+  - README.md
+  - pyproject.toml
+  - Dockerfile
+  - install_dslv_zpdi.sh
+  - tools/orphan_checker.py
+  - tools/check_version_sync.py
+  - tools/repo_guard.py
+  - tests/test_pipeline.py
+  - repo_manifest.yaml
+
+forbidden_patterns:
+  - tests: "sys.path.insert"
+  - tests: "PYTHONPATH="
+  - source: "__import__("
+
+expected_docker:
+  editable_install_required: true
+  pip_check_required: true
+  pytest_required: true
+  orphan_checker_required: true
+  version_sync_required: true
+  repo_guard_required: true
+  forbid_pythonpath_env: true
+
+version_authority:
+  pyproject: pyproject.toml
+  readme: README.md
+  release_notes_glob: "RELEASE_NOTES_v*.md"
+  changelog: CHANGELOG.md

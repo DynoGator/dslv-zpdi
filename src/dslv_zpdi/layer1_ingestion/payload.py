@@ -10,6 +10,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
+from dslv_zpdi.core.states import TrustState
+
 class SensorModality(Enum):
     """SPEC-005A.1 — Authorized sensor modalities."""
 
@@ -39,7 +41,7 @@ class IngestionPayload:
     drift_percent: float = 0.0
     source_path: str = ""
     hardware_tier: int = 1
-    trust_state: str = "ASSEMBLED"
+    trust_state: str = TrustState.ASSEMBLED.value
     quarantine_reason: Optional[str] = None
     schema_version: str = "3.1"
     payload_checksum: str = ""
@@ -48,15 +50,15 @@ class IngestionPayload:
     def validate(self) -> tuple[str, Optional[str]]:
         """SPEC-003 / SPEC-005A.3 — Validate packet trust state."""
         if not all([self.node_id, self.sensor_id, self.modality]):
-            return "KILLED", "missing_identity"
+            return TrustState.KILLED.value, "missing_identity"
 
         if not self.gps_locked:
-            return "SECONDARY_QUARANTINED", "gps_unlocked"
+            return TrustState.SECONDARY_QUARANTINED.value, "gps_unlocked"
 
         if self.pps_jitter_ns > 10000.0:
-            return "SECONDARY_QUARANTINED", "high_pps_jitter"
+            return TrustState.SECONDARY_QUARANTINED.value, "high_pps_jitter"
 
-        return "ASSEMBLED", None
+        return TrustState.ASSEMBLED.value, None
 
     def to_json(self) -> str:
         """SPEC-005A.5 — Serialize to JSON with immutable digest handling."""

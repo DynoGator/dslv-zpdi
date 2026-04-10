@@ -1,7 +1,7 @@
 """Unit tests for CoherenceScorer engine."""
 
 import numpy as np
-from layer2_core.coherence import CoherenceScorer
+from dslv_zpdi.layer2_core.coherence import CoherenceScorer
 
 
 def test_baseline_calculation():

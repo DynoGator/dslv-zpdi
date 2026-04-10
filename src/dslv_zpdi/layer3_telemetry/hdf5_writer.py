@@ -12,7 +12,8 @@ import time
 from pathlib import Path
 from typing import Dict, Optional
 
-from layer2_core.coherence import CoherencePacket
+from dslv_zpdi.core.states import RouteStream
+from dslv_zpdi.layer2_core.coherence import CoherencePacket
 from .router import DualStreamRouter, RoutingDecision
 
 try:
@@ -56,10 +57,10 @@ class HDF5Writer:
     def ingest(self, json_payload: str) -> RoutingDecision:
         """SPEC-007 — Process single packet through router and persist."""
         decision = self.router.route(json_payload)
-        if decision.stream == "PRIMARY" and decision.packet is not None:
+        if decision.stream == RouteStream.PRIMARY.value and decision.packet is not None:
             self._write_primary(decision.packet, json_payload)
             self.stats["primary_written"] += 1
-        elif decision.stream in ("SECONDARY", "PRIMARY_CANDIDATE"):
+        elif decision.stream in (RouteStream.SECONDARY.value, RouteStream.PRIMARY_CANDIDATE.value):
             self._log_secondary(json_payload, decision)
             self.stats["secondary_logged"] += 1
         else:
