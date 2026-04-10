@@ -122,7 +122,8 @@ def test_attestation():
 def test_rotation():
     from layer3_telemetry.hdf5_writer import HDF5Writer
 
-    assert HDF5Writer()._file_size_exceeded() == True
+    assert HDF5Writer()._file_size_exceeded() is True
+
     print("  TEST 9 PASS: File Rotation ✅")
 
 

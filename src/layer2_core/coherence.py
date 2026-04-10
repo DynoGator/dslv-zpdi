@@ -4,6 +4,7 @@ Layer 2 implementation of Kuramoto order parameters and baseline learning.
 """
 
 import json
+import logging
 import os
 import time
 import uuid
@@ -12,6 +13,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
+logger = logging.getLogger("dslv-zpdi.coherence")
 
 # pylint: disable=too-many-instance-attributes
 @dataclass

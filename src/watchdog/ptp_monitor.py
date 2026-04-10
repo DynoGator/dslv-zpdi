@@ -50,7 +50,7 @@ class PTPMonitor:
                     # Trigger system-wide quarantine via MVIP-6 hooks (Phase 2B integration)
                     self._trigger_timing_quarantine()
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("PTP monitoring error: %s", e)
                 self.healthy = False
 
