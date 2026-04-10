@@ -2,6 +2,7 @@
 SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.0.2.2)
 Concrete implementation of the HAL for physical CM5 + i210-T1 hardware.
 """
+
 import os
 import fcntl
 import struct
@@ -12,6 +13,7 @@ import uuid
 import numpy as np
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
+
 
 class HardwareHAL(BaseHAL):
     """SPEC-005A.HAL-HW — Production hardware ingestion logic."""
@@ -27,19 +29,19 @@ class HardwareHAL(BaseHAL):
     ) -> IngestionPayload:
         """SPEC-005A.4a — GPS/PPS Live Ingestion (Hardware-Anchored, Rev 3.2)"""
         mono_ns = time.monotonic_ns()
-        pps_jitter_ns = float('inf')
+        pps_jitter_ns = float("inf")
         try:
             fd = os.open(pps_device, os.O_RDONLY)
             try:
-                buf = fcntl.ioctl(fd, 0x80047001, struct.pack('llll', 0, 0, 0, 0))
-                sec, nsec, _, _ = struct.unpack('llll', buf)
+                buf = fcntl.ioctl(fd, 0x80047001, struct.pack("llll", 0, 0, 0, 0))
+                sec, nsec, _, _ = struct.unpack("llll", buf)
                 pps_time_ns = sec * 1_000_000_000 + nsec
                 mono_now_ns = time.monotonic_ns()
                 pps_jitter_ns = float(abs(mono_now_ns - pps_time_ns) % 1_000_000_000)
             finally:
                 os.close(fd)
         except (OSError, IOError):
-            pps_jitter_ns = float('inf') 
+            pps_jitter_ns = float("inf")
 
         try:
             ser = serial.Serial(serial_port, baud, timeout=2)
@@ -110,7 +112,7 @@ class HardwareHAL(BaseHAL):
             sdr.gain = "auto"
             iq_raw = sdr.read_samples(num_samples)
             sdr.close()
-            
+
             # SPEC-005 Correctness: iq_raw is complex, compute phases directly
             phases = np.angle(iq_raw).tolist()[:512]
             raw_val = {

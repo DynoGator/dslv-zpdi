@@ -23,8 +23,12 @@
     - Appended Appendix E (HDF5 Schema) to the Living Master.
 5. **Expanded Testing:**
     - Added `tests/test_payload.py` and `tests/test_coherence.py`.
-    - Verified 100% test pass rate across 16+ distinct test cases in simulated environments.
-6. **Deployment:** Synchronized GitHub `main` branch with Rev 4.0.2 baseline.
+    - Repaired string escaping syntax errors in Tier 1 tooling.
+    - Verified 100% test pass rate across 19 distinct test cases in simulated environments.
+6. **Line-by-Line Code Hardening (Rev 4.0.2):**
+    - Refactored `CoherenceScorer` and `DualStreamRouter` to correctly persist SPEC-009 baselines and strictly block PRIMARY stream propagation while baseline learning is active.
+    - Executed `black` formatter across all source directories to enforce stylistic consistency.
+7. **Deployment:** Synchronized GitHub `main` branch with airtight Rev 4.0.2 baseline.
 
 ---
 

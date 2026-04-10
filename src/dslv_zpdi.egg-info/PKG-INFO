@@ -1,0 +1,72 @@
+Metadata-Version: 2.4
+Name: dslv-zpdi
+Version: 4.0.2
+Summary: Distributed Sensor Locational Vectoring — Zero-Point Data Integration
+Author-email: "Joseph R. Fross" <jrfross@gmail.com>
+License: MIT
+Keywords: SIGINT,Kuramoto,HDF5,PTP,CM5
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: h5py>=3.6.0
+Requires-Dist: pyserial>=3.5
+Requires-Dist: pyrtlsdr>=0.2.9
+Requires-Dist: dataclasses; python_version < "3.10"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=3.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: pylint>=2.12.0; extra == "dev"
+Dynamic: license-file
+
+# DSLV-ZPDI (Distributed Sensor Locational Vectoring)
+
+**Project Phase:** Phase 2A (Hardware Hardening)  
+**Revision:** Rev 4.0.2  
+**Status:** Software Airtight. Automated Installer Deployed.
+
+## Overview
+DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
+
+## Architecture
+- **Layer 1 (Ingestion):** Hardware drivers (SDR, GPS/PPS) and phase extraction via HardwareHAL.
+- **Layer 2 (Core):** KCET-ATLAS Kuramoto coherence engine and statistical outlier detection.
+- **Layer 3 (Telemetry):** Dual-stream routing, HDF5 persistence, and cryptographic attestation.
+
+## Installation & Deployment
+The canonical way to install DSLV-ZPDI is via the automated installer:
+
+```bash
+# Clone the repository
+git clone https://github.com/DynoGator/dslv-zpdi.git
+cd dslv-zpdi
+
+# Run the installer (requires sudo for hardware audit packages)
+sudo ./install_dslv_zpdi.sh --tier1
+```
+
+For virtualized environments (skip hardware checks):
+```bash
+sudo ./install_dslv_zpdi.sh --tier1 --simulator
+```
+
+## Pre-Flight Check (Manual)
+If not using the installer, you can run manual checks:
+```bash
+# Run core test suite
+pytest tests
+
+# Verify SPEC-ID compliance
+python tools/orphan_checker.py
+```
+
+## Hardware Deployment (Phase 2A)
+Refer to `PHASE_2A_HARDWARE_BUILD_LIST.md` for precision timing (i210-T1) and supercapacitor power (Tier 2) specifications.

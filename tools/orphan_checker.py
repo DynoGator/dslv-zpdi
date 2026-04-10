@@ -19,12 +19,16 @@ def _node_has_spec(node: ast.AST, lines: list[str]) -> bool:
     if docstring and SPEC_PATTERN.search(docstring):
         return True
 
-    decorator_lines = [getattr(d, "lineno", None) for d in getattr(node, "decorator_list", [])]
+    decorator_lines = [
+        getattr(d, "lineno", None) for d in getattr(node, "decorator_list", [])
+    ]
     decorator_lines = [ln for ln in decorator_lines if ln is not None]
     header_start = min(decorator_lines + [node.lineno])
 
-    first_body_line = node.body[0].lineno if getattr(node, "body", None) else node.lineno
-    header_block = "\n".join(lines[header_start - 1:first_body_line - 1])
+    first_body_line = (
+        node.body[0].lineno if getattr(node, "body", None) else node.lineno
+    )
+    header_block = "\n".join(lines[header_start - 1 : first_body_line - 1])
     if SPEC_PATTERN.search(header_block):
         return True
 
@@ -86,6 +90,7 @@ def analyze_codebase(src_dir: Path):
                     rogue_nodes.append((str(filepath), node.lineno, ntype, name))
 
     return claimed_specs, rogue_nodes
+
 
 def main():
     root = Path(__file__).resolve().parents[1]

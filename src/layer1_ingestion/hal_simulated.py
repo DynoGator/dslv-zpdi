@@ -2,11 +2,13 @@
 SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.0.2)
 Deterministic simulation of Tier 1 hardware for CI/CD and virtual validation.
 """
+
 import time
 import uuid
 import numpy as np
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
+
 
 class SimulatedHAL(BaseHAL):
     """SPEC-005A.HAL-SIM — Virtual hardware for testing and CI/CD."""
@@ -23,7 +25,7 @@ class SimulatedHAL(BaseHAL):
             "status": "A" if gps_locked else "V",
             "utc_time": "123456.00",
             "lat": "4000.0000",
-            "lon": "10500.0000"
+            "lon": "10500.0000",
         }
 
         payload = IngestionPayload(
@@ -38,7 +40,7 @@ class SimulatedHAL(BaseHAL):
             gps_locked=gps_locked,
             pps_jitter_ns=pps_jitter_ns,
             calibration_valid=gps_locked and pps_jitter_ns < 10000.0,
-            trust_state="CAL_TRUSTED" if gps_locked else "SECONDARY_QUARANTINED"
+            trust_state="CAL_TRUSTED" if gps_locked else "SECONDARY_QUARANTINED",
         )
         return payload
 
@@ -46,11 +48,11 @@ class SimulatedHAL(BaseHAL):
         """SPEC-005A.4b — Mock SDR IQ Ingestion with deterministic phase."""
         node_id = kwargs.get("node_id", "SIM-ALPHA")
         sensor_id = kwargs.get("sensor_id", "SIM-RTLSDR-01")
-        
+
         # Generate 512 samples of a coherent sine wave
         t = np.linspace(0, 1, 512)
-        phases = (2 * np.pi * 10 * t).tolist() # 10Hz signal
-        
+        phases = (2 * np.pi * 10 * t).tolist()  # 10Hz signal
+
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),
             node_id=node_id,
@@ -63,6 +65,6 @@ class SimulatedHAL(BaseHAL):
             gps_locked=True,
             pps_jitter_ns=500.0,
             calibration_valid=True,
-            trust_state="CAL_TRUSTED"
+            trust_state="CAL_TRUSTED",
         )
         return payload

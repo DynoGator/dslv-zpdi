@@ -11,6 +11,7 @@ from ..layer2_core.coherence import CoherencePacket
 
 try:
     import h5py
+
     HDF5_AVAILABLE = True
 except ImportError:
     HDF5_AVAILABLE = False
@@ -19,11 +20,16 @@ logger = logging.getLogger("dslv-zpdi.hdf5")
 FILE_VERSION = "3.1"
 MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
+
 class HDF5Writer:
     """SPEC-007 — Institutional telemetry persistence with cryptographic attestation."""
 
-    def __init__(self, output_path="./output/primary", secondary_path="./output/secondary",
-                 hardware_enclave_key: Optional[bytes] = None):
+    def __init__(
+        self,
+        output_path="./output/primary",
+        secondary_path="./output/secondary",
+        hardware_enclave_key: Optional[bytes] = None,
+    ):
         """SPEC-007.1 — Initialize writer with output paths and attestation key."""
         self.output_dir = Path(output_path)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -34,7 +40,11 @@ class HDF5Writer:
         self.current_file = None
         self.current_filepath: Optional[Path] = None
         self.event_count = 0
-        self.stats: Dict[str, int] = {"primary_written": 0, "secondary_logged": 0, "rejected": 0}
+        self.stats: Dict[str, int] = {
+            "primary_written": 0,
+            "secondary_logged": 0,
+            "rejected": 0,
+        }
 
     def ingest(self, json_payload: str) -> RoutingDecision:
         """SPEC-007 — Process single packet through router and persist."""
@@ -81,15 +91,22 @@ class HDF5Writer:
             "chronyc_tracking": self._get_chronyc_state(),
         }
 
-        content_bytes = json.dumps({
-            "r_local": packet.r_local, "r_smooth": packet.r_smooth,
-            "r_global": packet.r_global, "payload_uuid": packet.payload_uuid,
-            "timestamp_utc": event_timestamp,
-        }, sort_keys=True).encode()
+        content_bytes = json.dumps(
+            {
+                "r_local": packet.r_local,
+                "r_smooth": packet.r_smooth,
+                "r_global": packet.r_global,
+                "payload_uuid": packet.payload_uuid,
+                "timestamp_utc": event_timestamp,
+            },
+            sort_keys=True,
+        ).encode()
         attestation["content_sha256"] = hashlib.sha256(content_bytes).hexdigest()
 
         attestation_json = json.dumps(attestation, sort_keys=True)
-        attestation["hmac_sha256"] = hmac.new(self.key, attestation_json.encode(), hashlib.sha256).hexdigest()
+        attestation["hmac_sha256"] = hmac.new(
+            self.key, attestation_json.encode(), hashlib.sha256
+        ).hexdigest()
 
         for k, v in attestation.items():
             grp.attrs[k] = v if isinstance(v, (int, float, str)) else str(v)
@@ -137,7 +154,9 @@ class HDF5Writer:
     def _get_chronyc_state(self) -> str:
         """SPEC-004A.1 — Capture chronyc tracking state for timing attestation chain of custody."""
         try:
-            result = subprocess.run(["chronyc", "tracking"], capture_output=True, text=True, timeout=2)
+            result = subprocess.run(
+                ["chronyc", "tracking"], capture_output=True, text=True, timeout=2
+            )
             if result.returncode == 0:
                 return result.stdout.strip()[:500]
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
