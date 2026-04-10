@@ -4,9 +4,10 @@ Dynamic selection between hardware and simulated ingestion layers.
 """
 
 import os
+
+from .hal_base import BaseHAL
 from .hal_hardware import HardwareHAL
 from .hal_simulated import SimulatedHAL
-from .hal_base import BaseHAL
 
 
 def get_hal() -> BaseHAL:

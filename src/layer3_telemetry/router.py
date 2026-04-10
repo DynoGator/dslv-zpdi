@@ -3,11 +3,12 @@ SPEC-007 | Trust Tier: Routed (Layer 3)
 Dual-Stream Protocol enforcer with Swarm Integrity verification.
 """
 
-from typing import Optional, List
 from dataclasses import dataclass
-from ..layer2_core.wiring import wire_to_coherence, coherence_engine
-from ..layer2_core.coherence import CoherencePacket
-from ..layer2_core.swarm_integrity import SwarmIntegrityMonitor
+from typing import List, Optional
+
+from layer2_core.coherence import CoherencePacket
+from layer2_core.swarm_integrity import SwarmIntegrityMonitor
+from layer2_core.wiring import coherence_engine, wire_to_coherence
 
 
 @dataclass
@@ -52,7 +53,8 @@ class DualStreamRouter:
             return RoutingDecision(
                 "PRIMARY", "confirmed_event", pkt, "PRIMARY_ACCEPTED"
             )
-        elif pkt.r_smooth >= 0.15:
+
+        if pkt.r_smooth >= 0.15:
             pkt.trust_state = "PRIMARY_CANDIDATE"
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
@@ -67,7 +69,7 @@ class DualStreamRouter:
 
     def validate_swarm_cluster(self, packets: List[dict]) -> bool:
         """SPEC-008.1 — Interface for multi-node swarm validation."""
-        is_valid, reason = self.swarm_monitor.evaluate_swarm_trigger(packets)
+        is_valid, _ = self.swarm_monitor.evaluate_swarm_trigger(packets)
         if not is_valid:
             # SPEC-008.1a: Log poisoned trigger event
             return False

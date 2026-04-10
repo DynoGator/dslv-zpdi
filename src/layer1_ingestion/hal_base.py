@@ -4,6 +4,7 @@ Defines the abstract interface for all Tier 1 ingestion sources.
 """
 
 from abc import ABC, abstractmethod
+
 from .payload import IngestionPayload
 
 
@@ -13,9 +14,7 @@ class BaseHAL(ABC):
     @abstractmethod
     def ingest_gps_pps(self, **kwargs) -> IngestionPayload:
         """SPEC-005A.4a — Abstract GPS/PPS Ingestion."""
-        pass
 
     @abstractmethod
     def ingest_sdr(self, **kwargs) -> IngestionPayload:
         """SPEC-005A.4b — Abstract SDR IQ Ingestion."""
-        pass

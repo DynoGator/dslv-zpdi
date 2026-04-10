@@ -3,10 +3,10 @@ import sys, os, json, math, uuid, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.layer1_ingestion.payload import IngestionPayload, SensorModality
-from src.layer2_core.coherence import CoherenceScorer
-from src.layer2_core.wiring import wire_to_coherence
-from src.layer3_telemetry.router import DualStreamRouter
+from layer1_ingestion.payload import IngestionPayload, SensorModality
+from layer2_core.coherence import CoherenceScorer
+from layer2_core.wiring import wire_to_coherence
+from layer3_telemetry.router import DualStreamRouter
 
 
 def test_quarantine_vs_kill():
@@ -93,7 +93,7 @@ def test_global_R():
         "modality": "rf_sdr",
         "ts": time.time(),
     }
-    assert scorer.compute_global_R() == 0.8
+    assert scorer.compute_global_r() == 0.8
     print("  TEST 6 PASS: Global R(t) ✅")
 
 
@@ -108,7 +108,7 @@ def test_killed_packet():
 
 def test_attestation():
     import hmac, hashlib
-    from src.layer3_telemetry.hdf5_writer import HDF5Writer
+    from layer3_telemetry.hdf5_writer import HDF5Writer
 
     w = HDF5Writer(hardware_enclave_key=b"key")
     tp = json.dumps({"t": "d"}).encode()
@@ -120,7 +120,7 @@ def test_attestation():
 
 
 def test_rotation():
-    from src.layer3_telemetry.hdf5_writer import HDF5Writer
+    from layer3_telemetry.hdf5_writer import HDF5Writer
 
     assert HDF5Writer()._file_size_exceeded() == True
     print("  TEST 9 PASS: File Rotation ✅")

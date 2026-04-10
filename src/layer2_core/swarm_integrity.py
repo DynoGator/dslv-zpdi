@@ -2,12 +2,13 @@
 SPEC-008 | Trust Tier: Swarm Validation
 """
 
-from typing import List
 import math
+from typing import List
 
 SPEED_OF_LIGHT_M_S = 299_792_458.0
 
 
+# pylint: disable=too-few-public-methods
 class SwarmIntegrityMonitor:
     """SPEC-008.1a — Swarm Anti-Poisoning (Rev 3.1)"""
 

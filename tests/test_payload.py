@@ -2,7 +2,7 @@
 
 import json
 import hashlib
-from src.layer1_ingestion.payload import IngestionPayload
+from layer1_ingestion.payload import IngestionPayload
 
 
 def test_payload_validation():

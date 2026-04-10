@@ -4,8 +4,8 @@ import tempfile
 import time
 import uuid
 
-from src.layer2_core.coherence import CoherenceScorer
-from src.layer3_telemetry.router import DualStreamRouter
+from layer2_core.coherence import CoherenceScorer
+from layer3_telemetry.router import DualStreamRouter
 
 
 def test_baseline_lifecycle_and_persistence():
@@ -18,7 +18,7 @@ def test_baseline_lifecycle_and_persistence():
         )
         scorer.start_baseline(started_utc=time.time() - (73 * 3600))
         for i in range(20):
-            scorer.update_baseline(0.05 + (i * 0.002), time.time())
+            scorer.update_baseline(0.05 + (i * 0.002))
         threshold = scorer.finalize_baseline(force=True)
         assert scorer.get_baseline_status()["ready"] is True
         assert threshold is not None and threshold > 0.0
@@ -31,7 +31,7 @@ def test_baseline_lifecycle_and_persistence():
 
 
 def test_router_blocks_primary_during_baseline_learning():
-    from src.layer2_core.wiring import coherence_engine
+    from layer2_core.wiring import coherence_engine
 
     coherence_engine.start_baseline()
 

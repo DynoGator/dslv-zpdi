@@ -3,9 +3,13 @@ SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.0.2)
 Deterministic simulation of Tier 1 hardware for CI/CD and virtual validation.
 """
 
+# pylint: disable=duplicate-code
+
 import time
 import uuid
+
 import numpy as np
+
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
 

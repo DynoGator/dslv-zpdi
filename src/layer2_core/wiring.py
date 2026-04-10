@@ -6,14 +6,15 @@ Rev 3.2 — enum rehydration, trust gating, phase extraction handoff, baseline s
 import json
 from typing import Optional
 
+from layer1_ingestion.payload import SensorModality
 from .coherence import CoherencePacket, CoherenceScorer
-from ..layer1_ingestion.payload import SensorModality
 
 coherence_engine = CoherenceScorer()
 
 
 # SPEC-006.5
 def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
+    """SPEC-006.5 — Wire ingested JSON payload to Layer 2 Coherence Packet."""
     if not json_payload:
         return None
     try:

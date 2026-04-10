@@ -3,12 +3,11 @@ SPEC-005A | Trust Tier: Ingested (Layer 1 Payload Contract)
 Hardware-anchored ingestion payload with full SHA-256 attestation.
 """
 
-import json
 import hashlib
-import time
+import json
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-from dataclasses import dataclass, field, asdict
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 
 class SensorModality(Enum):
@@ -20,6 +19,7 @@ class SensorModality(Enum):
     INERTIAL = "inertial"
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclass
 class IngestionPayload:
     """SPEC-005A.2 — Canonical ingestion payload structure."""

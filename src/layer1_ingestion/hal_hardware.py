@@ -3,14 +3,18 @@ SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.0.2.2)
 Concrete implementation of the HAL for physical CM5 + i210-T1 hardware.
 """
 
-import os
+# pylint: disable=duplicate-code
+
 import fcntl
+import os
 import struct
-import serial
-import rtlsdr
 import time
 import uuid
+
 import numpy as np
+import rtlsdr
+import serial
+
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
 
@@ -18,6 +22,7 @@ from .payload import IngestionPayload, SensorModality
 class HardwareHAL(BaseHAL):
     """SPEC-005A.HAL-HW — Production hardware ingestion logic."""
 
+    # pylint: disable=arguments-differ, too-many-arguments, too-many-positional-arguments, too-many-locals
     def ingest_gps_pps(
         self,
         serial_port: str = "/dev/ttyACM0",
@@ -40,7 +45,7 @@ class HardwareHAL(BaseHAL):
                 pps_jitter_ns = float(abs(mono_now_ns - pps_time_ns) % 1_000_000_000)
             finally:
                 os.close(fd)
-        except (OSError, IOError):
+        except (OSError, IOError, struct.error):
             pps_jitter_ns = float("inf")
 
         try:
@@ -57,8 +62,8 @@ class HardwareHAL(BaseHAL):
                     nmea_data["lon"] = parts[5] if len(parts) > 5 else ""
                     break
             ser.close()
-        except Exception as e:
-            nmea_data = {"error": str(e)}
+        except (serial.SerialException, UnicodeDecodeError, IndexError):
+            nmea_data = {"error": "Serial communication failed"}
 
         gps_locked = nmea_data.get("status") == "A"
 
@@ -92,6 +97,7 @@ class HardwareHAL(BaseHAL):
 
         return payload
 
+    # pylint: disable=arguments-differ, too-many-arguments, too-many-positional-arguments, too-many-locals
     def ingest_sdr(
         self,
         center_freq: float = 100e6,
@@ -120,9 +126,9 @@ class HardwareHAL(BaseHAL):
                 "center_freq": center_freq,
                 "sample_rate": sample_rate,
             }
-        except Exception as e:
+        except Exception:  # pylint: disable=broad-exception-caught
             phases = []
-            raw_val = {"error": str(e)}
+            raw_val = {"error": "SDR acquisition failed"}
 
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),

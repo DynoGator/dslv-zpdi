@@ -1,6 +1,6 @@
 """Unit tests for MVIP-6 Watchdog."""
 
-from src.watchdog.mvip6 import MVIP6Watchdog
+from watchdog.mvip6 import MVIP6Watchdog
 
 
 def test_watchdog_healthy():

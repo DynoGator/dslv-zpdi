@@ -1,13 +1,19 @@
-import json
-import hmac
+"""
+SPEC-007 | Trust Tier: Institutional Persistence
+Layer 3 implementation of HDF5 storage with SHA-256 attestation and HMAC.
+"""
+
 import hashlib
-import time
-import subprocess
+import hmac
+import json
 import logging
+import subprocess
+import time
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict, Optional
+
+from layer2_core.coherence import CoherencePacket
 from .router import DualStreamRouter, RoutingDecision
-from ..layer2_core.coherence import CoherencePacket
 
 try:
     import h5py
@@ -21,6 +27,7 @@ FILE_VERSION = "3.1"
 MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
 
+# pylint: disable=too-many-instance-attributes
 class HDF5Writer:
     """SPEC-007 — Institutional telemetry persistence with cryptographic attestation."""
 
@@ -112,7 +119,7 @@ class HDF5Writer:
             grp.attrs[k] = v if isinstance(v, (int, float, str)) else str(v)
 
         self.event_count += 1
-        logger.info(f"PRIMARY WRITE: {group_name} (r_smooth={packet.r_smooth:.4f})")
+        logger.info("PRIMARY WRITE: %s (r_smooth=%.4f)", group_name, packet.r_smooth)
 
     def _log_secondary(self, json_payload: str, decision: RoutingDecision):
         """SPEC-007 — Append quarantined packet to secondary exploratory JSONL stream."""
@@ -127,7 +134,7 @@ class HDF5Writer:
         if decision.packet is not None:
             log_entry["r_smooth"] = decision.packet.r_smooth
             log_entry["node_id"] = decision.packet.node_id
-        with open(quarantine_file, "a") as f:
+        with open(quarantine_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry) + "\n")
 
     def _rotate_file(self):
@@ -148,14 +155,18 @@ class HDF5Writer:
             return True
         try:
             return self.current_file.id.get_filesize() > MAX_FILE_SIZE_BYTES
-        except Exception:
+        except (AttributeError, RuntimeError, OSError):
             return False
 
     def _get_chronyc_state(self) -> str:
         """SPEC-004A.1 — Capture chronyc tracking state for timing attestation chain of custody."""
         try:
             result = subprocess.run(
-                ["chronyc", "tracking"], capture_output=True, text=True, timeout=2
+                ["chronyc", "tracking"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
             )
             if result.returncode == 0:
                 return result.stdout.strip()[:500]

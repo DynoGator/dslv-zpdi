@@ -1,13 +1,19 @@
-import uuid
-import time
-import math
-import os
+"""
+SPEC-006 | Trust Tier: Coherence Analysis
+Layer 2 implementation of Kuramoto order parameters and baseline learning.
+"""
+
 import json
-import numpy as np
-from typing import List, Dict, Optional
+import os
+import time
+import uuid
 from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+import numpy as np
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclass
 class CoherencePacket:
     """SPEC-006 – Processed telemetry packet."""
@@ -22,6 +28,7 @@ class CoherencePacket:
     event_window_id: Optional[str] = None
 
 
+# pylint: disable=too-many-instance-attributes
 class CoherenceScorer:
     """SPEC-006 ― Kuramoto Coherence Engine."""
 
@@ -44,7 +51,7 @@ class CoherenceScorer:
         # Load from persistence if available
         if self.baseline_state_path and os.path.exists(self.baseline_state_path):
             try:
-                with open(self.baseline_state_path, "r") as f:
+                with open(self.baseline_state_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if data.get("ready"):
                         self.dynamic_threshold = data.get("threshold", 0.40)
@@ -53,21 +60,24 @@ class CoherenceScorer:
                         self.baseline_learning_mode = True
                         self.baseline_samples = data.get("samples", [])
                         self.baseline_started_utc = data.get("started_utc", time.time())
-            except Exception:
+            except (json.JSONDecodeError, OSError, KeyError):
                 pass
 
     def start_baseline(self, started_utc=None):
+        """SPEC-006.4 — Reset and start baseline learning."""
         self.baseline_learning_mode = True
         self.baseline_started_utc = started_utc or time.time()
         self.baseline_samples = []
         self._save_baseline_state()
 
-    def update_baseline(self, r_local, ts):
+    def update_baseline(self, r_local):
+        """SPEC-006.4 — Update baseline samples with local coherence."""
         if self.baseline_learning_mode:
             self.baseline_samples.append(r_local)
             self._save_baseline_state()
 
     def get_baseline_status(self) -> dict:
+        """SPEC-006.5 — Get current baseline learning status."""
         return {
             "ready": not self.baseline_learning_mode,
             "threshold": self.dynamic_threshold,
@@ -76,9 +86,10 @@ class CoherenceScorer:
         }
 
     def _save_baseline_state(self):
+        """SPEC-006.6 — Persist baseline state to disk."""
         if self.baseline_state_path:
             try:
-                with open(self.baseline_state_path, "w") as f:
+                with open(self.baseline_state_path, "w", encoding="utf-8") as f:
                     json.dump(
                         {
                             "ready": not self.baseline_learning_mode,
@@ -88,7 +99,7 @@ class CoherenceScorer:
                         },
                         f,
                     )
-            except Exception:
+            except (IOError, OSError):
                 pass
 
     def compute_local_r(self, phases: List[float]) -> float:
@@ -99,7 +110,7 @@ class CoherenceScorer:
         r = np.abs(np.mean(np.exp(1j * phases_arr)))
         return float(r)
 
-    def compute_global_R(self) -> float:
+    def compute_global_r(self) -> float:
         """SPEC-006.2 — Compute weighted global coherence R(t)."""
         if not self.fleet_state:
             return 0.0
@@ -142,9 +153,9 @@ class CoherenceScorer:
         }
 
         if self.baseline_learning_mode:
-            self.update_baseline(r_local, payload.get("timestamp_utc", time.time()))
+            self.update_baseline(r_local)
 
-        r_global = self.compute_global_R()
+        r_global = self.compute_global_r()
 
         # Event declaration based on dynamic threshold (SPEC-009)
         evt_id = None

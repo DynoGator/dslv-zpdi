@@ -1,8 +1,8 @@
 import time
 import uuid
 import json
-from src.layer1_ingestion.payload import IngestionPayload, SensorModality
-from src.layer3_telemetry.router import DualStreamRouter
+from layer1_ingestion.payload import IngestionPayload, SensorModality
+from layer3_telemetry.router import DualStreamRouter
 
 
 def run_gps_fault_injection():

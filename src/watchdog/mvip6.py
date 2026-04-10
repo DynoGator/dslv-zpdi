@@ -3,9 +3,8 @@ SPEC-011 | MVIP-6 Watchdog Service
 Continuously evaluates GPS lock, jitter, and node health.
 """
 
-import time
 import json
-import logging
+import time
 from typing import Dict
 
 
@@ -46,10 +45,14 @@ class MVIP6Watchdog:
         return json.dumps(self.health_metrics, sort_keys=True)
 
 
-if __name__ == "__main__":
-    # Example usage
+def main():
+    """Example usage for MVIP6Watchdog."""
     wd = MVIP6Watchdog()
     mock_payload = {"gps_locked": True, "pps_jitter_ns": 120.0, "drift_percent": 0.05}
     is_healthy = wd.evaluate_node_health(mock_payload)
     print(f"Node Health: {'PASS' if is_healthy else 'FAIL'}")
     print(f"Metrics: {wd.get_status_report()}")
+
+
+if __name__ == "__main__":
+    main()
