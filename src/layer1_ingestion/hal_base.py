@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL | Hardware Abstraction Layer Base (Rev 3.4)
+SPEC-005A.HAL | Hardware Abstraction Layer Base (Rev 4.0.2)
 Defines the abstract interface for all Tier 1 ingestion sources.
 """
 from abc import ABC, abstractmethod

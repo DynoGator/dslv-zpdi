@@ -1,27 +1,39 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Hardening)  
-**Revision:** Rev 3.4.2  
-**Status:** Software Airtight. Proceeding to Hardware.
+**Revision:** Rev 4.0.2  
+**Status:** Software Airtight. Automated Installer Deployed.
 
 ## Overview
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
 
 ## Architecture
-- **Layer 1 (Ingestion):** Hardware drivers (SDR, GPS/PPS) and phase extraction.
+- **Layer 1 (Ingestion):** Hardware drivers (SDR, GPS/PPS) and phase extraction via HardwareHAL.
 - **Layer 2 (Core):** KCET-ATLAS Kuramoto coherence engine and statistical outlier detection.
 - **Layer 3 (Telemetry):** Dual-stream routing, HDF5 persistence, and cryptographic attestation.
 
-## Installation
+## Installation & Deployment
+The canonical way to install DSLV-ZPDI is via the automated installer:
+
 ```bash
-pip install -r requirements.txt
-pip install -e .
+# Clone the repository
+git clone https://github.com/DynoGator/dslv-zpdi.git
+cd dslv-zpdi
+
+# Run the installer (requires sudo for hardware audit packages)
+sudo ./install_dslv_zpdi.sh --tier1
 ```
 
-## Pre-Flight Check (Validation)
+For virtualized environments (skip hardware checks):
 ```bash
-# Run core test suite (10/10)
-python tests/test_pipeline.py
+sudo ./install_dslv_zpdi.sh --tier1 --simulator
+```
+
+## Pre-Flight Check (Manual)
+If not using the installer, you can run manual checks:
+```bash
+# Run core test suite
+pytest tests
 
 # Verify SPEC-ID compliance
 python tools/orphan_checker.py

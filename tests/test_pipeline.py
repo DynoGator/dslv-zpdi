@@ -77,7 +77,7 @@ def test_baseline():
     print("  TEST 10 PASS: Adaptive Baseline ✅")
 
 def main():
-    print("=" * 40 + "\nDSLV-ZPDI Rev 3.4 Tests\n" + "=" * 40)
+    print("=" * 40 + "\nDSLV-ZPDI Rev 4.0.2 Tests\n" + "=" * 40)
     for t in [test_quarantine_vs_kill, test_serialization_roundtrip, test_state_machine, test_full_pipeline, test_coherence_math, test_global_R, test_killed_packet, test_attestation, test_rotation, test_baseline]: t()
     print("ALL 10 TESTS PASSED ✅")
 

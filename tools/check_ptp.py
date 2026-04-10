@@ -1,5 +1,5 @@
 \"\"\"
-SPEC-004A.1-CHECK | PTP Verification Utility (Rev 3.5.2)
+SPEC-004A.1-CHECK | PTP Verification Utility (Rev 4.0.2)
 Validates Intel i210-T1 PTP presence and nanosecond jitter.
 \"\"\"
 import os

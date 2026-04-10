@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 3.4)
+SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.0.2)
 Deterministic simulation of Tier 1 hardware for CI/CD and virtual validation.
 """
 import time

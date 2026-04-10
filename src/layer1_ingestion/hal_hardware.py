@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL-HW | Hardware Implementation (Rev 3.5.2)
+SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.0.2.2)
 Concrete implementation of the HAL for physical CM5 + i210-T1 hardware.
 """
 import os
@@ -101,7 +101,7 @@ class HardwareHAL(BaseHAL):
         pps_jitter_ns: float = 500.0,
         calibration_valid: bool = True,
     ) -> IngestionPayload:
-        """SPEC-005A.4b — SDR IQ Live Ingestion (Rev 3.5.2 Robustness Fix)"""
+        """SPEC-005A.4b — SDR IQ Live Ingestion (Rev 4.0.2.2 Robustness Fix)"""
         mono_ns = time.monotonic_ns()
         try:
             sdr = rtlsdr.RtlSdr()

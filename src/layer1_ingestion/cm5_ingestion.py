@@ -1,5 +1,5 @@
 \"\"\"
-SPEC-005A.HAL-FACTORY | HAL Factory (Rev 3.4)
+SPEC-005A.HAL-FACTORY | HAL Factory (Rev 4.0.2)
 Dynamic selection between hardware and simulated ingestion layers.
 \"\"\"
 import os

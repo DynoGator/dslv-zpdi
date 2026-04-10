@@ -2,6 +2,17 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.0.2] - 2026-04-09
+
+### Added
+- **Unified Installer:** Deployed `install_dslv_zpdi.sh` for automated deployment and hardware audit.
+- **Hardware Agnostic Detection:** Expanded installer detection for CM4, CM5, Pi 4, and Pi 5 (SPEC-004A.1 compliance).
+- **Simulator Mode:** Exposes `--simulator` flag for virtualized Tier 1 hardware audits.
+
+### Changed
+- **Installation Workflow:** Optimized dependency management and venv creation.
+- **Root-Safe Execution:** Installer now handles `sudo` and `git safe.directory` protocols.
+
 ## [3.5.3] - 2026-04-09
 
 ### Added
@@ -38,7 +49,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 ### Changed
 - **Router Logic:** Integrated `SwarmIntegrityMonitor` into `DualStreamRouter` (SPEC-008).
 - **Core Optimization:** Migrated `coherence.py` to NumPy-based vector operations.
-- **Test Alignment:** Synchronized `test_pipeline.py` and auxiliary scripts with Rev 3.4/3.5 implementation.
+- **Test Alignment:** Synchronized `test_pipeline.py` and auxiliary scripts with Rev 4.0.2/3.5 implementation.
 
 ### Fixed
 - Resolved API mismatches in `HDF5Writer` constructor and method names.

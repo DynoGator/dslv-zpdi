@@ -1,5 +1,5 @@
 """
-SPEC-004A.CAL | Factory Calibration & Drift Analysis (Rev 3.5.2)
+SPEC-004A.CAL | Factory Calibration & Drift Analysis (Rev 4.0.2)
 Measures static PPS jitter and oscillator drift to establish node baseline.
 """
 import time

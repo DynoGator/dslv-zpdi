@@ -7,7 +7,7 @@
 **Owner:** Joseph R. Fross
 **Canonical File:** THIS FILE
 **Last Updated:** 2026-04-08
-**Current Revision:** Rev 3.3 (Clean Canonical — Architecture Compliant, Turnovers Consolidated, Phase 2A Active)
+**Current Revision:** Rev 4.0.2 (Clean Canonical — Architecture Compliant, Turnovers Consolidated, Phase 2A Active)
 
 ---
 

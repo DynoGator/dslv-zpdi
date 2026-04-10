@@ -1,5 +1,5 @@
 \"\"\"
-SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 3.5.2)
+SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 4.0.2)
 Automates hardware-readiness checks for Anchor Nodes.
 \"\"\"
 import os
