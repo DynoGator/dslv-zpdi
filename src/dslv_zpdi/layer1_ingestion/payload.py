@@ -13,10 +13,12 @@ from typing import Any, Dict, List, Optional
 from dslv_zpdi.core.states import TrustState
 
 class SensorModality(Enum):
-    """SPEC-005A.1 — Authorized sensor modalities."""
+    """SPEC-005A.1 — Authorized sensor modalities per Section 5.3."""
 
     RF_SDR = "rf_sdr"
     GPS_PPS = "gps_pps"
+    THERMAL = "thermal"
+    ACOUSTIC = "acoustic"
     MAGNETOMETER = "magnetometer"
     INERTIAL = "inertial"
 
