@@ -9,11 +9,10 @@ paths:
   baseline_state: ./output/state/baseline_state.json
 
 clock_discipline:
-  ptp_required: true
-  phc_device: /dev/ptp0
+  pps_required: true
+  pps_device: /dev/pps0
   chrony_tracking_required: true
-  max_pps_jitter_ns: 10000
-  max_total_jitter_ns: 50
+  max_pps_jitter_ns: 1000
   gps_lock_required: true
 
 health_thresholds:
@@ -37,7 +36,7 @@ nodes:
   tier1_anchor_defaults:
     hardware_tier: 1
     role: institutional_anchor
-    timing_source: gnss_ptp_phc
+    timing_source: gpsdo_clk_in
     baseline_learning_enabled: true
     allow_primary_output: true
   tier2_swarm_defaults:

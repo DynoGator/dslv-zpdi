@@ -1,16 +1,16 @@
 """
-SPEC-004A.2 — Continuous PTP Health Monitoring
+SPEC-004A.3 — Continuous Timing Health Monitoring
 """
 
 import logging
 import subprocess
 from threading import Event, Thread
 
-logger = logging.getLogger("dslv-zpdi.ptp")
+logger = logging.getLogger("dslv-zpdi.timing")
 
 
-class PTPMonitor:
-    """SPEC-004A.2 — Runtime PTP jitter monitoring with automatic quarantine trigger."""
+class TimingMonitor:
+    """SPEC-004A.3 — Runtime GPSDO/PPS jitter monitoring with automatic quarantine trigger."""
 
     def __init__(self, check_interval_seconds=10, jitter_threshold_ns=50000):
         self.check_interval = check_interval_seconds
@@ -24,7 +24,7 @@ class PTPMonitor:
         """Start monitoring thread."""
         self._thread = Thread(target=self._monitor_loop, daemon=True)
         self._thread.start()
-        logger.info("PTP Monitor started (threshold: %d ns)", self.threshold_ns)
+        logger.info("Timing Monitor started (threshold: %d ns)", self.threshold_ns)
 
     def stop(self):
         """Signal thread to stop."""
@@ -42,7 +42,7 @@ class PTPMonitor:
 
                 if not self.healthy:
                     logger.error(
-                        "SPEC-004A.1 VIOLATION: PTP jitter %d ns exceeds %d ns threshold",
+                        "SPEC-004A.3 VIOLATION: PPS jitter %d ns exceeds %d ns threshold",
                         jitter,
                         self.threshold_ns,
                     )
@@ -50,7 +50,7 @@ class PTPMonitor:
                     self._trigger_timing_quarantine()
 
             except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("PTP monitoring error: %s", e)
+                logger.error("Timing monitoring error: %s", e)
                 self.healthy = False
 
             self._stop_event.wait(self.check_interval)

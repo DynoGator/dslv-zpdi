@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Joseph R. Fross", email = "jrfross@gmail.com"}
 ]
-keywords = ["SIGINT", "Kuramoto", "HDF5", "PTP", "CM5"]
+keywords = ["SIGINT", "Kuramoto", "HDF5", "GPSDO", "SDR", "Phase-Lock"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",

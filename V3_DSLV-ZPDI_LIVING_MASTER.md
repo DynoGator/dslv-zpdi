@@ -156,24 +156,52 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 
 ### SPEC-004A — TIER 1: ANCHOR NODES (Institutional Grade)
 
-**IMPLEMENTATION TARGET:** Custom Raspberry Pi CM5 cyberdecks with SDRs, u-blox GPS (PPS), and Thermal optics.
-**OPERATIONAL INTENT:** The unassailable truth engines producing the primary HDF5 stream.
-**KILL CONDITION:** GPS lock loss, PPS jitter > 10µs, calibration drift > 20%.
+**IMPLEMENTATION TARGET:** Raspberry Pi 5 (16GB) with HackRF One SDR, Leo Bodnar Mini GPSDO (10 MHz + 1 PPS), and multi-modal sensors.
+**OPERATIONAL INTENT:** The unassailable truth engines producing the primary HDF5 stream via RF Metrology timing.
+**KILL CONDITION:** GPS lock loss, PPS jitter > 10µs, calibration drift > 20%, ADC not phase-locked to GPSDO reference.
 
-### SPEC-004A.1 — PTP HARDWARE CLOCK REQUIREMENT (Rev 3.1)
+### SPEC-004A.1 — GPSDO METROLOGY CLOCK REQUIREMENT (Rev 4.1)
 
-**SYSTEM FUNCTION:** Eliminate CM5 native NIC 34µs static offset and GPIO interrupt latency.
-**OPERATIONAL INTENT:** Tier 1 nodes MUST use dedicated Precision Time Protocol (IEEE 1588) hardware clock via external PCIe NIC.
-**IMPLEMENTATION TARGET:** Intel i210-T1 Gigabit Ethernet Controller (PCIe header) with PPS wired directly to SDP (Software-Definable Pin) header.
-**FORBIDDEN:** Raspberry Pi CM5 native NIC PHC (34µs offset produces >100m TDOA error).
-**MANDATORY:** ts2phc synchronization via /dev/ptp0; chrony.conf with explicit offset calibration (< 50ns total jitter); u-blox L1/L5 dual-band GNSS PPS routed to i210 SDP (bypasses GPIO and CM5 data bus).
-**KILL CONDITION:** Any Tier 1 node utilizing CM5 native NIC for PTP discipline.
+**SYSTEM FUNCTION:** Achieve hardware-level ADC phase coherence by locking the SDR sampling clock directly to the GPS constellation via an external GPSDO, eliminating all USB bus jitter and software timing intermediaries from the phase measurement chain.
+**OPERATIONAL INTENT:** Tier 1 nodes MUST use a GPS-Disciplined Oscillator (GPSDO) providing a 10 MHz reference signal injected into the SDR's external clock input (`CLKIN`), phase-locking the ADC at the analog level. A separate 1 PPS output from the GPSDO provides UTC epoch anchoring to the host compute board via GPIO hardware interrupt. This is "RF Metrology" timing — the measurement instrument itself is GPS-locked, not merely the computer's system clock.
+**PHASE 2A PRIMARY TARGET:** Leo Bodnar Mini GPSDO → 10 MHz SMA out to HackRF One `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module and `chronyd`.
+**FORBIDDEN:** Reliance on USB bus timing for phase coherence. Any configuration where the SDR ADC clock is derived from the SDR's internal oscillator during institutional data collection. Software-only timestamping (NTP/PTP without hardware PPS interrupt) for Tier 1 primary stream.
+**MANDATORY:** External 10 MHz reference locked to GPS constellation feeding SDR CLKIN; 1 PPS hardware interrupt on host GPIO; `chronyd` configured with PPS refclock for < 1µs UTC accuracy; verification of ADC lock via `hackrf_debug` or equivalent tool.
+**KILL CONDITION:** Any Tier 1 node collecting institutional data with an unlocked (free-running) ADC oscillator.
+
+### SPEC-004A.2 — HARDWARE AGNOSTICISM STANDARD (Rev 4.1)
+
+**SYSTEM FUNCTION:** Define the universal hardware performance criteria for Tier 1 eligibility, ensuring the project is approachable and not locked to a single vendor or component.
+**OPERATIONAL INTENT:** Any hardware combination is permissible for Tier 1 as long as it meets the following three criteria:
+1. **External 10 MHz Phase-Locking:** The SDR/digitizer MUST accept an external 10 MHz reference that hardware-locks the ADC sampling clock. Software frequency correction is NOT sufficient.
+2. **1 PPS Hardware Interrupt:** The compute platform MUST receive a 1 PPS signal from the GPSDO via a hardware interrupt path (GPIO, SDP, dedicated timing input) — NOT via network or software polling.
+3. **Sufficient Compute:** The platform MUST buffer incoming IQ data, compute Kuramoto coherence math, and write HDF5 without dropping frames at the operational sample rate.
+**PERMISSIBLE TIER 1 EXAMPLES:**
+- Raspberry Pi 5 (16GB) + HackRF One + Leo Bodnar Mini GPSDO ← **Phase 2A Primary**
+- Raspberry Pi CM5 + HackRF One + Leo Bodnar Mini GPSDO (carrier board with GPIO access)
+- Nvidia Jetson AGX Orin + Ettus USRP B200/B210 + external GPSDO
+- Intel NUC with M.2 timing card + LimeSDR USB + external GPSDO
+- Any Linux SBC with GPIO + any SDR with CLKIN + any GPS-disciplined 10 MHz source
+**KILL CONDITION:** Hardware marketed as "Tier 1 compliant" that lacks a hardware-locked external clock input on the SDR.
+
+### SPEC-004A.3 — CONTINUOUS TIMING HEALTH MONITORING (Rev 4.1)
+
+**SYSTEM FUNCTION:** Monitor GPSDO/PPS stability in real-time to ensure the integrity of the institutional data stream.
+**OPERATIONAL INTENT:** Tier 1 nodes MUST run a continuous watchdog that monitors the PPS jitter from the GPSDO via `chronyd`. If the root-mean-square (RMS) offset exceeds 10µs for more than 60 seconds, the node must automatically flag all incoming data as "Quarantined" (Tier 2 status) until stable timing is restored.
+**IMPLEMENTATION TARGET:** `TimingMonitor` class in Layer 1, polling `chronyc tracking` for RMS offset status.
+**KILL CONDITION:** Institutional data collected while the timing watchdog is in an "Unhealthy" state.
 
 ### SPEC-004B — TIER 2: SWARM NODES (Heuristic Net)
 
 **IMPLEMENTATION TARGET:** Rooted e-waste devices (Android/iOS) in hermetically sealed, solar-powered cases.
 **OPERATIONAL INTENT:** Distributed early-warning triggers to vector Tier 1 Anchors. Permanently sandboxed.
 **KILL CONDITION:** Swarm data entering primary stream without Tier 1 corroboration.
+
+### SPEC-004B.1 — TIER 2 / TESTBED SDR STANDARD (Rev 4.1)
+
+**SYSTEM FUNCTION:** Define permissible SDR hardware for Tier 2 swarm nodes and development testbeds.
+**OPERATIONAL INTENT:** The RTL-SDR (v3/v4) is explicitly authorized as a Tier 2 or Testbed device. It is acceptable for pipeline development, algorithm validation, and swarm heuristic detection. However, the HackRF One (or any SDR with a native `CLKIN` port) is heavily preferred for actual field deployments due to hardware clock-locking capability and wider bandwidth (20 MHz vs 2.4 MHz). RTL-SDR data MUST NOT enter the Tier 1 primary stream unless the RTL-SDR node independently satisfies all SPEC-004A.2 criteria (which the RTL-SDR v3/v4 cannot, as it lacks an external clock input).
+**KILL CONDITION:** RTL-SDR data in the primary institutional stream without Tier 1 corroboration from a clock-locked node.
 
 ## 3.3 PART III: SOFTWARE ARCHITECTURE SPECS
 
@@ -224,35 +252,39 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 **Section Status:** CONTROLLED
 **Purpose:** Capture Tier 1 / Tier 2 hardware roles, sync requirements, and physical deployment intent.
 **Editable By:** Controlled revision
-**Last Revised:** 2026-04-08 (Rev 3.1 — i210-T1 mandate, supercapacitor Tier 2 spec)
+**Last Revised:** 2026-04-11 (Rev 4.1 — HackRF/GPSDO metrology pivot, Hardware Agnosticism Standard)
 
 ## 4.1 The Two-Tier Hardware Architecture
 
 To achieve unprecedented situational awareness without an impossible budget, the physical array operates on a bifurcated hardware model:
 
-**Tier 1: The Anchors (Institutional Grade)**
+**Tier 1: The Anchors (Institutional Grade — RF Metrology Timing)**
 
-- **Hardware:** Custom Raspberry Pi CM5 Cyberdecks.
-- **Sensors:** High-fidelity SDRs, precise GPS modules, thermal optics.
-- **Timing (Rev 3.1):** Intel i210-T1 PCIe NIC + u-blox L1/L5 GNSS (PPS to SDP header). Verified jitter < 30ns, zero static offset. CM5 native NIC is FORBIDDEN for PTP discipline (see SPEC-004A.1).
-- **Role:** The unassailable truth engines. These nodes dictate the timing, establish the secure backbone, and produce the primary institutional output.
+- **Phase 2A Primary Compute:** Raspberry Pi 5 (16GB).
+- **SDR (The Eye):** HackRF One (PortaPack optional/irrelevant for headless operation). 20 MHz bandwidth, 1 MHz – 6 GHz range.
+- **Clock Authority:** Leo Bodnar Mini GPSDO (or equivalent GPS-disciplined 10 MHz oscillator).
+- **Timing Wiring (Rev 4.1):** 10 MHz SMA out from GPSDO → HackRF One `CLKIN` port (hardware ADC lock). 1 PPS out from GPSDO → Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module + `chronyd`. This eliminates all USB bus jitter from the phase measurement chain. The ADC sampling clock is derived directly from the GPS constellation — no software intermediaries.
+- **Role:** The unassailable truth engines. These nodes produce the primary institutional output with hardware-locked phase coherence.
+- **Hardware Agnosticism:** Any hardware meeting the SPEC-004A.2 criteria is equally valid for Tier 1. The Pi 5 + HackRF + Leo Bodnar is the Phase 2A reference implementation, not a mandate. See Section 3.2, SPEC-004A.2 for the full permissible hardware list.
 
 **Tier 2: The Swarm (The Heuristic Net)**
 
-- **Hardware:** Rooted/Jailbroken E-waste (Android/iOS phones, Arduinos).
+- **Hardware:** Rooted/Jailbroken E-waste (Android/iOS phones, Arduinos), RTL-SDR v3/v4 receivers.
 - **Enclosure:** Hermetically sealed, passively cooled (heat sink to SoC), rugged cases designed to survive extreme field environments with zero maintenance.
 - **Power Architecture (Rev 3.1):** Industrial supercapacitor banks (100–500F, e.g., Eaton HS-108 series). Voltage: 2.7V series arrays with buck-boost regulation to 5V/3.3V. Cycle life: >500,000 cycles. Temperature range: –40°C to +65°C. Maintenance interval: 5–7 years. Lithium-ion batteries are FORBIDDEN (thermal runaway risk under sealed conditions).
+- **SDR Standard (Rev 4.1):** RTL-SDR v3/v4 is the authorized Tier 2/Testbed SDR (see SPEC-004B.1). Acceptable for pipeline development and heuristic triggering. Not eligible for Tier 1 primary stream due to lack of external clock input.
 - **Role:** Distributed early-warning triggers. If the Swarm detects an anomaly, it vectors the Tier 1 Anchors.
 
-> **Governing SPEC-IDs:** SPEC-004, SPEC-004A, SPEC-004A.1, SPEC-004B (canonically defined in Section 3.2).
+> **Governing SPEC-IDs:** SPEC-004, SPEC-004A, SPEC-004A.1, SPEC-004A.2, SPEC-004B, SPEC-004B.1 (canonically defined in Section 3.2).
 
-## 4.2 Hardware: The CM5 Cyberdeck Sensor Nodes
+## 4.2 Hardware: The Tier 1 Anchor Node ("Thoth's Eye")
 
-The physical collection layer will be built on custom Raspberry Pi CM5-based cyberdecks. These units provide the necessary compute density, GPIO flexibility, and portable ruggedness for field deployment. Each "Thoth's Eye" node will feature:
+The physical collection layer is built on hardware-agnostic Linux SBCs with GPS-disciplined SDRs. The Phase 2A reference implementation uses the Raspberry Pi 5, but any platform meeting SPEC-004A.2 is equally valid. Each "Thoth's Eye" node features:
 
-- **Multi-Modal Ingestion:** RF (SDR), Optical, Thermal, and Acoustic sensors.
-- **Hardware-Level Synchronization:** GPS-disciplined oscillators via Intel i210-T1 PTP hardware clock, ensuring nanosecond-accurate timestamping across geographically distributed nodes.
-- **Health & Trust Telemetry:** Continuous logging of calibration status, GPS lock, PPS jitter, and environmental classification.
+- **Multi-Modal Ingestion:** RF (HackRF One or equivalent CLKIN-capable SDR), Thermal, Acoustic, and GPS/PPS sensors.
+- **Hardware-Level Phase Coherence (Rev 4.1):** GPSDO 10 MHz reference → SDR CLKIN port. The ADC sampling clock is hardware-locked to the GPS constellation at the analog level. USB bus jitter is irrelevant — it affects data transfer latency, not the phase relationship between IQ samples. This is RF Metrology timing, not IT Network timing.
+- **UTC Epoch Anchoring:** GPSDO 1 PPS → GPIO hardware interrupt → `pps-gpio` + `chronyd`. Combined with the GPS-locked sample rate, every IQ sample receives a precise UTC timestamp by counting samples from the last PPS edge.
+- **Health & Trust Telemetry:** Continuous logging of ADC lock status, GPS lock, PPS jitter, calibration drift, and environmental classification.
 
 ---
 

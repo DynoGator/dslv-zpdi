@@ -136,9 +136,10 @@ BASE_PACKAGES=(
 
 TIER1_PACKAGES=(
     chrony
-    linuxptp
+    pps-tools
     ethtool
     pciutils
+    hackrf
 )
 
 log_info "Starting DSLV-ZPDI install (${SCRIPT_REV})"
@@ -204,7 +205,7 @@ required_paths=(
 # Conditional validation for Tier 1 tools
 if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     required_paths+=("tools/provision_tier1.py")
-    required_paths+=("tools/check_ptp.py")
+    required_paths+=("tools/check_timing.py")
 fi
 
 missing_paths=0
@@ -282,7 +283,7 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     fi
 
     [[ -f "$INSTALL_DIR/tools/provision_tier1.py" ]] || log_fail "Tier 1 audit requested but tools/provision_tier1.py is missing"
-    [[ -f "$INSTALL_DIR/tools/check_ptp.py" ]] || log_fail "Tier 1 audit requested but tools/check_ptp.py is missing"
+    [[ -f "$INSTALL_DIR/tools/check_timing.py" ]] || log_fail "Tier 1 audit requested but tools/check_timing.py is missing"
 
     log_info "Running Tier 1 hardware audit"
     
@@ -293,16 +294,15 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     fi
     
     # NOTE: Running as root (not run_as_real_user) because hardware audit checks:
-    # - lsmod (readable by all, but PTP device access usually requires root)
-    # - /dev/ptp0 permissions
-    # - System-level PTP configuration
+    # - /dev/pps0 permissions
+    # - System-level timing configuration
     if ! run_as_root "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/provision_tier1.py"; then
-        log_fail "Tier 1 hardware audit failed. Ensure Intel i210-T1 is installed and PTP is configured (see PHASE_2A_HARDWARE_BUILD_LIST.md)"
+        log_fail "Tier 1 hardware audit failed. Ensure HackRF/GPSDO is installed and PPS is configured (see PHASE_2A_HARDWARE_BUILD_LIST.md)"
     fi
 
     log_ok "Tier 1 hardware audit passed"
 else
-    log_info "Tier 1 hardware audit skipped. Re-run with --tier1 on a CM4/CM5 + i210/PTP-equipped anchor node."
+    log_info "Tier 1 hardware audit skipped. Re-run with --tier1 on a GPSDO/PPS-equipped anchor node (e.g., Pi 5 + HackRF)."
     log_info "Use --simulator with --tier1 to validate logic without hardware."
 fi
 
@@ -318,7 +318,7 @@ echo -e "Suggested next commands:"
 echo -e "  cd '$INSTALL_DIR'"
 echo -e "  '$VENV_DIR/bin/pytest' -q tests"
 echo -e "  '$VENV_DIR/bin/python' tools/orphan_checker.py"
-echo -e "  sudo ./install_dslv_zpdi.sh --tier1     # CM4/CM5 + i210/PTP anchor node"
+echo -e "  sudo ./install_dslv_zpdi.sh --tier1     # GPSDO/PPS anchor node (e.g., Pi 5 + HackRF)"
 echo -e "  sudo ./install_dslv_zpdi.sh --tier1 --simulator  # Test audit logic only\n"
 
 exit 0

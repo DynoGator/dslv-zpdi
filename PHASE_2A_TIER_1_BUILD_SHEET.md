@@ -1,140 +1,106 @@
 # DSLV-ZPDI Phase 2A Tier 1 Build Sheet
 
 **Project source:** DynoGator/dslv-zpdi
-**Repo revision used:** Rev 4.0.2 / installer revision 4.0.2-CORRECTED / hardware list updated 2026-04-09
-**Document purpose:** Printable procurement and assembly reference for a fresh, from-scratch build
-**Document Date:** 2026-04-10
+**Repo revision used:** Rev 4.1-PIVOT / hardware list updated 2026-04-11
+**Document purpose:** Printable procurement and assembly reference for a fresh, from-scratch build using RF Metrology timing
+**Document Date:** 2026-04-11
 
-> **DISCLAIMER:** The prices, links, and availability listed in this document are based on live web checks performed on **2026-04-10**. Prices are subject to change. Taxes, tariffs, and shipping are not included.
+> **DISCLAIMER:** The prices, links, and availability listed in this document are based on live web checks performed on **2026-04-11**. Prices are subject to change. Taxes, tariffs, and shipping are not included.
 
 ## Short answer
-For the repo's Tier 1 anchor build, do **not** use the Hailo 8 AI HAT+ on the anchor node. Keep the PCIe path dedicated to the **Intel i210-T1** timing NIC and wire PPS from the **u-blox ZED-F9P** to the NIC SDP header. Use the Hailo only on a separate sidecar/dev node if you want it later.
+For the Phase 2A Tier 1 anchor build, we have pivoted to **RF Metrology** timing. The primary hardware stack is now the **Raspberry Pi 5 (16GB)**, **HackRF One**, and **Leo Bodnar Mini GPSDO**. This configuration achieves true hardware phase-lock to the GPS constellation, bypassing the USB bus jitter inherent in the previous IT-style networking approach.
 
 ---
 
-## 1. Supported compute options (top-tier filter only)
+## 1. Supported compute options (Tier 1 Primary only)
 
 | Part number | Board / module | RAM / storage | Use level for this repo | Qty | List price | Verified purchase link |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| CM5116000 | Raspberry Pi Compute Module 5 Wireless | 16GB / Lite (0GB eMMC) | Canonical Tier 1 anchor - recommended | 1 | $300.00 | PiShop US |
-| CM4108000 | Raspberry Pi Compute Module 4 Wireless | 8GB / Lite (0GB eMMC) | Canonical Tier 1 anchor - supported | 1 | $160.00 | Newark |
-| PI5-16GB | Raspberry Pi 5 board | 16GB / microSD boot | Conditional anchor use only if PCIe is reserved for i210-T1; no Hailo on this node | 1 | $305.00 | CanaKit |
-| PI4-8GB | Raspberry Pi 4 Model B | 8GB / microSD boot | Software-compatible fallback; not the preferred practical Tier 1 path | 1 | $165.00 | CanaKit |
+| PI5-16GB | Raspberry Pi 5 board | 16GB / microSD boot | Phase 2A Primary Anchor - recommended | 1 | $305.00 | CanaKit |
+| CM5116000 | Raspberry Pi Compute Module 5 Wireless | 16GB / Lite (0GB eMMC) | Permissible Anchor (via IO Board) | 1 | $300.00 | PiShop US |
+| JETSON-AGX-ORIN | NVIDIA Jetson AGX Orin | 32GB/64GB | Permissible (High Performance) | 1 | $1,999.00 | Arrow |
 
-*Selection rule: for a clean repo-faithful anchor build, prefer **CM5 16GB Lite Wireless** first, then **CM4 8GB Lite Wireless**. The Pi 5 board is still workable, but only if the PCIe lane is reserved for the i210 timing path.*
+*Selection rule: for the Phase 2A pivot, the **Raspberry Pi 5 (16GB)** is the reference implementation. It provides sufficient compute for coherence math while maintaining GPIO access for PPS.*
 
 ---
 
-## 2. Canonical Tier 1 bill of materials
+## 2. Canonical Tier 1 bill of materials (RF Metrology Stack)
 
-This section is organized to match the repo hardware list, then tightened into practical buy-now options.
+This section reflects the 2026-04-11 Hardware Pivot.
 
 | Category | Required component | Part / variant | Qty | List price | Verified purchase link | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Compute | CM5 module | CM5116000 | 1 | $300.00 | PiShop US | Best primary choice for this sheet. |
-| Compute | CM4 module | CM4108000 | 1 | $160.00 | Newark | Use if building on CM4 instead of CM5. |
-| Carrier / breakout | CM5 IO board | Raspberry Pi CM5 IO Board Rev 2 | 1 | $26.95 | PiShop US | Recommended for CM5 builds. |
-| Carrier / breakout | CM4 carrier | Waveshare Mini Base Board (B) / 19602 | 1 | $27.95 | PiShop US | Compact CM4 carrier with buyable stock page. |
-| Precision timing | Timing NIC | Intel i210-T1 | 1 | $59.99 | CDW | Mandatory for repo-faithful Tier 1 timing. |
-| GPS / PPS | GNSS module | u-blox ZED-F9P-04B | 1 | $127.41 | Mouser | PPS source. Repo names ZED-F9P family, then you hard-wire PPS to i210 SDP. |
-| Storage | OS / endurance media | VIOFO 128GB Industrial Grade microSD | 1 | $55.99 | Amazon | Recommended for Lite modules and board boot media. |
+| Compute | Raspberry Pi 5 | PI5-16GB | 1 | $305.00 | CanaKit | 16GB RAM is preferred for large HDF5 buffers. |
+| SDR (RF Eye) | HackRF One | HackRF One (Great Scott Gadgets) | 1 | $349.00 | Great Scott Gadgets | **MANDATORY:** Must have CLKIN port for GPSDO sync. |
+| Clock Authority | GPS-Disciplined Oscillator | Leo Bodnar Mini GPSDO | 1 | $185.00 | Leo Bodnar Electronics | **MANDATORY:** Provides 10MHz reference and 1 PPS. |
+| Storage | OS / endurance media | VIOFO 128GB Industrial Grade microSD | 1 | $55.99 | Amazon | Recommended for long-term HDF5 logging. |
+| Cooling | Active Cooling | Raspberry Pi 5 Active Cooler | 1 | $5.00 | PiShop US | Mandatory for sustained 20MHz IQ processing. |
+| Power | USB-C Power | Raspberry Pi 27W Power Supply | 1 | $12.95 | PiShop US | Required for Pi 5 board + peripherals. |
 
 ### Repo-shared peripherals and cabling
 
 | Category | Recommended buy | Part / variant | Qty | List price | Verified purchase link | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| SDR | Fast-ship option | Airspy R2 | 1 | $169.00 | Airspy.US | Chosen because the repo allows Airspy R2 and this listing shows it in stock. |
-| SDR | Budget option | RTL-SDR Blog V4 | 1 | $39.95 | Official eBay listing | Repo-allowed, but current shipping commonly runs 3-6 weeks, so it misses your preferred wait window. |
+| :--- | :--- | :--- | : :--- | :--- | :--- | :--- |
+| RF Cabling | SMA to SMA (10MHz) | RG174 SMA Male to Male | 1 | $9.99 | Amazon | Connects GPSDO 10MHz Out to HackRF CLKIN. |
+| GNSS Antenna | Active GPS Antenna | 3-5V Active Patch Antenna | 1 | $12.00 | Adafruit | Required for GPSDO lock. |
 | RF cabling | By-the-foot coax | LMR-240 | As needed | $1.37/ft | DX Ham Radio Supply | Usually ships in 1-3 business days. |
-| Network cabling | Shielded patch cable | Monoprice shielded Cat6 / Cat6A | As needed | $15.44 (20 ft example) | Monoprice | Repo calls for shielded Cat6 for the PTP network. |
-
-*Antenna note: the repo specifies a **multi-spectrum dipole / patch array for 400 MHz-2.4 GHz** but does not lock a single SKU, so antenna selection stays modality-dependent.*
 
 ---
 
-## 3. Power, cooling, and storage medium choice
+## 3. Hardware Agnosticism Standard (SPEC-004A.2)
 
-| Platform | Recommended power item | Qty | List price | Verified purchase link | Use note |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| CM5 / Pi 5 path | Raspberry Pi 27W USB-C Power Supply Black US - SC1158 | 1 | $12.95 | PiShop US | Use for CM5 IO Board Rev 2 or Pi 5 class builds. |
-| Pi 4B path | Raspberry Pi 15W USB-C Power Supply | 1 | $8.80 | PiShop US | Pi 4 path uses the official 5.1V / 3A supply class. |
+If the primary components above are unavailable, any hardware meeting these criteria is permissible for Tier 1:
+1. **External 10 MHz Phase-Locking:** The SDR MUST have a `CLKIN` or equivalent port that hardware-locks the sampling clock.
+2. **1 PPS Hardware Interrupt:** The compute board MUST receive a 1 PPS signal via a direct hardware interrupt (GPIO).
+3. **Compute Performance:** Must handle Kuramoto Coherence math at the operational sample rate without frame drops.
 
-*Storage medium choice for this sheet:* **boot from industrial microSD first**. That keeps the build clean on Lite modules and top-tier Pi boards. Add NVMe later only after the timing path is stable; do not consume the Tier 1 PCIe path with storage or AI hardware during initial bring-up.
+*Permissible fallbacks: USRP B200, USRP N210, LimeSDR (with clock mod), Intel NUC with M.2 timing card.*
 
 ---
 
-## 4. Physical assembly and wiring procedure
+## 4. Physical assembly and wiring procedure (RF Metrology Focus)
 
-**Step 1.** Choose one compute path only: **CM5 16GB Lite Wireless + CM5 IO Board Rev 2** (preferred) or **CM4 8GB Lite Wireless + CM4 carrier**.
-**Step 2.** Unpack the compute module, carrier board, i210-T1, ZED-F9P, industrial microSD, power supply, SDR, and cabling. Use normal ESD discipline.
-**Step 3.** Install the CM5 or CM4 into its carrier/IO board. Verify full seating before adding anything else.
-**Step 4.** Install the cooling solution required by that platform. Pi 5-class silicon performs best with active cooling or at minimum a proper passive cooler. Do not enclose the board in a tight case during first bring-up.
-**Step 5.** Insert the 128GB industrial microSD card into the active boot slot for the selected platform.
-**Step 6.** Install the **Intel i210-T1** into the carrier board's **PCIe x1 path**. On a Pi 5 board path, that means any adapter chain must terminate in the i210-T1 and nothing else. **Do not install the Hailo 8 AI HAT+ on the anchor node.**
-**Step 7.** Mount and connect the **u-blox ZED-F9P**. Attach its GNSS antenna with the shortest practical clean RF run.
-**Step 8.** Perform the repo's required timing wiring: **physically wire the ZED-F9P PPS output pin directly to the Software Definable Pin (SDP) header on the Intel i210-T1**. Keep the PPS lead short, mechanically secured, and clearly labeled.
-**Step 9.** Connect the timing/network side using **shielded Cat6** or better. Connect RF peripherals using **LMR-240 or better**.
-**Step 10.** Attach the chosen SDR. For a buy-now path that respects your delivery constraint, the practical immediate choice is **Airspy R2**.
-**Step 11.** Apply power only after re-checking: compute seating, PCIe card seating, PPS wire placement, antenna connection, microSD installed, and no Hailo or NVMe occupying the anchor PCIe path.
+**Step 1.** Unpack the Raspberry Pi 5, HackRF One, Leo Bodnar Mini GPSDO, and peripherals.
+**Step 2.** Install the Raspberry Pi 5 Active Cooler. High-bandwidth SDR operation will thermally throttle a bare board.
+**Step 3.** Flash Raspberry Pi OS 64-bit to the industrial microSD using Raspberry Pi Imager.
+**Step 4.** **The Phase-Lock Connection:** Connect a short SMA-to-SMA cable from the Leo Bodnar Mini GPSDO 10 MHz output to the HackRF One `CLKIN` port.
+**Step 5.** **The PPS Connection:** Connect the 1 PPS output from the Leo Bodnar GPSDO to **GPIO 18** (Physical Pin 12) on the Raspberry Pi 5. Ensure a common ground between the GPSDO and the Pi.
+**Step 6.** Connect the HackRF One to the Raspberry Pi 5 via a high-quality USB 3.0 cable. (Note: USB jitter is now irrelevant to phase-lock).
+**Step 7.** Connect the Active GPS antenna to the Leo Bodnar GPSDO and place it with a clear view of the sky.
+**Step 8.** Apply power to the Pi 5 and the GPSDO.
 
 ---
 
 ## 5. Operating system and initial software bring-up
 
-Recommended OS for first bring-up: **Raspberry Pi OS 64-bit**. On Raspberry Pi 5-class hardware, use the current Raspberry Pi OS branch supported by Raspberry Pi 5; do not use releases older than Bookworm.
-
-Use Raspberry Pi Imager to flash Raspberry Pi OS 64-bit to the industrial microSD.
-Enable SSH during imaging if desired.
-Boot the target board from the microSD and complete first-boot user setup.
-Update the base OS:
-```bash
-sudo apt update && sudo apt full-upgrade -y
-```
-
-Clone the repo:
+1. **Update OS:** `sudo apt update && sudo apt full-upgrade -y`
+2. **Configure PPS:** Add `dtoverlay=pps-gpio,gpiopin=18` to `/boot/firmware/config.txt`.
+3. **Install Tools:** `sudo apt install pps-tools chrony hackrf`
+4. **Verify PPS:** `lsmod | grep pps` and `ppstest /dev/pps0`.
+5. **Verify HackRF:** `hackrf_info` (ensure it's detected).
+6. **Clone & Install Repo:**
 ```bash
 git clone https://github.com/DynoGator/dslv-zpdi.git
 cd dslv-zpdi
-```
-
-Run the canonical installer for the anchor path:
-```bash
 sudo ./install_dslv_zpdi.sh --tier1
 ```
 
-The installer expects Python 3.9+, creates a virtual environment, installs the repo in editable mode, runs tests/orphan checks, and when invoked with `--tier1` installs the timing/audit package set: `chrony linuxptp ethtool pciutils`.
+---
+
+## 6. Verification checklist (Post-Pivot)
+
+- **Check 1.** Run `hackrf_debug --clock_source`. It MUST report the clock source as external (clkin).
+- **Check 2.** Run `chronyc sources -v`. The PPS source should have a `*` or `+` indicating active discipline.
+- **Check 3.** Run `python tools/check_timing.py` (the updated PPS/GPSDO audit utility).
+- **Check 4.** Run the full test suite: `pytest tests/`.
 
 ---
 
-## 6. Verification checklist
+## 7. Do-not-do list for the RF Metrology build
 
-- **Check 1.** Confirm the hardware model is one of the repo-recognized platforms before deeper testing.
-- **Check 2.** Confirm the i210 timing NIC enumerates correctly and that a PTP device node is present.
-- **Check 3.** Run the repo installer with `--tier1` and let the hardware audit execute.
-- **Check 4.** Verify the repo's stated timing checks: `chronyc tracking` shows disciplined timing and `ts2phc` is disciplining the i210 PHC from the PPS signal.
-- **Check 5.** Run the repo test suite and orphan checker after installation.
-- **Check 6.** Only after stable timing and successful test pass should you add any optional peripherals, enclosures, or workflow customizations.
-
----
-
-## 7. Do-not-do list for this anchor build
-
-- Do not put the **Hailo 8 AI HAT+** on the Tier 1 anchor.
-- Do not consume the anchor PCIe path with NVMe during first bring-up.
-- Do not rely on the native board clock path when the repo is explicitly built around i210 + PPS hardening.
-- Do not bury the PPS wire in a messy harness. Route it cleanly and label it.
-- Do not switch operating systems mid-build. Bring the node up cleanly on Raspberry Pi OS 64-bit first, then customize later.
-
----
-
-## 8. Final procurement summary
-
-Minimum clean anchor-node shopping list:
-
-| Line | Buy one of these | Plus these required items |
-| :--- | :--- | :--- |
-| CM5 path | CM5116000 + CM5 IO Board Rev 2 | Intel i210-T1, u-blox ZED-F9P, 128GB industrial microSD, 27W PSU, SDR, LMR-240, shielded Cat6 |
-| CM4 path | CM4108000 + Waveshare Mini Base Board (B) | Intel i210-T1, u-blox ZED-F9P, 128GB industrial microSD, suitable PSU, SDR, LMR-240, shielded Cat6 |
-| Pi 5 path | Pi 5 16GB board only if PCIe is reserved for i210 | Intel i210-T1 via proper PCIe path, u-blox ZED-F9P, 128GB industrial microSD, 27W PSU, SDR, LMR-240, shielded Cat6 |
+- **Do not** use a free-running SDR oscillator for Tier 1 institutional data collection.
+- **Do not** use software-only PTP/NTP for primary stream timing.
+- **Do not** use a low-quality USB power supply; the HackRF + Pi 5 draw significant current during 20MHz ingestion.
+- **Do not** skip the 10MHz SMA connection; without it, the SDR is not phase-locked.
 
 *End of build sheet.*

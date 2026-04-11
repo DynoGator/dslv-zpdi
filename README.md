@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Hardening)  
-**Revision:** Rev 4.0.2.4  
+**Revision:** Rev 4.1-PIVOT  
 **Status:** Software Airtight. Automated Installer Deployed.
 
 ## Overview
@@ -40,4 +40,4 @@ python tools/orphan_checker.py
 ```
 
 ## Hardware Deployment (Phase 2A)
-Refer to `PHASE_2A_HARDWARE_BUILD_LIST.md` for precision timing (i210-T1) and supercapacitor power (Tier 2) specifications.
+Refer to `PHASE_2A_HARDWARE_BUILD_LIST.md` for the new **RF Metrology** timing standard (HackRF One + GPSDO) and supercapacitor power (Tier 2) specifications.
