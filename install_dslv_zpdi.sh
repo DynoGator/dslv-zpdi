@@ -140,6 +140,9 @@ TIER1_PACKAGES=(
     ethtool
     pciutils
     hackrf
+    libhackrf-dev
+    soapysdr-module-hackrf
+    python3-soapysdr
 )
 
 log_info "Starting DSLV-ZPDI install (${SCRIPT_REV})"
@@ -159,6 +162,40 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
     if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
         log_info "Installing Tier 1 timing/audit packages"
         apt-get install -y "${TIER1_PACKAGES[@]}" || log_fail "Failed to install Tier 1 packages"
+        
+        # Configure chrony for PPS priority (ARCH-PHASE-2A-PIVOT §4.3)
+        log_info "Configuring chrony for PPS priority over NTP"
+        if ! grep -q "refclock PPS /dev/pps0" /etc/chrony/chrony.conf 2>/dev/null; then
+            cat >> /etc/chrony/chrony.conf << 'EOF'
+
+# DSLV-ZPDI RF Metrology Configuration (Rev 4.1)
+# Absolute UTC via Hardware PPS - prioritizes GPSDO over network
+refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
+EOF
+            log_ok "Chrony configured for PPS priority"
+        fi
+        
+        # Configure PPS GPIO overlay for Pi 5 RP1 (ARCH-PHASE-2A-PIVOT §4.2)
+        log_info "Configuring PPS-GPIO overlay for Pi 5 RP1"
+        if [[ -f /boot/firmware/config.txt ]]; then
+            if ! grep -q "dtoverlay=pps-gpio" /boot/firmware/config.txt; then
+                cat >> /boot/firmware/config.txt << 'EOF'
+
+# DSLV-ZPDI PPS Configuration (Rev 4.1)
+# WARNING: Pi 5 RP1 uses 3.3V logic. Verify GPSDO output voltage before connecting.
+dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
+EOF
+                log_warn "PPS overlay added to /boot/firmware/config.txt"
+                log_warn "REBOOT REQUIRED for PPS to take effect"
+                log_warn "CRITICAL: Verify GPSDO PPS output is 3.3V logic level before reboot!"
+            fi
+        fi
+        
+        # Ensure pps-gpio module loads on boot
+        if ! grep -q "pps-gpio" /etc/modules 2>/dev/null; then
+            echo "pps-gpio" >> /etc/modules
+            log_ok "pps-gpio module added to /etc/modules"
+        fi
     fi
 else
     log_warn "Skipping apt package installation by request"
