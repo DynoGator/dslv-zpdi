@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI installer / validator
-# Revision: 4.0.2.4-CORRECTED
-# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.0.2.4)
-# Date: 2026-04-09
+# Revision: 4.2.0-LBE1420
+# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.2.0)
+# Date: 2026-04-11
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.0.2.4"
+SCRIPT_REV="Rev 4.2.0"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
@@ -130,8 +130,6 @@ BASE_PACKAGES=(
     build-essential
     libhdf5-dev
     libusb-1.0-0-dev
-    rtl-sdr
-    librtlsdr0
 )
 
 TIER1_PACKAGES=(

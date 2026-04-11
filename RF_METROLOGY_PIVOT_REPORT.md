@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-The Phase 2A Hardware Timing Refactor has been **successfully completed**. The project has pivoted from the deprecated IT Network Timing architecture (Intel i210-T1 + RTL-SDR) to the RF Metrology Timing architecture (Raspberry Pi 5 + HackRF One + Leo Bodnar Mini GPSDO).
+The Phase 2A Hardware Timing Refactor has been **successfully completed**. The project has pivoted from the deprecated IT Network Timing architecture (Intel i210-T1 + RTL-SDR) to the RF Metrology Timing architecture (Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO).
 
 This pivot achieves **hardware-level ADC phase coherence** by injecting an atomic-level reference signal directly into the SDR front-end, eliminating the USB jitter that mathematically invalidated true phase coherence in the previous architecture.
 
@@ -144,7 +144,7 @@ OS Clock Accurate                                            RF Sampling
 ```
 ┌─────────────┐     GPIO      ┌──────────────┐    10 MHz     ┌──────────┐
 │ Raspberry   │ ←───────────→ │ Leo Bodnar   │ ←──────────→ │ HackRF   │
-│ Pi 5        │   1 PPS       │ Mini GPSDO   │   Reference  │ One      │
+│ Pi 5        │   1 PPS       │ LBE-1420   │   Reference  │ One      │
 └─────────────┘               └──────────────┘              └──────────┘
        │                              │                            │
        │ UTC epoch                    │ GPS-locked                 │ GPS-locked
@@ -236,7 +236,7 @@ OK: no rogue nodes and no orphaned SPEC claims.
 
 1. **Hardware Architecture Pivot**
    - Deprecated: Intel i210-T1 NIC + RTL-SDR + CM5
-   - Deployed: Leo Bodnar Mini GPSDO + HackRF One + Pi 5
+   - Deployed: Leo Bodnar LBE-1420 GPSDO + HackRF One + Pi 5
    - Rationale: Hardware-level ADC phase coherence eliminates USB jitter
 
 2. **Software Implementation**
@@ -258,7 +258,7 @@ OK: no rogue nodes and no orphaned SPEC claims.
 ### Next Actions at Handoff
 
 1. **Hardware Procurement**
-   - Order: Raspberry Pi 5 (16GB), HackRF One, Leo Bodnar Mini GPSDO
+   - Order: Raspberry Pi 5 (16GB), HackRF One, Leo Bodnar LBE-1420 GPSDO
    - Refer to: `PHASE_2A_TIER_1_BUILD_SHEET.md` for verified purchase links
 
 2. **Physical Assembly**
@@ -298,7 +298,7 @@ All changes maintain SPEC-ID compliance. The orphan checker validates 100% cover
 feat(hardware): Rev 4.1-PIVOT — Complete RF Metrology Architecture Migration
 
 BREAKING CHANGE: Deprecates CM5 + Intel i210-T1 PTP timing in favor of
-Raspberry Pi 5 + HackRF One + Leo Bodnar Mini GPSDO RF Metrology stack.
+Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO RF Metrology stack.
 
 [Full commit message in repository]
 ```

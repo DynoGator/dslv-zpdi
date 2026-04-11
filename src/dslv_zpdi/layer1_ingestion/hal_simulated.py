@@ -1,8 +1,8 @@
 """
-SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.1-PIVOT)
+SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.2-LBE1420)
 Deterministic simulation of RF Metrology Tier 1 hardware for CI/CD and virtual validation.
 
-Simulates: Raspberry Pi 5 + HackRF One + Leo Bodnar Mini GPSDO
+Simulates: Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO
 Rev 4.1: Updated to match HackRF + GPSDO RF Metrology architecture.
 """
 
@@ -31,7 +31,7 @@ class SimulatedHAL(BaseHAL):
         """
         SPEC-005A.4a — Mock GPS/PPS Ingestion (GPSDO simulation).
         
-        Simulates Leo Bodnar Mini GPSDO 1 PPS output.
+        Simulates Leo Bodnar LBE-1420 GPSDO 1 PPS output.
         """
         node_id = kwargs.get("node_id", "SIM-ALPHA")
         sensor_id = kwargs.get("sensor_id", "SIM-GPSDO-01")
@@ -41,7 +41,7 @@ class SimulatedHAL(BaseHAL):
         # Simulated GPSDO data
         gpsdo_data = {
             "pps_time_ns": time.time_ns(),
-            "source": "gpsdo_leo_bodnar_mini_simulated",
+            "source": "gpsdo_lbe1420_simulated",
             "pps_device": "/dev/pps0",
             "gpsdo_lock": gps_locked,
             "satellites_visible": 12 if gps_locked else 0,

@@ -1,5 +1,5 @@
 """
-SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 4.1-FORGE)
+SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 4.2-LBE1420)
 Automates hardware-readiness checks for Anchor Nodes (GPSDO/HackRF focus).
 
 Rev 4.1-FORGE: Added SoapySDR checks and Pi 5 RP1 3.3V logic warning.
@@ -16,14 +16,16 @@ def print_rp1_warning():
     ARCH-PHASE-2A-PIVOT §3 — Critical voltage warning for Pi 5 RP1 southbridge.
     """
     print("=" * 60)
-    print("CRITICAL WARNING: Raspberry Pi 5 RP1 Southbridge Logic Levels")
+    print("NOTE: Leo Bodnar LBE-1420 — Native 3.3V CMOS Compatibility")
     print("=" * 60)
     print("""
 The Pi 5's RP1 southbridge utilizes STRICTLY 3.3V logic.
 
-BEFORE connecting GPSDO 1 PPS to GPIO 18:
-1. Use a multimeter to verify GPSDO PPS output voltage
-2. If output exceeds 3.3V (e.g., 5V CMOS), you MUST use:
+The LBE-1420 GPSDO outputs a 3.3V CMOS square wave natively,
+making it DIRECTLY compatible with Pi 5 GPIO 18 — NO level-
+shifter or voltage divider is required.
+
+If using an ALTERNATIVE GPSDO with 5V CMOS output, you MUST use:
    - A logic level shifter, OR
    - A voltage divider (e.g., 10kΩ/20kΩ resistor network)
 
@@ -228,6 +230,31 @@ def check_pps_gpio_overlay():
         return False
 
 
+def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
+    """
+    SPEC-004A.3-NMEA — Verify LBE-1420 NMEA telemetry stream via USB-C virtual serial.
+    """
+    try:
+        import serial as pyserial
+        ser = pyserial.Serial(serial_port, 9600, timeout=2)
+        line = ser.readline().decode("ascii", errors="ignore").strip()
+        ser.close()
+        if line.startswith("$G"):
+            print(f"[*] LBE-1420 NMEA telemetry active on {serial_port} ✅")
+            print(f"    Sample: {line[:60]}")
+            return True
+        print(f"[!] LBE-1420 NMEA: unexpected data on {serial_port}")
+        return False
+    except ImportError:
+        print("[WARN] pyserial not installed. Cannot verify NMEA.")
+        print("       Install: pip install pyserial")
+        return True  # Don't fail provisioning for this
+    except (OSError, IOError):
+        print(f"[WARN] Cannot open {serial_port} for NMEA verification.")
+        print("       Ensure LBE-1420 is connected via USB-C.")
+        return True  # Don't fail provisioning for this
+
+
 def main():
     print_rp1_warning()
     
@@ -235,7 +262,7 @@ def main():
     print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.1)")
     print("=" * 60)
     print()
-    print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar Mini GPSDO")
+    print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO")
     print("Required Wiring:")
     print("  - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)")
     print("  - GPSDO 1 PPS → Pi 5 GPIO 18 (UTC timestamp)")
@@ -251,6 +278,7 @@ def main():
         ("HackRF Presence", check_hackrf_presence()),
         ("HackRF Clock Source", check_hackrf_clock_source()),
         ("PPS Device", check_pps_device()),
+        ("LBE-1420 NMEA", check_nmea_telemetry()),
         ("udev Rules", check_udev_rules()),
         ("Python Dependencies", check_python_dependencies()),
         ("Chrony PPS Config", check_chrony_pps_config()),

@@ -7,7 +7,7 @@
 **Owner:** Joseph R. Fross
 **Canonical File:** THIS FILE
 **Last Updated:** 2026-04-08
-**Current Revision:** Rev 4.0.2 (Clean Canonical — Architecture Compliant, Turnovers Consolidated, Phase 2A Active)
+**Current Revision:** Rev 4.2.0 (LBE-1420 Hardware Pivot — RF Metrology Finalized, Phase 2A Active)
 
 ---
 
@@ -158,7 +158,7 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 
 ### SPEC-004A — TIER 1: ANCHOR NODES (Institutional Grade)
 
-**IMPLEMENTATION TARGET:** Raspberry Pi 5 (16GB) with HackRF One SDR, Leo Bodnar Mini GPSDO (10 MHz + 1 PPS), and multi-modal sensors.
+**IMPLEMENTATION TARGET:** Raspberry Pi 5 (16GB) with HackRF One SDR, Leo Bodnar LBE-1420 GPSDO (10 MHz + 1 PPS), and multi-modal sensors.
 **OPERATIONAL INTENT:** The unassailable truth engines producing the primary HDF5 stream via RF Metrology timing.
 **KILL CONDITION:** GPS lock loss, PPS jitter > 10µs, calibration drift > 20%, ADC not phase-locked to GPSDO reference.
 
@@ -166,7 +166,7 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 
 **SYSTEM FUNCTION:** Achieve hardware-level ADC phase coherence by locking the SDR sampling clock directly to the GPS constellation via an external GPSDO, eliminating all USB bus jitter and software timing intermediaries from the phase measurement chain.
 **OPERATIONAL INTENT:** Tier 1 nodes MUST use a GPS-Disciplined Oscillator (GPSDO) providing a 10 MHz reference signal injected into the SDR's external clock input (`CLKIN`), phase-locking the ADC at the analog level. A separate 1 PPS output from the GPSDO provides UTC epoch anchoring to the host compute board via GPIO hardware interrupt. This is "RF Metrology" timing — the measurement instrument itself is GPS-locked, not merely the computer's system clock.
-**PHASE 2A PRIMARY TARGET:** Leo Bodnar Mini GPSDO → 10 MHz SMA out to HackRF One `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module and `chronyd`.
+**PHASE 2A PRIMARY TARGET:** Leo Bodnar LBE-1420 GPSDO → 10 MHz SMA out to HackRF One `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module and `chronyd`.
 **FORBIDDEN:** Reliance on USB bus timing for phase coherence. Any configuration where the SDR ADC clock is derived from the SDR's internal oscillator during institutional data collection. Software-only timestamping (NTP/PTP without hardware PPS interrupt) for Tier 1 primary stream.
 **MANDATORY:** External 10 MHz reference locked to GPS constellation feeding SDR CLKIN; 1 PPS hardware interrupt on host GPIO; `chronyd` configured with PPS refclock for < 1µs UTC accuracy; verification of ADC lock via `hackrf_debug` or equivalent tool.
 **KILL CONDITION:** Any Tier 1 node collecting institutional data with an unlocked (free-running) ADC oscillator.
@@ -179,8 +179,8 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 2. **1 PPS Hardware Interrupt:** The compute platform MUST receive a 1 PPS signal from the GPSDO via a hardware interrupt path (GPIO, SDP, dedicated timing input) — NOT via network or software polling.
 3. **Sufficient Compute:** The platform MUST buffer incoming IQ data, compute Kuramoto coherence math, and write HDF5 without dropping frames at the operational sample rate.
 **PERMISSIBLE TIER 1 EXAMPLES:**
-- Raspberry Pi 5 (16GB) + HackRF One + Leo Bodnar Mini GPSDO ← **Phase 2A Primary**
-- Raspberry Pi CM5 + HackRF One + Leo Bodnar Mini GPSDO (carrier board with GPIO access)
+- Raspberry Pi 5 (16GB) + HackRF One + Leo Bodnar LBE-1420 GPSDO ← **Phase 2A Primary**
+- Raspberry Pi CM5 + HackRF One + Leo Bodnar LBE-1420 GPSDO (carrier board with GPIO access)
 - Nvidia Jetson AGX Orin + Ettus USRP B200/B210 + external GPSDO
 - Intel NUC with M.2 timing card + LimeSDR USB + external GPSDO
 - Any Linux SBC with GPIO + any SDR with CLKIN + any GPS-disciplined 10 MHz source
@@ -264,7 +264,7 @@ To achieve unprecedented situational awareness without an impossible budget, the
 
 - **Phase 2A Primary Compute:** Raspberry Pi 5 (16GB).
 - **SDR (The Eye):** HackRF One (PortaPack optional/irrelevant for headless operation). 20 MHz bandwidth, 1 MHz – 6 GHz range.
-- **Clock Authority:** Leo Bodnar Mini GPSDO (or equivalent GPS-disciplined 10 MHz oscillator).
+- **Clock Authority:** Leo Bodnar LBE-1420 GPSDO (or equivalent GPS-disciplined 10 MHz oscillator).
 - **Timing Wiring (Rev 4.1):** 10 MHz SMA out from GPSDO → HackRF One `CLKIN` port (hardware ADC lock). 1 PPS out from GPSDO → Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module + `chronyd`. This eliminates all USB bus jitter from the phase measurement chain. The ADC sampling clock is derived directly from the GPS constellation — no software intermediaries.
 - **Role:** The unassailable truth engines. These nodes produce the primary institutional output with hardware-locked phase coherence.
 - **Hardware Agnosticism:** Any hardware meeting the SPEC-004A.2 criteria is equally valid for Tier 1. The Pi 5 + HackRF + Leo Bodnar is the Phase 2A reference implementation, not a mandate. See Section 3.2, SPEC-004A.2 for the full permissible hardware list.
@@ -1099,7 +1099,7 @@ Established Master Specification (Rev 1.1), deployed CI/CD orphan enforcement, i
 
 **Phase 1 (Complete — Virtual):** All code spec-compliant. Fault injection validated. Golden Sample generated in Virtual HDF5 Enclave. RF Metrology hardware validation ready for "Known-Good" hardware certification.
 
-**Phase 2A (Current — Hardware Transition):** Deploy HackRF One + Leo Bodnar Mini GPSDO on Pi 5 units. Verify <50ns jitter. Execute 72-hour adaptive baseline per SPEC-009. Deploy first Tier 2 swarm cluster with SPEC-008 anti-poisoning. Any Tier 1 node showing >50ns jitter post-installation flagged HARDWARE_KILL.
+**Phase 2A (Current — Hardware Transition):** Deploy HackRF One + Leo Bodnar LBE-1420 GPSDO on Pi 5 units. Verify <50ns jitter. Execute 72-hour adaptive baseline per SPEC-009. Deploy first Tier 2 swarm cluster with SPEC-008 anti-poisoning. Any Tier 1 node showing >50ns jitter post-installation flagged HARDWARE_KILL.
 
 **Phase 2B (Tooling Hardening):** CI/CD boundary enforcement, GitHub Actions, smoke tests per layer.
 

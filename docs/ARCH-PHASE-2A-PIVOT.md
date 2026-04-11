@@ -2,7 +2,7 @@
 
 **Document ID:** `ARCH-PHASE-2A-PIVOT`  
 **Author:** J.R. Fross (@DynoGator) / Resonant Genesis LLC  
-**Target Baseline:** Revision 4.1-FORGE  
+**Target Baseline:** Revision 4.2-LBE1420  
 **Status:** ACTIVE - Mandatory Implementation Standard  
 
 ---
@@ -27,7 +27,7 @@ Effective immediately, the following stack is classified as the Tier 1 hardware 
 |-----------|-------|---------------|
 | **Compute/Buffering** | Raspberry Pi 5 (16GB) | High-bandwidth FFT processing |
 | **SDR Array (The Eye)** | HackRF One | 20MHz bandwidth, native `CLKIN` capability |
-| **Clock Authority** | Leo Bodnar Mini GPSDO | 10 MHz + 1 PPS from GPS constellation |
+| **Clock Authority** | Leo Bodnar LBE-1420 GPSDO | 10 MHz + 1 PPS from GPS constellation |
 
 ### 2.1 Hardware-Agnostic Requisites
 
@@ -51,15 +51,13 @@ The GPSDO outputs a **1 Pulse-Per-Second (PPS)** signal via jumper to the Raspbe
 
 - **Target Pin:** GPIO Pin 18 (Physical Pin 12)
 
-#### ⚠️ CRITICAL WARNING: 3.3V Logic Limit (RP1 Southbridge)
+#### LBE-1420 Native 3.3V Compatibility (RP1 Southbridge)
 
-The Pi 5's **RP1 southbridge** utilizes strictly **3.3V logic**. Developers **MUST** verify the GPSDO output voltage with a multimeter prior to connection.
+The Pi 5's **RP1 southbridge** utilizes strictly **3.3V logic**. The **LBE-1420 outputs a 3.3V CMOS square wave natively**, making it directly compatible with Pi 5 GPIO without level-shifting.
 
-**If the output exceeds 3.3V (e.g., 5V CMOS):**
-- A logic level shifter must be implemented, OR
-- A voltage divider must be used (e.g., 10kΩ/20kΩ resistor network)
+**No voltage divider or level-shifter is required** for the LBE-1420 → GPIO 18 PPS connection.
 
-**Connecting 5V directly to GPIO 18 will cause catastrophic damage to the RP1 chip.**
+*Note: If using an alternative GPSDO with 5V CMOS output, a level-shifter or voltage divider (e.g., 10kΩ/20kΩ) is mandatory to prevent RP1 damage.*
 
 ---
 
@@ -186,7 +184,7 @@ print(f"Clock source: {status['clock_source']}")
 4. **Hardware Procurement** (if not already complete):
    - Raspberry Pi 5 (16GB)
    - HackRF One
-   - Leo Bodnar Mini GPSDO
+   - Leo Bodnar LBE-1420 GPSDO
    - Active GPS antenna
    - SMA cables (10 MHz reference)
    - Jumper wires (1 PPS, with 3.3V logic verification)

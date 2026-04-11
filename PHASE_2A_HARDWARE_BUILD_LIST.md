@@ -12,15 +12,19 @@
 |-----------|---------------|-------------|----------|------|
 | Compute | Raspberry Pi 5 (16GB) | PI5-16GB | 1 | Primary Logic & I/O |
 | SDR (The Eye) | HackRF One | HackRF-One | 1 | RF Ingestion (External CLKIN) |
-| Clock Authority | Leo Bodnar Mini GPSDO | LB-MINI-GPSDO | 1 | 10 MHz & 1 PPS Source |
+| Clock Authority | Leo Bodnar LBE-1420 GPSDO | LBE-1420 | 1 | 10 MHz & 1 PPS, USB-C, NMEA, 3.3V CMOS |
+| SDR Antenna | Great Scott Gadgets ANT500 | ANT500 | 1 | 75 MHz - 1 GHz Coverage |
+| RF Interconnect | SMA Male-to-Male Coaxial | 50 Ohm, ≤ 1FT | 1 | GPSDO Output → HackRF CLKIN |
+| Interrupt Interconnect | Premium F-to-F Jumper Wires | 2.54mm pitch | 2 | PPS + Ground Bridge |
 | Multi-Modal Sensors | Thermal/Acoustic array | Generic | 1 | Secondary Modality Data |
 | Storage | Industrial microSD | Endurance-128GB | 1 | HDF5 Persistence |
 
 ### Tier 1 Assembly Instructions:
-1. **RF Metrology Lock:** Connect the 10 MHz SMA output from the Leo Bodnar Mini GPSDO directly to the `CLKIN` port of the HackRF One. This phase-locks the SDR's ADC to the GPS constellation.
-2. **UTC Timing:** Wire the 1 PPS output from the GPSDO to GPIO 18 on the Raspberry Pi 5. Use the `pps-gpio` kernel module and `chronyd` for sub-microsecond OS timestamping.
-3. **OS Configuration:** Install Raspberry Pi OS (64-bit). Install `chrony` and `hackrf` tools.
-4. **Verification:** Confirm ADC lock via `hackrf_debug --clock_source` (should show external) and verify PPS discipline with `chronyc sources -v`.
+1. **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1420 `Output` port directly to HackRF One `CLKIN` port. This phase-locks the SDR's ADC to the GPS constellation.
+2. **OS Timestamping (Heartbeat):** Run jumper wire from LBE-1420 `1 PPS` output to Pi 5 GPIO Pin 18 (Physical Pin 12). Bridge ground between GPSDO and Pi. *Note: LBE-1420 outputs 3.3V CMOS natively — no level-shifter required.*
+3. **Power & Telemetry:** Connect LBE-1420 via USB-C to Pi 5. Provides power and NMEA virtual serial connection for GPS fix verification.
+4. **OS Configuration:** Install Raspberry Pi OS (64-bit). Install `chrony` and `hackrf` tools. Add `dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0` to `/boot/firmware/config.txt`.
+5. **Verification:** Confirm ADC lock via `hackrf_debug --clock_source` (should show external), verify PPS discipline with `chronyc sources -v`, and verify NMEA stream on `/dev/ttyACM0`.
 
 ---
 

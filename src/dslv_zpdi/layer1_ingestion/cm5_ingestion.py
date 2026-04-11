@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL-FACTORY | HAL Factory (Rev 4.1-PIVOT)
+SPEC-005A.HAL-FACTORY | HAL Factory (Rev 4.2-LBE1420)
 Dynamic selection between hardware and simulated ingestion layers.
 
 Rev 4.1: Updated for RF Metrology architecture (Pi 5 + HackRF + GPSDO).
@@ -30,7 +30,7 @@ def ingest_gps_pps(**kwargs):
     SPEC-005A.4a — GPS/PPS ingestion via GPSDO.
     
     Routes to appropriate HAL implementation:
-    - Hardware: Leo Bodnar Mini GPSDO 1 PPS via GPIO
+    - Hardware: Leo Bodnar LBE-1420 GPSDO 1 PPS via GPIO
     - Simulated: Deterministic GPSDO simulation
     """
     return get_hal().ingest_gps_pps(**kwargs)

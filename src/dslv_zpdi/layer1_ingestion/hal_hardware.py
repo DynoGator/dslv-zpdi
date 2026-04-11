@@ -1,7 +1,7 @@
 """
-SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.1-FORGE)
+SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.2-LBE1420)
 Concrete implementation of the HAL for RF Metrology hardware:
-Raspberry Pi 5 + HackRF One + Leo Bodnar Mini GPSDO.
+Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO.
 
 This implementation achieves hardware-level ADC phase coherence by:
 1. 10 MHz reference from GPSDO → HackRF CLKIN (hardware ADC lock)
@@ -9,6 +9,8 @@ This implementation achieves hardware-level ADC phase coherence by:
 
 Rev 4.1-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
 Added "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
+Rev 4.2-LBE1420: Migrated to LBE-1420 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
+Added NMEA serial verification for GPS fix confirmation.
 """
 
 # pylint: disable=duplicate-code
@@ -49,7 +51,7 @@ class HardwareHAL(BaseHAL):
     Hardware Requirements (SPEC-004A.1, SPEC-004A.2):
     - Raspberry Pi 5 (16GB) or compatible compute platform
     - HackRF One with CLKIN port for 10 MHz GPSDO reference
-    - Leo Bodnar Mini GPSDO (10 MHz + 1 PPS output)
+    - Leo Bodnar LBE-1420 GPSDO (10 MHz + 1 PPS output)
     - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC phase-lock)
     - GPSDO 1 PPS → Pi 5 GPIO 18 (UTC timestamp interrupt)
     
@@ -259,9 +261,9 @@ class HardwareHAL(BaseHAL):
             ingest_monotonic_ns=mono_ns,
             raw_value={
                 "pps_time_ns": pps_time_ns,
-                "source": "gpsdo_leo_bodnar_mini",
+                "source": "gpsdo_leo_bodnar_lbe1420",
                 "pps_device": pps_device,
-                "rp1_warning": "Verify 3.3V logic level on PPS output",
+                "lbe1420_native_3v3": True,
             },
             extracted_phases=[],  # GPS provides no phase vector
             gps_locked=gps_locked,
@@ -533,5 +535,67 @@ class HardwareHAL(BaseHAL):
                 info["error"] = str(e)
         else:
             info["error"] = "No SDR driver available. Install SoapySDR or pyhackrf."
-            
+
         return info
+
+    @staticmethod
+    def verify_nmea_telemetry(
+        serial_port: str = "/dev/ttyACM0",
+        baud_rate: int = 9600,
+        timeout: float = 3.0,
+    ) -> dict:
+        """
+        SPEC-004A.3-NMEA — Verify LBE-1420 NMEA telemetry via USB-C virtual serial.
+
+        The LBE-1420 provides observable NMEA sentences over a virtual serial port
+        when connected via USB-C. This method queries the stream to confirm an
+        active GPS fix before allowing data ingestion.
+
+        Args:
+            serial_port: Path to virtual serial device (default: /dev/ttyACM0)
+            baud_rate: Serial baud rate (default: 9600)
+            timeout: Read timeout in seconds
+
+        Returns:
+            Dict with GPS fix status and satellite info
+        """
+        result = {
+            "nmea_available": False,
+            "gps_fix": False,
+            "serial_port": serial_port,
+            "sentences": [],
+            "warnings": [],
+        }
+
+        try:
+            import serial  # pylint: disable=import-outside-toplevel
+            ser = serial.Serial(serial_port, baud_rate, timeout=timeout)
+            lines_read = 0
+            max_lines = 10
+
+            while lines_read < max_lines:
+                line = ser.readline().decode("ascii", errors="ignore").strip()
+                if not line:
+                    break
+                lines_read += 1
+                result["sentences"].append(line)
+
+                # Parse GGA sentence for fix quality
+                if line.startswith("$GPGGA") or line.startswith("$GNGGA"):
+                    parts = line.split(",")
+                    if len(parts) > 6:
+                        fix_quality = parts[6]
+                        if fix_quality and int(fix_quality) > 0:
+                            result["gps_fix"] = True
+                        if len(parts) > 7 and parts[7]:
+                            result["satellites_used"] = int(parts[7])
+
+            ser.close()
+            result["nmea_available"] = lines_read > 0
+
+        except ImportError:
+            result["warnings"].append("pyserial not installed: pip install pyserial")
+        except (OSError, IOError) as e:
+            result["warnings"].append(f"Serial port error: {e}")
+
+        return result

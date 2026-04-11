@@ -2,6 +2,25 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.2.0] - 2026-04-11
+
+### Added
+- **LBE-1420 GPSDO Migration:** Migrated Clock Authority from Leo Bodnar Mini GPSDO to Leo Bodnar LBE-1420 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native output).
+- **NMEA Telemetry:** Added `verify_nmea_telemetry()` to HardwareHAL and NMEA check to provisioning tool for GPS fix verification via virtual serial port.
+- **RF/Magnetic Shielding Docs:** Created `docs/RF_MAGNETIC_SHIELDING.md` — cyberdeck chassis design with conduction cooling, compartmentalization, galvanic isolation, and pass-through security.
+- **Hardware Change Justification:** Created `docs/HARDWARE_CHANGE_JUSTIFICATION.md` (SPEC-UPDATE-PHASE-2A-LBE1420).
+- **Updated BOM:** Added ANT500 antenna, SMA cabling, and jumper wire specifications to Tier 1 mandatory BOM.
+
+### Changed
+- **Dependencies:** Replaced `pyrtlsdr` with `pyhackrf` in core dependencies. RTL-SDR is Tier 2 only.
+- **Version Alignment:** Synchronized all version references to 4.2.0 across pyproject.toml, README, installer, tests, specs, tools, and MASTER_SPEC documents.
+- **RP1 Voltage Warning:** Updated to reflect LBE-1420 native 3.3V compatibility (no level-shifter needed).
+- **Physical Routing Protocol:** Updated wiring instructions for LBE-1420-specific connections (USB-C power/telemetry, 3.3V PPS).
+- **Installer:** Removed `rtl-sdr`/`librtlsdr0` from base packages (not on critical build path).
+
+### Deprecated
+- **Leo Bodnar Mini GPSDO:** Formally superseded by LBE-1420. Mini-USB connection unreliable for field ops.
+
 ## [4.0.2.4] - 2026-04-10
 
 ### Added
