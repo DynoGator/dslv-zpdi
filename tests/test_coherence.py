@@ -20,20 +20,26 @@ def test_baseline_calculation():
 
 
 def test_outlier_detection():
-    scorer = CoherenceScorer()
-    # Mock a high threshold
+    """Verify event declaration uses dynamic_threshold and EWMA smoothing.
+    Event confirmation requires min_nodes (default 4) — so we feed 4 nodes
+    with coherent phases to trigger a confirmed event."""
+    scorer = CoherenceScorer(min_nodes=1)  # Lower for unit test isolation
     scorer.dynamic_threshold = 0.5
 
-    # Low coherence
+    # Low coherence — should NOT trigger event
     phases_low = np.random.uniform(0, 2 * np.pi, 100).tolist()
     pkt_low = scorer.update({"node_id": "test"}, phases_low)
     assert pkt_low.event_window_id is None
 
-    # High coherence (event)
-    # Perfectly coherent phases (all the same)
+    # High coherence — feed multiple updates to ramp EWMA past threshold
     phases_high = [1.0] * 100
-    pkt_high = scorer.update({"node_id": "test"}, phases_high)
+    ts = 1000.0
+    for i in range(10):
+        pkt_high = scorer.update(
+            {"node_id": "test", "timestamp_utc": ts + i * 0.01}, phases_high
+        )
     assert pkt_high.r_local > 0.99
+    assert pkt_high.r_smooth > 0.5  # EWMA has converged
     assert pkt_high.event_window_id is not None
 
 

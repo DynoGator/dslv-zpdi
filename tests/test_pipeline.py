@@ -95,7 +95,8 @@ def test_global_R():
         "modality": "rf_sdr",
         "ts": time.time(),
     }
-    assert scorer.compute_global_r() == 0.8
+    # Weighted global R(t) per Section 5.5.2 — single node yields r_smooth * w / w
+    assert abs(scorer.compute_global_r() - 0.8) < 0.001
     print("  TEST 6 PASS: Global R(t) ✅")
 
 
