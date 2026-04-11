@@ -60,7 +60,7 @@ class HDF5Writer:
         if decision.stream == RouteStream.PRIMARY.value and decision.packet is not None:
             self._write_primary(decision.packet, json_payload)
             self.stats["primary_written"] += 1
-        elif decision.stream in (RouteStream.SECONDARY.value, RouteStream.PRIMARY_CANDIDATE.value):
+        elif decision.stream == RouteStream.SECONDARY.value:
             self._log_secondary(json_payload, decision)
             self.stats["secondary_logged"] += 1
         else:

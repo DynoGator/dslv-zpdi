@@ -1,6 +1,7 @@
 """
 SPEC-007 | Trust Tier: Routed (Layer 3)
-Dual-Stream Protocol enforcer with Swarm Integrity verification.
+SPEC-003 | Dual-Stream Protocol enforcer with Swarm Integrity verification.
+Kill condition: Any packet reaching HDF5Writer without passing through this router.
 """
 
 from dataclasses import dataclass
@@ -23,56 +24,61 @@ class RoutingDecision:
 
 
 class DualStreamRouter:
-    """SPEC-007.3 — Stateful router for Dual-Stream enforcement."""
+    """SPEC-007.3 — Stateful router enforcing exactly two streams: PRIMARY and SECONDARY."""
 
     def __init__(self):
         self.stats = {"routed_primary": 0, "routed_secondary": 0}
-        self.swarm_monitor = SwarmIntegrityMonitor()  # SPEC-008 Integration
+        self.swarm_monitor = SwarmIntegrityMonitor()
 
     def route(self, json_payload: str) -> RoutingDecision:
-        """SPEC-007.3a — Route single packet."""
+        """SPEC-007.3a — Route single packet to PRIMARY or SECONDARY.
+        Per SPEC-003, exactly two routing destinations exist. No third stream."""
         pkt = wire_to_coherence(json_payload)
         if pkt is None:
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
-                RouteStream.SECONDARY.value, "wiring_rejected", None, TrustState.SECONDARY_QUARANTINED.value
+                RouteStream.SECONDARY.value, "wiring_rejected", None,
+                TrustState.SECONDARY_QUARANTINED.value,
             )
 
-        # Check SPEC-009 baseline readiness
+        # SPEC-009: Baseline must be LOCKED before any primary routing
         baseline_status = coherence_engine.get_baseline_status()
         if not baseline_status.get("ready"):
             pkt.trust_state = TrustState.SECONDARY_QUARANTINED.value
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
-                RouteStream.SECONDARY.value, "baseline_learning_active", pkt, TrustState.SECONDARY_QUARANTINED.value
+                RouteStream.SECONDARY.value, "baseline_learning_active", pkt,
+                TrustState.SECONDARY_QUARANTINED.value,
             )
 
-        # Check for confirmed event window
+        # PRIMARY: confirmed event with r_smooth above threshold and event window
         if pkt.r_smooth >= 0.40 and pkt.event_window_id:
             pkt.trust_state = TrustState.PRIMARY_ACCEPTED.value
             self.stats["routed_primary"] += 1
             return RoutingDecision(
-                RouteStream.PRIMARY.value, "confirmed_event", pkt, TrustState.PRIMARY_ACCEPTED.value
+                RouteStream.PRIMARY.value, "confirmed_event", pkt,
+                TrustState.PRIMARY_ACCEPTED.value,
             )
 
+        # SECONDARY: structured background (no confirmed event) or below threshold
         if pkt.r_smooth >= 0.15:
             pkt.trust_state = TrustState.PRIMARY_CANDIDATE.value
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
-                RouteStream.PRIMARY_CANDIDATE.value, "structured_background", pkt, TrustState.PRIMARY_CANDIDATE.value
+                RouteStream.SECONDARY.value, "structured_background", pkt,
+                TrustState.PRIMARY_CANDIDATE.value,
             )
 
         pkt.trust_state = TrustState.SECONDARY_QUARANTINED.value
         self.stats["routed_secondary"] += 1
         return RoutingDecision(
-            RouteStream.SECONDARY.value, "below_threshold", pkt, TrustState.SECONDARY_QUARANTINED.value
+            RouteStream.SECONDARY.value, "below_threshold", pkt,
+            TrustState.SECONDARY_QUARANTINED.value,
         )
-
 
     def validate_swarm_cluster(self, packets: List[dict]) -> bool:
         """SPEC-008.1 — Interface for multi-node swarm validation."""
         is_valid, _ = self.swarm_monitor.evaluate_swarm_trigger(packets)
         if not is_valid:
-            # SPEC-008.1a: Log poisoned trigger event
             return False
         return True
