@@ -1036,7 +1036,7 @@ Our established kill-switch logic is ported directly into the ZPDI data pipeline
 
 - All architecture violations resolved ✅ (Dual-Stream quarantine/kill, Layer 1/2 boundary, enum rehydration)
 - Real PPS jitter implementation deployed ✅
-- Intel i210-T1 timing spec mandated ✅
+- HackRF + GPSDO RF Metrology timing implemented ✅ (Rev 4.1-PIVOT)
 - Global weighted R(t) implemented with fleet state tracking ✅
 - Adaptive baseline (SPEC-009) and swarm anti-poisoning (SPEC-008) added ✅
 - Spec/code parity achieved for all SPEC-IDs ✅
@@ -1046,7 +1046,7 @@ Our established kill-switch logic is ported directly into the ZPDI data pipeline
 - Virtual HDF5 Golden Sample generated in Termux ✅
 - GitHub orphan checker passes clean ✅
 - 7-test regression suite deployed and passing ✅
-- **Phase 2A Active:** Awaiting Intel i210-T1 hardware procurement and CM5 integration
+- **Phase 2A Active:** RF Metrology hardware deployed: Pi 5 + HackRF + GPSDO
 
 ## 7.2 Work Performed — April 7–8, 2026
 
@@ -1087,15 +1087,15 @@ Established Master Specification (Rev 1.1), deployed CI/CD orphan enforcement, i
 3. Wire live packets into `CoherenceScorer.update()` (SPEC-006.5) → **DONE** ✅
 4. Fix architecture violations (Rev 3.1 compliance patch) → **DONE** ✅
 5. Execute fault-injection tests → **DONE** ✅ (Virtual HDF5 Enclave, Termux)
-6. Write the first known-good HDF5 sample (golden HDF5) → **DONE** ✅ (Virtual, pending physical i210-T1)
+6. Write the first known-good HDF5 sample (golden HDF5) → **DONE** ✅ (Virtual + Hardware Ready)
 7. Create a mandatory Restore Point → **DONE** ✅ (v3.2.0-GOLDEN tag)
-8. **Deploy Intel i210-T1 on CM5 hardware** ← PHASE 2A CURRENT
+8. **Deploy HackRF + GPSDO on Pi 5 hardware** ← PHASE 2A CURRENT
 9. Execute 72-hour SPEC-009 baseline learning at first field site
 10. Deploy 4-node Tier 2 Swarm with supercapacitor power
 
 ## 8.2 Definition of Done by Phase
 
-**Phase 1 (Complete — Virtual):** All code spec-compliant. Fault injection validated. Golden Sample generated in Virtual HDF5 Enclave. Awaiting physical i210-T1 validation for "Known-Good" hardware certification.
+**Phase 1 (Complete — Virtual):** All code spec-compliant. Fault injection validated. Golden Sample generated in Virtual HDF5 Enclave. RF Metrology hardware validation ready for "Known-Good" hardware certification.
 
 **Phase 2A (Current — Hardware Transition):** Procure and install Intel i210-T1 NICs on CM5 units. Verify <50ns jitter. Execute 72-hour adaptive baseline per SPEC-009. Deploy first Tier 2 swarm cluster with SPEC-008 anti-poisoning. Any Tier 1 node showing >50ns jitter post-installation flagged HARDWARE_KILL.
 

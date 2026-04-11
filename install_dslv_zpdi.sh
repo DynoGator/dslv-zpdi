@@ -270,10 +270,10 @@ else
 fi
 
 if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
-    # Hardware validation: CM4 OR CM5 are valid Tier 1 anchors per PHASE_2A_HARDWARE_BUILD_LIST.md
+    # Hardware validation: Pi 5 (16GB) is the Phase 2A primary anchor per PHASE_2A_HARDWARE_BUILD_LIST.md
     if [[ -r /proc/device-tree/model ]]; then
         if ! grep -aqE 'Compute Module 4|Compute Module 5|Raspberry Pi 4|Raspberry Pi 5' /proc/device-tree/model; then
-            log_warn "Tier 1 audit: Host does not identify as CM4/CM5 or Pi 4/5"
+            log_warn "Tier 1 audit: Host does not identify as Pi 5 (check model info)"
             log_warn "Expected: Compute Module 4 or 5 (per PHASE_2A_HARDWARE_BUILD_LIST.md)"
         else
             log_ok "Hardware identifies as compatible Tier 1 platform"
