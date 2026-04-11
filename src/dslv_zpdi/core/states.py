@@ -20,8 +20,15 @@ class TrustState(Enum):
 
 
 class RouteStream(Enum):
-    """SPEC-007.2 — Authorized routing streams."""
+    """SPEC-007.2 — Authorized routing streams per SPEC-003."""
 
     PRIMARY = "PRIMARY"
     SECONDARY = "SECONDARY"
-    PRIMARY_CANDIDATE = "PRIMARY_CANDIDATE"
+
+
+class BaselineState(Enum):
+    """SPEC-009.1 — Three-state FSM for environmental baseline learning."""
+
+    NOT_STARTED = "NOT_STARTED"
+    LEARNING = "LEARNING"
+    LOCKED = "LOCKED"
