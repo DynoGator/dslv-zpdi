@@ -70,7 +70,7 @@ sys.modules["h5py"] = MockH5py()
 class MockPacket:
     def __init__(self):
         self.payload_uuid = str(uuid.uuid4())
-        self.node_id = "CM5-ALPHA-GOLDEN"
+        self.node_id = "PI5-ALPHA-GOLDEN"
         self.modality = "FUSION_SDR_GPS"
         self.timestamp = self.timestamp_utc = time.time()
         self.trust_state = "CORE_PROCESSED"

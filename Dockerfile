@@ -4,7 +4,9 @@ WORKDIR /app
 
 # System dependencies needed by current repo dependency surface
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    librtlsdr-dev \
+    libhackrf-dev \
+    soapysdr-module-hackrf \
+    libusb-1.0-0-dev \
     pkg-config \
     git \
     libhdf5-dev \

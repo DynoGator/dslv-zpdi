@@ -60,4 +60,4 @@ if __name__ == "__main__":
 
     drift = measure_drift()
     print(f"[*] Measured Drift: {drift:.6f}%")
-    generate_calibration_artifact("CM5-NODE", drift)
+    generate_calibration_artifact("PI5-NODE", drift)

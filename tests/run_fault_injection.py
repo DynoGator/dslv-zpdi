@@ -12,8 +12,8 @@ def run_gps_fault_injection():
     print("[*] Generating payload with gps_locked=False and pps_jitter_ns=50000.0...")
     faulty_payload = IngestionPayload(
         payload_uuid=str(uuid.uuid4()),
-        node_id="CM5-ALPHA-TEST",
-        sensor_id="UBLOX-GPS-01",
+        node_id="PI5-ALPHA-TEST",
+        sensor_id="GPSDO-01",
         modality=SensorModality.RF_SDR.value,
         timestamp_utc=time.time(),
         gps_locked=False,
