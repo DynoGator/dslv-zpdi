@@ -649,17 +649,20 @@ class CoherenceScorer:
             })
 ```
 
-## 5.6 CM5 Ingestion Module — Full Live Implementation (Rev 3.1)
+## 5.6 Tier 1 Ingestion Module — Full Live Implementation (Rev 4.2)
 
-**File:** `src/layer1_ingestion/cm5_ingestion.py`
+**File:** `src/layer1_ingestion/cm5_ingestion.py` *(filename retained for backward compatibility)*
 
-Rev 3.1 changes: `ingest_gps_pps()` reads real PPS via kernel ioctl on /dev/pps0 (no random placeholder). `ingest_sdr()` performs Hilbert transform and phase extraction in Layer 1 and stores results in `extracted_phases` field. Both functions store modality as string (not enum object) for JSON compatibility.
+**Primary Hardware Baseline:** Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO.  
+**Permissible Alternatives:** Raspberry Pi CM5 (via IO board), CM4, or any hardware meeting SPEC-004A.2 criteria.
+
+Rev 4.2 changes: Migrated from RTL-SDR/u-blox PTP stack to GPSDO RF Metrology. `ingest_gps_pps()` reads real PPS via kernel ioctl on /dev/pps0 from the LBE-1420 GPSDO. `ingest_sdr()` performs Hilbert transform and phase extraction in Layer 1 via HackRF and stores results in `extracted_phases` field. Both functions store modality as string (not enum object) for JSON compatibility.
 
 ```python
 """
-SPEC-005A.4 — CM5 Hardware-Specific Ingestion (Rev 3.1 — Live)
+SPEC-005A.4 — Tier 1 Hardware Ingestion (Rev 4.2-LBE1420)
 Phase extraction is performed HERE (Layer 1) per SPEC-005.
-PPS jitter is measured HERE from real hardware per SPEC-004A.1.
+PPS jitter is measured HERE from real hardware per SPEC-004A.1/004A.3.
 """
 import os
 import fcntl

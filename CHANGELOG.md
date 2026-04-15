@@ -24,7 +24,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 ## [4.0.2.4] - 2026-04-10
 
 ### Added
-- **Architectural Hardening:** Implemented SPEC-010 (Packet Integrity), SPEC-009.1 (Atomic Baseline Persistence), SPEC-008.2 (Temporal Freshness), SPEC-005A.5 (Immutable IQ Digest), and SPEC-004A.2 (PTP Watchdog).
+- **Architectural Hardening:** Implemented SPEC-010 (Packet Integrity), SPEC-009.1 (Atomic Baseline Persistence), SPEC-008.2 (Temporal Freshness), SPEC-005A.5 (Immutable IQ Digest), and SPEC-004A.3 (Continuous Timing Health Monitor).
 - **Build Documentation:** Integrated `PHASE_2A_TIER_1_BUILD_SHEET.md` with explicit date/pricing disclaimers.
 
 ### Fixed
@@ -57,7 +57,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 ## [3.5.2] - 2026-04-09
 
 ### Added
-- **PTP Verification:** Deployed `tools/check_ptp.py` and `tools/provision_tier1.py` for SPEC-004A.1 enforcement.
+- **Timing Verification:** Deployed `tools/check_timing.py` and `tools/provision_tier1.py` for SPEC-004A.1 enforcement.
 - **Unit Testing:** Added `tests/test_payload.py` and `tests/test_coherence.py`.
 - **Checksum Metadata:** Added `checksum_algo` to `IngestionPayload`.
 

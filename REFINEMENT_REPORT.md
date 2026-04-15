@@ -1,5 +1,7 @@
 # DSLV-ZPDI Refinement Report — 2026-04-11
 
+> **ARCHITECTURE UPDATE (2026-04-11 onwards):** This report documents the pre-pivot refinement session. The project has since executed the **Phase 2A RF Metrology Pivot**. The current Tier 1 baseline is **Raspberry Pi 5 / HackRF One / Leo Bodnar LBE-1420 GPSDO**. The Intel i210-T1 / PTP / RTL-SDR path discussed herein has been formally deprecated. See `docs/ARCH-PHASE-2A-PIVOT.md` for the canonical current architecture.
+
 **Evaluator:** Claude Opus 4.6 (Lead Software Engineer, DSLV-ZPDI)  
 **Operator:** Joseph R. Fross — Resonant Genesis LLC / DynoGator  
 **Repo State:** Rev 4.0.2.4 → Rev 4.0.3 (post-refinement)
