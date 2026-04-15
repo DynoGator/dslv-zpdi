@@ -1335,3 +1335,11 @@ Independent verification of a record requires:
 **Action:** Executed a fundamental architectural pivot for Phase 2A hardware. Replaced the CM5/i210-T1 PTP-based timing approach with a superior "RF Metrology" timing standard. Canonical Tier 1 baseline is now Raspberry Pi 5 (16GB), HackRF One (via external 10MHz CLKIN), and Leo Bodnar LBE-1420 GPSDO (10MHz reference + 1 PPS GPIO). Refactored all governing documents (`V3_DSLV-ZPDI_LIVING_MASTER.md`, `MASTER_SPEC.md`, `PHASE_2A_HARDWARE_BUILD_LIST.md`, and `PHASE_2A_TIER_1_BUILD_SHEET.md`) to reflect this pivot. Updated the software stack: renamed and refactored `PTPMonitor` to `TimingMonitor` (SPEC-004A.3), renamed `check_ptp.py` to `check_timing.py`, and updated `provision_tier1.py` and `install_dslv_zpdi.sh` for GPSDO/PPS/HackRF compliance. Verified 100% pass rate across 31 tests and a clean orphan check.
 **Status at Handoff:** Hardware strategy is pivoted and technically superior. Documentation is 100% aligned with the new Rev 4.1-PIVOT baseline. Software tools are refactored for the new hardware stack. 
 **Next Action at Handoff:** Execute physical commissioning on Raspberry Pi 5 + HackRF + Leo Bodnar hardware using the updated `install_dslv_zpdi.sh --tier1`.
+
+## TURNOVER — 2026-04-15 (Session 23: Dependency Compliance & Rev 4.2.1 Hotfix)
+
+**Date:** April 15, 2026  
+**Author:** Gemini (Autonomous Co-Pilot)
+**Action:** Evaluated repository state and discovered a critical dependency compliance issue in Rev 4.2.0. The `pyproject.toml` and `requirements.txt` incorrectly required `pyhackrf>=1.0.0`, which is not available on PyPI, causing installation failures. Applied hotfix Rev 4.2.1: corrected `pyhackrf` requirement to `>=0.2.0` and synchronized all version strings across `pyproject.toml`, `README.md`, `install_dslv_zpdi.sh`, `MASTER_SPEC.md`, and the Living Master. Created `RELEASE_NOTES_v4.2.1.md` and updated `CHANGELOG.md`. Validated 100% test pass rate (31/31) and clean installation via `install_dslv_zpdi.sh --simulator`.
+**Status at Handoff:** Repository is fully synchronized, compliant, and installation-ready. The `pyhackrf` dependency bottleneck is resolved.
+**Next Action at Handoff:** Proceed with physical Tier 1 hardware commissioning as previously planned.
