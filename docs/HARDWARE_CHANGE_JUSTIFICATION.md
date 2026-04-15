@@ -56,7 +56,7 @@ Connect the LBE-1420 via USB-C to the Pi 5. This provides power and establishes 
 
 ## 4. Software Stack Integration Requirements
 
-### 4.1 System Level (Bookworm OS)
+### 4.1 System Level (Bookworm/Trixie OS)
 
 **Interrupt Handling:** `/boot/firmware/config.txt` must invoke the `pps-gpio` overlay:
 ```

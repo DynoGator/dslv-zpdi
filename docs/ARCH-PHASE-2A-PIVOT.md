@@ -67,7 +67,7 @@ The following configurations must be mirrored across all development instances p
 
 ### 4.1 Dependency Stack
 
-Ensure the local OS (Bookworm) is primed with the necessary metrology and SDR wrappers:
+Ensure the local OS (Bookworm/Trixie) is primed with the necessary metrology and SDR wrappers:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
