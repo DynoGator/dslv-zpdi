@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI installer / validator
-# Revision: 4.2.0-LBE1420
-# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.2.0)
-# Date: 2026-04-11
+# Revision: 4.2.1-LBE1420
+# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.2.1)
+# Date: 2026-04-15
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.2.0"
+SCRIPT_REV="Rev 4.2.1"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0

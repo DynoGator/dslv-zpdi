@@ -7,7 +7,7 @@
 **Owner:** Joseph R. Fross
 **Canonical File:** THIS FILE
 **Last Updated:** 2026-04-08
-**Current Revision:** Rev 4.2.0 (LBE-1420 Hardware Pivot — RF Metrology Finalized, Phase 2A Active)
+**Current Revision:** Rev 4.2.1 (LBE-1420 Hardware Pivot — RF Metrology Finalized, Phase 2A Active)
 
 ---
 

@@ -2,6 +2,12 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.2.1] - 2026-04-15
+
+### Fixed
+- **Dependencies:** Corrected `pyhackrf` version requirement from `>=1.0.0` (non-existent) to `>=0.2.0`.
+- **Installer:** Resolved installation failure in `install_dslv_zpdi.sh` due to invalid `pyhackrf` version.
+
 ## [4.2.0] - 2026-04-11
 
 ### Added

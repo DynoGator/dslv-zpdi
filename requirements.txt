@@ -2,5 +2,5 @@ numpy>=1.21.0
 scipy>=1.7.0
 h5py>=3.6.0
 pyserial>=3.5
-pyhackrf>=1.0.0
+pyhackrf>=0.2.0
 pytest>=7.0.0

@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Transition - RF Metrology)  
-**Revision:** Rev 4.2.0  
+**Revision:** Rev 4.2.1  
 **Status:** Hardware Airtight. HackRF + LBE-1420 GPSDO Architecture Deployed.
 
 ## Overview
