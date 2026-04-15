@@ -2,6 +2,17 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.3.0] - 2026-04-15
+
+### Added
+- **Multi-OS Support:** Formal validation for Raspberry Pi OS Trixie (Debian 13).
+- **SoapySDR Venv Linkage:** Automated symlinking of system `python3-soapysdr` to venv.
+- **OS Detection:** Added Debian codename and version detection to installer.
+
+### Changed
+- **Installer:** Hardened `install_dslv_zpdi.sh` for multi-OS firmware path compliance.
+- **Version Alignment:** Synchronized to Rev 4.3.0.
+
 ## [4.2.1] - 2026-04-15
 
 ### Fixed

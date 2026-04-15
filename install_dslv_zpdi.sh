@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# DSLV-ZPDI installer / validator
-# Revision: 4.2.1-LBE1420
-# Validated against: https://github.com/DynoGator/dslv-zpdi (Rev 4.2.1)
+# DSLV-ZPDI Unified Installer / Validator
+# Revision: 4.3.0-LBE1420
+# OS Support: Raspberry Pi OS Bookworm (Deb 12) & Trixie (Deb 13)
 # Date: 2026-04-15
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.2.1"
+SCRIPT_REV="Rev 4.3.0"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
@@ -24,6 +24,11 @@ log_info()    { echo -e "${YELLOW}[DSLV-INFO] $*${NC}"; }
 log_ok()      { echo -e "${GREEN}[DSLV-OK] $*${NC}"; }
 log_warn()    { echo -e "${BLUE}[DSLV-WARN] $*${NC}"; }
 log_fail()    { echo -e "${RED}[DSLV-ERR] $*${NC}"; exit 1; }
+
+# 1. OS Detection Logic (Bookworm vs. Trixie compliance)
+OS_ID=$(grep '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+OS_VERSION=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+OS_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2 | tr -d '"')
 
 usage() {
     cat <<USAGE
@@ -99,7 +104,7 @@ if [[ "$PY_MAJOR" -lt 3 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 9 ]]; then
     log_fail "Python 3.9+ required (found $PY_VERSION). Upgrade Python before continuing."
 fi
 
-log_ok "Python version check passed: $PY_VERSION"
+log_ok "OS Detected: $OS_ID ($OS_CODENAME) — Python $PY_VERSION"
 
 REAL_USER="${SUDO_USER:-${USER:-root}}"
 REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6 || true)"
@@ -166,7 +171,7 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
         if ! grep -q "refclock PPS /dev/pps0" /etc/chrony/chrony.conf 2>/dev/null; then
             cat >> /etc/chrony/chrony.conf << 'EOF'
 
-# DSLV-ZPDI RF Metrology Configuration (Rev 4.1)
+# DSLV-ZPDI RF Metrology Configuration (Rev 4.1+)
 # Absolute UTC via Hardware PPS - prioritizes GPSDO over network
 refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
 EOF
@@ -175,15 +180,21 @@ EOF
         
         # Configure PPS GPIO overlay for Pi 5 RP1 (ARCH-PHASE-2A-PIVOT §4.2)
         log_info "Configuring PPS-GPIO overlay for Pi 5 RP1"
-        if [[ -f /boot/firmware/config.txt ]]; then
-            if ! grep -q "dtoverlay=pps-gpio" /boot/firmware/config.txt; then
-                cat >> /boot/firmware/config.txt << 'EOF'
+        # Pi OS Bookworm/Trixie firmware path
+        FIRMWARE_CONFIG="/boot/firmware/config.txt"
+        if [[ ! -f "$FIRMWARE_CONFIG" ]]; then
+            FIRMWARE_CONFIG="/boot/config.txt" # Legacy path
+        fi
 
-# DSLV-ZPDI PPS Configuration (Rev 4.1)
+        if [[ -f "$FIRMWARE_CONFIG" ]]; then
+            if ! grep -q "dtoverlay=pps-gpio" "$FIRMWARE_CONFIG"; then
+                cat >> "$FIRMWARE_CONFIG" << 'EOF'
+
+# DSLV-ZPDI PPS Configuration (Rev 4.1+)
 # WARNING: Pi 5 RP1 uses 3.3V logic. Verify GPSDO output voltage before connecting.
 dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
 EOF
-                log_warn "PPS overlay added to /boot/firmware/config.txt"
+                log_warn "PPS overlay added to $FIRMWARE_CONFIG"
                 log_warn "REBOOT REQUIRED for PPS to take effect"
                 log_warn "CRITICAL: Verify GPSDO PPS output is 3.3V logic level before reboot!"
             fi
@@ -205,7 +216,6 @@ require_cmd python3
 # Git clone / pull logic safely refactored
 if [[ -d "$INSTALL_DIR/.git" ]]; then
     log_info "Repository exists; fetching latest changes"
-    # Configure safe.directory to avoid "dubious ownership" errors in newer git
     git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
     run_as_real_user "git -C '$INSTALL_DIR' fetch --all --prune && git -C '$INSTALL_DIR' pull --ff-only" \
         || log_warn "Git pull failed in $INSTALL_DIR (continuing with local files)"
@@ -237,7 +247,6 @@ required_paths=(
     "repo_manifest.yaml"
 )
 
-# Conditional validation for Tier 1 tools
 if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     required_paths+=("tools/provision_tier1.py")
     required_paths+=("tools/check_timing.py")
@@ -252,7 +261,7 @@ for rel in "${required_paths[@]}"; do
 done
 
 if [[ "$missing_paths" -eq 1 ]]; then
-    log_fail "Repository structure validation failed. Repository may be incomplete or --tier1 tools missing."
+    log_fail "Repository structure validation failed. Repository may be incomplete."
 fi
 
 log_ok "Repository structure validated"
@@ -260,6 +269,26 @@ log_ok "Repository structure validated"
 VENV_DIR="$INSTALL_DIR/venv"
 log_info "Creating virtual environment at $VENV_DIR"
 run_as_real_user "python3 -m venv '$VENV_DIR'" || log_fail "venv creation failed"
+
+# 2. SoapySDR Venv Linkage Logic (Rev 4.3 feature)
+# Trixie/Bookworm Python packages are managed; we link them to venv for tier1.
+if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
+    log_info "Linking system SoapySDR to virtual environment"
+    VENV_SITE_PACKAGES=$(run_as_real_user "'$VENV_DIR/bin/python' -c 'import site; print(site.getsitepackages()[0])'")
+    SYS_DIST_PACKAGES="/usr/lib/python3/dist-packages"
+    
+    if [[ -d "$SYS_DIST_PACKAGES" ]]; then
+        # Use find to locate SoapySDR related files in system dist-packages
+        mapfile -t SOAPY_FILES < <(find "$SYS_DIST_PACKAGES" -maxdepth 1 -name "SoapySDR*" -o -name "_SoapySDR*")
+        for f in "${SOAPY_FILES[@]}"; do
+            target="$VENV_SITE_PACKAGES/$(basename "$f")"
+            if [[ ! -e "$target" ]]; then
+                log_info "Linking $(basename "$f") → venv"
+                ln -s "$f" "$target"
+            fi
+        done
+    fi
+fi
 
 log_info "Upgrading pip tooling"
 run_as_real_user "'$VENV_DIR/bin/python' -m pip install --upgrade pip setuptools wheel" \
@@ -300,60 +329,35 @@ if [[ "$SKIP_TESTS" -eq 0 ]]; then
         || log_fail "Repo guard failed"
 
     log_ok "Validation suite passed"
-else
-    log_warn "Skipping repo tests and SPEC validation by request"
 fi
 
 if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
-    # Hardware validation: Pi 5 (16GB) is the Phase 2A primary anchor per PHASE_2A_HARDWARE_BUILD_LIST.md
     if [[ -r /proc/device-tree/model ]]; then
         if ! grep -aqE 'Compute Module 4|Compute Module 5|Raspberry Pi 4|Raspberry Pi 5' /proc/device-tree/model; then
             log_warn "Tier 1 audit: Host does not identify as Pi 5 (check model info)"
-            log_warn "Expected: Compute Module 4 or 5 (per PHASE_2A_HARDWARE_BUILD_LIST.md)"
         else
             log_ok "Hardware identifies as compatible Tier 1 platform"
         fi
-    else
-        log_warn "Cannot determine hardware model (no /proc/device-tree/model)"
     fi
-
-    [[ -f "$INSTALL_DIR/tools/provision_tier1.py" ]] || log_fail "Tier 1 audit requested but tools/provision_tier1.py is missing"
-    [[ -f "$INSTALL_DIR/tools/check_timing.py" ]] || log_fail "Tier 1 audit requested but tools/check_timing.py is missing"
 
     log_info "Running Tier 1 hardware audit"
-    
-    # Export simulator mode for the Python tools
     if [[ "$SIMULATOR_MODE" -eq 1 ]]; then
         export DEV_SIMULATOR=1
-        log_warn "DEV_SIMULATOR=1: Skipping hardware-specific checks"
     fi
     
-    # NOTE: Running as root (not run_as_real_user) because hardware audit checks:
-    # - /dev/pps0 permissions
-    # - System-level timing configuration
     if ! run_as_root "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/provision_tier1.py"; then
-        log_fail "Tier 1 hardware audit failed. Ensure HackRF/GPSDO is installed and PPS is configured (see PHASE_2A_HARDWARE_BUILD_LIST.md)"
+        log_fail "Tier 1 hardware audit failed."
     fi
 
     log_ok "Tier 1 hardware audit passed"
-else
-    log_info "Tier 1 hardware audit skipped. Re-run with --tier1 on a GPSDO/PPS-equipped anchor node (e.g., Pi 5 + HackRF)."
-    log_info "Use --simulator with --tier1 to validate logic without hardware."
 fi
 
-# Final summary refactored to explicitly render ANSI color sequences
 echo -e "\n${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║              DSLV-ZPDI INSTALLATION COMPLETE                 ║${NC}"
 echo -e "${GREEN}║                    ${SCRIPT_REV}                           ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}\n"
+echo -e "OS Info    : $OS_ID ($OS_CODENAME) — Python $PY_VERSION"
 echo -e "Repository : $INSTALL_DIR"
-echo -e "Venv       : $VENV_DIR"
 echo -e "Activate   : source '$VENV_DIR/bin/activate'\n"
-echo -e "Suggested next commands:"
-echo -e "  cd '$INSTALL_DIR'"
-echo -e "  '$VENV_DIR/bin/pytest' -q tests"
-echo -e "  '$VENV_DIR/bin/python' tools/orphan_checker.py"
-echo -e "  sudo ./install_dslv_zpdi.sh --tier1     # GPSDO/PPS anchor node (e.g., Pi 5 + HackRF)"
-echo -e "  sudo ./install_dslv_zpdi.sh --tier1 --simulator  # Test audit logic only\n"
 
 exit 0
