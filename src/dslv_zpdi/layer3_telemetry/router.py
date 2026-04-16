@@ -26,6 +26,8 @@ class RoutingDecision:
 class DualStreamRouter:
     """SPEC-007.3 — Stateful router enforcing exactly two streams: PRIMARY and SECONDARY."""
 
+    CANDIDATE_RATIO = 0.5
+
     def __init__(self):
         self.stats = {"routed_primary": 0, "routed_secondary": 0}
         self.swarm_monitor = SwarmIntegrityMonitor()
@@ -37,7 +39,9 @@ class DualStreamRouter:
         if pkt is None:
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
-                RouteStream.SECONDARY.value, "wiring_rejected", None,
+                RouteStream.SECONDARY.value,
+                "wiring_rejected",
+                None,
                 TrustState.SECONDARY_QUARANTINED.value,
             )
 
@@ -47,32 +51,43 @@ class DualStreamRouter:
             pkt.trust_state = TrustState.SECONDARY_QUARANTINED.value
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
-                RouteStream.SECONDARY.value, "baseline_learning_active", pkt,
+                RouteStream.SECONDARY.value,
+                "baseline_learning_active",
+                pkt,
                 TrustState.SECONDARY_QUARANTINED.value,
             )
 
+        dynamic_threshold = baseline_status.get("threshold", 0.40)
+        candidate_threshold = dynamic_threshold * self.CANDIDATE_RATIO
+
         # PRIMARY: confirmed event with r_smooth above threshold and event window
-        if pkt.r_smooth >= 0.40 and pkt.event_window_id:
+        if pkt.r_smooth >= dynamic_threshold and pkt.event_window_id:
             pkt.trust_state = TrustState.PRIMARY_ACCEPTED.value
             self.stats["routed_primary"] += 1
             return RoutingDecision(
-                RouteStream.PRIMARY.value, "confirmed_event", pkt,
+                RouteStream.PRIMARY.value,
+                "confirmed_event",
+                pkt,
                 TrustState.PRIMARY_ACCEPTED.value,
             )
 
         # SECONDARY: structured background (no confirmed event) or below threshold
-        if pkt.r_smooth >= 0.15:
+        if pkt.r_smooth >= candidate_threshold:
             pkt.trust_state = TrustState.PRIMARY_CANDIDATE.value
             self.stats["routed_secondary"] += 1
             return RoutingDecision(
-                RouteStream.SECONDARY.value, "structured_background", pkt,
+                RouteStream.SECONDARY.value,
+                "structured_background",
+                pkt,
                 TrustState.PRIMARY_CANDIDATE.value,
             )
 
         pkt.trust_state = TrustState.SECONDARY_QUARANTINED.value
         self.stats["routed_secondary"] += 1
         return RoutingDecision(
-            RouteStream.SECONDARY.value, "below_threshold", pkt,
+            RouteStream.SECONDARY.value,
+            "below_threshold",
+            pkt,
             TrustState.SECONDARY_QUARANTINED.value,
         )
 

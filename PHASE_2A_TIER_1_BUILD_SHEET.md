@@ -1,5 +1,8 @@
 # DSLV-ZPDI Phase 2A Tier 1 Build Sheet
 
+> **Canonical source:** `PHASE_2A_TIER_1_BUILD_SHEET.md` in the repo root  
+> **Generated PDF:** `docs/build-guides/DSLV-ZPDI_Tier1_Build_Guide.pdf`
+
 **Project source:** DynoGator/dslv-zpdi
 **Repo revision used:** Rev 4.2-LBE1420 / hardware list updated 2026-04-11
 **Document purpose:** Printable procurement and assembly reference for a fresh, from-scratch build using RF Metrology timing

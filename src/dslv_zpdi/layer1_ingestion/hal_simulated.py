@@ -81,8 +81,8 @@ class SimulatedHAL(BaseHAL):
         t = np.linspace(0, 1, 512)
         phases = (2 * np.pi * 10 * t).tolist()  # 10Hz signal
 
-        # Simulated GPS-locked IQ samples
-        iq_samples = [np.cos(p) + 1j * np.sin(p) for p in phases[:64]]
+        # Simulated GPS-locked IQ samples (serialized as [I, Q] pairs)
+        iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases[:64]]
 
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),

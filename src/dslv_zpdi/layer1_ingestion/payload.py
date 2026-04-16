@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from dslv_zpdi.core.states import TrustState
 
+
 class SensorModality(Enum):
     """SPEC-005A.1 — Authorized sensor modalities per Section 5.3."""
 
@@ -54,11 +55,37 @@ class IngestionPayload:
         if not all([self.node_id, self.sensor_id, self.modality]):
             return TrustState.KILLED.value, "missing_identity"
 
+        try:
+            SensorModality(self.modality)
+        except ValueError:
+            return TrustState.KILLED.value, "invalid_modality"
+
+        if self.schema_version != "3.1":
+            return TrustState.SECONDARY_QUARANTINED.value, "schema_version_mismatch"
+
+        if not isinstance(self.raw_value, dict):
+            return TrustState.KILLED.value, "malformed_raw_value"
+
+        if self.extracted_phases is not None:
+            if not isinstance(self.extracted_phases, list):
+                return TrustState.KILLED.value, "malformed_extracted_phases"
+            for ph in self.extracted_phases:
+                if not isinstance(ph, (int, float)):
+                    return TrustState.KILLED.value, "non_numeric_phase"
+                if not -10 <= ph <= 10:
+                    return TrustState.SECONDARY_QUARANTINED.value, "phase_out_of_bounds"
+
         if not self.gps_locked:
             return TrustState.SECONDARY_QUARANTINED.value, "gps_unlocked"
 
         if self.pps_jitter_ns > 10000.0:
             return TrustState.SECONDARY_QUARANTINED.value, "high_pps_jitter"
+
+        # Tier 1 RF payloads require external clock source
+        if self.modality == SensorModality.RF_SDR.value:
+            clock_source = self.raw_value.get("clock_source", "unknown")
+            if clock_source != "external":
+                return TrustState.SECONDARY_QUARANTINED.value, "rf_clock_not_external"
 
         return TrustState.ASSEMBLED.value, None
 
@@ -67,10 +94,10 @@ class IngestionPayload:
         # Create shallow copy to avoid mutating original state
         raw_copy = self.raw_value.copy() if isinstance(self.raw_value, dict) else {}
 
-        # Digest IQ samples if present
+        # Digest IQ samples if present (always digest; full IQ stays binary/HDF5 only)
         if "iq_samples" in raw_copy:
             iq = raw_copy["iq_samples"]
-            if isinstance(iq, list) and len(iq) > 512:
+            if isinstance(iq, list):
                 iq_bytes = json.dumps(iq).encode()
                 raw_copy["iq_digest"] = hashlib.sha256(iq_bytes).hexdigest()
                 raw_copy["iq_preview"] = iq[:64]

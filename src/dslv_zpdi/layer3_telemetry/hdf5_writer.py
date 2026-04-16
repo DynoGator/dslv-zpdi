@@ -52,11 +52,27 @@ class HDF5Writer:
             "primary_written": 0,
             "secondary_logged": 0,
             "rejected": 0,
+            "integrity_failed": 0,
+            "checksum_missing": 0,
+            "checksum_invalid": 0,
         }
 
     def ingest(self, json_payload: str) -> RoutingDecision:
         """SPEC-007 — Process single packet through router and persist."""
         decision = self.router.route(json_payload)
+        if decision.packet is not None:
+            integrity_ok = self.verify_packet_integrity(decision.packet, json_payload)
+            if not integrity_ok:
+                self.stats["integrity_failed"] += 1
+                # Reject primary write; log to secondary for forensics
+                self._log_secondary(json_payload, decision)
+                return RoutingDecision(
+                    RouteStream.SECONDARY.value,
+                    "integrity_failed",
+                    decision.packet,
+                    decision.trust_state,
+                )
+
         if decision.stream == RouteStream.PRIMARY.value and decision.packet is not None:
             self._write_primary(decision.packet, json_payload)
             self.stats["primary_written"] += 1
@@ -193,6 +209,13 @@ class HDF5Writer:
             payload_dict = json.loads(original_json)
             stored_checksum = payload_dict.get("payload_checksum", "")
 
+            if not stored_checksum:
+                logger.error(
+                    "SPEC-010 VIOLATION: Missing checksum for %s", packet.payload_uuid
+                )
+                self.stats["checksum_missing"] += 1
+                return False
+
             # Recompute checksum
             d = payload_dict.copy()
             d["payload_checksum"] = ""
@@ -203,7 +226,9 @@ class HDF5Writer:
                 logger.error(
                     "SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid
                 )
+                self.stats["checksum_invalid"] += 1
                 return False
             return True
         except (json.JSONDecodeError, KeyError):
+            self.stats["checksum_invalid"] += 1
             return False

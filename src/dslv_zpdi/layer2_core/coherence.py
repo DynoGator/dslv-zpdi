@@ -59,6 +59,7 @@ class CoherenceScorer:
         baseline_state_path=None,
         min_baseline_samples=10,
         baseline_duration_hours=72,
+        event_cooldown_s: float = 5.0,
     ):
         """SPEC-006 / SPEC-009 — Initialize coherence engine with baseline support."""
         self.alpha = alpha
@@ -67,6 +68,7 @@ class CoherenceScorer:
         self.history: Dict[str, deque] = {}
         self.fleet_state: Dict[str, Dict] = {}
         self.global_events: List[Dict] = []
+        self.event_cooldown_s = event_cooldown_s
 
         # SPEC-009: Baseline FSM state
         self.baseline_state_path = baseline_state_path
@@ -282,11 +284,24 @@ class CoherenceScorer:
             if recent and recent[-1][1] >= threshold:
                 confirming.append(nid)
         if len(confirming) >= self.min_nodes:
+            confirming_set = frozenset(confirming)
+            # Deduplication: update existing event if same cluster within cooldown
+            for event in reversed(self.global_events):
+                if event.get("confirming_nodes_set") == confirming_set:
+                    if abs(ts - event["timestamp"]) <= self.event_cooldown_s:
+                        packet.event_window_id = event["event_id"]
+                        event["timestamp"] = ts
+                        event["node_count"] = len(confirming)
+                        return
+
             event_id = str(uuid.uuid4())
             packet.event_window_id = event_id
-            self.global_events.append({
-                "event_id": event_id,
-                "timestamp": ts,
-                "confirming_nodes": confirming,
-                "node_count": len(confirming),
-            })
+            self.global_events.append(
+                {
+                    "event_id": event_id,
+                    "timestamp": ts,
+                    "confirming_nodes": confirming,
+                    "confirming_nodes_set": confirming_set,
+                    "node_count": len(confirming),
+                }
+            )

@@ -2,7 +2,7 @@
 
 **Project Phase:** Phase 2A (Hardware Transition - RF Metrology)  
 **Revision:** Rev 4.3.0  
-**Status:** Hardware Airtight. Multi-OS (Bookworm/Trixie) Installer Deployed.
+**Status:** Beta — hardware transition complete; awaiting Tier 1 baseline capture validation. Multi-OS (Bookworm/Trixie) Installer Deployed.
 
 ## Overview
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
