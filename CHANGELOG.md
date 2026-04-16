@@ -2,6 +2,33 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.3.1] - 2026-04-15
+
+### Added
+- Canonical exception hierarchy in `core/exceptions.py` (SPEC-005A).
+- Tier 1 policy contract module (`contracts/tier1_policy.py`) centralizing clock, baseline, and routing constants (SPEC-009).
+- Event deduplication/cooldown in `CoherenceScorer` to prevent duplicate global-event flooding.
+- Real HDF5 rotation tests verifying file close/open/reset behavior.
+- Hardware failure-path mock tests covering SoapySDR, pyhackrf, serial/NMEA, and HDF5 unavailability.
+- `mypy` and `ruff` to dev dependencies and `pyproject.toml` config.
+- CI matrix expansion (local) for Python 3.10/3.11/3.12 and Debian bookworm/trixie.
+
+### Changed
+- SDR JSON serialization now emits serializable `[[I,Q],…]` pairs; `iq_samples` are digested unconditionally with a 64-item preview.
+- `HardwareHAL` now raises `HardwareInitializationError`, `ClockVerificationError`, and `DriverUnavailableError` instead of calling `sys.exit(1)`.
+- Clock verification fails closed: unknown/internal clock sources are rejected.
+- `HDF5Writer.ingest()` enforces packet integrity before primary write; new stat counters added.
+- `DualStreamRouter` uses dynamic baseline threshold for primary and `dynamic_threshold * 0.5` for candidate routing.
+- `IngestionPayload.validate()` now validates modality, schema version, raw_value shape, phase bounds, and RF clock source.
+- Renamed canonical HAL factory to `hal_factory.py`; `cm5_ingestion.py` retained as deprecated wrapper.
+- README status updated from "Hardware Airtight" to "Beta — hardware transition complete; awaiting Tier 1 baseline capture validation".
+- Canonical source banners added to build sheet and PDF guide folder.
+
+### Fixed
+- Potential runtime JSON serialization break on 512-length complex IQ sample lists.
+- False-positive clock verification in pyhackrf fallback path.
+- Missing live-gate enforcement for packet checksum verification.
+
 ## [4.3.0] - 2026-04-15
 
 ### Added
