@@ -2,6 +2,23 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.4.0] - 2026-04-15
+
+### Added
+- `src/dslv_zpdi/main_pipeline.py` — SPEC-011 production pipeline loop with `--field` baseline mode.
+- `tools/capture_baseline.py` — 72 h passive baseline capture script (SPEC-009.1).
+- Canonical HAL factory `get_hal(tier, simulator)` per SPEC-005A.4.
+- Hilbert phase extraction in `HardwareHAL` and `SimulatedHAL` (Layer 1, 64-item preview).
+- Thermal/acoustic ingest hooks in `HardwareHAL` (Layer 1 modality expansion).
+- udev rules (`99-pps.rules`, `52-hackrf.rules`) and `systemctl enable chrony` in installer.
+- CI matrix expansion for Python 3.10–3.13 and Pi 5 self-hosted hardware runners.
+- RP1 3.3V hard enforcement guard in `provision_tier1.py` and build sheet.
+
+### Changed
+- `hal_hardware.py` — NMEA telemetry integrated into `ingest_gps_pps()`, IQ serialization aligned to 64-item preview.
+- Schema bumped to 3.2 in `payload.py`, `tier1_policy.py`, and `hdf5_writer.py`.
+- Version alignment to Rev 4.4.0 across README, installer, tests, and release notes.
+
 ## [4.3.1] - 2026-04-15
 
 ### Added

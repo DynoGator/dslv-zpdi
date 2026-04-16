@@ -4,9 +4,9 @@
 > **Generated PDF:** `docs/build-guides/DSLV-ZPDI_Tier1_Build_Guide.pdf`
 
 **Project source:** DynoGator/dslv-zpdi
-**Repo revision used:** Rev 4.2-LBE1420 / hardware list updated 2026-04-11
+**Repo revision used:** Rev 4.4.0 / hardware list updated 2026-04-15
 **Document purpose:** Printable procurement and assembly reference for a fresh, from-scratch build using RF Metrology timing
-**Document Date:** 2026-04-11
+**Document Date:** 2026-04-15
 
 > **DISCLAIMER:** The prices, links, and availability listed in this document are based on live web checks performed on **2026-04-11**. Prices are subject to change. Taxes, tariffs, and shipping are not included.
 
@@ -94,6 +94,13 @@ sudo ./install_dslv_zpdi.sh --tier1
 ---
 
 ## 6. Verification checklist (Post-Pivot)
+
+```bash
+# RP1 3.3V guard
+if grep -q "LBE1420" /etc/dslv_zpdi_cal.json; then
+    echo "[HARD] LBE-1420 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used."
+fi
+```
 
 - **Check 1.** Run `hackrf_debug --clock_source`. It MUST report the clock source as external (clkin).
 - **Check 2.** Run `chronyc sources -v`. The PPS source should have a `*` or `+` indicating active discipline.

@@ -46,7 +46,7 @@ class IngestionPayload:
     hardware_tier: int = 1
     trust_state: str = TrustState.ASSEMBLED.value
     quarantine_reason: Optional[str] = None
-    schema_version: str = "3.1"
+    schema_version: str = "3.2"
     payload_checksum: str = ""
     checksum_algo: str = "sha256"  # SPEC-005A.2a: Full checksum metadata
 
@@ -60,7 +60,7 @@ class IngestionPayload:
         except ValueError:
             return TrustState.KILLED.value, "invalid_modality"
 
-        if self.schema_version != "3.1":
+        if self.schema_version not in ("3.1", "3.2"):
             return TrustState.SECONDARY_QUARANTINED.value, "schema_version_mismatch"
 
         if not isinstance(self.raw_value, dict):

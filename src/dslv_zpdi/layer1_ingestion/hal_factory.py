@@ -1,28 +1,28 @@
 """
-SPEC-005A.HAL-FACTORY | HAL Factory (Rev 4.2-LBE1420)
+SPEC-005A.4 — Canonical HAL factory (Rev 4.4.0).
 Dynamic selection between hardware and simulated ingestion layers.
-
-Rev 4.1: Updated for RF Metrology architecture (Pi 5 + HackRF + GPSDO).
-Note: Module name retained for backward compatibility; implements new hardware stack.
 """
 
 import os
 
-from .hal_base import BaseHAL
 from .hal_hardware import HardwareHAL
 from .hal_simulated import SimulatedHAL
 
 
-def get_hal() -> BaseHAL:
+def get_hal(tier: int = 1, simulator: bool = False) -> HardwareHAL | SimulatedHAL:
     """
-    SPEC-005A.HAL-FACTORY — Returns appropriate HAL based on environment.
+    SPEC-005A.4 — Returns appropriate HAL based on environment.
+
+    Args:
+        tier: Hardware tier level (default 1).
+        simulator: Force simulated HAL regardless of environment.
 
     Returns:
-        SimulatedHAL if DEV_SIMULATOR=1, otherwise HardwareHAL for RF Metrology stack
+        SimulatedHAL if simulator=True or DEV_SIMULATOR=1, otherwise HardwareHAL.
     """
-    if os.environ.get("DEV_SIMULATOR") == "1":
+    if simulator or os.getenv("DEV_SIMULATOR") == "1":
         return SimulatedHAL()
-    return HardwareHAL()
+    return HardwareHAL()  # SoapySDR primary → pyhackrf fallback, external clock enforced
 
 
 def ingest_gps_pps(**kwargs):

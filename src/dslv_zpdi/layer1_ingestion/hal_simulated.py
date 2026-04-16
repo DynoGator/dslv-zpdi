@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.2-LBE1420)
+SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.4.0)
 Deterministic simulation of RF Metrology Tier 1 hardware for CI/CD and virtual validation.
 
 Simulates: Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO
@@ -12,6 +12,7 @@ import time
 import uuid
 
 import numpy as np
+from scipy.signal import hilbert
 
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
@@ -78,11 +79,15 @@ class SimulatedHAL(BaseHAL):
 
         # Generate 512 samples of a coherent sine wave
         # Simulating GPS-locked phase stability
-        t = np.linspace(0, 1, 512)
+        t = np.linspace(0, 1, 64)
         phases = (2 * np.pi * 10 * t).tolist()  # 10Hz signal
 
         # Simulated GPS-locked IQ samples (serialized as [I, Q] pairs)
-        iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases[:64]]
+        iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases]
+
+        # Hilbert phase extraction for simulator parity with hardware HAL
+        analytic = hilbert([iq[0] for iq in iq_samples])
+        phases = np.angle(analytic).tolist()
 
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),

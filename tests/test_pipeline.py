@@ -141,7 +141,7 @@ def test_baseline():
 
 
 def main():
-    print("=" * 40 + "\nDSLV-ZPDI Rev 4.2.0 Tests\n" + "=" * 40)
+    print("=" * 40 + "\nDSLV-ZPDI Rev 4.4.0 Tests\n" + "=" * 40)
     for t in [
         test_quarantine_vs_kill,
         test_serialization_roundtrip,

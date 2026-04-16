@@ -1,5 +1,5 @@
 """
-SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.2-LBE1420)
+SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.4.0)
 Concrete implementation of the HAL for RF Metrology hardware:
 Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO.
 
@@ -9,7 +9,7 @@ This implementation achieves hardware-level ADC phase coherence by:
 
 Rev 4.1-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
 Added "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
-Rev 4.2-LBE1420: Migrated to LBE-1420 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
+Rev 4.4.0: Migrated to LBE-1420 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
 Added NMEA serial verification for GPS fix confirmation.
 """
 
@@ -23,6 +23,7 @@ import uuid
 from typing import List, Optional
 
 import numpy as np
+from scipy.signal import hilbert
 
 from dslv_zpdi.core.exceptions import (
     ClockVerificationError,
@@ -273,6 +274,10 @@ class HardwareHAL(BaseHAL):
         # GPSDO provides continuous PPS only when GPS-locked
         gps_locked = pps_jitter_ns < 1_000_000_000.0  # Valid PPS = GPS locked
 
+        # SPEC-004A.3-NMEA: integrate LBE-1420 telemetry
+        nmea = self.verify_nmea_telemetry()
+        gps_locked = gps_locked and nmea.get("gps_fix", False)
+
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),
             node_id=node_id,
@@ -285,6 +290,7 @@ class HardwareHAL(BaseHAL):
                 "source": "gpsdo_leo_bodnar_lbe1420",
                 "pps_device": pps_device,
                 "lbe1420_native_3v3": True,
+                "nmea_telemetry": nmea,
             },
             extracted_phases=[],  # GPS provides no phase vector
             gps_locked=gps_locked,
@@ -451,11 +457,12 @@ class HardwareHAL(BaseHAL):
             sdr.deactivateStream(rx_stream)
             sdr.closeStream(rx_stream)
 
-            # Phase extraction from GPS-locked samples
-            phases = np.angle(buff).tolist()[:512]
+            # Hilbert phase extraction from GPS-locked samples (Layer 1 per SPEC-005)
+            analytic = hilbert(np.real(buff))
+            phases = np.angle(analytic).tolist()[:64]
 
             return {
-                "iq_samples": [[float(x.real), float(x.imag)] for x in buff[:512]],
+                "iq_samples": [[float(x.real), float(x.imag)] for x in buff[:64]],
                 "center_freq": center_freq,
                 "sample_rate": sample_rate,
                 "clock_source": "external",
@@ -498,12 +505,13 @@ class HardwareHAL(BaseHAL):
             iq_raw = iq_int8.astype(np.float32) / 128.0
             iq_complex = iq_raw[0::2] + 1j * iq_raw[1::2]
 
-            # Phase extraction from GPS-locked samples
-            phases = np.angle(iq_complex).tolist()[:512]
+            # Hilbert phase extraction from GPS-locked samples (Layer 1 per SPEC-005)
+            analytic = hilbert(np.real(iq_complex))
+            phases = np.angle(analytic).tolist()[:64]
 
             return {
                 "iq_samples": [
-                    [float(x.real), float(x.imag)] for x in iq_complex[:512]
+                    [float(x.real), float(x.imag)] for x in iq_complex[:64]
                 ],
                 "center_freq": center_freq,
                 "sample_rate": sample_rate,
@@ -520,6 +528,45 @@ class HardwareHAL(BaseHAL):
                 "clock_source": "external",
                 "driver": "pyhackrf",
             }
+
+
+    def ingest_thermal(self, node_id: str = "PI5-ALPHA", sensor_id: str = "THERMAL-01") -> IngestionPayload:
+        """
+        SPEC-005A.THERMAL — Thermal modality ingest hook (Layer 1 only).
+        Returns a placeholder payload for future thermal sensor integration.
+        """
+        return IngestionPayload(
+            payload_uuid=str(uuid.uuid4()),
+            node_id=node_id,
+            sensor_id=sensor_id,
+            modality=SensorModality.THERMAL.value,
+            timestamp_utc=time.time(),
+            ingest_monotonic_ns=time.monotonic_ns(),
+            raw_value={"status": "placeholder"},
+            extracted_phases=[],
+            gps_locked=True,
+            trust_state="CAL_TRUSTED",
+            hardware_tier=1,
+        )
+
+    def ingest_acoustic(self, node_id: str = "PI5-ALPHA", sensor_id: str = "ACOUSTIC-01") -> IngestionPayload:
+        """
+        SPEC-005A.ACOUSTIC — Acoustic modality ingest hook (Layer 1 only).
+        Returns a placeholder payload for future acoustic sensor integration.
+        """
+        return IngestionPayload(
+            payload_uuid=str(uuid.uuid4()),
+            node_id=node_id,
+            sensor_id=sensor_id,
+            modality=SensorModality.ACOUSTIC.value,
+            timestamp_utc=time.time(),
+            ingest_monotonic_ns=time.monotonic_ns(),
+            raw_value={"status": "placeholder"},
+            extracted_phases=[],
+            gps_locked=True,
+            trust_state="CAL_TRUSTED",
+            hardware_tier=1,
+        )
 
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict:
         """

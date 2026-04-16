@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI Unified Installer / Validator
-# Revision: 4.3.0-LBE1420
+# Revision: 4.4.0-LBE1420
 # OS Support: Raspberry Pi OS Bookworm (Deb 12) & Trixie (Deb 13)
 # Date: 2026-04-15
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.3.0"
+SCRIPT_REV="Rev 4.4.0"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0

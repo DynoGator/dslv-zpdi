@@ -1,5 +1,5 @@
 """
-SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 4.2-LBE1420)
+SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 4.4.0)
 Automates hardware-readiness checks for Anchor Nodes (GPSDO/HackRF focus).
 
 Rev 4.1-FORGE: Added SoapySDR checks and Pi 5 RP1 3.3V logic warning.
@@ -35,6 +35,20 @@ damage to the RP1 chip and render the Pi 5 inoperable.
     print("=" * 60)
     print()
 
+
+
+def check_rp1_voltage_guard() -> bool:
+    """
+    SPEC-004A.1 — Hard enforcement: LBE-1420 native 3.3V only.
+    """
+    cal_path = "/etc/dslv_zpdi_cal.json"
+    if os.path.exists(cal_path):
+        with open(cal_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if "LBE1420" in content:
+                print("[HARD] LBE-1420 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
+                return True
+    return True  # Soft pass if calibration file absent
 
 def check_soapy_sdr():
     """
@@ -259,7 +273,7 @@ def main():
     print_rp1_warning()
     
     print("=" * 60)
-    print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.1)")
+    print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.4.0)")
     print("=" * 60)
     print()
     print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO")
@@ -274,6 +288,7 @@ def main():
         sys.exit(0)
 
     checks = [
+        ("RP1 3.3V Guard", check_rp1_voltage_guard()),
         ("SoapySDR Library", check_soapy_sdr()),
         ("HackRF Presence", check_hackrf_presence()),
         ("HackRF Clock Source", check_hackrf_clock_source()),

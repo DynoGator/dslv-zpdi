@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Transition - RF Metrology)  
-**Revision:** Rev 4.3.0  
+**Revision:** Rev 4.4.0  
 **Status:** Beta — hardware transition complete; awaiting Tier 1 baseline capture validation. Multi-OS (Bookworm/Trixie) Installer Deployed.
 
 ## Overview

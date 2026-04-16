@@ -24,7 +24,7 @@ except ImportError:
     HDF5_AVAILABLE = False
 
 logger = logging.getLogger("dslv-zpdi.hdf5")
-FILE_VERSION = "3.1"
+FILE_VERSION = "3.2"
 MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
 
