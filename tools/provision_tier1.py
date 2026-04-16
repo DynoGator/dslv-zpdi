@@ -6,6 +6,7 @@ Rev 4.1-FORGE: Added SoapySDR checks and Pi 5 RP1 3.3V logic warning.
 Implemented "Silent Traitor" clock failure detection per ARCH-PHASE-2A-PIVOT.
 """
 
+import argparse
 import os
 import subprocess
 import sys
@@ -269,7 +270,35 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
         return True  # Don't fail provisioning for this
 
 
+def check_hal_factory_lock() -> bool:
+    """
+    SPEC-005A.4 — Verify canonical HAL factory returns a live, clock-locked HAL.
+    """
+    try:
+        from dslv_zpdi.layer1_ingestion.hal_factory import get_hal
+        hal = get_hal()
+        lock_info = hal.verify_gpsdo_lock()
+        if lock_info.get("phase_lock_verified"):
+            print("[*] HAL factory live — phase-lock verified ✅")
+            return True
+        print("[!] HAL factory returned but phase-lock NOT verified ❌")
+        print(f"    Driver: {lock_info.get('driver_used', 'unknown')}")
+        print(f"    Clock source: {lock_info.get('clock_source', 'unknown')}")
+        return False
+    except Exception as e:
+        print(f"[!] HAL factory verification failed: {e}")
+        return False
+
+
 def main():
+    parser = argparse.ArgumentParser(description="DSLV-ZPDI Tier 1 Provisioning")
+    parser.add_argument("--field", action="store_true", help="Auto-launch 72 h baseline capture after audit")
+    parser.add_argument("--simulator", action="store_true", help="Run in simulator mode")
+    args = parser.parse_args()
+
+    if args.simulator:
+        os.environ["DEV_SIMULATOR"] = "1"
+
     print_rp1_warning()
     
     print("=" * 60)
@@ -289,6 +318,7 @@ def main():
 
     checks = [
         ("RP1 3.3V Guard", check_rp1_voltage_guard()),
+        ("HAL Factory Lock", check_hal_factory_lock()),
         ("SoapySDR Library", check_soapy_sdr()),
         ("HackRF Presence", check_hackrf_presence()),
         ("HackRF Clock Source", check_hackrf_clock_source()),
@@ -325,6 +355,12 @@ def main():
     if all_passed:
         print("[PASSED] Node is compliant with Phase 2A RF Metrology mandates.")
         print("         Ready for 72-hour SPEC-009 baseline calibration.")
+        if args.field:
+            print("[*] --field flag detected. Launching baseline capture...")
+            try:
+                subprocess.call([sys.executable, "tools/capture_baseline.py"])
+            except KeyboardInterrupt:
+                print("[!] Baseline capture interrupted by user.")
         sys.exit(0)
     else:
         print("[FAILED] Node lacks required hardware timing or RF ingestion capability.")

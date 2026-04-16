@@ -1,0 +1,16 @@
+[Unit]
+Description=DSLV-ZPDI Baseline Capture (SPEC-009.1)
+After=network.target chrony.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dslv-zpdi
+ExecStart=/opt/dslv-zpdi/venv/bin/python /opt/dslv-zpdi/tools/capture_baseline.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

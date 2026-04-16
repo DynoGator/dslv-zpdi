@@ -10,6 +10,7 @@ SCRIPT_REV="Rev 4.4.0"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
+FIELD_MODE=0
 SKIP_TESTS=0
 SKIP_APT=0
 SIMULATOR_MODE=0
@@ -36,6 +37,7 @@ Usage: sudo ./install_dslv_zpdi.sh [options]
 
 Options:
   --tier1        Run strict Tier 1 hardware audit after install
+  --field        Auto-launch 72 h baseline capture after Tier 1 audit (implies --tier1)
   --simulator    Run Tier 1 audit in simulation mode (skip hardware checks)
   --skip-tests   Skip pytest / pipeline / SPEC validation
   --skip-apt     Skip apt-get package installation
@@ -54,6 +56,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --tier1)
             RUN_TIER1_AUDIT=1
+            ;;
+        --field)
+            RUN_TIER1_AUDIT=1
+            FIELD_MODE=1
             ;;
         --simulator)
             SIMULATOR_MODE=1
@@ -345,7 +351,11 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
         export DEV_SIMULATOR=1
     fi
     
-    if ! run_as_root "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/provision_tier1.py"; then
+    field_flag=""
+    if [[ "$FIELD_MODE" -eq 1 ]]; then
+        field_flag="--field"
+    fi
+    if ! run_as_root "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/provision_tier1.py $field_flag"; then
         log_fail "Tier 1 hardware audit failed."
     fi
 
