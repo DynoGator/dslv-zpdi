@@ -1,7 +1,8 @@
 [Unit]
 Description=DSLV-ZPDI Production Pipeline (SPEC-011)
-After=network.target chrony.service
+After=network.target chrony.service dslv-zpdi-preflight.service
 Wants=chrony.service
+Requires=dslv-zpdi-preflight.service
 
 [Service]
 Type=simple
@@ -10,8 +11,12 @@ Group=dynogator
 WorkingDirectory=/home/dynogator/dslv-zpdi
 ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline --simulator
 Environment=DEV_SIMULATOR=1
+Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
 RestartSec=15
+Nice=-5
+IOSchedulingClass=realtime
+IOSchedulingPriority=4
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=dslv-zpdi

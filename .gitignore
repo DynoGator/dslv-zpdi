@@ -8,6 +8,8 @@ env/
 .idea/
 .DS_Store
 data/
+output/
+*.bak
 *.h5
 *.hdf5
 *.json
