@@ -3,6 +3,7 @@ SPEC-004A.3 — Continuous Timing Health Monitoring
 """
 
 import logging
+import math
 import subprocess
 from threading import Event, Thread
 
@@ -41,13 +42,20 @@ class TimingMonitor:
                 self.healthy = jitter < self.threshold_ns
 
                 if not self.healthy:
-                    logger.error(
-                        "SPEC-004A.3 VIOLATION: PPS jitter %d ns exceeds %d ns threshold",
-                        jitter,
-                        self.threshold_ns,
-                    )
-                    # Trigger system-wide quarantine via MVIP-6 hooks (Phase 2B integration)
-                    self._trigger_timing_quarantine()
+                    if not math.isfinite(jitter):
+                        logger.warning(
+                            "SPEC-004A.3 COLD-START: chronyc unavailable or returned "
+                            "non-finite jitter — no valid timing reference this cycle. "
+                            "Skipping quarantine trigger."
+                        )
+                    else:
+                        logger.error(
+                            "SPEC-004A.3 VIOLATION: PPS jitter %d ns exceeds %d ns threshold",
+                            int(jitter),
+                            self.threshold_ns,
+                        )
+                        # Trigger system-wide quarantine via MVIP-6 hooks (Phase 2B integration)
+                        self._trigger_timing_quarantine()
 
             except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Timing monitoring error: %s", e)

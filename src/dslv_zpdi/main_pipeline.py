@@ -38,7 +38,11 @@ def main():
         baseline_state_path="/var/lib/dslv_zpdi/baseline.json"
     )
     writer = HDF5Writer()
-    monitor = TimingMonitor()  # SPEC-004A.3 thread
+    # SPEC-004A.3 — Relaxed threshold in simulator mode (NTP jitter ~3ms, not GPSDO).
+    # Hardware production threshold: 50,000 ns (50 µs).
+    # Simulator threshold: 10,000,000 ns (10 ms) — passes NTP, gates gross failures.
+    _timing_threshold = 10_000_000 if (args.simulator or os.getenv("DEV_SIMULATOR") == "1") else 50_000
+    monitor = TimingMonitor(jitter_threshold_ns=_timing_threshold)  # SPEC-004A.3 thread
     monitor.start()
 
     if args.field:
