@@ -49,8 +49,12 @@ def footer_panel() -> Panel:
         t.append(" ] ", style="dim")
         t.append(desc, style="bright_white")
         t.append("  ", style="dim")
-    t.append("\n[italic dim]DSLV-ZPDI :: DynoGatorLabs :: Tier 1 Anchor :: "
-             "If it moves, it gets coherence-scored.[/]")
+    t.append("\n")
+    t.append(
+        "DSLV-ZPDI :: DynoGatorLabs :: Tier 1 Anchor :: "
+        "If it moves, it gets coherence-scored.",
+        style="italic dim bright_white",
+    )
     return Panel(t, border_style="bright_black", padding=(0, 1))
 
 
