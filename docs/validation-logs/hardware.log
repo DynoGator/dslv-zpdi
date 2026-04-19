@@ -1,0 +1,63 @@
+===== hackrf_info =====
+hackrf_info version: 2024.02.1
+libhackrf version: 2024.02.1 (0.9)
+Found HackRF
+Index: 0
+Serial number: 0000000000000000010961dc2a7c5f4f
+Board ID Number: 4 (HackRF One)
+Firmware Version: v2.1.0 (API:1.08)
+Part ID Number: 0xa000cb3c 0x005d4764
+Hardware Revision: r9
+Hardware appears to have been manufactured by Great Scott Gadgets.
+Hardware supported by installed firmware:
+    HackRF One
+===== lsmod | pps =====
+pps_gpio               49152  0
+===== /dev/pps0 =====
+crw------- 1 root root 250, 0 Apr 18 10:48 /dev/pps0
+===== chronyc tracking =====
+Reference ID    : 17BAA87E (ntp.maxhost.io)
+Stratum         : 3
+Ref time (UTC)  : Sun Apr 19 08:13:38 2026
+System time     : 0.004680919 seconds slow of NTP time
+Last offset     : -0.004946988 seconds
+RMS offset      : 0.005427998 seconds
+Frequency       : 3.968 ppm slow
+Residual freq   : -0.133 ppm
+Skew            : 3.992 ppm
+Root delay      : 0.104665145 seconds
+Root dispersion : 0.057334572 seconds
+Update interval : 1024.8 seconds
+Leap status     : Normal
+===== vcgencmd =====
+temp=48.8'C
+throttled=0x50000
+volt=0.8906V
+===== CPU governor =====
+/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor: performance
+/sys/devices/system/cpu/cpu1/cpufreq/scaling_governor: performance
+/sys/devices/system/cpu/cpu2/cpufreq/scaling_governor: performance
+/sys/devices/system/cpu/cpu3/cpufreq/scaling_governor: performance
+===== /proc/device-tree/model =====
+Raspberry Pi 5 Model B Rev 1.1
+===== free =====
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       1.6Gi        12Gi        76Mi       2.0Gi        14Gi
+Swap:          2.0Gi          0B       2.0Gi
+===== df =====
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/mmcblk0p2  117G  7.6G  105G   7% /
+/dev/mmcblk0p2  117G  7.6G  105G   7% /
+===== uname =====
+Linux dslv-zpdi 6.12.75+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.75-1+rpt1 (2026-03-11) aarch64 GNU/Linux
+===== os-release =====
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.4
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"

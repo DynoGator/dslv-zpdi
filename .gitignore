@@ -14,6 +14,7 @@ output/
 *.hdf5
 *.json
 *.log
+!docs/validation-logs/*.log
 config/local_*.yaml
 *.egg-info/
 .pytest_cache/

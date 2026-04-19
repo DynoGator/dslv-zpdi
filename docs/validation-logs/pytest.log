@@ -1,0 +1,62 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /home/dynogator/dslv-zpdi/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/dynogator/dslv-zpdi
+configfile: pyproject.toml
+plugins: cov-7.1.0
+collecting ... collected 43 items
+
+tests/test_calibration.py::test_calibration_artifact_generation PASSED   [  2%]
+tests/test_coherence.py::test_baseline_calculation PASSED                [  4%]
+tests/test_coherence.py::test_outlier_detection PASSED                   [  6%]
+tests/test_ewma_and_routing.py::test_ewma_smoothing_dampens_spikes PASSED [  9%]
+tests/test_ewma_and_routing.py::test_ewma_converges_over_multiple_updates PASSED [ 11%]
+tests/test_ewma_and_routing.py::test_global_r_weighted_by_modality PASSED [ 13%]
+tests/test_ewma_and_routing.py::test_router_only_two_streams PASSED      [ 16%]
+tests/test_ewma_and_routing.py::test_structured_background_routes_to_secondary PASSED [ 18%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_no_devices_found_raises_driver_unavailable PASSED [ 20%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_hackrf_not_found_raises_hardware_initialization PASSED [ 23%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_clock_mismatch_raises_clock_verification PASSED [ 25%]
+tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification PASSED [ 27%]
+tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification PASSED [ 30%]
+tests/test_hardware_failure_paths.py::TestIngestionFailurePaths::test_ingest_sdr_no_driver_returns_error_payload PASSED [ 32%]
+tests/test_hardware_failure_paths.py::TestIngestionFailurePaths::test_ingest_sdr_unverified_clock_raises PASSED [ 34%]
+tests/test_hardware_failure_paths.py::TestNMEAFailurePaths::test_no_nmea_sentences PASSED [ 37%]
+tests/test_hardware_failure_paths.py::TestNMEAFailurePaths::test_serial_timeout PASSED [ 39%]
+tests/test_hardware_failure_paths.py::TestHDF5Unavailable::test_primary_write_skipped_when_hdf5_unavailable PASSED [ 41%]
+tests/test_hdf5_rotation.py::test_real_file_rotation PASSED              [ 44%]
+tests/test_hdf5_rotation.py::test_event_count_resets_on_rotation PASSED  [ 46%]
+tests/test_payload.py::test_payload_validation PASSED                    [ 48%]
+tests/test_payload.py::test_payload_to_json_harden PASSED                [ 51%]
+tests/test_pipeline.py::test_quarantine_vs_kill PASSED                   [ 53%]
+tests/test_pipeline.py::test_serialization_roundtrip PASSED              [ 55%]
+tests/test_pipeline.py::test_state_machine PASSED                        [ 58%]
+tests/test_pipeline.py::test_full_pipeline PASSED                        [ 60%]
+tests/test_pipeline.py::test_coherence_math PASSED                       [ 62%]
+tests/test_pipeline.py::test_global_R PASSED                             [ 65%]
+tests/test_pipeline.py::test_killed_packet PASSED                        [ 67%]
+tests/test_pipeline.py::test_attestation PASSED                          [ 69%]
+tests/test_pipeline.py::test_rotation PASSED                             [ 72%]
+tests/test_pipeline.py::test_baseline PASSED                             [ 74%]
+tests/test_spec009_fsm.py::test_fsm_initial_state_is_not_started PASSED  [ 76%]
+tests/test_spec009_fsm.py::test_fsm_not_started_to_learning PASSED       [ 79%]
+tests/test_spec009_fsm.py::test_fsm_learning_to_locked PASSED            [ 81%]
+tests/test_spec009_fsm.py::test_fsm_locked_cannot_restart PASSED         [ 83%]
+tests/test_spec009_fsm.py::test_fsm_persistence_roundtrip PASSED         [ 86%]
+tests/test_spec009_fsm.py::test_fsm_duration_gate_enforced PASSED        [ 88%]
+tests/test_spec009_fsm.py::test_finalize_not_started_returns_none PASSED [ 90%]
+tests/test_spec009_state_machine.py::test_baseline_lifecycle_and_persistence PASSED [ 93%]
+tests/test_spec009_state_machine.py::test_router_blocks_primary_during_baseline_learning PASSED [ 95%]
+tests/test_watchdog.py::test_watchdog_healthy PASSED                     [ 97%]
+tests/test_watchdog.py::test_watchdog_unhealthy PASSED                   [100%]
+
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 43 passed, 2 warnings in 1.16s ========================
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

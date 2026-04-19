@@ -1,8 +1,8 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Transition - RF Metrology)  
-**Revision:** Rev 4.4.0  
-**Status:** Beta — hardware transition complete; awaiting Tier 1 baseline capture validation. Multi-OS (Bookworm/Trixie) Installer Deployed.
+**Revision:** Rev 4.5.0 — LBE-1420 Hardened Operations Stack  
+**Status:** Beta — Pi 5 deployment validated, system-wide hardening applied, operations dashboard shipped. Awaiting LBE-1420 GPSDO delivery for Tier 1 baseline capture.
 
 ## Overview
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
@@ -41,7 +41,35 @@ DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates
 - Premium Female-to-Female jumper wires (2.54mm pitch) for PPS
 - GPS antenna with clear sky view
 
-### Automated Installation
+### One-Shot Bootstrap (Recommended, Trixie / Pi 5)
+
+Fresh SD card? Drop this into the terminal — it clones the repo, installs everything,
+hardens the OS, enables the dashboard, culls bloatware, and enables passwordless sudo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DynoGator/dslv-zpdi/main/bootstrap.sh | bash -s -- --all
+```
+
+What `--all` implies:
+- `--harden` — kernel freeze (`apt-mark hold`), sysctl tuning, DVB blacklist, systemd service chain (`dslv-zpdi-tuning` → `dslv-zpdi-preflight` → `dslv-zpdi`) with `Nice=-5` + realtime I/O
+- `--dashboard` — installs rich/textual/pyfiglet and wires the TUI dashboard into XDG autostart (lxterminal 180×50 on desktop boot)
+- `--bloatware` — removes LibreOffice, Firefox, VLC L10N, Wolfram, Sonic-Pi, Scratch, Thonny, RealVNC, NodeJS, RPi-Imager, etc. (keeps desktop, WiFi, Bluetooth, accessibility)
+- `--passwordless-sudo` — writes `/etc/sudoers.d/dslv-zpdi` (validated via `visudo -c`)
+- `--simulator` — pipeline runs in sim mode until LBE-1420 GPSDO arrives
+
+### Installer Flags
+
+| Flag | Purpose |
+|------|---------|
+| `--tier1` | Full Tier-1 pipeline install (default when none specified) |
+| `--simulator` | Enable simulator mode (no GPSDO hardware required) |
+| `--harden` | Kernel freeze + sysctl + systemd chain + modprobe blacklist |
+| `--dashboard` | Install TUI dashboard + XDG autostart |
+| `--bloatware` | Remove Pi OS bloatware, disable unused services |
+| `--passwordless-sudo` | Enable NOPASSWD sudo for installing user |
+| `--all` | Shorthand for `--harden --dashboard --bloatware --passwordless-sudo --simulator` |
+
+### Manual (Clone + Run)
 ```bash
 # Clone the repository
 git clone https://github.com/DynoGator/dslv-zpdi.git
@@ -51,15 +79,11 @@ cd dslv-zpdi
 echo "dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0" | sudo tee -a /boot/firmware/config.txt
 sudo reboot
 
-# Install system dependencies
-sudo apt update
-sudo apt install -y pps-tools chrony hackrf libhackrf-dev
+# Full hardened install in one command:
+sudo ./install_dslv_zpdi.sh --all
 
-# Install Python dependencies (includes pyhackrf)
-pip install pyhackrf pyserial
-
-# Run the installer
-sudo ./install_dslv_zpdi.sh --tier1
+# Or piecewise:
+sudo ./install_dslv_zpdi.sh --tier1 --simulator
 ```
 
 ### Hardware Verification
@@ -81,6 +105,42 @@ python -c "import serial; s=serial.Serial('/dev/ttyACM0', 9600, timeout=2); prin
 ### Simulator Mode (No Hardware)
 ```bash
 sudo ./install_dslv_zpdi.sh --tier1 --simulator
+```
+
+## Operations Dashboard (TUI)
+
+The dashboard is a Rich-based Live TUI that streams pipeline telemetry, system vitals,
+hardware state, journalctl logs, and a real-time SDR waterfall.
+
+```bash
+# Manual launch (from any terminal):
+bash /home/$USER/dslv-zpdi/tools/dashboard/launch.sh
+
+# Auto-launches at desktop login (if --dashboard flag was used during install)
+```
+
+**Keybindings:** `q` quit · `space` pause · `m` cycle waterfall mode (SWEEP / NARROW / SCOPE) ·
+`r` toggle real SDR input · `h` toggle banner.
+
+**Panels:**
+- **System** — CPU %, RAM, temp, throttle flags, governor, uptime
+- **Pipeline** — `systemctl` state, HDF5 capture counts, packet rate
+- **Hardware** — HackRF firmware, PPS tick, GPSDO fix, chrony offset/stratum
+- **Waterfall** — 9-stop perceptual truecolor gradient, 20 MHz BW @ 100 MHz default
+- **Logs** — threaded `journalctl -fu dslv-zpdi` tail
+- **Notifications** — rotating dark-humor scan ticker + glitch events
+
+## Live Services (post-hardening)
+
+```bash
+# Check pipeline chain:
+systemctl status dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi
+
+# Follow live pipeline logs:
+journalctl -u dslv-zpdi -f
+
+# Manual preflight (kills SDR conflicts, verifies HackRF/PPS/chrony, non-fatal):
+/home/$USER/dslv-zpdi/tools/preflight.sh
 ```
 
 ## Pre-Flight Check (Manual)
@@ -139,6 +199,8 @@ The 3.3V CMOS output is perfectly matched to the Pi 5 RP1 southbridge, eliminati
 - `MASTER_SPEC.md` - Canonical SPEC-ID law layer
 - `docs/RF_MAGNETIC_SHIELDING.md` - Cyberdeck chassis shielding design (in development)
 - `docs/HARDWARE_CHANGE_JUSTIFICATION.md` - Phase 2A hardware pivot rationale (SPEC-UPDATE-PHASE-2A-LBE1420)
+- `docs/validation-logs/` - Live evidence artifacts (pytest, validators, hardware, system)
+- `CLAUDE-HOME/SESSION_REPORT_2026-04-19_*.md` - Deployment and hardening session reports
 
 ## Scientific Justification
 

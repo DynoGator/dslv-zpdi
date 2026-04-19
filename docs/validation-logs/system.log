@@ -1,0 +1,127 @@
+===== dslv-zpdi services =====
+● dslv-zpdi-tuning.service - DSLV-ZPDI System Tuning (CPU governor, USB power)
+     Loaded: loaded (/etc/systemd/system/dslv-zpdi-tuning.service; enabled; preset: enabled)
+     Active: active (exited) since Sun 2026-04-19 02:02:53 MDT; 34min ago
+ Invocation: 8f93ea074f7949bc93724e04759a72e5
+   Main PID: 9147 (code=exited, status=0/SUCCESS)
+        CPU: 22ms
+
+Apr 19 02:02:53 dslv-zpdi systemd[1]: Starting dslv-zpdi-tuning.service - DSLV-ZPDI System Tuning (CPU governor, USB power)...
+Apr 19 02:02:53 dslv-zpdi systemd[1]: Finished dslv-zpdi-tuning.service - DSLV-ZPDI System Tuning (CPU governor, USB power).
+
+● dslv-zpdi-preflight.service - DSLV-ZPDI Hardware Preflight
+     Loaded: loaded (/etc/systemd/system/dslv-zpdi-preflight.service; enabled; preset: enabled)
+     Active: active (exited) since Sun 2026-04-19 02:07:24 MDT; 30min ago
+ Invocation: 860094af8cad4ce28a90a7aa0bf73fe0
+    Process: 9648 ExecStart=/home/dynogator/dslv-zpdi/tools/preflight.sh (code=exited, status=0/SUCCESS)
+   Main PID: 9648 (code=exited, status=0/SUCCESS)
+        CPU: 165ms
+
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] PPS device /dev/pps0 present
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9667]: chrony active
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] chrony active
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9679]: temp=49.4'C  throttled=0x50000
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] temp=49.4'C  throttled=0x50000
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9682]: governor=performance
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] governor=performance
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9683]: ===== preflight complete (non-fatal) =====
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] ===== preflight complete (non-fatal) =====
+Apr 19 02:07:24 dslv-zpdi systemd[1]: Finished dslv-zpdi-preflight.service - DSLV-ZPDI Hardware Preflight.
+
+● dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011)
+     Loaded: loaded (/etc/systemd/system/dslv-zpdi.service; enabled; preset: enabled)
+     Active: active (running) since Sun 2026-04-19 02:09:34 MDT; 28min ago
+ Invocation: d8cc60a0f5ac4540838268d1e1ee52d9
+   Main PID: 10081 (python)
+      Tasks: 5 (limit: 19357)
+        CPU: 32.362s
+     CGroup: /system.slice/dslv-zpdi.service
+             └─10081 /home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline --simulator
+
+Apr 19 02:09:34 dslv-zpdi systemd[1]: Started dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011).
+Apr 19 02:10:07 dslv-zpdi dslv-zpdi[10081]: SPEC-004A.3 COLD-START: chronyc unavailable or returned non-finite jitter — no valid timing reference this cycle. Skipping quarantine trigger.
+===== enabled dslv services =====
+UNIT FILE                   STATE    PRESET
+dslv-zpdi-baseline.service  disabled enabled
+dslv-zpdi-preflight.service enabled  enabled
+dslv-zpdi-tuning.service    enabled  enabled
+dslv-zpdi.service           enabled  enabled
+
+4 unit files listed.
+===== preflight log (last run) =====
+Apr 19 02:07:24 dslv-zpdi systemd[1]: Starting dslv-zpdi-preflight.service - DSLV-ZPDI Hardware Preflight...
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9649]: ===== DSLV-ZPDI preflight starting =====
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] ===== DSLV-ZPDI preflight starting =====
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9664]: HackRF detected
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] HackRF detected
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9665]: PPS device /dev/pps0 present
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] PPS device /dev/pps0 present
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9667]: chrony active
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] chrony active
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9679]: temp=49.4'C  throttled=0x50000
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] temp=49.4'C  throttled=0x50000
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9682]: governor=performance
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] governor=performance
+Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9683]: ===== preflight complete (non-fatal) =====
+Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] ===== preflight complete (non-fatal) =====
+Apr 19 02:07:24 dslv-zpdi systemd[1]: Finished dslv-zpdi-preflight.service - DSLV-ZPDI Hardware Preflight.
+===== pipeline log (recent) =====
+Apr 19 01:08:36 dslv-zpdi systemd[1]: Started dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011).
+Apr 19 02:06:07 dslv-zpdi dslv-zpdi[4077]: SPEC-004A.3 COLD-START: chronyc unavailable or returned non-finite jitter — no valid timing reference this cycle. Skipping quarantine trigger.
+Apr 19 02:07:24 dslv-zpdi systemd[1]: Stopping dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011)...
+Apr 19 02:07:24 dslv-zpdi systemd[1]: dslv-zpdi.service: Deactivated successfully.
+Apr 19 02:07:24 dslv-zpdi systemd[1]: Stopped dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011).
+Apr 19 02:07:24 dslv-zpdi systemd[1]: dslv-zpdi.service: Consumed 1min 28.068s CPU time.
+Apr 19 02:07:24 dslv-zpdi systemd[1]: Started dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011).
+Apr 19 02:09:33 dslv-zpdi systemd[1]: Stopping dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011)...
+Apr 19 02:09:34 dslv-zpdi systemd[1]: dslv-zpdi.service: Deactivated successfully.
+Apr 19 02:09:34 dslv-zpdi systemd[1]: Stopped dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011).
+Apr 19 02:09:34 dslv-zpdi systemd[1]: dslv-zpdi.service: Consumed 3.953s CPU time.
+Apr 19 02:09:34 dslv-zpdi systemd[1]: Started dslv-zpdi.service - DSLV-ZPDI Production Pipeline (SPEC-011).
+Apr 19 02:10:07 dslv-zpdi dslv-zpdi[10081]: SPEC-004A.3 COLD-START: chronyc unavailable or returned non-finite jitter — no valid timing reference this cycle. Skipping quarantine trigger.
+===== apt-mark showhold =====
+bluez
+bluez-firmware
+chrony
+firmware-atheros
+firmware-brcm80211
+firmware-mediatek
+hackrf
+libhackrf-dev
+libhackrf0
+linux-headers-6.12.75+rpt-common-rpi
+linux-headers-6.12.75+rpt-rpi-2712
+linux-headers-6.12.75+rpt-rpi-v8
+linux-headers-rpi-2712
+linux-headers-rpi-v8
+linux-image-6.12.75+rpt-rpi-2712
+linux-image-6.12.75+rpt-rpi-v8
+linux-image-rpi-2712
+linux-image-rpi-v8
+linux-kbuild-6.12.75+rpt
+pps-tools
+===== disabled services (ours) =====
+cloud-init           not-found
+cups                 disabled
+wayvnc-control       disabled
+rpcbind              disabled
+nfs-blkmap           disabled
+===== sysctl tuning =====
+# DSLV-ZPDI Kernel Tuning for RF Metrology Pipeline
+# Minimize swap pressure (we have 16GB RAM, no need to swap aggressively)
+vm.swappiness = 10
+# Larger networking buffers for HDF5 streaming / future multi-node
+net.core.rmem_max = 26214400
+net.core.wmem_max = 26214400
+# Reduce kernel log flood from pipeline
+kernel.printk = 4 4 1 7
+# Protect fifos/regular files
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+fs.protected_fifos = 2
+fs.protected_regular = 2
+===== modprobe blacklist =====
+# DSLV-ZPDI: blacklist DVB driver auto-load to keep RTL-SDR dongles (future) free for SoapySDR
+blacklist dvb_usb_rtl28xxu
+blacklist rtl2832
+blacklist rtl2830
