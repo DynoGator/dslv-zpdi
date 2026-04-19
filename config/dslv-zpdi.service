@@ -1,0 +1,20 @@
+[Unit]
+Description=DSLV-ZPDI Production Pipeline (SPEC-011)
+After=network.target chrony.service
+Wants=chrony.service
+
+[Service]
+Type=simple
+User=dynogator
+Group=dynogator
+WorkingDirectory=/home/dynogator/dslv-zpdi
+ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline --simulator
+Environment=DEV_SIMULATOR=1
+Restart=on-failure
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dslv-zpdi
+
+[Install]
+WantedBy=multi-user.target
