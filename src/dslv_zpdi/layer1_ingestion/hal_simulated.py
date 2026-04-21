@@ -76,18 +76,20 @@ class SimulatedHAL(BaseHAL):
         sample_rate = kwargs.get("sample_rate", 20e6)  # HackRF: up to 20 MHz
         center_freq = kwargs.get("center_freq", 100e6)
         clock_source = kwargs.get("clock_source", "external")  # GPSDO-locked
+        coherent_burst = bool(kwargs.get("coherent_burst", False))
 
-        # Generate 512 samples of a coherent sine wave
-        # Simulating GPS-locked phase stability
-        t = np.linspace(0, 1, 64)
-        phases = (2 * np.pi * 10 * t).tolist()  # 10Hz signal
-
-        # Simulated GPS-locked IQ samples (serialized as [I, Q] pairs)
-        iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases]
-
-        # Hilbert phase extraction for simulator parity with hardware HAL
-        analytic = hilbert([iq[0] for iq in iq_samples])
-        phases = np.angle(analytic).tolist()
+        if coherent_burst:
+            # High-coherence burst: tightly clustered phases → r_local ≈ 1.
+            rng = np.random.default_rng(hash(node_id) & 0xFFFFFFFF)
+            phases = (rng.normal(0.0, 0.05, 64)).tolist()
+            iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases]
+        else:
+            # Background: swept 10 Hz signal → phases uniform over [0, 2π] → r_local ≈ 0.
+            t = np.linspace(0, 1, 64)
+            phases = (2 * np.pi * 10 * t).tolist()
+            iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases]
+            analytic = hilbert([iq[0] for iq in iq_samples])
+            phases = np.angle(analytic).tolist()
 
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),
