@@ -41,6 +41,9 @@ def footer_panel() -> Panel:
         ("space", "pause"),
         ("m", "wf-mode"),
         ("r", "real-sdr"),
+        ("p", "palette"),
+        ("s", "spec"),
+        ("[/]", "range"),
         ("h", "help"),
     ]
     for k, desc in keys:
@@ -164,6 +167,24 @@ class Dashboard:
             self.show_banner = not self.show_banner
             self.layout = build_layout(self.show_banner)
             self.note_p.push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
+        elif k == "[":
+            self.wf_p.adjust_floor(-5.0)
+            self.note_p.push("INFO", f"floor: {self.wf_p.dbm_floor} dBm")
+        elif k == "]":
+            self.wf_p.adjust_floor(5.0)
+            self.note_p.push("INFO", f"floor: {self.wf_p.dbm_floor} dBm")
+        elif k == "{":
+            self.wf_p.adjust_ceil(-5.0)
+            self.note_p.push("INFO", f"ceil: {self.wf_p.dbm_ceil} dBm")
+        elif k == "}":
+            self.wf_p.adjust_ceil(5.0)
+            self.note_p.push("INFO", f"ceil: {self.wf_p.dbm_ceil} dBm")
+        elif k in ("p", "P"):
+            self.wf_p.cycle_palette()
+            self.note_p.push("INFO", "palette cycled")
+        elif k in ("s", "S"):
+            self.wf_p.show_spectrum = not self.wf_p.show_spectrum
+            self.note_p.push("INFO", f"spectrum: {'ON' if self.wf_p.show_spectrum else 'OFF'}")
 
     def run(self):
         self._boot_animation()

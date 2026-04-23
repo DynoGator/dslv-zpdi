@@ -10,8 +10,17 @@ from dashboard.humor import pick_scan, pick_glitch
 
 
 class NotificationPanel:
-    def __init__(self, max_items: int = 8):
+    def __init__(
+        self,
+        max_items: int = 8,
+        humor_every_s: float = 4.0,
+        glitch_every_s: float = 37.0,
+        border_style: str = "bright_magenta",
+    ):
         self.max_items = max_items
+        self.humor_every_s = humor_every_s
+        self.glitch_every_s = glitch_every_s
+        self.border_style = border_style
         self.items: collections.deque[tuple[float, str, str]] = collections.deque(maxlen=max_items)
         self._last_humor = 0.0
         self._last_glitch = 0.0
@@ -21,11 +30,11 @@ class NotificationPanel:
 
     def tick_humor(self):
         now = time.time()
-        if now - self._last_humor >= 4.0:
+        if now - self._last_humor >= self.humor_every_s:
             self._last_humor = now
             self.push("SCAN", pick_scan())
         # sprinkle occasional glitch
-        if now - self._last_glitch >= 37.0:
+        if now - self._last_glitch >= self.glitch_every_s:
             self._last_glitch = now
             self.push("GLITCH", pick_glitch())
 
@@ -33,7 +42,7 @@ class NotificationPanel:
         self.tick_humor()
         t = Text()
         if not self.items:
-            t.append("[dim]...[/]")
+            t.append("…", style="dim")
         else:
             for ts, lvl, msg in self.items:
                 age = int(time.time() - ts)
@@ -59,7 +68,7 @@ class NotificationPanel:
                 t.append(f"{msg}\n", style=sty)
         return Panel(
             t,
-            title="[bold bright_magenta]▓ NOTIFICATIONS ▓[/]",
-            border_style="bright_magenta",
+            title=f"[bold {self.border_style}]▓ NOTIFICATIONS ▓[/]",
+            border_style=self.border_style,
             padding=(0, 1),
         )

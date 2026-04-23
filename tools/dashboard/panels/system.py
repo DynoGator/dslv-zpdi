@@ -110,8 +110,9 @@ def _uptime() -> str:
 
 
 class SystemPanel:
-    def __init__(self):
+    def __init__(self, border_style: str = "bright_cyan"):
         self._cpu_state = {}
+        self.border_style = border_style
 
     def render(self) -> Panel:
         cpu_pct = _cpu_usage_percent(self._cpu_state)
@@ -139,7 +140,7 @@ class SystemPanel:
 
         return Panel(
             t,
-            title="[bold bright_cyan]▓ SYSTEM ▓[/]",
-            border_style="bright_cyan",
+            title=f"[bold {self.border_style}]▓ SYSTEM ▓[/]",
+            border_style=self.border_style,
             padding=(0, 1),
         )

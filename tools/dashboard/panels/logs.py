@@ -5,14 +5,21 @@ import subprocess
 import threading
 import time
 
+from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.text import Text
 
 
 class LogPanel:
-    def __init__(self, unit: str = "dslv-zpdi", max_lines: int = 14):
+    def __init__(
+        self,
+        unit: str = "dslv-zpdi",
+        max_lines: int = 14,
+        border_style: str = "bright_white",
+    ):
         self.unit = unit
         self.max_lines = max_lines
+        self.border_style = border_style
         self.lines: collections.deque[str] = collections.deque(maxlen=max_lines)
         self._started = False
         self._thread: threading.Thread | None = None
@@ -59,21 +66,23 @@ class LogPanel:
             style = "bright_green"
         else:
             style = "bright_white"
-        # keep last 120 chars max
-        txt = line[-120:]
+        txt = line[-180:]
         return Text(txt, style=style, no_wrap=True, overflow="ellipsis")
 
     def render(self) -> Panel:
-        t = Text()
+        t = Text(no_wrap=True, overflow="ellipsis")
         if not self.lines:
-            t.append("[dim]waiting for journald...[/]", style="dim")
+            t.append(f"waiting for journald (unit={self.unit})...", style="dim italic")
         else:
             for ln in self.lines:
                 t.append_text(self._style_line(ln))
                 t.append("\n")
         return Panel(
             t,
-            title="[bold bright_white]▓ LIVE LOG ▓[/] [dim](journalctl -u dslv-zpdi -f)[/]",
-            border_style="bright_white",
+            title=(
+                f"[bold {self.border_style}]▓ LIVE LOG ▓[/] "
+                f"[dim](journalctl -u {_esc(self.unit)} -f)[/]"
+            ),
+            border_style=self.border_style,
             padding=(0, 1),
         )

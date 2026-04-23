@@ -1,0 +1,49 @@
+# DSLV-ZPDI Operations Dashboard — example configuration
+# Copy to ~/.config/dslv-zpdi/dashboard.toml and edit.
+#
+# Any section or key you omit falls back to the built-in default.
+
+[dashboard]
+refresh       = 0.5
+show_banner   = true
+service_unit  = "dslv-zpdi"
+
+[dashboard.panels]
+system        = true
+pipeline      = true
+hardware      = true
+waterfall     = true
+logs          = true
+notifications = true
+
+[dashboard.theme]
+system_border        = "bright_cyan"
+pipeline_border      = "bright_green"
+hardware_border      = "yellow"
+waterfall_border     = "bright_magenta"
+logs_border          = "bright_white"
+notifications_border = "bright_magenta"
+banner_border        = "bright_green"
+footer_border        = "bright_black"
+accent               = "bright_cyan"
+
+[dashboard.waterfall]
+mode       = "SWEEP"
+center_hz  = 100_000_000
+span_hz    = 20_000_000
+history    = 12
+
+[dashboard.notifications]
+humor_every_s   = 4.0
+glitch_every_s  = 37.0
+max_items       = 8
+
+[dashboard.logs]
+max_lines = 14
+
+[dashboard.keybindings]
+quit      = "q"
+pause     = " "
+wf_mode   = "m"
+real_sdr  = "r"
+help      = "h"

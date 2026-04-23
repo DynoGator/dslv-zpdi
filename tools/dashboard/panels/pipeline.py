@@ -109,6 +109,9 @@ class PipelinePanel:
         t.add_row("Up", f"[dim]{up_s}[/]")
         t.add_row("HDF5", f"[bright_green]{prim}[/] files")
         t.add_row("Quarantine", f"[yellow]{sec}[/] pkts")
+        t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
+        t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
+        t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
         t.add_row("Rate", f"[bright_magenta]{rate:5.1f}[/] pkt/s")
 
         return Panel(
