@@ -28,6 +28,11 @@ SAY "================================================================"
 SAY "DSLV-ZPDI clean launch starting"
 SAY "================================================================"
 
+# Warm-up pause: gives the desktop session / display server / chrony a moment
+# to finish settling before we start yanking processes and services.
+SAY "warm-up :: 5s settle pause before initiating the rest of the script"
+sleep 5
+
 # --- 1. Kill every user-space DSLV process ------------------------------
 SAY "step 1/7 :: killing stale DSLV and SDR processes"
 
@@ -61,10 +66,13 @@ else
 fi
 if [ -n "$SUDO" ]; then
     $SUDO systemctl stop dslv-zpdi.service           2>/dev/null || true
-    $SUDO systemctl stop dslv-zpdi-preflight.service 2>/dev/null || true
-    $SUDO systemctl stop dslv-zpdi-tuning.service    2>/dev/null || true
-    $SUDO systemctl stop dslv-zpdi-baseline.service  2>/dev/null || true
     sleep 1
+    $SUDO systemctl stop dslv-zpdi-preflight.service 2>/dev/null || true
+    sleep 1
+    $SUDO systemctl stop dslv-zpdi-tuning.service    2>/dev/null || true
+    sleep 1
+    $SUDO systemctl stop dslv-zpdi-baseline.service  2>/dev/null || true
+    sleep 2
 fi
 
 # --- 3. Validate venv --------------------------------------------------
@@ -79,6 +87,7 @@ OK "venv python: $PYVER"
     || ( cd "$REPO/tools" && "$VENV/bin/python" -c "import dashboard" 2>/dev/null \
          && OK "dashboard importable (from tools/)" \
          || WARN "dashboard package not importable" )
+sleep 1
 
 # --- 4. HackRF + driver sanity check -----------------------------------
 SAY "step 4/7 :: HackRF and driver sanity"
@@ -112,14 +121,19 @@ if [ -e /lib/udev/rules.d/60-libhackrf0.rules ] \
 else
     WARN "no HackRF udev rules found (device may need sudo to open)"
 fi
+sleep 1
 
 # --- 5. Reload + start chain in order ---------------------------------
 if [ -n "$SUDO" ]; then
     SAY "step 5/7 :: starting dslv-zpdi chain (tuning → preflight → pipeline)"
     $SUDO systemctl daemon-reload
+    sleep 1
     for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service; do
         SAY "  - start $unit"
         $SUDO systemctl start "$unit" || WARN "failed to start $unit"
+        # pause between dependent unit starts so each finishes init
+        # before the next one is asked to come up
+        sleep 2
     done
     sleep 2
 else
@@ -142,6 +156,7 @@ if [ "$FAILED" -gt 0 ]; then
     WARN "$FAILED unit(s) not active — showing last 20 lines of dslv-zpdi journal"
     journalctl -u dslv-zpdi -n 20 --no-pager 2>/dev/null || true
 fi
+sleep 1
 
 # --- 7. Launch dashboard + waterfall second window --------------------
 SAY "step 7/7 :: launching operations dashboard and waterfall window"
@@ -169,7 +184,10 @@ spawn_terminal() {
     local geo="$1"; shift
     case "$TERMCMD" in
         lxterminal)
-            nohup lxterminal --title="$title" --geometry="$geo" -e "$@" \
+            # --no-remote keeps each window as its own process, otherwise
+            # lxterminal's single-instance daemon swallows the -e of
+            # subsequent invocations and only one window actually opens.
+            nohup lxterminal --no-remote --title="$title" --geometry="$geo" -e "$*" \
                 >/dev/null 2>&1 & disown ;;
         x-terminal-emulator)
             nohup x-terminal-emulator -T "$title" -e "$@" \
@@ -188,16 +206,24 @@ fi
 # 7a — waterfall second window FIRST so it's visible under the dashboard
 SAY "  - opening waterfall window ($TERMCMD)"
 spawn_terminal "$TITLE_WF" "$GEO_WF" \
-    "$VENV/bin/python" -m dashboard --waterfall-only --no-boot
-sleep 0.3
+    "$DASH" --waterfall-only --no-boot
+# give the first window a moment to register on the display server
+# before we fire the second one
+sleep 2
 
-# 7b — main dashboard takes the foreground
+# 7b — main dashboard (spawned the same way so both survive under
+# lxterminal's single-instance behavior)
 SAY "  - opening operations dashboard ($TERMCMD)"
 case "$TERMCMD" in
     lxterminal)
-        exec lxterminal --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" ;;
+        nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" \
+            >/dev/null 2>&1 & disown ;;
     x-terminal-emulator)
-        exec x-terminal-emulator -T "$TITLE_MAIN" -e "$DASH" ;;
+        nohup x-terminal-emulator -T "$TITLE_MAIN" -e "$DASH" \
+            >/dev/null 2>&1 & disown ;;
     xterm)
-        exec xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -e "$DASH" ;;
+        nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -e "$DASH" \
+            >/dev/null 2>&1 & disown ;;
 esac
+sleep 1
+OK "launch complete — dashboard + waterfall windows dispatched"

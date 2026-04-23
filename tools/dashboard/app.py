@@ -61,8 +61,14 @@ def footer_panel() -> Panel:
     return Panel(t, border_style="bright_black", padding=(0, 1))
 
 
-def build_layout(show_banner: bool) -> Layout:
+def build_layout(show_banner: bool, waterfall_only: bool = False) -> Layout:
     layout = Layout()
+
+    if waterfall_only:
+        layout.split_column(
+            Layout(name="middle"),
+        )
+        return layout
 
     layout.split_column(
         Layout(name="banner", size=9 if show_banner else 0),
@@ -85,10 +91,11 @@ def build_layout(show_banner: bool) -> Layout:
 
 
 class Dashboard:
-    def __init__(self, refresh: float = 0.5, show_banner: bool = True):
+    def __init__(self, refresh: float = 0.5, show_banner: bool = True, waterfall_only: bool = False):
         self.console = Console()
         self.refresh = refresh
         self.show_banner = show_banner
+        self.waterfall_only = waterfall_only
 
         self.sys_p = SystemPanel()
         self.pipe_p = PipelinePanel()
@@ -98,7 +105,7 @@ class Dashboard:
         self.note_p = NotificationPanel()
 
         self.paused = False
-        self.layout = build_layout(self.show_banner)
+        self.layout = build_layout(self.show_banner, self.waterfall_only)
         self._keyboard_mode = None
         self._orig_attrs = None
 
@@ -131,6 +138,10 @@ class Dashboard:
 
     # render ---
     def _render(self):
+        if self.waterfall_only:
+            self.layout["middle"].update(self.wf_p.render())
+            return
+
         if self.show_banner:
             self.layout["banner"].update(full_banner())
         self.layout["system"].update(self.sys_p.render())
@@ -142,11 +153,12 @@ class Dashboard:
         self.layout["footer"].update(footer_panel())
 
     def _boot_animation(self):
-        frames = startup_animation_frames(self.console)
-        for line in frames:
-            self.console.print("  " + line)
-            time.sleep(0.28)
-        time.sleep(0.4)
+        if self.waterfall_only:
+            return
+        for frame in startup_animation_frames(self.console):
+            self.console.print(frame)
+            time.sleep(0.15)
+        time.sleep(0.5)
 
     def _handle_key(self, k: str):
         if k in ("q", "Q"):
@@ -164,9 +176,10 @@ class Dashboard:
             os.environ["DSLV_DASHBOARD_REAL_SDR"] = new
             self.note_p.push("INFO", f"real SDR mode: {'ON' if new == '1' else 'OFF'}")
         elif k in ("h", "H"):
-            self.show_banner = not self.show_banner
-            self.layout = build_layout(self.show_banner)
-            self.note_p.push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
+            if not self.waterfall_only:
+                self.show_banner = not self.show_banner
+                self.layout = build_layout(self.show_banner, self.waterfall_only)
+                self.note_p.push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
         elif k == "[":
             self.wf_p.adjust_floor(-5.0)
             self.note_p.push("INFO", f"floor: {self.wf_p.dbm_floor} dBm")
@@ -217,12 +230,13 @@ def main():
     parser.add_argument("--refresh", type=float, default=0.5, help="refresh interval (s)")
     parser.add_argument("--no-banner", action="store_true", help="hide startup banner")
     parser.add_argument("--no-boot", action="store_true", help="skip boot animation")
+    parser.add_argument("--waterfall-only", action="store_true", help="render only the waterfall panel")
     args = parser.parse_args()
 
     signal.signal(signal.SIGTERM, _signal_handler)
     signal.signal(signal.SIGINT, _signal_handler)
 
-    dash = Dashboard(refresh=args.refresh, show_banner=not args.no_banner)
+    dash = Dashboard(refresh=args.refresh, show_banner=not args.no_banner, waterfall_only=args.waterfall_only)
     if args.no_boot:
         dash._boot_animation = lambda: None  # type: ignore
     dash.run()

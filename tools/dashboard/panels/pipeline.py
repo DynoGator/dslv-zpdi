@@ -68,7 +68,7 @@ def _count_secondary_lines() -> int:
 class PipelinePanel:
     def __init__(self, unit: str = "dslv-zpdi"):
         self.unit = unit
-        self._last_pkt = 0
+        self._last_pkt: int | None = None
         self._last_t = time.time()
 
     def render(self) -> Panel:
@@ -85,7 +85,10 @@ class PipelinePanel:
         now = time.time()
         total_pkts = prim + sec
         dt = now - self._last_t
-        rate = (total_pkts - self._last_pkt) / dt if dt > 0 else 0.0
+        if self._last_pkt is None or dt <= 0:
+            rate = 0.0
+        else:
+            rate = max(0.0, (total_pkts - self._last_pkt) / dt)
         self._last_pkt = total_pkts
         self._last_t = now
 
@@ -109,8 +112,6 @@ class PipelinePanel:
         t.add_row("Up", f"[dim]{up_s}[/]")
         t.add_row("HDF5", f"[bright_green]{prim}[/] files")
         t.add_row("Quarantine", f"[yellow]{sec}[/] pkts")
-        t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
-        t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
         t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
         t.add_row("Rate", f"[bright_magenta]{rate:5.1f}[/] pkt/s")
 
