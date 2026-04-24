@@ -2,6 +2,36 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.5.1] - 2026-04-24
+
+### Added
+- `tools/health_check.sh` — 8-subsystem Tier 1 node validator (exit 0/1/2).
+- `config/dslv-zpdi-tuning.service` — tracked in repo (CPU governor, USB power).
+- Dashboard config integration: `app.py` loads `dashboard.toml` for refresh, theme, waterfall defaults, notifications.
+- Dashboard keybindings: gain (+/-, g), amp (a), tune (</>), zoom (z/x).
+- Waterfall hot-plug detection, timestamp tracking, linear interpolation resampling.
+- Mapping temporal filters (`--since`, `--until`) and toggleable heatmap layer.
+- Mapping `r_smooth`-weighted coordinate scatter for data-driven positioning.
+
+### Changed
+- `hal_hardware.py` — PPS jitter now uses interval-stdev ring buffer; IQ phase via `np.angle(complex_baseband)`; SoapySDR error handling; guarded NMEA parsing.
+- `hal_simulated.py` — IQ phase extraction aligned to complex analytic signal.
+- `coherence.py` — eliminated duplicate baseline sampling by delegating to `update_baseline()`.
+- `wiring.py` — `CORE_PROCESSED` accepted for packet reprocessing.
+- `main_pipeline.py` — captures coherence RoutingDecision, logs PRIMARY events, emits 60s status heartbeat; uses absolute output paths.
+- `config/dslv-zpdi.service` — defaults to hardware mode; removed hardcoded `--simulator`.
+- `config/dslv-zpdi-baseline.service` — correct paths and `dynogator` user.
+- `config/deployment.yaml` — absolute paths throughout.
+
+### Fixed
+- PPS jitter modulo wrap-around bug (catastrophic offsets appeared as near-zero).
+- Incorrect Hilbert transform on complex IQ data (discarded Q channel).
+- Silent SoapySDR stream errors (return code ignored).
+- Unhandled NMEA empty-field `ValueError` crashes.
+- Dashboard filesystem probe performance (`find` → cached `os.listdir`).
+- LogPanel infinite retry spam on missing systemd unit.
+- Mapping `_tail_lines` double-pass performance issue.
+
 ## [4.5.0] - 2026-04-24
 
 ### Added
