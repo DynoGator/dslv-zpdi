@@ -163,8 +163,33 @@ SAY "step 7/7 :: launching operations dashboard and waterfall window"
 
 TITLE_MAIN="DSLV-ZPDI :: DynoGatorLabs"
 TITLE_WF="DSLV-ZPDI :: WATERFALL"
-GEO_MAIN="180x50"
-GEO_WF="140x34"
+
+# Screen-aware geometry.
+# - 5" DSI (800x480): compact terminals that actually fit the screen.
+# - anything larger: the original wide layout.
+SCREEN_W=0
+SCREEN_H=0
+if command -v xrandr >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
+    read SCREEN_W SCREEN_H < <(xrandr --current 2>/dev/null \
+        | awk '/\*/{print $1; exit}' | tr 'x' ' ' || true)
+fi
+SCREEN_W=${SCREEN_W:-0}
+SCREEN_H=${SCREEN_H:-0}
+if [ "${SCREEN_W:-0}" -le 1024 ] && [ "${SCREEN_H:-0}" -le 600 ] \
+   && [ "${SCREEN_W:-0}" -gt 0 ]; then
+    # 5" DSI: single fullscreen window, compact layout, no second terminal.
+    # 92x28 keeps the waterfall visible at 800x480 with default lxterminal
+    # font (dense enough to hit ~28-30 rows on most Pi OS installs).
+    GEO_MAIN="92x28"
+    GEO_WF="92x28"
+    COMPACT_MODE=1
+    SAY "detected small display (${SCREEN_W}x${SCREEN_H}) - compact layout enabled"
+else
+    GEO_MAIN="180x50"
+    GEO_WF="140x34"
+    COMPACT_MODE=0
+fi
+export DSLV_DASHBOARD_COMPACT="$COMPACT_MODE"
 
 # Pick a GUI terminal emulator once; both windows use the same one.
 TERMCMD=""
@@ -203,27 +228,47 @@ if [ -z "$TERMCMD" ]; then
     exec "$DASH"
 fi
 
-# 7a — waterfall second window FIRST so it's visible under the dashboard
-SAY "  - opening waterfall window ($TERMCMD)"
-spawn_terminal "$TITLE_WF" "$GEO_WF" \
-    "$DASH" --waterfall-only --no-boot
-# give the first window a moment to register on the display server
-# before we fire the second one
-sleep 2
+if [ "$COMPACT_MODE" = "1" ]; then
+    # 5" DSI: one window, compact layout, no separate waterfall — the
+    # panel already stacks inside the dashboard, and a second window
+    # would not fit on 800x480 anyway.
+    SAY "  - opening operations dashboard in compact mode ($TERMCMD)"
+    case "$TERMCMD" in
+        lxterminal)
+            nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" \
+                >/dev/null 2>&1 & disown ;;
+        x-terminal-emulator)
+            nohup x-terminal-emulator -T "$TITLE_MAIN" -e "$DASH" \
+                >/dev/null 2>&1 & disown ;;
+        xterm)
+            nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -fa 'Monospace' -fs 9 -e "$DASH" \
+                >/dev/null 2>&1 & disown ;;
+    esac
+    sleep 1
+    OK "launch complete — compact dashboard dispatched"
+else
+    # 7a — waterfall second window FIRST so it's visible under the dashboard
+    SAY "  - opening waterfall window ($TERMCMD)"
+    spawn_terminal "$TITLE_WF" "$GEO_WF" \
+        "$DASH" --waterfall-only --no-boot
+    # give the first window a moment to register on the display server
+    # before we fire the second one
+    sleep 2
 
-# 7b — main dashboard (spawned the same way so both survive under
-# lxterminal's single-instance behavior)
-SAY "  - opening operations dashboard ($TERMCMD)"
-case "$TERMCMD" in
-    lxterminal)
-        nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" \
-            >/dev/null 2>&1 & disown ;;
-    x-terminal-emulator)
-        nohup x-terminal-emulator -T "$TITLE_MAIN" -e "$DASH" \
-            >/dev/null 2>&1 & disown ;;
-    xterm)
-        nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -e "$DASH" \
-            >/dev/null 2>&1 & disown ;;
-esac
-sleep 1
-OK "launch complete — dashboard + waterfall windows dispatched"
+    # 7b — main dashboard (spawned the same way so both survive under
+    # lxterminal's single-instance behavior)
+    SAY "  - opening operations dashboard ($TERMCMD)"
+    case "$TERMCMD" in
+        lxterminal)
+            nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" \
+                >/dev/null 2>&1 & disown ;;
+        x-terminal-emulator)
+            nohup x-terminal-emulator -T "$TITLE_MAIN" -e "$DASH" \
+                >/dev/null 2>&1 & disown ;;
+        xterm)
+            nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -e "$DASH" \
+                >/dev/null 2>&1 & disown ;;
+    esac
+    sleep 1
+    OK "launch complete — dashboard + waterfall windows dispatched"
+fi

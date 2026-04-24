@@ -1,0 +1,19 @@
+# DSLV-ZPDI Sensor Location
+#
+# Copy to ~/.config/dslv-zpdi/sensor_location.yaml and fill in your
+# anchor position. Without a location, the map script will fall back to
+# 0,0 and pin everything at the Gulf of Guinea, which is not useful.
+#
+# Coordinates are WGS84 decimal degrees. Azimuth is true-north bearing.
+
+node_id: DSLV-ANCHOR-001
+site_name: "Home Anchor"
+latitude: 39.7392
+longitude: -104.9903
+altitude_m: 1609
+# Heading the HackRF antenna is pointed in (degrees from true north).
+# Used to render the primary directional cone on the map.
+antenna_heading_deg: 0
+# Optional secondary ring radius (meters). Secondary (quarantined) events are
+# plotted on a jittered ring around the anchor so they don't stack on one pin.
+secondary_ring_m: 150

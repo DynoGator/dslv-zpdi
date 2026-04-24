@@ -1,0 +1,24 @@
+# DSLV-ZPDI Email Configuration
+#
+# Copy to ~/.config/dslv-zpdi/email.yaml (chmod 600) and fill in below.
+#
+# Gmail users: you MUST use an "App Password" (not your regular password).
+# Generate one at https://myaccount.google.com/apppasswords — this
+# requires 2FA to be on. Paste the 16-character code into `password`.
+
+backend: gmail           # gmail | smtp (others pluggable later)
+smtp_user: "you@gmail.com"
+smtp_password: ""        # 16-char Gmail App Password; leave empty to prompt
+from_name: "DSLV-ZPDI Anchor"
+recipients:
+  - "analyst@example.com"
+# Optional overrides (ignored for gmail backend)
+smtp_host: "smtp.gmail.com"
+smtp_port: 587
+# How much primary/secondary data to include per send. Anything larger
+# than this gets skipped (email attachment limits are ~25MB on Gmail).
+max_attachment_mb: 20
+include_primary: true
+include_secondary: true
+include_map: true
+subject_prefix: "[DSLV-ZPDI]"

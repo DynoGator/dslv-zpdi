@@ -129,6 +129,7 @@ top strip becomes two columns instead of three with no blank gap.
 |---|---|
 | `DSLV_DASHBOARD_CONFIG` | Path to an alternate TOML config. |
 | `DSLV_DASHBOARD_REAL_SDR` | `1` = use real `hackrf_sweep`, `0` (or unset) = simulator. The `r` key toggles this. |
+| `DSLV_DASHBOARD_COMPACT` | `1` forces the compact 5" DSI layout (2×2 status grid, no mega-banner). Auto-detected when terminal is narrower than 140 cols; also toggled live with the `c` key. |
 
 ## Requirements
 

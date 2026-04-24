@@ -287,6 +287,10 @@ class WaterfallPanel:
         self._stream = HackrfSweepStream()
         self._want_real = False
         self._last_source = "SIM"
+        # Raw dBm view of the latest row (real or simulated). Consumed by the
+        # RF anomaly panel so it can report peak dBm, noise floor, etc.
+        self.last_dbm_row: list[float] | None = None
+        self._anomaly_count_recent = 0
 
     def cycle_palette(self):
         global _PALETTE_IDX
@@ -394,20 +398,70 @@ class WaterfallPanel:
     def tick(self):
         self._sync_stream()
         row: list[float] | None = None
+        raw_dbm: list[float] | None = None
         source = "SIM"
         if self._want_real:
             raw_row = self._stream.pop_row()
             if raw_row is not None:
                 source = "HACKRF"
+                raw_dbm = raw_row
                 row = self._normalize(raw_row)
         if row is None:
             row = self._sim_row()
+            # Synthesize a plausible dBm trace from the normalized sim row so
+            # the anomaly panel still has something meaningful to display.
+            raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
             if self._want_real:
                 source = "HACKRF-WAIT"
         self._last_source = source
+        self.last_dbm_row = raw_dbm
+        if raw_dbm:
+            floor = self._estimate_floor(raw_dbm)
+            self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
         self.rows.append(row)
         if len(self.rows) > self.history:
             self.rows.pop(0)
+
+    @staticmethod
+    def _estimate_floor(row: list[float]) -> float:
+        """Median is a robust noise-floor estimate against a few strong carriers."""
+        s = sorted(row)
+        return s[len(s) // 2]
+
+    def metrics(self) -> dict:
+        """Snapshot of current spectrum metrics for the RF anomaly panel."""
+        row = self.last_dbm_row
+        if not row:
+            return {
+                "have_data": False,
+                "peak_dbm": float("nan"),
+                "peak_freq_hz": float("nan"),
+                "noise_floor_dbm": float("nan"),
+                "snr_db": float("nan"),
+                "anomaly_count": 0,
+                "source": self._last_source,
+                "span_hz": self.span_hz,
+                "center_hz": self.center_hz,
+                "sweeps": self._stream.sweeps(),
+            }
+        peak_idx = max(range(len(row)), key=lambda i: row[i])
+        peak_v = row[peak_idx]
+        floor = self._estimate_floor(row)
+        lo_hz = self.center_hz - self.span_hz / 2
+        bin_hz = self.span_hz / max(1, len(row) - 1)
+        peak_freq_hz = lo_hz + peak_idx * bin_hz
+        return {
+            "have_data": True,
+            "peak_dbm": peak_v,
+            "peak_freq_hz": peak_freq_hz,
+            "noise_floor_dbm": floor,
+            "snr_db": peak_v - floor,
+            "anomaly_count": self._anomaly_count_recent,
+            "source": self._last_source,
+            "span_hz": self.span_hz,
+            "center_hz": self.center_hz,
+            "sweeps": self._stream.sweeps(),
+        }
 
     def _spectrum_text(self, row: list[float], height: int = 5) -> Text:
         t = Text()

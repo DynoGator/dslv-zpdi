@@ -18,3 +18,11 @@ output/
 config/local_*.yaml
 *.egg-info/
 .pytest_cache/
+
+# agent workspaces (not source of truth)
+GEMINI-HOME/
+CLAUDE-HOME/
+
+# user-level runtime config (example stays in tree)
+config/sensor_location.yaml
+config/email.yaml
