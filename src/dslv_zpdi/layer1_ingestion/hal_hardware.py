@@ -23,7 +23,6 @@ import uuid
 from typing import List, Optional
 
 import numpy as np
-from scipy.signal import hilbert
 
 from dslv_zpdi.core.exceptions import (
     ClockVerificationError,
@@ -78,6 +77,10 @@ class HardwareHAL(BaseHAL):
         """
         self.sdr_device = None
         self._clock_verified = False
+        # PPS jitter tracking: ring buffer of last N PPS timestamps for
+        # statistically valid interval-jitter computation.
+        self._pps_history: list[int] = []
+        self._pps_history_max = 16
 
         if SOAPYSDR_AVAILABLE:
             self._init_soapy_sdr()
@@ -254,6 +257,7 @@ class HardwareHAL(BaseHAL):
         mono_ns = time.monotonic_ns()
         pps_jitter_ns = float("inf")
         pps_time_ns = 0
+        pps_offset_ns = float("inf")
 
         # Read actual PPS timestamp from kernel via ioctl (SPEC-004A.3)
         try:
@@ -264,15 +268,38 @@ class HardwareHAL(BaseHAL):
                 sec, nsec, _, _ = struct.unpack("llll", buf)
                 pps_time_ns = sec * 1_000_000_000 + nsec
                 mono_now_ns = time.monotonic_ns()
-                pps_jitter_ns = float(abs(mono_now_ns - pps_time_ns) % 1_000_000_000)
+                # Offset is the sub-second difference, centred around zero so
+                # that offsets near 1 s wrap correctly (e.g. 999 ms → -1 ms).
+                raw_delta = mono_now_ns - pps_time_ns
+                pps_offset_ns = float(
+                    ((raw_delta + 500_000_000) % 1_000_000_000) - 500_000_000
+                )
             finally:
                 os.close(fd)
         except (OSError, IOError, struct.error):
             pps_jitter_ns = float("inf")
 
+        # Track PPS timestamps in a ring buffer for interval-jitter computation.
+        # Jitter = stdev of observed intervals vs ideal 1 s interval.
+        if pps_time_ns > 0:
+            self._pps_history.append(pps_time_ns)
+            if len(self._pps_history) > self._pps_history_max:
+                self._pps_history.pop(0)
+            if len(self._pps_history) >= 2:
+                intervals = [
+                    self._pps_history[i] - self._pps_history[i - 1]
+                    for i in range(1, len(self._pps_history))
+                ]
+                # Filter pathological intervals (missed pulses > 2 s or < 0.5 s)
+                valid = [iv for iv in intervals if 500_000_000 <= iv <= 2_000_000_000]
+                if valid:
+                    arr = np.array(valid, dtype=np.float64)
+                    deviations = np.abs(arr - 1_000_000_000.0)
+                    pps_jitter_ns = float(np.std(deviations))
+
         # GPS lock status is inferred from valid PPS signal
         # GPSDO provides continuous PPS only when GPS-locked
-        gps_locked = pps_jitter_ns < 1_000_000_000.0  # Valid PPS = GPS locked
+        gps_locked = pps_time_ns > 0 and pps_jitter_ns < 1_000_000_000.0
 
         # SPEC-004A.3-NMEA: integrate LBE-1420 telemetry
         nmea = self.verify_nmea_telemetry()
@@ -287,6 +314,7 @@ class HardwareHAL(BaseHAL):
             ingest_monotonic_ns=mono_ns,
             raw_value={
                 "pps_time_ns": pps_time_ns,
+                "pps_offset_ns": pps_offset_ns,
                 "source": "gpsdo_leo_bodnar_lbe1420",
                 "pps_device": pps_device,
                 "lbe1420_native_3v3": True,
@@ -452,14 +480,20 @@ class HardwareHAL(BaseHAL):
             # Read samples
             buff = np.empty(num_samples, np.complex64)
             sr = sdr.readStream(rx_stream, [buff], num_samples)
+            if sr.ret < 0:
+                raise RuntimeError(
+                    f"SoapySDR readStream error: {SoapySDR.errToStr(sr.ret)}"
+                )
+            actual_samples = sr.ret
+            if actual_samples < num_samples:
+                buff = buff[:actual_samples]
 
             # Cleanup
             sdr.deactivateStream(rx_stream)
             sdr.closeStream(rx_stream)
 
-            # Hilbert phase extraction from GPS-locked samples (Layer 1 per SPEC-005)
-            analytic = hilbert(np.real(buff))
-            phases = np.angle(analytic).tolist()[:64]
+            # Phase extraction from complex baseband IQ (already analytic)
+            phases = np.angle(buff).tolist()[:64]
 
             return {
                 "iq_samples": [[float(x.real), float(x.imag)] for x in buff[:64]],
@@ -505,9 +539,8 @@ class HardwareHAL(BaseHAL):
             iq_raw = iq_int8.astype(np.float32) / 128.0
             iq_complex = iq_raw[0::2] + 1j * iq_raw[1::2]
 
-            # Hilbert phase extraction from GPS-locked samples (Layer 1 per SPEC-005)
-            analytic = hilbert(np.real(iq_complex))
-            phases = np.angle(analytic).tolist()[:64]
+            # Phase extraction from complex baseband IQ (already analytic)
+            phases = np.angle(iq_complex).tolist()[:64]
 
             return {
                 "iq_samples": [
@@ -675,11 +708,20 @@ class HardwareHAL(BaseHAL):
                 if line.startswith("$GPGGA") or line.startswith("$GNGGA"):
                     parts = line.split(",")
                     if len(parts) > 6:
-                        fix_quality = parts[6]
-                        if fix_quality and int(fix_quality) > 0:
-                            result["gps_fix"] = True
-                        if len(parts) > 7 and parts[7]:
-                            result["satellites_used"] = int(parts[7])
+                        fix_quality = parts[6].strip()
+                        if fix_quality:
+                            try:
+                                if int(fix_quality) > 0:
+                                    result["gps_fix"] = True
+                            except ValueError:
+                                pass
+                        if len(parts) > 7:
+                            sats = parts[7].strip()
+                            if sats:
+                                try:
+                                    result["satellites_used"] = int(sats)
+                                except ValueError:
+                                    pass
 
             ser.close()
             result["nmea_available"] = lines_read > 0

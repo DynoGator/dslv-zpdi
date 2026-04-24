@@ -1,0 +1,15 @@
+[Unit]
+Description=DSLV-ZPDI System Tuning (CPU governor, USB power)
+DefaultDependencies=no
+After=sysinit.target local-fs.target
+Before=dslv-zpdi-preflight.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > $c; done'
+ExecStart=/bin/bash -c 'for d in /sys/bus/usb/devices/*/power/control; do [ -e "$d" ] && echo on > $d 2>/dev/null || true; done'
+ExecStart=/bin/bash -c 'for d in /sys/bus/usb/devices/*/power/autosuspend; do [ -e "$d" ] && echo -1 > $d 2>/dev/null || true; done'
+
+[Install]
+WantedBy=multi-user.target

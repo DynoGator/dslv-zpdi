@@ -19,11 +19,17 @@ import json
 import math
 import os
 import random
+from collections import deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
 
-import h5py
+try:
+    import h5py
+    _HAVE_H5PY = True
+except Exception:
+    h5py = None  # type: ignore
+    _HAVE_H5PY = False
 
 try:
     import yaml  # optional
@@ -152,7 +158,10 @@ def _read_event(group: h5py.Group) -> dict:
     return out
 
 
-def collect_primary(anchor: Anchor, max_events: int | None = None) -> list[MapEvent]:
+def collect_primary(anchor: Anchor, max_events: int | None = None,
+                    since_utc: float | None = None, until_utc: float | None = None) -> list[MapEvent]:
+    if not _HAVE_H5PY:
+        return []
     events: list[MapEvent] = []
     cone_half_deg = 35.0  # directional spread
     ring_m = 80.0         # primary pins fall inside this ring
@@ -170,14 +179,18 @@ def collect_primary(anchor: Anchor, max_events: int | None = None) -> list[MapEv
                 rec = _read_event(group)
                 if not rec:
                     continue
+                ts = float(rec.get("timestamp_utc", 0.0) or 0.0)
+                if since_utc is not None and ts < since_utc:
+                    continue
+                if until_utc is not None and ts > until_utc:
+                    continue
                 rng = _stable_rand(f"primary::{h5_path.name}::{name}")
                 bearing = anchor.antenna_heading_deg + rng.uniform(-cone_half_deg, cone_half_deg)
-                dist = ring_m * (0.3 + rng.random() * 0.7)
+                r_s = float(rec.get("r_smooth", 0.0) or 0.0)
+                dist = ring_m * (1.0 - min(1.0, r_s)) * 0.5 + rng.uniform(0, ring_m * 0.3)
                 lat, lon = _offset(anchor.latitude, anchor.longitude, bearing, dist)
-                ts = float(rec.get("timestamp_utc", 0.0) or 0.0)
                 r_g = float(rec.get("r_global", 0.0) or 0.0)
                 r_l = float(rec.get("r_local", 0.0) or 0.0)
-                r_s = float(rec.get("r_smooth", 0.0) or 0.0)
                 label = f"PRIMARY {name.split('_')[1]}  r={r_s:.3f}"
                 events.append(MapEvent(
                     kind="primary",
@@ -208,38 +221,25 @@ def _tail_lines(path: Path, max_lines: int) -> list[tuple[int, str]]:
     """
     if max_lines <= 0:
         return []
-    chunk = 1 << 16
-    collected: list[bytes] = []
+    dq: deque[tuple[int, bytes]] = deque(maxlen=max_lines)
+    line_no = 0
     with open(path, "rb") as fh:
-        fh.seek(0, 2)
-        end = fh.tell()
-        pos = end
-        newline_count = 0
-        while pos > 0 and newline_count <= max_lines:
-            step = min(chunk, pos)
-            pos -= step
-            fh.seek(pos)
-            buf = fh.read(step)
-            collected.insert(0, buf)
-            newline_count = b"".join(collected).count(b"\n")
-    blob = b"".join(collected)
-    all_lines = blob.splitlines()
-    tail = all_lines[-max_lines:]
-    # Walk the full file once to get line numbers — cheap since we only
-    # need indices, not content.
-    total_lines = 0
-    if end > 0:
-        with open(path, "rb") as fh:
-            for chunk_bytes in iter(lambda: fh.read(1 << 16), b""):
-                total_lines += chunk_bytes.count(b"\n")
-    start_idx = max(0, total_lines - len(tail))
-    return [
-        (start_idx + i, line.decode("utf-8", errors="replace"))
-        for i, line in enumerate(tail)
-    ]
+        leftover = b""
+        for chunk_bytes in iter(lambda: fh.read(1 << 16), b""):
+            chunk_bytes = leftover + chunk_bytes
+            lines = chunk_bytes.split(b"\n")
+            leftover = lines.pop()
+            for line in lines:
+                dq.append((line_no, line))
+                line_no += 1
+        if leftover:
+            dq.append((line_no, leftover))
+            line_no += 1
+    return [(i, line.decode("utf-8", errors="replace")) for i, line in dq]
 
 
-def collect_secondary(anchor: Anchor, max_events: int | None = None) -> list[MapEvent]:
+def collect_secondary(anchor: Anchor, max_events: int | None = None,
+                      since_utc: float | None = None, until_utc: float | None = None) -> list[MapEvent]:
     events: list[MapEvent] = []
     if not SECONDARY_FILE.exists():
         return events
@@ -253,11 +253,15 @@ def collect_secondary(anchor: Anchor, max_events: int | None = None) -> list[Map
             rec = json.loads(line)
         except json.JSONDecodeError:
             continue
+        ts = float(rec.get("timestamp_utc", 0.0) or 0.0)
+        if since_utc is not None and ts < since_utc:
+            continue
+        if until_utc is not None and ts > until_utc:
+            continue
         rng = _stable_rand(f"secondary::{idx}")
         bearing = rng.uniform(0, 360)
         dist = anchor.secondary_ring_m * (0.8 + rng.random() * 0.4)
         lat, lon = _offset(anchor.latitude, anchor.longitude, bearing, dist)
-        ts = float(rec.get("timestamp_utc", 0.0) or 0.0)
         node = str(rec.get("node_id", "?"))
         reason = str(rec.get("reason", ""))
         r_s = rec.get("r_smooth")
@@ -286,10 +290,12 @@ def collect_secondary(anchor: Anchor, max_events: int | None = None) -> list[Map
 
 def collect_all(config_path: Path | None = None,
                 max_primary: int | None = 2000,
-                max_secondary: int | None = 2000) -> tuple[Anchor, list[MapEvent]]:
+                max_secondary: int | None = 2000,
+                since_utc: float | None = None,
+                until_utc: float | None = None) -> tuple[Anchor, list[MapEvent]]:
     anchor = load_anchor(config_path)
-    prim = collect_primary(anchor, max_events=max_primary)
-    sec = collect_secondary(anchor, max_events=max_secondary)
+    prim = collect_primary(anchor, max_events=max_primary, since_utc=since_utc, until_utc=until_utc)
+    sec = collect_secondary(anchor, max_events=max_secondary, since_utc=since_utc, until_utc=until_utc)
     return anchor, prim + sec
 
 

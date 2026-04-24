@@ -7,6 +7,16 @@ Keyboard:
     h            help banner toggle
     m            cycle waterfall mode
     r            toggle REAL SDR data (sets DSLV_DASHBOARD_REAL_SDR env)
+    g            cycle LNA gain
+    +/-          adjust LNA gain up/down
+    a            toggle RF front-end amp
+    </>          tune center frequency down/up
+    z/x          zoom out/in
+    [/]          floor down/up
+    {/}          ceil down/up
+    p            cycle palette
+    s            toggle spectrum view
+    c            toggle compact layout
 """
 
 import argparse
@@ -18,6 +28,7 @@ import sys
 import termios
 import time
 import tty
+from pathlib import Path
 
 from rich.console import Console
 from rich.layout import Layout
@@ -26,6 +37,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from dashboard.banner import compact_banner, full_banner, startup_animation_frames
+from dashboard.config import DashboardConfig, load_config
 from dashboard.panels.anomaly import RFAnomalyPanel
 from dashboard.panels.hardware import HardwarePanel
 from dashboard.panels.logs import LogPanel
@@ -48,6 +60,9 @@ def footer_panel(compact: bool = False) -> Panel:
             ("p", "pal"),
             ("s", "spec"),
             ("c", "wide"),
+            ("g", "gain"),
+            ("a", "amp"),
+            ("z/x", "zoom"),
         ]
     else:
         keys = [
@@ -61,6 +76,11 @@ def footer_panel(compact: bool = False) -> Panel:
             ("{/}", "ceil"),
             ("h", "banner"),
             ("c", "compact"),
+            ("g", "gain"),
+            ("a", "amp"),
+            ("+/-", "gain"),
+            ("</>", "tune"),
+            ("z/x", "zoom"),
         ]
     for k, desc in keys:
         t.append(" [ ", style="dim")
@@ -171,28 +191,54 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
 
 
 class Dashboard:
-    def __init__(self, refresh: float = 0.5, show_banner: bool = True, waterfall_only: bool = False,
-                 compact: bool | None = None):
+    def __init__(
+        self,
+        refresh: float | None = None,
+        show_banner: bool | None = None,
+        waterfall_only: bool = False,
+        compact: bool | None = None,
+        config: DashboardConfig | None = None,
+    ):
+        cfg = config if config is not None else load_config()
         self.console = Console()
-        self.refresh = refresh
+        self.refresh = refresh if refresh is not None else cfg.refresh
         self.compact = _is_compact() if compact is None else compact
         # The user's banner preference is independent of compact mode — we
         # render a small banner in compact, the full banner in wide. Toggling
         # compact should never forget the user's "show/hide" choice.
-        self._banner_pref = show_banner
-        self.show_banner = show_banner
+        self._banner_pref = show_banner if show_banner is not None else cfg.show_banner
+        self.show_banner = self._banner_pref
         self.waterfall_only = waterfall_only
 
-        self.sys_p = SystemPanel()
-        self.pipe_p = PipelinePanel()
-        self.hw_p = HardwarePanel()
+        self.sys_p = SystemPanel(border_style=cfg.theme.system_border)
+        self.pipe_p = PipelinePanel(
+            unit=cfg.service_unit, border_style=cfg.theme.pipeline_border
+        )
+        self.hw_p = HardwarePanel(border_style=cfg.theme.hardware_border)
+        wf_cfg = cfg.waterfall
         wf_width = max(40 if self.compact else 60, shutil.get_terminal_size().columns - 6)
-        self.wf_p = WaterfallPanel(width=wf_width)
+        self.wf_p = WaterfallPanel(
+            width=wf_width,
+            history=wf_cfg.history,
+            mode=wf_cfg.mode,
+            center_hz=wf_cfg.center_hz,
+            span_hz=wf_cfg.span_hz,
+            border_style=cfg.theme.waterfall_border,
+        )
         self.anom_p = RFAnomalyPanel(self.wf_p)
         self.weather_p = SpaceWeatherPanel()
         self.storm_p = StormPanel()
-        self.log_p = LogPanel()
-        self.note_p = NotificationPanel()
+        self.log_p = LogPanel(
+            unit=cfg.service_unit,
+            max_lines=cfg.logs.max_lines,
+            border_style=cfg.theme.logs_border,
+        )
+        self.note_p = NotificationPanel(
+            max_items=cfg.notifications.max_items,
+            humor_every_s=cfg.notifications.humor_every_s,
+            glitch_every_s=cfg.notifications.glitch_every_s,
+            border_style=cfg.theme.notifications_border,
+        )
 
         self.paused = False
         self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact)
@@ -219,12 +265,30 @@ class Dashboard:
         if not sys.stdin.isatty():
             return None
         r, _, _ = select.select([sys.stdin], [], [], 0.0)
-        if r:
-            try:
-                return sys.stdin.read(1)
-            except Exception:
-                return None
-        return None
+        if not r:
+            return None
+        try:
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":
+                # Non-blocking attempt to consume the rest of an escape sequence.
+                seq = ""
+                while True:
+                    r2, _, _ = select.select([sys.stdin], [], [], 0.0)
+                    if not r2:
+                        break
+                    seq += sys.stdin.read(1)
+                if seq == "[A":
+                    return "UP"
+                elif seq == "[B":
+                    return "DOWN"
+                elif seq == "[C":
+                    return "RIGHT"
+                elif seq == "[D":
+                    return "LEFT"
+                return f"\x1b{seq}"
+            return ch
+        except Exception:
+            return None
 
     # render ---
     def _render(self):
@@ -306,6 +370,30 @@ class Dashboard:
         elif k in ("s", "S"):
             self.wf_p.show_spectrum = not self.wf_p.show_spectrum
             self.note_p.push("INFO", f"spectrum: {'ON' if self.wf_p.show_spectrum else 'OFF'}")
+        elif k in ("+", "UP"):
+            self.wf_p.adjust_gain(1)
+            self.note_p.push("INFO", f"lna gain: {self.wf_p.lna_gain}dB")
+        elif k in ("-", "DOWN"):
+            self.wf_p.adjust_gain(-1)
+            self.note_p.push("INFO", f"lna gain: {self.wf_p.lna_gain}dB")
+        elif k in ("g", "G"):
+            self.wf_p.cycle_gain()
+            self.note_p.push("INFO", f"lna gain: {self.wf_p.lna_gain}dB")
+        elif k in ("a", "A"):
+            self.wf_p.toggle_amp()
+            self.note_p.push("INFO", f"amp: {'ON' if self.wf_p.amp_enabled else 'OFF'}")
+        elif k == "<":
+            self.wf_p.tune(-int(self.wf_p.span_hz * 0.1))
+            self.note_p.push("INFO", f"tune: {self.wf_p.center_hz / 1e6:.1f}MHz")
+        elif k == ">":
+            self.wf_p.tune(int(self.wf_p.span_hz * 0.1))
+            self.note_p.push("INFO", f"tune: {self.wf_p.center_hz / 1e6:.1f}MHz")
+        elif k in ("z", "Z"):
+            self.wf_p.zoom(2.0)
+            self.note_p.push("INFO", f"zoom: {self.wf_p.span_hz / 1e6:.1f}MHz")
+        elif k in ("x", "X"):
+            self.wf_p.zoom(0.5)
+            self.note_p.push("INFO", f"zoom: {self.wf_p.span_hz / 1e6:.1f}MHz")
 
     def run(self):
         self._boot_animation()
@@ -333,15 +421,27 @@ def _signal_handler(sig, frame):
     raise KeyboardInterrupt
 
 
-def main():
+def main(cfg=None):
+    if cfg is None:
+        cfg = load_config()
+
     parser = argparse.ArgumentParser(description="DSLV-ZPDI Operations Dashboard")
-    parser.add_argument("--refresh", type=float, default=0.5, help="refresh interval (s)")
+    parser.add_argument("--refresh", type=float, default=cfg.refresh, help="refresh interval (s)")
     parser.add_argument("--no-banner", action="store_true", help="hide startup banner")
     parser.add_argument("--no-boot", action="store_true", help="skip boot animation")
     parser.add_argument("--waterfall-only", action="store_true", help="render only the waterfall panel")
     parser.add_argument("--compact", action="store_true", help="force compact layout (5\" DSI)")
     parser.add_argument("--wide", action="store_true", help="force wide layout (disable compact auto-detect)")
+    parser.add_argument("--config", type=str, default="", help="use a custom dashboard.toml")
+    parser.add_argument("--print-config", action="store_true", help="dump resolved config and exit")
     args = parser.parse_args()
+
+    if args.config:
+        cfg = load_config(Path(args.config))
+    if args.print_config:
+        from pprint import pformat
+        print(pformat(cfg))
+        return
 
     signal.signal(signal.SIGTERM, _signal_handler)
     signal.signal(signal.SIGINT, _signal_handler)
@@ -351,8 +451,15 @@ def main():
         compact = True
     elif args.wide:
         compact = False
-    dash = Dashboard(refresh=args.refresh, show_banner=not args.no_banner,
-                     waterfall_only=args.waterfall_only, compact=compact)
+
+    show_banner = False if args.no_banner else cfg.show_banner
+    dash = Dashboard(
+        refresh=args.refresh,
+        show_banner=show_banner,
+        waterfall_only=args.waterfall_only,
+        compact=compact,
+        config=cfg,
+    )
     if args.no_boot:
         dash._boot_animation = lambda: None  # type: ignore
     dash.run()

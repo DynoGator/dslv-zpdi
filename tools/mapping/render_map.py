@@ -9,6 +9,7 @@ Layers:
     * Primary events (red pins)      — labeled with r_smooth, timestamp.
     * Secondary events (blue pins)   — labeled with node_id, reason.
     * Anchor marker                  — sensor anchor + antenna heading cone.
+    * Event density heatmap          — toggleable density layer.
 
 Primary events are clustered to keep render time sane on large captures.
 """
@@ -26,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import folium
-from folium.plugins import MarkerCluster
+from folium.plugins import MarkerCluster, HeatMap
 
 from mapping.aggregate import Anchor, MapEvent, collect_all
 
@@ -41,6 +42,34 @@ def _fmt_ts(ts: float) -> str:
         return dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     except (OverflowError, ValueError, OSError):
         return str(ts)
+
+
+def _parse_time(value: str | None) -> float | None:
+    """Accept ISO-8601 strings or Unix timestamps and return UTC seconds."""
+    if not value:
+        return None
+    value = value.strip()
+    try:
+        return float(value)
+    except ValueError:
+        pass
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+    ):
+        try:
+            parsed = dt.datetime.strptime(value, fmt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=dt.timezone.utc)
+            return parsed.timestamp()
+        except ValueError:
+            pass
+    raise argparse.ArgumentTypeError(f"Invalid time format: {value!r}")
 
 
 def _popup_html(e: MapEvent) -> str:
@@ -139,6 +168,13 @@ def build_map(anchor: Anchor, events: list[MapEvent]) -> folium.Map:
             tooltip="Antenna cone",
         ).add_to(fmap)
 
+    # Event density heatmap layer.
+    heatmap_fg = folium.FeatureGroup(name="Event density", show=False)
+    heatmap_data = [[e.latitude, e.longitude] for e in events]
+    if heatmap_data:
+        HeatMap(heatmap_data, min_opacity=0.3, radius=15, blur=10).add_to(heatmap_fg)
+    heatmap_fg.add_to(fmap)
+
     # Split into primary/secondary clusters.
     primary = folium.FeatureGroup(name="Primary (tier 1)", show=True)
     secondary = folium.FeatureGroup(name="Secondary (tier 2)", show=True)
@@ -194,6 +230,10 @@ def main():
     p.add_argument("--config", type=Path, help="sensor_location.yaml path (optional)")
     p.add_argument("--max-primary", type=int, default=2000)
     p.add_argument("--max-secondary", type=int, default=2000)
+    p.add_argument("--since", type=_parse_time, default=None, metavar="TIME",
+                   help="Only include events at or after this time (ISO-8601 or Unix timestamp)")
+    p.add_argument("--until", type=_parse_time, default=None, metavar="TIME",
+                   help="Only include events at or before this time (ISO-8601 or Unix timestamp)")
     p.add_argument("--open", action="store_true", help="open the map in a browser when done")
     args = p.parse_args()
 
@@ -201,6 +241,8 @@ def main():
         config_path=args.config,
         max_primary=args.max_primary,
         max_secondary=args.max_secondary,
+        since_utc=args.since,
+        until_utc=args.until,
     )
 
     fmap = build_map(anchor, events)

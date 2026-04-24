@@ -4,9 +4,11 @@ Top-level integration: HAL → Coherence → HDF5 persistence.
 """
 
 import argparse
+import json
 import os
 import signal
 import time
+from pathlib import Path
 
 from dslv_zpdi.layer1_ingestion.hal_factory import get_hal
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
@@ -64,11 +66,22 @@ def main():
         default="sdr",
         help="Ingestion mode",
     )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=os.getenv("DSLV_OUTPUT_DIR", "/home/dynogator/dslv-zpdi/output"),
+        help="Absolute output directory for primary/secondary streams",
+    )
     args = parser.parse_args()
 
     simulator_mode = _resolve_simulator(args)
     hal = get_hal(simulator=simulator_mode)
-    writer = HDF5Writer()
+
+    out_base = Path(args.output).resolve()
+    writer = HDF5Writer(
+        output_path=str(out_base / "primary"),
+        secondary_path=str(out_base / "secondary"),
+    )
 
     # SPEC-004A.3 — Relaxed threshold in simulator mode (NTP jitter ~3ms, not GPSDO).
     _timing_threshold = 10_000_000 if simulator_mode else 50_000
@@ -96,6 +109,8 @@ def main():
     signal.signal(signal.SIGTERM, _sig_handler)
 
     tick = 0
+    primary_events = 0
+    last_status_at = 0.0
     try:
         while running:
             hal_kwargs = {}
@@ -118,9 +133,26 @@ def main():
                 monitor.healthy
                 and payload.trust_state != "SECONDARY_QUARANTINED"
             ):
-                writer.ingest(payload.to_json())
+                decision = writer.ingest(payload.to_json())
+                if decision.stream == "PRIMARY":
+                    primary_events += 1
+                    print(
+                        f"[EVENT] PRIMARY {decision.packet.event_window_id} "
+                        f"r_smooth={decision.packet.r_smooth:.4f} "
+                        f"nodes={decision.packet.node_id}"
+                    )
 
             tick += 1
+            now = time.time()
+            if now - last_status_at >= 60.0:
+                stats = writer.get_stats()
+                bl = scorer.get_baseline_status()
+                print(
+                    f"[STATUS] ticks={tick} primary={primary_events} "
+                    f"stats={json.dumps(stats)} baseline={json.dumps(bl)}"
+                )
+                last_status_at = now
+
             # Demo mode sleeps shorter so the 4-node rotation fits inside the
             # 300 ms confirmation window (SPEC-006.4).
             time.sleep(0.05 if demo_nodes else 0.1)

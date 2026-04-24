@@ -39,13 +39,49 @@ def _proc_uptime_seconds(pid: int) -> float:
         return 0.0
 
 
+_PRIMARY_TTL = 2.0
+
+
+class _Cache:
+    def __init__(self, ttl: float):
+        self.ttl = ttl
+        self.t = 0.0
+        self.val = None
+
+    def get(self, producer):
+        now = time.time()
+        if self.val is None or now - self.t > self.ttl:
+            self.val = producer()
+            self.t = now
+        return self.val
+
+
+class _MtimeCache:
+    def __init__(self):
+        self.mtime = 0.0
+        self.val = 0
+
+    def get(self, path: str, producer):
+        try:
+            st = os.stat(path)
+            mtime = st.st_mtime
+        except Exception:
+            mtime = 0.0
+        if mtime != self.mtime:
+            self.val = producer()
+            self.mtime = mtime
+        return self.val
+
+
 def _count_primary_pkts() -> int:
     try:
-        out = subprocess.check_output(
-            ["find", "/home/dynogator/dslv-zpdi/output/primary", "-type", "f"],
-            text=True, timeout=2,
+        return len(
+            [
+                f
+                for f in os.listdir("/home/dynogator/dslv-zpdi/output/primary")
+                if os.path.isfile(os.path.join("/home/dynogator/dslv-zpdi/output/primary", f))
+            ]
         )
-        return len([l for l in out.splitlines() if l.strip()])
     except Exception:
         return 0
 
@@ -56,7 +92,6 @@ def _count_secondary_lines() -> int:
         if not os.path.exists(path):
             return 0
         with open(path, "rb") as f:
-            # cheap estimate
             count = 0
             for _ in f:
                 count += 1
@@ -66,10 +101,13 @@ def _count_secondary_lines() -> int:
 
 
 class PipelinePanel:
-    def __init__(self, unit: str = "dslv-zpdi"):
+    def __init__(self, unit: str = "dslv-zpdi", border_style: str = "bright_green"):
         self.unit = unit
+        self.border_style = border_style
         self._last_pkt: int | None = None
         self._last_t = time.time()
+        self._prim_cache = _Cache(_PRIMARY_TTL)
+        self._sec_cache = _MtimeCache()
 
     def render(self) -> Panel:
         info = _systemctl_show(self.unit)
@@ -79,8 +117,11 @@ class PipelinePanel:
         exec_main = info.get("ExecMainStartTimestampMonotonic", "0")
 
         uptime = _proc_uptime_seconds(pid) if pid > 0 else 0.0
-        prim = _count_primary_pkts()
-        sec = _count_secondary_lines()
+        prim = self._prim_cache.get(_count_primary_pkts)
+        sec = self._sec_cache.get(
+            "/home/dynogator/dslv-zpdi/output/secondary/quarantine.jsonl",
+            _count_secondary_lines,
+        )
 
         now = time.time()
         total_pkts = prim + sec
@@ -118,6 +159,6 @@ class PipelinePanel:
         return Panel(
             t,
             title="[bold bright_green]▓ PIPELINE ▓[/]",
-            border_style="bright_green",
+            border_style=self.border_style,
             padding=(0, 1),
         )

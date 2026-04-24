@@ -10,6 +10,7 @@
 #   sudo tools/toggle_simulator.sh status      # show current mode (no sudo required)
 #   sudo tools/toggle_simulator.sh demo on     # simulator + DSLV_SIM_DEMO=1 (event generator)
 #   sudo tools/toggle_simulator.sh demo off    # simulator without demo event generator
+#   sudo tools/toggle_simulator.sh clear       # remove drop-in, revert to service default
 
 set -Eeuo pipefail
 
@@ -19,7 +20,7 @@ VENV_PY="/home/dynogator/dslv-zpdi/venv/bin/python"
 UNIT="dslv-zpdi.service"
 
 usage() {
-  sed -n '2,12p' "$0"
+  sed -n '2,14p' "$0"
   exit 1
 }
 
@@ -50,11 +51,11 @@ current_mode() {
     echo "simulator (drop-in)"
     return
   fi
-  # Fall back to the baked-in service file (which currently defaults to --simulator)
+  # Fall back to the baked-in service file (defaults to hardware since v4.5.1)
   if systemctl cat "$UNIT" 2>/dev/null | grep -q -- '--hardware'; then
     echo "hardware"
   else
-    echo "simulator (default)"
+    echo "hardware (default)"
   fi
 }
 

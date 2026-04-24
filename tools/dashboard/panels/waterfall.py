@@ -325,6 +325,16 @@ class WaterfallPanel:
     def adjust_ceil(self, delta: float):
         self.dbm_ceil = max(self.dbm_floor + 5.0, min(0.0, self.dbm_ceil + delta))
 
+    def adjust_gain(self, step: int):
+        steps = [0, 8, 16, 24, 32, 40]
+        try:
+            i = steps.index(self.lna_gain)
+        except ValueError:
+            i = 0
+        i = max(0, min(len(steps) - 1, i + step))
+        self.lna_gain = steps[i]
+        self._restart_stream_if_running()
+
     def cycle_gain(self):
         steps = [0, 8, 16, 24, 32, 40]
         try:

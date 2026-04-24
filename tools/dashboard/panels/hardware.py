@@ -6,6 +6,7 @@ they don't dominate the dashboard refresh loop.
 
 import os
 import re
+import select
 import subprocess
 import time
 
@@ -16,6 +17,7 @@ from rich.table import Table
 
 _HACKRF_TTL = 3.0   # seconds
 _CHRONY_TTL = 1.5   # seconds
+_GPSDO_TTL = 5.0    # seconds
 
 
 class _Cache:
@@ -71,6 +73,37 @@ def _gpsdo_serial() -> str | None:
     return None
 
 
+def _read_gga(port: str) -> dict:
+    """Read a single GGA sentence from a GPSDO serial port."""
+    try:
+        fd = os.open(port, os.O_RDONLY | os.O_NONBLOCK)
+        try:
+            ready, _, _ = select.select([fd], [], [], 1.0)
+            if not ready:
+                return {"fix": "?", "sats": "?"}
+            data = os.read(fd, 4096).decode("ascii", errors="ignore")
+            for line in data.splitlines():
+                if line.startswith("$GNGGA") or line.startswith("$GPGGA"):
+                    parts = line.split(",")
+                    if len(parts) >= 8:
+                        fix = parts[6]
+                        sats = parts[7]
+                        fix_map = {
+                            "0": "None",
+                            "1": "GPS",
+                            "2": "DGPS",
+                            "4": "RTK",
+                            "5": "Float",
+                        }
+                        return {"fix": fix_map.get(fix, fix), "sats": sats}
+                    break
+        finally:
+            os.close(fd)
+    except Exception:
+        pass
+    return {"fix": "?", "sats": "?"}
+
+
 def _chrony_stats() -> dict:
     try:
         out = subprocess.check_output(
@@ -102,12 +135,17 @@ class HardwarePanel:
         self.border_style = border_style
         self._hackrf = _Cache(_HACKRF_TTL)
         self._chrony = _Cache(_CHRONY_TTL)
+        self._gpsdo = _Cache(_GPSDO_TTL)
 
     def render(self) -> Panel:
         hrf = self._hackrf.get(_hackrf_info)
         pps_dev = _pps_device()
         pps_mod = _pps_module_loaded()
         gpsdo = _gpsdo_serial()
+        if gpsdo:
+            gpsdo_nmea = self._gpsdo.get(lambda p=gpsdo: _read_gga(p))
+        else:
+            gpsdo_nmea = {"fix": "-", "sats": "-"}
         chr_ = self._chrony.get(_chrony_stats)
 
         t = Table.grid(padding=(0, 2), expand=True)
@@ -132,6 +170,8 @@ class HardwarePanel:
 
         gpsdo_style = "bright_green" if gpsdo else "bright_red"
         gpsdo_text = gpsdo if gpsdo else "AWAITING LBE-1420"
+        if gpsdo:
+            gpsdo_text += f"  fix={gpsdo_nmea['fix']} sats={gpsdo_nmea['sats']}"
         t.add_row(
             "GPSDO",
             f"[{gpsdo_style}]{'◉' if gpsdo else '○'} {_esc(gpsdo_text)}[/]",

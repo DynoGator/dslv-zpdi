@@ -3,10 +3,10 @@ project: DSLV-ZPDI
 environment: field
 
 paths:
-  primary_output: ./output/primary
-  secondary_output: ./output/secondary
-  state_dir: ./output/state
-  baseline_state: ./output/state/baseline_state.json
+  primary_output: /home/dynogator/dslv-zpdi/output/primary
+  secondary_output: /home/dynogator/dslv-zpdi/output/secondary
+  state_dir: /var/lib/dslv_zpdi
+  baseline_state: /var/lib/dslv_zpdi/baseline.json
 
 clock_discipline:
   pps_required: true
@@ -46,8 +46,8 @@ nodes:
     allow_primary_output: false
 
 env:
-  DSLV_PRIMARY_OUTPUT_DIR: ./output/primary
-  DSLV_SECONDARY_OUTPUT_DIR: ./output/secondary
-  DSLV_BASELINE_STATE_PATH: ./output/state/baseline_state.json
+  DSLV_PRIMARY_OUTPUT_DIR: /home/dynogator/dslv-zpdi/output/primary
+  DSLV_SECONDARY_OUTPUT_DIR: /home/dynogator/dslv-zpdi/output/secondary
+  DSLV_BASELINE_STATE_PATH: /var/lib/dslv_zpdi/baseline.json
   DSLV_BASELINE_HOURS: "72"
   DSLV_MIN_BASELINE_SAMPLES: "240"

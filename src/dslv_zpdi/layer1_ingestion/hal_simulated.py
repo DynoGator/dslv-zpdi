@@ -12,7 +12,6 @@ import time
 import uuid
 
 import numpy as np
-from scipy.signal import hilbert
 
 from .hal_base import BaseHAL
 from .payload import IngestionPayload, SensorModality
@@ -88,8 +87,9 @@ class SimulatedHAL(BaseHAL):
             t = np.linspace(0, 1, 64)
             phases = (2 * np.pi * 10 * t).tolist()
             iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases]
-            analytic = hilbert([iq[0] for iq in iq_samples])
-            phases = np.angle(analytic).tolist()
+            # Derive phases directly from the complex analytic signal (I + jQ)
+            iq_complex = np.array([complex(i, q) for i, q in iq_samples])
+            phases = np.angle(iq_complex).tolist()
 
         payload = IngestionPayload(
             payload_uuid=str(uuid.uuid4()),

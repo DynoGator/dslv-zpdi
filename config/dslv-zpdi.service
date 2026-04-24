@@ -9,9 +9,10 @@ Type=simple
 User=dynogator
 Group=dynogator
 WorkingDirectory=/home/dynogator/dslv-zpdi
-ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline --simulator
-Environment=DEV_SIMULATOR=1
+# Default: hardware mode. Use toggle_simulator.sh to switch to simulator.
+ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline
 Environment=PYTHONUNBUFFERED=1
+Environment=DSLV_OUTPUT_DIR=/home/dynogator/dslv-zpdi/output
 Restart=on-failure
 RestartSec=15
 Nice=-5

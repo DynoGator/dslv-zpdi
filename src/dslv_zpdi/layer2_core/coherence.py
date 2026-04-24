@@ -253,7 +253,7 @@ class CoherenceScorer:
 
         # Collect baseline samples during LEARNING
         if self._baseline_state == BaselineState.LEARNING:
-            self.baseline_samples.append(r_local)
+            self.update_baseline(r_local)
 
         r_global = self.compute_global_r()
 

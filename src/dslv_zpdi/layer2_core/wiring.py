@@ -40,7 +40,11 @@ def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
     trust_state = str(payload_dict.get("trust_state", "")).strip()
     if trust_state in {TrustState.SECONDARY_QUARANTINED.value, TrustState.KILLED.value}:
         return None
-    if trust_state not in {TrustState.TIME_TRUSTED.value, TrustState.CAL_TRUSTED.value}:
+    if trust_state not in {
+        TrustState.TIME_TRUSTED.value,
+        TrustState.CAL_TRUSTED.value,
+        TrustState.CORE_PROCESSED.value,
+    }:
         return None
 
     phases = payload_dict.get("extracted_phases")

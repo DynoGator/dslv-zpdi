@@ -36,7 +36,9 @@ class LogPanel:
         self._stop.set()
 
     def _tail(self):
+        backoff = 1.0
         while not self._stop.is_set():
+            proc = None
             try:
                 proc = subprocess.Popen(
                     [
@@ -44,7 +46,7 @@ class LogPanel:
                         "--no-pager", "-o", "short-iso",
                     ],
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
                     text=True,
                 )
                 assert proc.stdout is not None
@@ -53,8 +55,39 @@ class LogPanel:
                         proc.terminate()
                         return
                     self.lines.append(line.rstrip())
+                    backoff = 1.0
+
+                # Process exited — inspect stderr for known errors.
+                stderr = ""
+                try:
+                    if proc.stderr is not None:
+                        stderr = proc.stderr.read()
+                except Exception:
+                    pass
+
+                if "could not be found" in stderr:
+                    self.lines.append(
+                        f"Unit {self.unit}.service could not be found — logs unavailable."
+                    )
+                    # Long sleep for a permanently missing unit.
+                    for _ in range(int(30 / 0.5)):
+                        if self._stop.is_set():
+                            return
+                        time.sleep(0.5)
+                    continue
+
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
             except Exception:
-                time.sleep(1)
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
+            finally:
+                if proc is not None and proc.poll() is None:
+                    try:
+                        proc.terminate()
+                        proc.wait(timeout=1.0)
+                    except Exception:
+                        pass
 
     def _style_line(self, line: str) -> Text:
         ll = line.lower()
@@ -66,7 +99,7 @@ class LogPanel:
             style = "bright_green"
         else:
             style = "bright_white"
-        txt = line[-180:]
+        txt = line[-240:]
         return Text(txt, style=style, no_wrap=True, overflow="ellipsis")
 
     def render(self) -> Panel:

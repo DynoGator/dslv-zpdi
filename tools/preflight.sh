@@ -64,7 +64,22 @@ if command -v vcgencmd >/dev/null 2>&1; then
     LOG "$TEMP  $THR"
 fi
 
-# 8. Governor check
+# 8. Repo validation (non-fatal)
+REPO="/home/dynogator/dslv-zpdi"
+if [ -d "$REPO" ]; then
+    if "$REPO/venv/bin/python" "$REPO/tools/check_version_sync.py" >/dev/null 2>&1; then
+        LOG "repo version sync OK"
+    else
+        WARN "repo version sync failed"
+    fi
+    if "$REPO/venv/bin/python" "$REPO/tools/repo_guard.py" >/dev/null 2>&1; then
+        LOG "repo guard OK"
+    else
+        WARN "repo guard failed"
+    fi
+fi
+
+# 9. Governor check
 GOV=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "?")
 if [ "$GOV" = "performance" ]; then
     LOG "governor=performance"
