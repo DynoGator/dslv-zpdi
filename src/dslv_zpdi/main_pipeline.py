@@ -19,7 +19,7 @@ _SIM_FALSE_TOKENS = {"0", "off", "false", "no"}
 
 
 def _env_simulator_override():
-    """Parse DSLV_SIMULATOR / DEV_SIMULATOR. Returns True, False, or None (unset)."""
+    """SPEC-011.1 — Parse DSLV_SIMULATOR / DEV_SIMULATOR. Returns True, False, or None (unset)."""
     for var in ("DSLV_SIMULATOR", "DEV_SIMULATOR"):
         raw = os.getenv(var)
         if raw is None:
@@ -33,7 +33,7 @@ def _env_simulator_override():
 
 
 def _resolve_simulator(args) -> bool:
-    """CLI flags win over env. --hardware forces hardware; --simulator forces sim."""
+    """SPEC-011.1 — CLI flags win over env. --hardware forces hardware; --simulator forces sim."""
     if args.hardware:
         return False
     if args.simulator:
@@ -88,6 +88,7 @@ def main():
     running = True
 
     def _sig_handler(_signum, _frame):
+        """SPEC-011.1 — Graceful shutdown on SIGINT/SIGTERM."""
         nonlocal running
         running = False
 

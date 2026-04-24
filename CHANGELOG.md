@@ -2,6 +2,27 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.5.0] - 2026-04-24
+
+### Added
+- Dashboard v2: 5" DSI-optimized layout, NOAA space-weather panel, storm/anomaly/weather/waterfall panels, TOML config.
+- Auto-email telemetry pipeline (`tools/mailer/`): SMTP/SendGrid/SES backends, daily/alert dispatch, interactive configuration TUI.
+- Interactive geospatial mapping (`tools/mapping/`): Folium HTML maps, HDF5 aggregation, quick-launch scripts.
+- Project launcher (`tools/launch_project.sh`) with clean-boot preflight, dual-window spawn, and simulator toggle.
+- Runtime configuration examples: `dashboard.toml.example`, `email.example.yaml`, `sensor_location.example.yaml`.
+- `tests/conftest.py` with shared pytest fixtures.
+
+### Changed
+- `main_pipeline.py` — unified simulator resolution (`_resolve_simulator`), graceful signal handling, demo-node rotation mode.
+- `wiring.py` — baseline state path resolution with env override.
+- `hal_simulated.py` — simulator fidelity aligned to SPEC-005A.HAL-SIM.
+- `.gitignore` — expanded agent-workspace and artefact coverage.
+- README bumped to Rev 4.5.0 — LBE-1420 Hardened Operations Stack.
+
+### Fixed
+- Launcher race conditions on clean-boot dual-window startup.
+- Pipeline baseline state not loaded into coherence engine on cold start.
+
 ## [4.4.0] - 2026-04-15
 
 ### Added

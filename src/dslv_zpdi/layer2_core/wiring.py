@@ -13,7 +13,7 @@ from dslv_zpdi.layer2_core.coherence import CoherencePacket, CoherenceScorer
 
 
 def _resolve_baseline_path() -> Optional[str]:
-    """Return a baseline state path only if it exists on disk. Env override wins."""
+    """SPEC-006.5 — Return a baseline state path only if it exists on disk. Env override wins."""
     path = os.getenv("DSLV_BASELINE_STATE_PATH") or "/var/lib/dslv_zpdi/baseline.json"
     return path if os.path.exists(path) else None
 
