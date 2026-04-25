@@ -35,6 +35,9 @@ class PanelsCfg:
     pipeline: bool = True
     hardware: bool = True
     waterfall: bool = True
+    anomaly: bool = True
+    weather: bool = True
+    storm: bool = True
     logs: bool = True
     notifications: bool = True
 

@@ -73,13 +73,18 @@ class _MtimeCache:
         return self.val
 
 
+def _output_dir() -> str:
+    return os.getenv("DSLV_OUTPUT_DIR", "/home/dynogator/dslv-zpdi/output")
+
+
 def _count_primary_pkts() -> int:
     try:
+        path = os.path.join(_output_dir(), "primary")
         return len(
             [
                 f
-                for f in os.listdir("/home/dynogator/dslv-zpdi/output/primary")
-                if os.path.isfile(os.path.join("/home/dynogator/dslv-zpdi/output/primary", f))
+                for f in os.listdir(path)
+                if os.path.isfile(os.path.join(path, f))
             ]
         )
     except Exception:
@@ -87,7 +92,7 @@ def _count_primary_pkts() -> int:
 
 
 def _count_secondary_lines() -> int:
-    path = "/home/dynogator/dslv-zpdi/output/secondary/quarantine.jsonl"
+    path = os.path.join(_output_dir(), "secondary", "quarantine.jsonl")
     try:
         if not os.path.exists(path):
             return 0
@@ -153,7 +158,7 @@ class PipelinePanel:
         t.add_row("Up", f"[dim]{up_s}[/]")
         t.add_row("HDF5", f"[bright_green]{prim}[/] files")
         t.add_row("Quarantine", f"[yellow]{sec}[/] pkts")
-        t.add_row("Data Path", "[dim]/home/dynogator/dslv-zpdi/output[/]")
+        t.add_row("Data Path", f"[dim]{_output_dir()}[/]")
         t.add_row("Rate", f"[bright_magenta]{rate:5.1f}[/] pkt/s")
 
         return Panel(

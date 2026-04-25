@@ -1,20 +1,31 @@
 """
 SPEC-011 — Production pipeline loop (Rev 4.5.1).
 Top-level integration: HAL → Coherence → HDF5 persistence.
+Rev 4.5.1: Added config loading, structured logging, health endpoint,
+           hardware watchdog, and optional producer-consumer threading.
 """
 
 import argparse
 import json
+import logging
 import os
+import queue
 import signal
+import threading
 import time
 from pathlib import Path
+from typing import Any, Dict, Optional
 
+from dslv_zpdi.config_loader import load_config
 from dslv_zpdi.layer1_ingestion.hal_factory import get_hal
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
+from dslv_zpdi.logging_config import get_logger, setup_logging
+from dslv_zpdi.watchdog.health_reporter import HealthReporter
+from dslv_zpdi.watchdog.pi_watchdog import PiWatchdog
 from dslv_zpdi.watchdog.timing_monitor import TimingMonitor
 
+logger = get_logger("pipeline")
 
 _SIM_TRUE_TOKENS = {"1", "on", "true", "yes"}
 _SIM_FALSE_TOKENS = {"0", "off", "false", "no"}
@@ -46,6 +57,138 @@ def _resolve_simulator(args) -> bool:
     return False  # default to hardware
 
 
+class PipelineState:
+    """SPEC-011.2 — Thread-safe mutable state container for the pipeline."""
+    """Thread-safe mutable state container for the pipeline."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.tick = 0
+        self.primary_events = 0
+        self.running = True
+        self.last_status_at = 0.0
+        self.health: Dict[str, Any] = {}
+
+    def inc_tick(self):
+        with self.lock:
+            self.tick += 1
+
+    def inc_primary(self):
+        with self.lock:
+            self.primary_events += 1
+
+    def get_snapshot(self) -> Dict[str, Any]:
+        with self.lock:
+            return {
+                "tick": self.tick,
+                "primary_events": self.primary_events,
+                "running": self.running,
+            }
+
+
+def _ingest_loop(
+    hal,
+    args,
+    state: PipelineState,
+    ingest_q: queue.Queue,
+    demo_nodes: Optional[list] = None,
+):
+    """SPEC-011.2 — Producer thread: pull from HAL and enqueue payloads."""
+    tick = 0
+    while state.running:
+        try:
+            hal_kwargs = {}
+            if demo_nodes:
+                hal_kwargs["node_id"] = demo_nodes[tick % len(demo_nodes)]
+                hal_kwargs["coherent_burst"] = True
+
+            if args.mode == "sdr":
+                payload = hal.ingest_sdr(**hal_kwargs)
+            elif args.mode == "pps":
+                payload = hal.ingest_gps_pps(**hal_kwargs)
+            else:
+                payload = (
+                    hal.ingest_sdr(**hal_kwargs)
+                    if int(time.time()) % 2 == 0
+                    else hal.ingest_gps_pps(**hal_kwargs)
+                )
+
+            ingest_q.put(payload, block=True, timeout=1.0)
+            tick += 1
+            # Demo mode sleeps shorter so the 4-node rotation fits inside the
+            # 300 ms confirmation window (SPEC-006.4).
+            time.sleep(0.05 if demo_nodes else args.interval)
+        except queue.Full:
+            logger.warning("Ingest queue full — dropping sample", extra={"spec_id": "SPEC-011.2"})
+        except Exception as exc:
+            logger.error("Ingest error: %s", exc, extra={"spec_id": "SPEC-011.2"})
+
+
+def _process_loop(
+    monitor,
+    writer,
+    ingest_q: queue.Queue,
+    persist_q: queue.Queue,
+    state: PipelineState,
+):
+    """SPEC-011.2 — Processing thread: coherence + routing, then enqueue for persistence."""
+    """Processing thread: coherence + routing, then enqueue for persistence."""
+    while state.running:
+        try:
+            payload = ingest_q.get(block=True, timeout=1.0)
+        except queue.Empty:
+            continue
+
+        if not monitor.healthy or payload.trust_state == "SECONDARY_QUARANTINED":
+            continue
+
+        decision = writer.ingest(payload.to_json())
+        if decision.stream == "PRIMARY":
+            state.inc_primary()
+            try:
+                persist_q.put(decision, block=False)
+            except queue.Full:
+                logger.warning("Persist queue full — dropping decision", extra={"spec_id": "SPEC-011.2"})
+            logger.info(
+                "PRIMARY event %s r_smooth=%.4f nodes=%s",
+                decision.packet.event_window_id,
+                decision.packet.r_smooth,
+                decision.packet.node_id,
+                extra={"spec_id": "SPEC-011.3", "context": {"node_id": decision.packet.node_id}},
+            )
+
+
+def _persist_loop(persist_q: queue.Queue, state: PipelineState):
+    """SPEC-011.2 — Persistence thread: drain queue (HDF5 already written in process thread)."""
+    """Persistence thread: drain queue (HDF5 already written in process thread)."""
+    while state.running:
+        try:
+            _ = persist_q.get(block=True, timeout=1.0)
+        except queue.Empty:
+            continue
+
+
+def _emit_status(state: PipelineState, writer, baseline_status: Dict[str, Any]):
+    """SPEC-011.4 — Emit periodic status log and health update."""
+    """Emit periodic status log and health update."""
+    snap = state.get_snapshot()
+    stats = writer.get_stats()
+    logger.info(
+        "STATUS ticks=%d primary=%d stats=%s baseline=%s",
+        snap["tick"],
+        snap["primary_events"],
+        json.dumps(stats),
+        json.dumps(baseline_status),
+        extra={"spec_id": "SPEC-011.4"},
+    )
+    state.health.update({
+        "ticks": snap["tick"],
+        "primary_events": snap["primary_events"],
+        "stats": stats,
+        "baseline": baseline_status,
+    })
+
+
 def main():
     """SPEC-011.1 — Run the production data pipeline."""
     parser = argparse.ArgumentParser(description="DSLV-ZPDI Production Pipeline")
@@ -72,7 +215,50 @@ def main():
         default=os.getenv("DSLV_OUTPUT_DIR", "/home/dynogator/dslv-zpdi/output"),
         help="Absolute output directory for primary/secondary streams",
     )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=os.getenv("DSLV_CONFIG_PATH", "config/deployment.yaml"),
+        help="Path to deployment.yaml config file",
+    )
+    parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="Enable producer-consumer threading (default: synchronous)",
+    )
+    parser.add_argument(
+        "--watchdog-device",
+        type=str,
+        default="/dev/watchdog",
+        help="Linux watchdog device path",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=0.1,
+        help="Ingestion interval in seconds (sync mode only)",
+    )
+    parser.add_argument(
+        "--node-id",
+        type=str,
+        default=None,
+        help="Override node ID (default: auto-detect from config or serial)",
+    )
     args = parser.parse_args()
+
+    # ------------------------------------------------------------------
+    # Config & Logging
+    # ------------------------------------------------------------------
+    config = load_config(args.config)
+    node_id = args.node_id or os.getenv("DSLV_NODE_ID", "PI5-ALPHA")
+    setup_logging(level=logging.INFO, node_id=node_id, log_format="json")
+
+    logger.info(
+        "DSLV-ZPDI pipeline starting (Rev 4.5.1) — config=%s node=%s",
+        args.config,
+        node_id,
+        extra={"spec_id": "SPEC-011.1"},
+    )
 
     simulator_mode = _resolve_simulator(args)
     hal = get_hal(simulator=simulator_mode)
@@ -92,76 +278,157 @@ def main():
     demo_nodes = None
     if simulator_mode and os.getenv("DSLV_SIM_DEMO", "").strip().lower() in _SIM_TRUE_TOKENS:
         demo_nodes = ["SIM-ALPHA", "SIM-BETA", "SIM-GAMMA", "SIM-DELTA"]
-        print("[SIM-DEMO] Rotating node IDs across", demo_nodes)
+        logger.info("SIM-DEMO rotating node IDs: %s", demo_nodes, extra={"spec_id": "SPEC-011.1"})
 
     if args.field:
         scorer.start_baseline()
-        print("[FIELD] Baseline capture started. Run for 72 h.")
+        logger.info("FIELD baseline capture started — 72 h", extra={"spec_id": "SPEC-011.1"})
 
-    running = True
+    # ------------------------------------------------------------------
+    # Health & Watchdog
+    # ------------------------------------------------------------------
+    health = HealthReporter(interval_sec=10.0)
+    health.start()
+
+    watchdog = PiWatchdog(device=args.watchdog_device)
+    watchdog_enabled = watchdog.open()
+
+    state = PipelineState()
 
     def _sig_handler(_signum, _frame):
         """SPEC-011.1 — Graceful shutdown on SIGINT/SIGTERM."""
-        nonlocal running
-        running = False
+        logger.info("Received signal %s — initiating shutdown", _signum, extra={"spec_id": "SPEC-011.1"})
+        state.running = False
 
     signal.signal(signal.SIGINT, _sig_handler)
     signal.signal(signal.SIGTERM, _sig_handler)
+
+    # ------------------------------------------------------------------
+    # Run Loop (threaded or synchronous)
+    # ------------------------------------------------------------------
+    ingest_q: queue.Queue = queue.Queue(maxsize=1024)
+    persist_q: queue.Queue = queue.Queue(maxsize=1024)
+
+    threads = []
+    if args.threaded:
+        logger.info("Threaded mode enabled", extra={"spec_id": "SPEC-011.2"})
+        t_ingest = threading.Thread(
+            target=_ingest_loop,
+            args=(hal, args, state, ingest_q, demo_nodes),
+            daemon=True,
+        )
+        t_process = threading.Thread(
+            target=_process_loop,
+            args=(monitor, writer, ingest_q, persist_q, state),
+            daemon=True,
+        )
+        t_persist = threading.Thread(
+            target=_persist_loop,
+            args=(persist_q, state),
+            daemon=True,
+        )
+        for t in (t_ingest, t_process, t_persist):
+            t.start()
+            threads.append(t)
+    else:
+        logger.info("Synchronous mode (default)", extra={"spec_id": "SPEC-011.2"})
 
     tick = 0
     primary_events = 0
     last_status_at = 0.0
     try:
-        while running:
-            hal_kwargs = {}
-            if demo_nodes:
-                hal_kwargs["node_id"] = demo_nodes[tick % len(demo_nodes)]
-                hal_kwargs["coherent_burst"] = True
-
-            if args.mode == "sdr":
-                payload = hal.ingest_sdr(**hal_kwargs)
-            elif args.mode == "pps":
-                payload = hal.ingest_gps_pps(**hal_kwargs)
+        while state.running:
+            if args.threaded:
+                # In threaded mode, main thread just pets watchdog, emits status, and sleeps
+                time.sleep(1.0)
+                snap = state.get_snapshot()
+                tick = snap["tick"]
+                primary_events = snap["primary_events"]
             else:
-                payload = (
-                    hal.ingest_sdr(**hal_kwargs)
-                    if int(time.time()) % 2 == 0
-                    else hal.ingest_gps_pps(**hal_kwargs)
-                )
+                hal_kwargs = {}
+                if demo_nodes:
+                    hal_kwargs["node_id"] = demo_nodes[tick % len(demo_nodes)]
+                    hal_kwargs["coherent_burst"] = True
 
-            if (
-                monitor.healthy
-                and payload.trust_state != "SECONDARY_QUARANTINED"
-            ):
-                decision = writer.ingest(payload.to_json())
-                if decision.stream == "PRIMARY":
-                    primary_events += 1
-                    print(
-                        f"[EVENT] PRIMARY {decision.packet.event_window_id} "
-                        f"r_smooth={decision.packet.r_smooth:.4f} "
-                        f"nodes={decision.packet.node_id}"
-                    )
+                try:
+                    if args.mode == "sdr":
+                        payload = hal.ingest_sdr(**hal_kwargs)
+                    elif args.mode == "pps":
+                        payload = hal.ingest_gps_pps(**hal_kwargs)
+                    else:
+                        payload = (
+                            hal.ingest_sdr(**hal_kwargs)
+                            if int(time.time()) % 2 == 0
+                            else hal.ingest_gps_pps(**hal_kwargs)
+                        )
+                except Exception as exc:
+                    logger.error("HAL ingest error: %s", exc, extra={"spec_id": "SPEC-011.2"})
+                    tick += 1
+                    time.sleep(0.05 if demo_nodes else args.interval)
+                    continue
 
-            tick += 1
+                if (
+                    monitor.healthy
+                    and payload.trust_state != "SECONDARY_QUARANTINED"
+                ):
+                    try:
+                        decision = writer.ingest(payload.to_json())
+                    except Exception as exc:
+                        logger.error("Writer ingest error: %s", exc, extra={"spec_id": "SPEC-011.3"})
+                    else:
+                        if decision.stream == "PRIMARY":
+                            primary_events += 1
+                            logger.info(
+                                "PRIMARY %s r_smooth=%.4f nodes=%s",
+                                decision.packet.event_window_id,
+                                decision.packet.r_smooth,
+                                decision.packet.node_id,
+                                extra={"spec_id": "SPEC-011.3", "context": {"node_id": decision.packet.node_id}},
+                            )
+
+                tick += 1
+                time.sleep(0.05 if demo_nodes else args.interval)
+
+            # Pet watchdog every loop
+            if watchdog_enabled:
+                watchdog.pet()
+
+            # Periodic status
             now = time.time()
             if now - last_status_at >= 60.0:
                 stats = writer.get_stats()
                 bl = scorer.get_baseline_status()
-                print(
-                    f"[STATUS] ticks={tick} primary={primary_events} "
-                    f"stats={json.dumps(stats)} baseline={json.dumps(bl)}"
+                logger.info(
+                    "STATUS ticks=%d primary=%d stats=%s baseline=%s",
+                    tick,
+                    primary_events,
+                    json.dumps(stats),
+                    json.dumps(bl),
+                    extra={"spec_id": "SPEC-011.4"},
                 )
+                health.update({
+                    "ticks": tick,
+                    "primary_events": primary_events,
+                    "stats": stats,
+                    "baseline": bl,
+                    "timing_healthy": monitor.healthy,
+                    "hal_mode": "sim" if simulator_mode else "hw",
+                    "node_id": node_id,
+                })
                 last_status_at = now
-
-            # Demo mode sleeps shorter so the 4-node rotation fits inside the
-            # 300 ms confirmation window (SPEC-006.4).
-            time.sleep(0.05 if demo_nodes else 0.1)
     finally:
+        state.running = False
+        if args.threaded:
+            for t in threads:
+                t.join(timeout=2.0)
         monitor.stop()
         writer.close()
+        health.stop()
+        if watchdog_enabled:
+            watchdog.close(disable=True)
         if args.field:
             scorer.finalize_baseline(force=True)
-            print("[FIELD] Baseline finalized.")
+            logger.info("FIELD baseline finalized", extra={"spec_id": "SPEC-011.1"})
 
 
 if __name__ == "__main__":

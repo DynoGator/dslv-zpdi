@@ -15,12 +15,43 @@ Environment=PYTHONUNBUFFERED=1
 Environment=DSLV_OUTPUT_DIR=/home/dynogator/dslv-zpdi/output
 Restart=on-failure
 RestartSec=15
+StartLimitInterval=60
+StartLimitBurst=3
 Nice=-5
 IOSchedulingClass=realtime
 IOSchedulingPriority=4
+CPUAffinity=2 3
+MemoryMax=2G
+MemorySwapMax=0
+LimitMEMLOCK=512M
+LimitNOFILE=65536
+
+# Systemd Sandboxing
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=yes
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictRealtime=false
+RestrictNamespaces=false
+
+# Read-write paths needed for pipeline operation.
+# NOTE: /dev/hackrf0 is intentionally omitted; it is a device node that may
+# be absent when the HackRF is unplugged, and systemd mount-namespace setup
+# fails (226/NAMESPACE) if any ReadWritePaths entry is missing. USB access
+# via /dev/bus/usb is sufficient for libusb/pyhackrf.
+ReadWritePaths=/home/dynogator/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
+
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=dslv-zpdi
+RuntimeDirectory=dslv-zpdi
+RuntimeDirectoryMode=0755
 
 [Install]
 WantedBy=multi-user.target

@@ -95,6 +95,11 @@ def footer_panel(compact: bool = False) -> Panel:
             "If it moves, it gets coherence-scored.",
             style="italic dim bright_white",
         )
+    # Live pulse + timestamp strip
+    pulse = "● LIVE" if int(time.time() * 2) % 2 == 0 else "○ LIVE"
+    ts = time.strftime("%H:%M:%S UTC", time.gmtime())
+    t.append("\n")
+    t.append(f"{pulse}  {ts}", style="bold bright_cyan")
     return Panel(t, border_style="bright_black", padding=(0, 1))
 
 
@@ -109,84 +114,85 @@ def _is_compact() -> bool:
         return False
 
 
-def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool = False) -> Layout:
+def _enabled(names, panels):
+    return [n for n in names if getattr(panels, n, True)]
+
+
+def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool = False, panels=None) -> Layout:
+    panels = panels or {}
     layout = Layout()
 
     if waterfall_only:
-        layout.split_column(
-            Layout(name="middle"),
-        )
+        layout.split_column(Layout(name="middle"))
         return layout
 
     if compact:
-        # 5" DSI (800x480) layout — stacked for vertical real estate. Row
-        # sizes scale with total_rows so the waterfall always gets useful
-        # height. At >= 32 rows we add the space-weather strip back in.
         try:
             total_rows = shutil.get_terminal_size().lines
         except Exception:
             total_rows = 24
         roomy = total_rows >= 30
         want_space = total_rows >= 32
-        # Fixed rows ...
+
+        status_a = _enabled(("system", "pipeline"), panels)
+        status_b = _enabled(("hardware", "anomaly"), panels)
+        space = _enabled(("weather", "storm"), panels)
+        bottom = _enabled(("logs", "notifications"), panels)
+
         status_sz = 8 if roomy else 7
         bottom_sz = 6 if roomy else 5
-        footer_sz = 3          # 3 is the minimum that shows the keys + borders
+        footer_sz = 3
         banner_sz = (4 if roomy else 3) if show_banner else 0
-        rows = [
-            Layout(name="banner", size=banner_sz),
-            Layout(name="status_a", size=status_sz),
-            Layout(name="status_b", size=status_sz),
-            Layout(name="middle"),
-            Layout(name="bottom", size=bottom_sz),
-            Layout(name="footer", size=footer_sz),
-        ]
-        if want_space:
-            rows.insert(4, Layout(name="space", size=8))
+
+        rows: list[Layout] = []
+        if banner_sz:
+            rows.append(Layout(name="banner", size=banner_sz))
+        if status_a:
+            rows.append(Layout(name="status_a", size=status_sz))
+        if status_b:
+            rows.append(Layout(name="status_b", size=status_sz))
+        rows.append(Layout(name="middle"))
+        if want_space and space:
+            rows.append(Layout(name="space", size=8))
+        if bottom:
+            rows.append(Layout(name="bottom", size=bottom_sz))
+        rows.append(Layout(name="footer", size=footer_sz))
         layout.split_column(*rows)
-        layout["status_a"].split_row(
-            Layout(name="system", ratio=1),
-            Layout(name="pipeline", ratio=1),
-        )
-        layout["status_b"].split_row(
-            Layout(name="hardware", ratio=1),
-            Layout(name="anomaly", ratio=1),
-        )
-        if want_space:
-            layout["space"].split_row(
-                Layout(name="weather", ratio=1),
-                Layout(name="storm", ratio=1),
-            )
-        layout["bottom"].split_row(
-            Layout(name="logs", ratio=3),
-            Layout(name="notifications", ratio=2),
-        )
+
+        if status_a:
+            layout["status_a"].split_row(*[Layout(name=n, ratio=1) for n in status_a])
+        if status_b:
+            layout["status_b"].split_row(*[Layout(name=n, ratio=1) for n in status_b])
+        if want_space and space:
+            layout["space"].split_row(*[Layout(name=n, ratio=1) for n in space])
+        if bottom:
+            layout["bottom"].split_row(*[Layout(name=n, ratio=1) for n in bottom])
         return layout
 
-    # Wide layout — row sizing banner tier-aware, status rows sized for densest panel.
-    layout.split_column(
-        Layout(name="banner", size=9 if show_banner else 0),
-        Layout(name="top", size=11),
-        Layout(name="middle"),
-        Layout(name="space", size=12),
-        Layout(name="bottom", size=12),
-        Layout(name="footer", size=4),
-    )
+    # Wide layout
+    top = _enabled(("system", "pipeline", "hardware", "anomaly"), panels)
+    space = _enabled(("weather", "storm"), panels)
+    bottom = _enabled(("logs", "notifications"), panels)
 
-    layout["top"].split_row(
-        Layout(name="system", ratio=1),
-        Layout(name="pipeline", ratio=1),
-        Layout(name="hardware", ratio=1),
-        Layout(name="anomaly", ratio=1),
-    )
-    layout["space"].split_row(
-        Layout(name="weather", ratio=1),
-        Layout(name="storm", ratio=1),
-    )
-    layout["bottom"].split_row(
-        Layout(name="logs", ratio=3),
-        Layout(name="notifications", ratio=2),
-    )
+    rows: list[Layout] = []
+    if show_banner:
+        rows.append(Layout(name="banner", size=9))
+    if top:
+        rows.append(Layout(name="top", size=11))
+    rows.append(Layout(name="middle"))
+    if space:
+        rows.append(Layout(name="space", size=12))
+    if bottom:
+        rows.append(Layout(name="bottom", size=12))
+    rows.append(Layout(name="footer", size=4))
+    layout.split_column(*rows)
+
+    if top:
+        layout["top"].split_row(*[Layout(name=n, ratio=1) for n in top])
+    if space:
+        layout["space"].split_row(*[Layout(name=n, ratio=1) for n in space])
+    if bottom:
+        layout["bottom"].split_row(*[Layout(name=n, ratio=1) for n in bottom])
     return layout
 
 
@@ -203,45 +209,62 @@ class Dashboard:
         self.console = Console()
         self.refresh = refresh if refresh is not None else cfg.refresh
         self.compact = _is_compact() if compact is None else compact
-        # The user's banner preference is independent of compact mode — we
-        # render a small banner in compact, the full banner in wide. Toggling
-        # compact should never forget the user's "show/hide" choice.
         self._banner_pref = show_banner if show_banner is not None else cfg.show_banner
         self.show_banner = self._banner_pref
         self.waterfall_only = waterfall_only
 
-        self.sys_p = SystemPanel(border_style=cfg.theme.system_border)
-        self.pipe_p = PipelinePanel(
-            unit=cfg.service_unit, border_style=cfg.theme.pipeline_border
-        )
-        self.hw_p = HardwarePanel(border_style=cfg.theme.hardware_border)
+        self._panels: dict[str, Any] = {}
+        if getattr(cfg.panels, "system", True):
+            self.sys_p = SystemPanel(border_style=cfg.theme.system_border)
+            self._panels["system"] = self.sys_p
+        if getattr(cfg.panels, "pipeline", True):
+            self.pipe_p = PipelinePanel(
+                unit=cfg.service_unit, border_style=cfg.theme.pipeline_border
+            )
+            self._panels["pipeline"] = self.pipe_p
+        if getattr(cfg.panels, "hardware", True):
+            self.hw_p = HardwarePanel(border_style=cfg.theme.hardware_border)
+            self._panels["hardware"] = self.hw_p
         wf_cfg = cfg.waterfall
         wf_width = max(40 if self.compact else 60, shutil.get_terminal_size().columns - 6)
-        self.wf_p = WaterfallPanel(
-            width=wf_width,
-            history=wf_cfg.history,
-            mode=wf_cfg.mode,
-            center_hz=wf_cfg.center_hz,
-            span_hz=wf_cfg.span_hz,
-            border_style=cfg.theme.waterfall_border,
-        )
-        self.anom_p = RFAnomalyPanel(self.wf_p)
-        self.weather_p = SpaceWeatherPanel()
-        self.storm_p = StormPanel()
-        self.log_p = LogPanel(
-            unit=cfg.service_unit,
-            max_lines=cfg.logs.max_lines,
-            border_style=cfg.theme.logs_border,
-        )
-        self.note_p = NotificationPanel(
-            max_items=cfg.notifications.max_items,
-            humor_every_s=cfg.notifications.humor_every_s,
-            glitch_every_s=cfg.notifications.glitch_every_s,
-            border_style=cfg.theme.notifications_border,
-        )
+        if getattr(cfg.panels, "waterfall", True):
+            self.wf_p = WaterfallPanel(
+                width=wf_width,
+                history=wf_cfg.history,
+                mode=wf_cfg.mode,
+                center_hz=wf_cfg.center_hz,
+                span_hz=wf_cfg.span_hz,
+                border_style=cfg.theme.waterfall_border,
+            )
+            self._panels["waterfall"] = self.wf_p
+            # Anomaly depends on waterfall metrics
+            self.anom_p = RFAnomalyPanel(self.wf_p)
+            self._panels["anomaly"] = self.anom_p
+        if getattr(cfg.panels, "weather", True):
+            self.weather_p = SpaceWeatherPanel()
+            self._panels["weather"] = self.weather_p
+        if getattr(cfg.panels, "storm", True):
+            self.storm_p = StormPanel()
+            self._panels["storm"] = self.storm_p
+        if getattr(cfg.panels, "logs", True):
+            self.log_p = LogPanel(
+                unit=cfg.service_unit,
+                max_lines=cfg.logs.max_lines,
+                border_style=cfg.theme.logs_border,
+            )
+            self._panels["logs"] = self.log_p
+        if getattr(cfg.panels, "notifications", True):
+            self.note_p = NotificationPanel(
+                max_items=cfg.notifications.max_items,
+                humor_every_s=cfg.notifications.humor_every_s,
+                glitch_every_s=cfg.notifications.glitch_every_s,
+                border_style=cfg.theme.notifications_border,
+            )
+            self._panels["notifications"] = self.note_p
 
         self.paused = False
-        self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact)
+        self._panels_cfg = cfg.panels
+        self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, cfg.panels)
         self._keyboard_mode = None
         self._orig_attrs = None
 
@@ -293,28 +316,17 @@ class Dashboard:
     # render ---
     def _render(self):
         if self.waterfall_only:
-            self.layout["middle"].update(self.wf_p.render())
+            if "waterfall" in self._panels:
+                self.layout["middle"].update(self._panels["waterfall"].render())
             return
 
         if self.show_banner:
             self.layout["banner"].update(
                 compact_banner() if self.compact else full_banner()
             )
-        self.layout["system"].update(self.sys_p.render())
-        self.layout["pipeline"].update(self.pipe_p.render())
-        self.layout["hardware"].update(self.hw_p.render())
-        self.layout["middle"].update(self.wf_p.render())
-        # Anomaly panel reads waterfall metrics — render after waterfall ticks.
-        self.layout["anomaly"].update(self.anom_p.render())
-        # "space" is optional in compact mode on short screens — skip the
-        # weather/storm render when those slots don't exist.
-        try:
-            self.layout["weather"].update(self.weather_p.render())
-            self.layout["storm"].update(self.storm_p.render())
-        except KeyError:
-            pass
-        self.layout["logs"].update(self.log_p.render())
-        self.layout["notifications"].update(self.note_p.render())
+        for name, panel in self._panels.items():
+            if name in self.layout:
+                self.layout[name].update(panel.render())
         self.layout["footer"].update(footer_panel(self.compact))
 
     def _boot_animation(self):
@@ -332,73 +344,110 @@ class Dashboard:
             self.paused = not self.paused
             self.note_p.push("INFO", "paused" if self.paused else "resumed")
         elif k in ("m", "M"):
-            self._wf_idx = (self._wf_idx + 1) % len(self._wf_modes)
-            self.wf_p.set_mode(self._wf_modes[self._wf_idx])
-            self.note_p.push("INFO", f"waterfall mode: {self._wf_modes[self._wf_idx]}")
+            if "waterfall" in self._panels:
+                self._wf_idx = (self._wf_idx + 1) % len(self._wf_modes)
+                self._panels["waterfall"].set_mode(self._wf_modes[self._wf_idx])
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"waterfall mode: {self._wf_modes[self._wf_idx]}")
         elif k in ("r", "R"):
             cur = os.getenv("DSLV_DASHBOARD_REAL_SDR", "0")
             new = "0" if cur == "1" else "1"
             os.environ["DSLV_DASHBOARD_REAL_SDR"] = new
-            self.note_p.push("INFO", f"real SDR mode: {'ON' if new == '1' else 'OFF'}")
+            if "notifications" in self._panels:
+                self._panels["notifications"].push("INFO", f"real SDR mode: {'ON' if new == '1' else 'OFF'}")
         elif k in ("h", "H"):
             if not self.waterfall_only:
                 self._banner_pref = not self._banner_pref
                 self.show_banner = self._banner_pref
-                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact)
-                self.note_p.push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
+                panels = getattr(self, "_panels_cfg", None)
+                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, panels)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
         elif k in ("c", "C"):
             if not self.waterfall_only:
                 self.compact = not self.compact
                 self.show_banner = self._banner_pref
-                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact)
-                self.note_p.push("INFO", f"compact: {'ON' if self.compact else 'OFF'}")
+                panels = getattr(self, "_panels_cfg", None)
+                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, panels)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"compact: {'ON' if self.compact else 'OFF'}")
         elif k == "[":
-            self.wf_p.adjust_floor(-5.0)
-            self.note_p.push("INFO", f"floor: {self.wf_p.dbm_floor} dBm")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].adjust_floor(-5.0)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"floor: {self._panels['waterfall'].dbm_floor} dBm")
         elif k == "]":
-            self.wf_p.adjust_floor(5.0)
-            self.note_p.push("INFO", f"floor: {self.wf_p.dbm_floor} dBm")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].adjust_floor(5.0)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"floor: {self._panels['waterfall'].dbm_floor} dBm")
         elif k == "{":
-            self.wf_p.adjust_ceil(-5.0)
-            self.note_p.push("INFO", f"ceil: {self.wf_p.dbm_ceil} dBm")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].adjust_ceil(-5.0)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"ceil: {self._panels['waterfall'].dbm_ceil} dBm")
         elif k == "}":
-            self.wf_p.adjust_ceil(5.0)
-            self.note_p.push("INFO", f"ceil: {self.wf_p.dbm_ceil} dBm")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].adjust_ceil(5.0)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"ceil: {self._panels['waterfall'].dbm_ceil} dBm")
         elif k in ("p", "P"):
-            self.wf_p.cycle_palette()
-            self.note_p.push("INFO", "palette cycled")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].cycle_palette()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", "palette cycled")
         elif k in ("s", "S"):
-            self.wf_p.show_spectrum = not self.wf_p.show_spectrum
-            self.note_p.push("INFO", f"spectrum: {'ON' if self.wf_p.show_spectrum else 'OFF'}")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].show_spectrum = not self._panels["waterfall"].show_spectrum
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"spectrum: {'ON' if self._panels['waterfall'].show_spectrum else 'OFF'}")
         elif k in ("+", "UP"):
-            self.wf_p.adjust_gain(1)
-            self.note_p.push("INFO", f"lna gain: {self.wf_p.lna_gain}dB")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].adjust_gain(1)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
         elif k in ("-", "DOWN"):
-            self.wf_p.adjust_gain(-1)
-            self.note_p.push("INFO", f"lna gain: {self.wf_p.lna_gain}dB")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].adjust_gain(-1)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
         elif k in ("g", "G"):
-            self.wf_p.cycle_gain()
-            self.note_p.push("INFO", f"lna gain: {self.wf_p.lna_gain}dB")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].cycle_gain()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
         elif k in ("a", "A"):
-            self.wf_p.toggle_amp()
-            self.note_p.push("INFO", f"amp: {'ON' if self.wf_p.amp_enabled else 'OFF'}")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].toggle_amp()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"amp: {'ON' if self._panels['waterfall'].amp_enabled else 'OFF'}")
         elif k == "<":
-            self.wf_p.tune(-int(self.wf_p.span_hz * 0.1))
-            self.note_p.push("INFO", f"tune: {self.wf_p.center_hz / 1e6:.1f}MHz")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].tune(-int(self._panels["waterfall"].span_hz * 0.1))
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"tune: {self._panels['waterfall'].center_hz / 1e6:.1f}MHz")
         elif k == ">":
-            self.wf_p.tune(int(self.wf_p.span_hz * 0.1))
-            self.note_p.push("INFO", f"tune: {self.wf_p.center_hz / 1e6:.1f}MHz")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].tune(int(self._panels["waterfall"].span_hz * 0.1))
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"tune: {self._panels['waterfall'].center_hz / 1e6:.1f}MHz")
         elif k in ("z", "Z"):
-            self.wf_p.zoom(2.0)
-            self.note_p.push("INFO", f"zoom: {self.wf_p.span_hz / 1e6:.1f}MHz")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].zoom(2.0)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"zoom: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
         elif k in ("x", "X"):
-            self.wf_p.zoom(0.5)
-            self.note_p.push("INFO", f"zoom: {self.wf_p.span_hz / 1e6:.1f}MHz")
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].zoom(0.5)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"zoom: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
 
     def run(self):
         self._boot_animation()
-        self.log_p.start()
-        self.note_p.push("INFO", "dashboard online")
+        if "logs" in self._panels:
+            self._panels["logs"].start()
+        if "notifications" in self._panels:
+            self._panels["notifications"].push("INFO", "dashboard online")
         self._enter_raw()
         try:
             with Live(self.layout, console=self.console, refresh_per_second=max(1, int(1 / self.refresh)), screen=True) as live:
@@ -413,7 +462,10 @@ class Dashboard:
             pass
         finally:
             self._exit_raw()
-            self.log_p.stop()
+            if "logs" in self._panels:
+                self._panels["logs"].stop()
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].shutdown()
             self.console.print("\n[bold bright_cyan]Dashboard offline. Pipeline continues in background.[/]\n")
 
 
@@ -432,6 +484,7 @@ def main(cfg=None):
     parser.add_argument("--waterfall-only", action="store_true", help="render only the waterfall panel")
     parser.add_argument("--compact", action="store_true", help="force compact layout (5\" DSI)")
     parser.add_argument("--wide", action="store_true", help="force wide layout (disable compact auto-detect)")
+    parser.add_argument("--real-sdr", action="store_true", help="start with real-SDR mode already on")
     parser.add_argument("--config", type=str, default="", help="use a custom dashboard.toml")
     parser.add_argument("--print-config", action="store_true", help="dump resolved config and exit")
     args = parser.parse_args()
@@ -451,6 +504,9 @@ def main(cfg=None):
         compact = True
     elif args.wide:
         compact = False
+
+    if args.real_sdr:
+        os.environ["DSLV_DASHBOARD_REAL_SDR"] = "1"
 
     show_banner = False if args.no_banner else cfg.show_banner
     dash = Dashboard(
