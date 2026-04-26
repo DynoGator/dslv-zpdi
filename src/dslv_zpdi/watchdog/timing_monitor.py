@@ -4,8 +4,11 @@ SPEC-004A.3 — Continuous Timing Health Monitoring
 
 import logging
 import math
+import os
+import random
 import subprocess
 from threading import Event, Thread
+from typing import Callable, Optional
 
 logger = logging.getLogger("dslv-zpdi.timing")
 
@@ -13,13 +16,24 @@ logger = logging.getLogger("dslv-zpdi.timing")
 class TimingMonitor:
     """SPEC-004A.3 — Runtime GPSDO/PPS jitter monitoring with automatic quarantine trigger."""
 
-    def __init__(self, check_interval_seconds=10, jitter_threshold_ns=50000):
+    def __init__(
+        self,
+        check_interval_seconds: float = 10,
+        jitter_threshold_ns: int = 50000,
+        simulated: bool = False,
+        jitter_source: Optional[Callable[[], float]] = None,
+    ):
         self.check_interval = check_interval_seconds
         self.threshold_ns = jitter_threshold_ns
+        self.simulated = simulated
+        self._jitter_source = jitter_source
         self._stop_event = Event()
         self._thread = None
         self.last_jitter_ns = float("inf")
-        self.healthy = False
+        # Optimistic startup: assume healthy until first reading proves otherwise.
+        # Prevents the start-up race where payloads are dropped while we wait
+        # for the first chronyc poll.
+        self.healthy = True
 
     def start(self):
         """Start monitoring thread."""
@@ -64,7 +78,26 @@ class TimingMonitor:
             self._stop_event.wait(self.check_interval)
 
     def _read_pps_jitter(self) -> float:
-        """Read current PPS jitter from chronyc tracking."""
+        """Read current PPS jitter.
+
+        - If a custom jitter_source was provided, use it.
+        - In simulated mode, generate a synthetic value matching the
+          DSLV_SIM_TIMING profile (gpsdo: ~10 ns, ntp: ~3 ms). This decouples
+          sim runs from host chronyc health.
+        - Otherwise read RMS offset from `chronyc tracking`.
+        """
+        if self._jitter_source is not None:
+            try:
+                return float(self._jitter_source())
+            except (TypeError, ValueError):
+                return float("inf")
+
+        if self.simulated:
+            mode = os.getenv("DSLV_SIM_TIMING", "gpsdo").strip().lower()
+            if mode == "ntp":
+                return float(abs(random.gauss(3_000_000.0, 1_000_000.0)))
+            return float(abs(random.gauss(10.0, 5.0)))
+
         try:
             result = subprocess.run(
                 ["chronyc", "tracking"],

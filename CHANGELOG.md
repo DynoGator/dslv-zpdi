@@ -2,6 +2,46 @@
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 
+## [4.5.2] - 2026-04-26
+
+### Fixed
+- **Silent data loss in main pipeline (SPEC-011.5).** When the timing
+  monitor was unhealthy or the payload arrived as `SECONDARY_QUARANTINED`,
+  the synchronous and threaded run loops both skipped the writer entirely,
+  leaving no forensic record. Both paths now mutate the payload with a
+  tagged quarantine reason (`timing_unhealthy` /
+  `upstream_quarantine`) and route it through the writer so every
+  observation lands in `secondary/quarantine.jsonl`.
+- `TimingMonitor` no longer reads host `chronyc` when the pipeline is
+  in simulator mode. A new `simulated=` flag selects a synthetic jitter
+  source matching `DSLV_SIM_TIMING` (gpsdo: ~10 ns, ntp: ~3 ms),
+  decoupling sim/CI runs from host clock health and eliminating the
+  start-up race that dropped the first batch of payloads.
+- `TimingMonitor.healthy` now starts `True` (optimistic) so payloads
+  ingested between `start()` and the first jitter read are not dropped.
+- `tests/test_hdf5_schema.py` — was passing only because the assertion
+  was OR-ed against an HDF5 file count that was always 0; now exercises
+  the new forensic-completeness guarantee.
+
+### Added
+- `PipelineState.note_quarantine()` — counts quarantine reasons and
+  surfaces them through the SPEC-014 health endpoint
+  (`/run/dslv-zpdi/health.json`).
+- Health endpoint now exports `timing_jitter_ns`, `timing_threshold_ns`,
+  and `quarantine_reasons` for downstream observability.
+- Dashboard `PipelinePanel` rebuilt against the live health endpoint:
+  surfaces PRIMARY/SECONDARY counts, integrity counters
+  (`fail/miss/inv/rej`), baseline state, timing health + jitter,
+  HDF5 byte volume, node ID, and HAL mode.
+- Dashboard `SystemPanel` now shows data-partition disk usage with
+  green/yellow/red banding.
+
+### Changed
+- `tests/test_integration.py` — assertion strengthened to require a
+  non-empty `quarantine.jsonl`, locking in the no-silent-drop guarantee.
+- `TimingMonitor` constructor signature extended (backwards compatible
+  via keyword args).
+
 ## [4.5.1] - 2026-04-24
 
 ### Added

@@ -1,8 +1,8 @@
-"""System stats panel: CPU, memory, temp, throttling."""
+"""System stats panel: CPU, memory, temp, throttling, disk."""
 
 import os
+import shutil
 import subprocess
-import time
 
 from rich.panel import Panel
 from rich.table import Table
@@ -94,6 +94,18 @@ def _throttle_status() -> str:
         return "?"
 
 
+def _disk_usage(path: str) -> tuple:
+    """Return (used_gib, total_gib, pct_used) for the partition holding `path`."""
+    try:
+        st = shutil.disk_usage(path)
+        used_gib = st.used / 1024 / 1024 / 1024
+        total_gib = st.total / 1024 / 1024 / 1024
+        pct = (st.used / st.total * 100) if st.total else 0.0
+        return used_gib, total_gib, pct
+    except Exception:
+        return 0.0, 0.0, 0.0
+
+
 def _uptime() -> str:
     try:
         up = float(_read("/proc/uptime", "0").split()[0])
@@ -131,11 +143,25 @@ class SystemPanel:
         cpu_style = "bright_green" if cpu_pct < 60 else "yellow" if cpu_pct < 85 else "bright_red"
         thr_style = "bright_green" if thr in ("clean",) else "yellow" if "past" in thr else "bright_red"
 
+        data_root = os.getenv("DSLV_OUTPUT_DIR", "/home/dynogator/dslv-zpdi/output")
+        d_used, d_total, d_pct = _disk_usage(
+            data_root if os.path.exists(data_root) else "/"
+        )
+        disk_style = (
+            "bright_green" if d_pct < 70 else
+            "yellow" if d_pct < 90 else "bright_red"
+        )
+
         t.add_row("CPU", f"[{cpu_style}]{cpu_pct:5.1f}%[/] @ [magenta]{gov}[/]")
         t.add_row("Mem", f"{mem_used:4.1f}/{mem_total:4.1f} GiB")
         t.add_row("Load", f"{load[0]:.2f} {load[1]:.2f} {load[2]:.2f}")
         t.add_row("Temp", f"[{temp_style}]{temp:4.1f}°C[/]")
         t.add_row("Power", f"[{thr_style}]{thr}[/]")
+        t.add_row(
+            "Disk",
+            f"[{disk_style}]{d_pct:4.1f}%[/]  "
+            f"[dim]{d_used:.1f}/{d_total:.1f} GiB[/]",
+        )
         t.add_row("Uptime", f"[dim]{up}[/]")
 
         return Panel(

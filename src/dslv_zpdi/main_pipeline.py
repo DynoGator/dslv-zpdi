@@ -59,7 +59,6 @@ def _resolve_simulator(args) -> bool:
 
 class PipelineState:
     """SPEC-011.2 — Thread-safe mutable state container for the pipeline."""
-    """Thread-safe mutable state container for the pipeline."""
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -68,6 +67,7 @@ class PipelineState:
         self.running = True
         self.last_status_at = 0.0
         self.health: Dict[str, Any] = {}
+        self.quarantine_reasons: Dict[str, int] = {}
 
     def inc_tick(self):
         with self.lock:
@@ -77,12 +77,17 @@ class PipelineState:
         with self.lock:
             self.primary_events += 1
 
+    def note_quarantine(self, reason: str) -> None:
+        with self.lock:
+            self.quarantine_reasons[reason] = self.quarantine_reasons.get(reason, 0) + 1
+
     def get_snapshot(self) -> Dict[str, Any]:
         with self.lock:
             return {
                 "tick": self.tick,
                 "primary_events": self.primary_events,
                 "running": self.running,
+                "quarantine_reasons": dict(self.quarantine_reasons),
             }
 
 
@@ -132,15 +137,22 @@ def _process_loop(
     state: PipelineState,
 ):
     """SPEC-011.2 — Processing thread: coherence + routing, then enqueue for persistence."""
-    """Processing thread: coherence + routing, then enqueue for persistence."""
     while state.running:
         try:
             payload = ingest_q.get(block=True, timeout=1.0)
         except queue.Empty:
             continue
 
-        if not monitor.healthy or payload.trust_state == "SECONDARY_QUARANTINED":
-            continue
+        # SPEC-011.5 — Forensic completeness: never silently drop a payload.
+        # Timing-unhealthy or upstream-quarantined samples are still persisted
+        # to the secondary stream (quarantine.jsonl) with a tagged reason,
+        # so we keep an unbroken record of every observation.
+        if not monitor.healthy:
+            payload.trust_state = "SECONDARY_QUARANTINED"
+            payload.quarantine_reason = "timing_unhealthy"
+            state.note_quarantine("timing_unhealthy")
+        elif payload.trust_state == "SECONDARY_QUARANTINED":
+            state.note_quarantine(payload.quarantine_reason or "upstream_quarantine")
 
         decision = writer.ingest(payload.to_json())
         if decision.stream == "PRIMARY":
@@ -271,7 +283,10 @@ def main():
 
     # SPEC-004A.3 — Relaxed threshold in simulator mode (NTP jitter ~3ms, not GPSDO).
     _timing_threshold = 10_000_000 if simulator_mode else 50_000
-    monitor = TimingMonitor(jitter_threshold_ns=_timing_threshold)
+    monitor = TimingMonitor(
+        jitter_threshold_ns=_timing_threshold,
+        simulated=simulator_mode,
+    )
     monitor.start()
 
     # DSLV_SIM_DEMO=1: rotate node IDs so the 4-node confirmation gate can fire in sim.
@@ -367,24 +382,30 @@ def main():
                     time.sleep(0.05 if demo_nodes else args.interval)
                     continue
 
-                if (
-                    monitor.healthy
-                    and payload.trust_state != "SECONDARY_QUARANTINED"
-                ):
-                    try:
-                        decision = writer.ingest(payload.to_json())
-                    except Exception as exc:
-                        logger.error("Writer ingest error: %s", exc, extra={"spec_id": "SPEC-011.3"})
-                    else:
-                        if decision.stream == "PRIMARY":
-                            primary_events += 1
-                            logger.info(
-                                "PRIMARY %s r_smooth=%.4f nodes=%s",
-                                decision.packet.event_window_id,
-                                decision.packet.r_smooth,
-                                decision.packet.node_id,
-                                extra={"spec_id": "SPEC-011.3", "context": {"node_id": decision.packet.node_id}},
-                            )
+                # SPEC-011.5 — Forensic completeness: tag, then always persist.
+                if not monitor.healthy:
+                    payload.trust_state = "SECONDARY_QUARANTINED"
+                    payload.quarantine_reason = "timing_unhealthy"
+                    state.note_quarantine("timing_unhealthy")
+                elif payload.trust_state == "SECONDARY_QUARANTINED":
+                    state.note_quarantine(
+                        payload.quarantine_reason or "upstream_quarantine"
+                    )
+
+                try:
+                    decision = writer.ingest(payload.to_json())
+                except Exception as exc:
+                    logger.error("Writer ingest error: %s", exc, extra={"spec_id": "SPEC-011.3"})
+                else:
+                    if decision.stream == "PRIMARY":
+                        primary_events += 1
+                        logger.info(
+                            "PRIMARY %s r_smooth=%.4f nodes=%s",
+                            decision.packet.event_window_id,
+                            decision.packet.r_smooth,
+                            decision.packet.node_id,
+                            extra={"spec_id": "SPEC-011.3", "context": {"node_id": decision.packet.node_id}},
+                        )
 
                 tick += 1
                 time.sleep(0.05 if demo_nodes else args.interval)
@@ -406,14 +427,19 @@ def main():
                     json.dumps(bl),
                     extra={"spec_id": "SPEC-011.4"},
                 )
+                snap = state.get_snapshot()
                 health.update({
                     "ticks": tick,
                     "primary_events": primary_events,
                     "stats": stats,
                     "baseline": bl,
                     "timing_healthy": monitor.healthy,
+                    "timing_jitter_ns": float(monitor.last_jitter_ns)
+                        if monitor.last_jitter_ns != float("inf") else None,
+                    "timing_threshold_ns": monitor.threshold_ns,
                     "hal_mode": "sim" if simulator_mode else "hw",
                     "node_id": node_id,
+                    "quarantine_reasons": snap.get("quarantine_reasons", {}),
                 })
                 last_status_at = now
     finally:
