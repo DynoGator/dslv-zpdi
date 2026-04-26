@@ -16,12 +16,12 @@ OK: no rogue nodes and no orphaned SPEC claims.
 [NOT READY] Hardware timing violations detected.
 ===== provision_tier1 (simulator) =====
 ============================================================
-NOTE: Leo Bodnar LBE-1420 — Native 3.3V CMOS Compatibility
+NOTE: Leo Bodnar LBE-1421 — Native 3.3V CMOS Compatibility
 ============================================================
 
 The Pi 5's RP1 southbridge utilizes STRICTLY 3.3V logic.
 
-The LBE-1420 GPSDO outputs a 3.3V CMOS square wave natively,
+The LBE-1421 GPSDO outputs a 3.3V CMOS square wave natively,
 making it DIRECTLY compatible with Pi 5 GPIO 18 — NO level-
 shifter or voltage divider is required.
 
@@ -38,7 +38,7 @@ damage to the RP1 chip and render the Pi 5 inoperable.
 DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.4.0)
 ============================================================
 
-Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO
+Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO
 Required Wiring:
   - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)
   - GPSDO 1 PPS → Pi 5 GPIO 18 (UTC timestamp)

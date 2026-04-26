@@ -2,7 +2,7 @@
 
 **Session:** Evaluate and repair broken pipeline; refine and visually polish dashboard UI  
 **Operator:** Kimi Code CLI (Engineering Collaborator)  
-**Platform:** Raspberry Pi 5 + HackRF One + LBE-1420 GPSDO (pending arrival) + 5" DSI  
+**Platform:** Raspberry Pi 5 + HackRF One + LBE-1421 GPSDO (pending arrival) + 5" DSI  
 **Branch:** `main` — committed and pushed to GitHub  
 
 ---
@@ -172,7 +172,7 @@ Expected: valid JSON with `timestamp_utc`, `uptime_s`, `ticks`, `primary_events`
 
 ## 6. Known follow-ups / deferred
 
-- **LBE-1420 GPSDO arrival day:** When hardware arrives, run `tools/provision_tier1.py`, verify auto-probe HAL selects `HardwareHAL`, run 72-hour baseline capture.
+- **LBE-1421 GPSDO arrival day:** When hardware arrives, run `tools/provision_tier1.py`, verify auto-probe HAL selects `HardwareHAL`, run 72-hour baseline capture.
 - **Systemd unit divergence:** The installed unit had sandboxing not present in the repo. This session unified them, but future edits should always update `config/dslv-zpdi.service` and run `sudo cp … && daemon-reload`.
 - **`requirements-frozen.txt.sha256` is 0 bytes** — hash verification is non-functional; regenerate when freezing requirements next.
 - **Threaded mode HDF5 safety:** `HDF5Writer` is not thread-safe. `_process_loop` calls `writer.ingest()` from a non-main thread when `--threaded` is used. h5py is not thread-safe by default. This is a latent risk for `--threaded` production runs; consider adding a threading lock around `writer.ingest()` and `writer.close()` if threaded mode becomes primary.

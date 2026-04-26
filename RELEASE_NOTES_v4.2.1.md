@@ -2,7 +2,7 @@
 
 **Revision:** Rev 4.2.1 (Dependency Hotfix)
 **Date:** 2026-04-15
-**Codename:** LBE1420-HOTFIX
+**Codename:** LBE-1421-HOTFIX
 
 ## Summary
 

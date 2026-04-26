@@ -1,6 +1,6 @@
 # DSLV-ZPDI Session Report: 2026-04-09
 
-> **ARCHITECTURE UPDATE:** This session report captures the state immediately prior to the Phase 2A RF Metrology Pivot. The current Tier 1 hardware baseline has shifted from the CM5 + Intel i210-T1 / PTP / RTL-SDR stack described below to **Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO**. See `docs/ARCH-PHASE-2A-PIVOT.md` and `RF_METROLOGY_PIVOT_REPORT.md` for the canonical current architecture.
+> **ARCHITECTURE UPDATE:** This session report captures the state immediately prior to the Phase 2A RF Metrology Pivot. The current Tier 1 hardware baseline has shifted from the CM5 + Intel i210-T1 / PTP / RTL-SDR stack described below to **Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO**. See `docs/ARCH-PHASE-2A-PIVOT.md` and `RF_METROLOGY_PIVOT_REPORT.md` for the canonical current architecture.
 
 **Operator:** Gemini (Autonomous Co-Pilot)
 **Subject:** Software Hardening, PTP Verification, and Unified Installer Deployment

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI Unified Installer / Validator / Hardening
-# Revision: 4.5.0-LBE1420-HARDENED
+# Revision: 4.5.0-LBE-1421-HARDENED
 # OS Support: Raspberry Pi OS Bookworm (Deb 12) & Trixie (Deb 13)
 # Date: 2026-04-19
 #
@@ -190,6 +190,12 @@ require_cmd() {
     command -v "$1" >/dev/null 2>&1 || log_fail "Required command not found: $1"
 }
 
+HARDENING_PACKAGES=(
+    apparmor-profiles
+    usbguard
+    auditd
+)
+
 BASE_PACKAGES=(
     git
     python3
@@ -224,7 +230,7 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
     export DEBIAN_FRONTEND=noninteractive
     log_info "Installing base OS dependencies"
     apt-get update -y || log_fail "apt-get update failed"
-    apt-get install -y "${BASE_PACKAGES[@]}" || log_fail "Failed to install base packages"
+    apt-get install -y "${BASE_PACKAGES[@]}" "${HARDENING_PACKAGES[@]}" || log_fail "Failed to install base packages"
 
     if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
         log_info "Installing Tier 1 timing/audit packages"
@@ -593,6 +599,57 @@ BLK
     systemctl enable dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service >/dev/null
     systemctl restart dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service || true
     log_ok "Systemd hardening chain installed and started"
+
+    # 9. USBGuard allow-listing (SPEC-011.1)
+    log_info "Configuring USBGuard allow-list"
+    # Generate a policy that allows the HackRF and LBE-1421
+    # HackRF: 1d50:6089
+    # LBE-1421: 1d50:604b (common Leo Bodnar) or check detected
+    usbguard generate-policy > /etc/usbguard/rules.conf
+    # Ensure HackRF is always allowed
+    if ! grep -q "1d50:6089" /etc/usbguard/rules.conf; then
+        echo "allow id 1d50:6089 serial \"*\" name \"HackRF One\" with-interface all" >> /etc/usbguard/rules.conf
+    fi
+    systemctl enable --now usbguard
+    log_ok "USBGuard configured and active"
+
+    # 10. Auditd monitoring (SPEC-011.2)
+    log_info "Configuring auditd for project directory"
+    cat > /etc/audit/rules.d/dslv-zpdi.rules <<AUDIT
+-w ${INSTALL_DIR} -p wa -k dslv_zpdi_changes
+AUDIT
+    augenrules --load
+    systemctl enable --now auditd
+    log_ok "Auditd monitoring active on ${INSTALL_DIR}"
+
+    # 11. Air-Gap Hardening (Day 3)
+    log_info "Disabling WiFi/Bluetooth for Air-Gap (SPEC-011.3)"
+    if [[ -f "$FIRMWARE_CONFIG" ]]; then
+        if ! grep -q "dtoverlay=disable-wifi" "$FIRMWARE_CONFIG"; then
+            cat >> "$FIRMWARE_CONFIG" << 'EOF'
+
+# DSLV-ZPDI Air-Gap Configuration
+dtoverlay=disable-wifi
+dtoverlay=disable-bt
+EOF
+            log_ok "WiFi/BT disabled in $FIRMWARE_CONFIG"
+        fi
+    fi
+
+    # 12. USB Power & Security
+    log_info "Setting usbcore.authorized_default=0 (speculative)"
+    # This prevents new USB devices from being authorized by default
+    if ! grep -q "usbcore.authorized_default=0" /etc/default/grub 2>/dev/null; then
+        # For Pi, we usually add to /boot/cmdline.txt
+        CMDLINE="/boot/firmware/cmdline.txt"
+        if [[ ! -f "$CMDLINE" ]]; then CMDLINE="/boot/cmdline.txt"; fi
+        if [[ -f "$CMDLINE" ]] && ! grep -q "usbcore.authorized_default=0" "$CMDLINE"; then
+            sed -i 's/$/ usbcore.authorized_default=0/' "$CMDLINE"
+            log_ok "USB authorized_default=0 added to $CMDLINE"
+        fi
+    fi
+
+
 fi
 
 if [[ "$DASHBOARD_MODE" -eq 1 ]]; then

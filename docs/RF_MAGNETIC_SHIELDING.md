@@ -2,7 +2,7 @@
 
 **Document ID:** `SHIELD-DESIGN-001`
 **Status:** IN DEVELOPMENT — Expanding as build progresses
-**Target Baseline:** Rev 4.2-LBE1420
+**Target Baseline:** Rev 4.2-LBE-1421
 **Author:** J.R. Fross (@DynoGator) / Resonant Genesis LLC
 
 ---
@@ -32,14 +32,14 @@ Instead of circulating air, we use **conduction cooling**:
 
 ## 3. Compartmentalization: The Bulkheads
 
-The noisy digital brain (Pi 5) must be separated from the sensitive metrology gear (HackRF + LBE-1420 GPSDO), and all of it shielded from the outside.
+The noisy digital brain (Pi 5) must be separated from the sensitive metrology gear (HackRF + LBE-1421 GPSDO), and all of it shielded from the outside.
 
 ### Chamber Layout
 
 | Chamber | Contents | Purpose |
 |---------|----------|---------|
 | **Chamber A** | Raspberry Pi 5 | Digital compute — noisy |
-| **Chamber B** | HackRF One + LBE-1420 GPSDO | RF metrology — sensitive |
+| **Chamber B** | HackRF One + LBE-1421 GPSDO | RF metrology — sensitive |
 
 ### Construction
 
@@ -132,7 +132,7 @@ If running an external battery:
 
 ## 8. Development Notes
 
-- [ ] Finalize internal chamber dimensions based on Pi 5 + HackRF + LBE-1420 footprints
+- [ ] Finalize internal chamber dimensions based on Pi 5 + HackRF + LBE-1421 footprints
 - [ ] Source and test specific Mu-Metal tape products
 - [ ] Validate thermal pad compression for optimal CPU-to-hull contact
 - [ ] Design SMA bulkhead layout for antenna and GPSDO connections

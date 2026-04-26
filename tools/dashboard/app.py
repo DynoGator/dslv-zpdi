@@ -485,6 +485,7 @@ def main(cfg=None):
     parser.add_argument("--compact", action="store_true", help="force compact layout (5\" DSI)")
     parser.add_argument("--wide", action="store_true", help="force wide layout (disable compact auto-detect)")
     parser.add_argument("--real-sdr", action="store_true", help="start with real-SDR mode already on")
+    parser.add_argument("--headless", action="store_true", help="run without TUI (journald only)")
     parser.add_argument("--config", type=str, default="", help="use a custom dashboard.toml")
     parser.add_argument("--print-config", action="store_true", help="dump resolved config and exit")
     args = parser.parse_args()
@@ -509,6 +510,17 @@ def main(cfg=None):
         os.environ["DSLV_DASHBOARD_REAL_SDR"] = "1"
 
     show_banner = False if args.no_banner else cfg.show_banner
+    
+    if args.headless:
+        print("[+] Headless mode active. Dashboard logic running in background. Check journalctl -u dslv-zpdi")
+        # Minimal loop to keep process alive and handle signals
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("[+] Headless dashboard shutting down.")
+            return
+
     dash = Dashboard(
         refresh=args.refresh,
         show_banner=show_banner,

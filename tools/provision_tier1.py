@@ -17,12 +17,12 @@ def print_rp1_warning():
     ARCH-PHASE-2A-PIVOT §3 — Critical voltage warning for Pi 5 RP1 southbridge.
     """
     print("=" * 60)
-    print("NOTE: Leo Bodnar LBE-1420 — Native 3.3V CMOS Compatibility")
+    print("NOTE: Leo Bodnar LBE-1421 — Native 3.3V CMOS Compatibility")
     print("=" * 60)
     print("""
 The Pi 5's RP1 southbridge utilizes STRICTLY 3.3V logic.
 
-The LBE-1420 GPSDO outputs a 3.3V CMOS square wave natively,
+The LBE-1421 GPSDO outputs a 3.3V CMOS square wave natively,
 making it DIRECTLY compatible with Pi 5 GPIO 18 — NO level-
 shifter or voltage divider is required.
 
@@ -40,14 +40,14 @@ damage to the RP1 chip and render the Pi 5 inoperable.
 
 def check_rp1_voltage_guard() -> bool:
     """
-    SPEC-004A.1 — Hard enforcement: LBE-1420 native 3.3V only.
+    SPEC-004A.1 — Hard enforcement: LBE-1421 native 3.3V only.
     """
     cal_path = "/etc/dslv_zpdi_cal.json"
     if os.path.exists(cal_path):
         with open(cal_path, "r", encoding="utf-8") as f:
             content = f.read()
-            if "LBE1420" in content:
-                print("[HARD] LBE-1420 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
+            if "LBE-1421" in content:
+                print("[HARD] LBE-1421 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
                 return True
     return True  # Soft pass if calibration file absent
 
@@ -247,7 +247,7 @@ def check_pps_gpio_overlay():
 
 def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
     """
-    SPEC-004A.3-NMEA — Verify LBE-1420 NMEA telemetry stream via USB-C virtual serial.
+    SPEC-004A.3-NMEA — Verify LBE-1421 NMEA telemetry stream via USB-C virtual serial.
     """
     try:
         import serial as pyserial
@@ -255,10 +255,10 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
         line = ser.readline().decode("ascii", errors="ignore").strip()
         ser.close()
         if line.startswith("$G"):
-            print(f"[*] LBE-1420 NMEA telemetry active on {serial_port} ✅")
+            print(f"[*] LBE-1421 NMEA telemetry active on {serial_port} ✅")
             print(f"    Sample: {line[:60]}")
             return True
-        print(f"[!] LBE-1420 NMEA: unexpected data on {serial_port}")
+        print(f"[!] LBE-1421 NMEA: unexpected data on {serial_port}")
         return False
     except ImportError:
         print("[WARN] pyserial not installed. Cannot verify NMEA.")
@@ -266,7 +266,7 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
         return True  # Don't fail provisioning for this
     except (OSError, IOError):
         print(f"[WARN] Cannot open {serial_port} for NMEA verification.")
-        print("       Ensure LBE-1420 is connected via USB-C.")
+        print("       Ensure LBE-1421 is connected via USB-C.")
         return True  # Don't fail provisioning for this
 
 
@@ -305,7 +305,7 @@ def main():
     print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.4.0)")
     print("=" * 60)
     print()
-    print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1420 GPSDO")
+    print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO")
     print("Required Wiring:")
     print("  - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)")
     print("  - GPSDO 1 PPS → Pi 5 GPIO 18 (UTC timestamp)")
@@ -323,7 +323,7 @@ def main():
         ("HackRF Presence", check_hackrf_presence()),
         ("HackRF Clock Source", check_hackrf_clock_source()),
         ("PPS Device", check_pps_device()),
-        ("LBE-1420 NMEA", check_nmea_telemetry()),
+        ("LBE-1421 NMEA", check_nmea_telemetry()),
         ("udev Rules", check_udev_rules()),
         ("Python Dependencies", check_python_dependencies()),
         ("Chrony PPS Config", check_chrony_pps_config()),

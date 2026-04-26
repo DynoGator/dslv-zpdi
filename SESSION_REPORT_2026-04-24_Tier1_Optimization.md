@@ -132,7 +132,7 @@ health_check.sh        → 1 warning (GPSDO serial absent — expected, hardware
 **Current System State:**
 - HackRF One r9 detected, fw 2.1.0, serial ending `61dc2a7c5f4f`
 - PPS device `/dev/pps0` present (kernel module loaded)
-- GPSDO LBE-1420 **not yet connected** via USB-C (NMEA serial absent) — expected hardware gap
+- GPSDO LBE-1421 **not yet connected** via USB-C (NMEA serial absent) — expected hardware gap
 - chrony active on NTP (stratum 3, ~9 ms RMS offset) — GPSDO PPS will improve this to <1 µs once wired
 - All systemd services active in simulator mode (drop-in `99-simulator.conf` in place)
 - Disk usage 9%, SoC 52°C, governor=performance
@@ -140,8 +140,8 @@ health_check.sh        → 1 warning (GPSDO serial absent — expected, hardware
 
 **To Transition to Hardware Mode:**
 ```bash
-# 1. Wire LBE-1420: 10 MHz SMA → HackRF CLKIN, 1 PPS → Pi 5 GPIO 18 (verify 3.3V)
-# 2. Connect LBE-1420 USB-C for NMEA telemetry
+# 1. Wire LBE-1421: 10 MHz SMA → HackRF CLKIN, 1 PPS → Pi 5 GPIO 18 (verify 3.3V)
+# 2. Connect LBE-1421 USB-C for NMEA telemetry
 # 3. Switch pipeline to hardware:
 sudo tools/toggle_simulator.sh off
 # 4. Verify:

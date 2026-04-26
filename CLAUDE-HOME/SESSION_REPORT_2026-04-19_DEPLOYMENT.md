@@ -16,7 +16,7 @@
 | Compute | Raspberry Pi 5 Model B Rev 1.1, 16 GB RAM | 104 GB free on 128 GB SD |
 | OS | Raspberry Pi OS Trixie (Debian 13) 64-bit | kernel 6.12.75-rpi-2712 |
 | SDR | HackRF One r9, S/N 010961dc2a7c5f4f, FW v2.1.0 | USB 3.0 connected, fully enumerated |
-| GPSDO | Leo Bodnar LBE-1420 | **PENDING DELIVERY** — simulator mode active |
+| GPSDO | Leo Bodnar LBE-1421 | **PENDING DELIVERY** — simulator mode active |
 | PPS GPIO | pps-gpio kernel module loaded, GPIO 18 configured | dtoverlay in /boot/firmware/config.txt |
 | Chrony | active (running), PPS /dev/pps0 configured | NTP fallback active pending GPSDO |
 | UPS | Suptronics X1202 + 4× Murata VTC6 18650 | 20V Dewalt → 5.1V/10A buck → Y + Schottky |
@@ -24,7 +24,7 @@
 | Input | Rii wireless touchpad | Working |
 | Cooling | Neo Argon PWM active cooler | Pi 5 header |
 
-**Tier 1 Compliance Status:** PARTIAL — HackRF hardware phase-lock requires GPSDO CLKIN. System operating in `DEV_SIMULATOR=1` mode pending LBE-1420 delivery.
+**Tier 1 Compliance Status:** PARTIAL — HackRF hardware phase-lock requires GPSDO CLKIN. System operating in `DEV_SIMULATOR=1` mode pending LBE-1421 delivery.
 
 ---
 
@@ -120,10 +120,10 @@ Removed `main_pipeline.py.bak` and `timing_monitor.py.bak` from working tree.
 ## Turnover / Next Steps
 
 ### Immediate (awaiting GPSDO delivery)
-1. **GPSDO Hardware Arrival (LBE-1420):** When the Leo Bodnar LBE-1420 arrives:
-   - Connect SMA cable: LBE-1420 `Output` → HackRF `CLKIN` (10 MHz phase lock)
-   - Connect jumper: LBE-1420 `1 PPS` → Pi 5 GPIO 18 (verify 3.3V — see RP1 warning in provision_tier1.py)
-   - Connect USB-C: LBE-1420 → Pi 5 (power + NMEA serial)
+1. **GPSDO Hardware Arrival (LBE-1421):** When the Leo Bodnar LBE-1421 arrives:
+   - Connect SMA cable: LBE-1421 `Output` → HackRF `CLKIN` (10 MHz phase lock)
+   - Connect jumper: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (verify 3.3V — see RP1 warning in provision_tier1.py)
+   - Connect USB-C: LBE-1421 → Pi 5 (power + NMEA serial)
    - Verify: `lsmod | grep pps && ppstest /dev/pps0`
    - Verify NMEA: `python -c "import serial; s=serial.Serial('/dev/ttyACM0',9600,timeout=2); print(s.readline())"`
 
@@ -157,7 +157,7 @@ This hardware **meets Tier 1 spec** for Phase 2A:
 - ✅ pps-gpio kernel module — loaded, GPIO 18 configured
 - ✅ Chrony — running, PPS /dev/pps0 configured
 - ✅ Power — 20V Dewalt → 5.1V/10A buck, UPS capacitor bank, Schottky isolation
-- ⏳ LBE-1420 GPSDO — **PENDING DELIVERY** (critical path for Tier 1 final validation)
+- ⏳ LBE-1421 GPSDO — **PENDING DELIVERY** (critical path for Tier 1 final validation)
 
 The pipeline is running, the platform is validated, and the system is in a clean, reproducible state. Tier 1 final sign-off awaits GPSDO hardware.
 

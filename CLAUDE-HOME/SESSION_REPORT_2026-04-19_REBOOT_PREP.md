@@ -4,7 +4,7 @@
 **Session:** 4 of 4 on 2026-04-19 (Verification / Cleanup / Reboot Prep)
 **Operator:** Joseph R. Fross
 **Host:** Pi 5 (Trixie, 16GB) — Uptime 6h 43min
-**Revision:** v4.5.0-LBE1420-HARDENED (from Session 3)
+**Revision:** v4.5.0-LBE-1421-HARDENED (from Session 3)
 
 ---
 
@@ -122,9 +122,9 @@ Launches automatically at desktop login. Manual invocation:
 /home/dynogator/dslv-zpdi/tools/dashboard/launch.sh
 ```
 
-### When LBE-1420 GPSDO Arrives
-1. Wire SMA: LBE-1420 `Output` → HackRF `CLKIN`
-2. Wire 1PPS: LBE-1420 `1 PPS` → Pi 5 GPIO 18 (physical pin 12); bridge grounds
+### When LBE-1421 GPSDO Arrives
+1. Wire SMA: LBE-1421 `Output` → HackRF `CLKIN`
+2. Wire 1PPS: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12); bridge grounds
 3. Connect USB-C (power + NMEA on `/dev/ttyACM0`)
 4. Verify GPS fix: `python -c "import serial; s=serial.Serial('/dev/ttyACM0',9600,timeout=2); print(s.readline())"`
 5. Remove `--simulator` from `/etc/systemd/system/dslv-zpdi.service` `ExecStart=`

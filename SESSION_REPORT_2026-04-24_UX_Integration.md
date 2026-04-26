@@ -2,7 +2,7 @@
 
 **Session:** UX integration & polish
 **Operator:** Joseph R. Fross
-**Platform:** Raspberry Pi 5 + HackRF + LBE-1420 GPSDO (pending) + 5" DSI
+**Platform:** Raspberry Pi 5 + HackRF + LBE-1421 GPSDO (pending) + 5" DSI
 **Branch:** `main` (uncommitted — see "Change log" below)
 **Version:** v4.5.0 (unchanged) → working toward v4.6.0-ux
 

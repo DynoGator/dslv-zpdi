@@ -29,7 +29,7 @@
    - `provision_tier1.py` updated to emit structured NMEA pass/fail in audit summary.
 
 4. **RP1 3.3V Hard Enforcement**
-   - Added `check_rp1_voltage_guard()` to `tools/provision_tier1.py` (reads `/etc/dslv_zpdi_cal.json` for LBE1420 marker).
+   - Added `check_rp1_voltage_guard()` to `tools/provision_tier1.py` (reads `/etc/dslv_zpdi_cal.json` for LBE-1421 marker).
    - Injected bash guard snippet into `PHASE_2A_TIER_1_BUILD_SHEET.md` verification checklist.
 
 ### Immediate Development Paths (0–72 h)

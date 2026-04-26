@@ -3,8 +3,8 @@
 **Date:** 2026-04-19
 **Session:** 3 of 3 (Publication / Turnover)
 **Operator:** Joseph R. Fross (jrfross@gmail.com)
-**Host:** Pi 5 (Trixie, 16GB) — HackRF One r9 — PPS /dev/pps0 — chrony NTP stratum 3 (awaiting LBE-1420)
-**Revision Bumped:** v4.4.0 → **v4.5.0-LBE1420-HARDENED**
+**Host:** Pi 5 (Trixie, 16GB) — HackRF One r9 — PPS /dev/pps0 — chrony NTP stratum 3 (awaiting LBE-1421)
+**Revision Bumped:** v4.4.0 → **v4.5.0-LBE-1421-HARDENED**
 
 ---
 
@@ -62,7 +62,7 @@ Live evidence committed into the repo (overrides `*.log` ignore rule via `.gitig
 
 | Component | Before | After |
 |-----------|--------|-------|
-| Installer revision | 4.4.0 | 4.5.0-LBE1420-HARDENED |
+| Installer revision | 4.4.0 | 4.5.0-LBE-1421-HARDENED |
 | Installer flags | `--tier1 --simulator --skip-kernel --help` | `+ --harden --dashboard --bloatware --passwordless-sudo --all` |
 | Bootstrap | — | **NEW** `bootstrap.sh` (curl-pipe) |
 | Systemd chain | `dslv-zpdi.service` only | `tuning` → `preflight` → `dslv-zpdi` (hardened with Nice=-5, IOSchedulingClass=realtime) |
@@ -135,9 +135,9 @@ modprobe blacklist:          dvb_usb_rtl28xxu, rtl2832, rtl2830
 - **Preflight (manual):** `/home/dynogator/dslv-zpdi/tools/preflight.sh`
 
 ### Waiting on Hardware
-**Leo Bodnar LBE-1420 GPSDO** — blocks Tier-1 baseline capture. When it lands:
-1. Wire SMA: LBE-1420 `Output` → HackRF `CLKIN`
-2. Wire PPS: LBE-1420 `1 PPS` → Pi 5 GPIO 18 (physical pin 12), bridge grounds
+**Leo Bodnar LBE-1421 GPSDO** — blocks Tier-1 baseline capture. When it lands:
+1. Wire SMA: LBE-1421 `Output` → HackRF `CLKIN`
+2. Wire PPS: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12), bridge grounds
 3. Wire USB-C for power + NMEA telemetry on `/dev/ttyACM0`
 4. Wait for GPS fix (verify via `python -c "import serial; s=serial.Serial('/dev/ttyACM0',9600,timeout=2); print(s.readline())"`)
 5. `sudo systemctl start dslv-zpdi-baseline.service` (72h capture)
@@ -151,7 +151,7 @@ sudo reboot
 ```
 
 ### Outstanding / Next Session
-- Capture LBE-1420 arrival milestone in `project_state.md` when it happens
+- Capture LBE-1421 arrival milestone in `project_state.md` when it happens
 - 72h baseline capture → `/var/lib/dslv_zpdi/baseline.json`
 - Validate PPS chrony offset improves from ms-NTP to sub-µs-PPS stratum-1
 - Cyberdeck chassis RF/magnetic shielding (`docs/RF_MAGNETIC_SHIELDING.md` — in design)
@@ -191,7 +191,7 @@ Commits ahead of origin/main at start of session: **5**
 - `33d9fea` feat(deploy): Add corrected systemd service for Pi 5 home-dir install
 - `3a7a6ac` fix(pipeline): simulator jitter threshold + math.isfinite cold-start guard
 
-**New commit (this session):** `feat(installer+bootstrap+docs): v4.5.0 LBE1420-hardened drop-in installer, curl-pipe bootstrap, validation evidence, README overhaul`
+**New commit (this session):** `feat(installer+bootstrap+docs): v4.5.0 LBE-1421-hardened drop-in installer, curl-pipe bootstrap, validation evidence, README overhaul`
 
 **Push target:** `https://github.com/DynoGator/dslv-zpdi.git` (main)
 **Push auth:** Ephemeral PAT via token-in-URL, scrubbed from `.git/config` immediately after.

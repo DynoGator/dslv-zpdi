@@ -48,7 +48,7 @@ custom operations dashboard build.
 | Pi 5 16 GB | Healthy | temp=47°C idle, 13 GB free of 16 GB, no current throttling (historical under-voltage bit still latched in `vcgencmd get_throttled 0x50000` — pre-Dewalt-battery artifact, ignorable) |
 | HackRF One r9 | Live | `hackrf_info` enumerates, FW v2.1.0, S/N …a7c5f4f |
 | PPS GPIO | Present | `/dev/pps0` present, `pps_gpio` kernel module loaded |
-| GPSDO LBE-1420 | **AWAITING DELIVERY** | no `/dev/ttyACM*`; pipeline in `DEV_SIMULATOR=1` |
+| GPSDO LBE-1421 | **AWAITING DELIVERY** | no `/dev/ttyACM*`; pipeline in `DEV_SIMULATOR=1` |
 | chrony | Active | stratum 2 (NTP fallback), PPS refclock configured for activation-on-arrival |
 | Power / UPS | Healthy | 20 V Dewalt → 5.1 V/10 A buck → Schottky-Y split to UPS + hub, 2200 µF cap bank on Pi side |
 
@@ -371,13 +371,13 @@ cd /home/dynogator/dslv-zpdi && ./venv/bin/python tools/orphan_checker.py
 apt-mark showhold
 ```
 
-### When the LBE-1420 GPSDO arrives
+### When the LBE-1421 GPSDO arrives
 
 1. **Physical hookup** (all 3.3 V native — no level shifter needed):
-   - SMA: LBE-1420 `Output` → HackRF `CLKIN` (hardware 10 MHz phase lock)
-   - Jumper: LBE-1420 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
+   - SMA: LBE-1421 `Output` → HackRF `CLKIN` (hardware 10 MHz phase lock)
+   - Jumper: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
      **Bridge ground between GPSDO and Pi.**
-   - USB-C: LBE-1420 → Pi 5 (power + NMEA serial for GPS fix verification)
+   - USB-C: LBE-1421 → Pi 5 (power + NMEA serial for GPS fix verification)
 
 2. **Flip the pipeline to production mode:**
    ```bash

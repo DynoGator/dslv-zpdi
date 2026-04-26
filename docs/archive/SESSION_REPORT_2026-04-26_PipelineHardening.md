@@ -241,7 +241,7 @@ dslv-zpdi.service`. No config changes required.
 - Dashboard waterfall, weather, storm, anomaly, logs, notifications
   panels: untouched.
 
-### LBE-1420 readiness
+### LBE-1421 readiness
 
 Independent of this session. Once the GPSDO arrives and is wired in,
 the production timing monitor (host chronyc) will report sub-µs RMS

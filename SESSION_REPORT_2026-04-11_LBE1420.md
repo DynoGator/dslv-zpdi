@@ -1,4 +1,4 @@
-# DSLV-ZPDI Session Report — 2026-04-11 (LBE-1420 Hardware Pivot)
+# DSLV-ZPDI Session Report — 2026-04-11 (LBE-1421 Hardware Pivot)
 
 **Session Type:** Hardware Migration + Repo Hardening
 **AI Agent:** Claude Opus 4.6 (Claude Code)
@@ -12,24 +12,24 @@
 
 ## 1. EXECUTIVE SUMMARY
 
-Executed mandatory hardware migration from the **Leo Bodnar Mini GPSDO** to the **Leo Bodnar LBE-1420 GPSDO** across the entire DSLV-ZPDI project. Updated 23 files in the dslv-zpdi repo and 1 file in the DynoGator profile repo. Fixed pre-existing version mismatches, removed deprecated dependencies from the critical build path, and created new documentation for RF/Magnetic shielding design. All 31 tests passing, all validation tools clean.
+Executed mandatory hardware migration from the **Leo Bodnar Mini GPSDO** to the **Leo Bodnar LBE-1421 GPSDO** across the entire DSLV-ZPDI project. Updated 23 files in the dslv-zpdi repo and 1 file in the DynoGator profile repo. Fixed pre-existing version mismatches, removed deprecated dependencies from the critical build path, and created new documentation for RF/Magnetic shielding design. All 31 tests passing, all validation tools clean.
 
 ---
 
 ## 2. WORK PERFORMED
 
-### 2.1 Hardware Migration (Leo Bodnar Mini → LBE-1420)
+### 2.1 Hardware Migration (Leo Bodnar Mini → LBE-1421)
 
 **Files Modified:** 20+ documentation files, 4 source files, 3 tool files
 
 | Change | Detail |
 |--------|--------|
-| Clock Authority model | Leo Bodnar Mini GPSDO → **Leo Bodnar LBE-1420 GPSDO** |
-| Part number | LB-MINI-GPSDO → **LBE-1420** |
+| Clock Authority model | Leo Bodnar Mini GPSDO → **Leo Bodnar LBE-1421 GPSDO** |
+| Part number | LB-MINI-GPSDO → **LBE-1421** |
 | Power connector | Mini-USB (fragile) → **USB-C (ruggedized)** |
 | Telemetry | None → **NMEA over virtual serial port** |
 | PPS output | Variable voltage → **3.3V CMOS native** (direct Pi 5 GPIO) |
-| Level-shifter | Required for safety → **Not required** (LBE-1420 is 3.3V native) |
+| Level-shifter | Required for safety → **Not required** (LBE-1421 is 3.3V native) |
 
 ### 2.2 BOM Updates
 
@@ -46,7 +46,7 @@ Added to Tier 1 mandatory BOM:
 | `hal_simulated.py` | Updated model references and source strings |
 | `cm5_ingestion.py` | Updated GPSDO references |
 | `hal_base.py` | Version bump to 4.2.0 |
-| `provision_tier1.py` | Added `check_nmea_telemetry()` function, updated RP1 warning for LBE-1420 |
+| `provision_tier1.py` | Added `check_nmea_telemetry()` function, updated RP1 warning for LBE-1421 |
 | `factory_calibration.py` | Version bump to 4.2.0 |
 
 ### 2.4 Dependency Cleanup
@@ -71,15 +71,15 @@ Added to Tier 1 mandatory BOM:
 | `MASTER_SPEC.md` | Rev 4.0.2 | **Rev 4.2.0** |
 | `V3_DSLV-ZPDI_LIVING_MASTER.md` | Rev 4.0.2 | **Rev 4.2.0** |
 | `test_pipeline.py` | Rev 4.0.2.4 | **Rev 4.2.0** |
-| HAL modules | Rev 4.1-FORGE/4.1-PIVOT | **Rev 4.2-LBE1420** |
-| `SPEC-004A.1.md` | Rev 4.1-PIVOT | **Rev 4.2-LBE1420** |
+| HAL modules | Rev 4.1-FORGE/4.1-PIVOT | **Rev 4.2-LBE-1421** |
+| `SPEC-004A.1.md` | Rev 4.1-PIVOT | **Rev 4.2-LBE-1421** |
 
 ### 2.6 New Documentation Created
 
 | File | Content |
 |------|---------|
 | `docs/RF_MAGNETIC_SHIELDING.md` | Cyberdeck chassis shielding design — conduction cooling, aluminum/Mu-Metal compartmentalization, galvanic USB isolation, pass-through security, materials reference |
-| `docs/HARDWARE_CHANGE_JUSTIFICATION.md` | SPEC-UPDATE-PHASE-2A-LBE1420 — formal rationale, updated BOM, physical routing protocol, software integration requirements |
+| `docs/HARDWARE_CHANGE_JUSTIFICATION.md` | SPEC-UPDATE-PHASE-2A-LBE-1421 — formal rationale, updated BOM, physical routing protocol, software integration requirements |
 | `RELEASE_NOTES_v4.2.0.md` | Full release notes for v4.2.0 |
 
 ### 2.7 GitHub Profile Update
@@ -98,21 +98,21 @@ Updated `DynoGator/DynoGator` README.md:
 ## [4.2.0] - 2026-04-11
 
 ### Added
-- LBE-1420 GPSDO Migration (USB-C, NMEA telemetry, 3.3V CMOS native)
+- LBE-1421 GPSDO Migration (USB-C, NMEA telemetry, 3.3V CMOS native)
 - verify_nmea_telemetry() for GPS fix verification via virtual serial
 - RF/Magnetic Shielding documentation (cyberdeck chassis design)
-- Hardware Change Justification (SPEC-UPDATE-PHASE-2A-LBE1420)
+- Hardware Change Justification (SPEC-UPDATE-PHASE-2A-LBE-1421)
 - ANT500 antenna, SMA cabling, jumper wire specs to Tier 1 BOM
 
 ### Changed
 - Dependencies: pyrtlsdr → pyhackrf in core deps
 - Version alignment to 4.2.0 across all files
-- RP1 voltage warning updated for LBE-1420 native 3.3V
-- Physical routing protocol for LBE-1420 connections
+- RP1 voltage warning updated for LBE-1421 native 3.3V
+- Physical routing protocol for LBE-1421 connections
 - Installer: removed rtl-sdr/librtlsdr0 from base packages
 
 ### Deprecated
-- Leo Bodnar Mini GPSDO (superseded by LBE-1420)
+- Leo Bodnar Mini GPSDO (superseded by LBE-1421)
 ```
 
 ---
@@ -166,13 +166,13 @@ Updated `DynoGator/DynoGator` README.md:
 ### Next Actions at Handoff
 
 1. **Hardware Procurement:**
-   - Order: Leo Bodnar LBE-1420 GPSDO, Great Scott Gadgets ANT500, SMA cable, jumper wires
+   - Order: Leo Bodnar LBE-1421 GPSDO, Great Scott Gadgets ANT500, SMA cable, jumper wires
    - Refer to: `PHASE_2A_TIER_1_BUILD_SHEET.md` for full BOM with pricing
 
 2. **Physical Assembly:**
-   - LBE-1420 SMA Output → HackRF CLKIN (RF phase lock)
-   - LBE-1420 1 PPS → Pi 5 GPIO 18 (no level-shifter needed)
-   - LBE-1420 USB-C → Pi 5 (power + NMEA telemetry)
+   - LBE-1421 SMA Output → HackRF CLKIN (RF phase lock)
+   - LBE-1421 1 PPS → Pi 5 GPIO 18 (no level-shifter needed)
+   - LBE-1421 USB-C → Pi 5 (power + NMEA telemetry)
    - Run: `python tools/provision_tier1.py` to validate
 
 3. **72-Hour Baseline (SPEC-009):**
@@ -202,7 +202,7 @@ GitHub PAT token is visible in git remote URLs for both repos. Recommend migrati
 
 ## 7. TECHNICAL INTEGRITY STATEMENT
 
-All changes maintain SPEC-ID compliance. The orphan checker validates 100% coverage. Version sync is clean at 4.2.0. The LBE-1420 migration eliminates the fragile Mini-USB connector, adds software-observable NMEA telemetry for GPS fix verification, and provides native 3.3V CMOS compatibility with the Pi 5 RP1 southbridge.
+All changes maintain SPEC-ID compliance. The orphan checker validates 100% coverage. Version sync is clean at 4.2.0. The LBE-1421 migration eliminates the fragile Mini-USB connector, adds software-observable NMEA telemetry for GPS fix verification, and provides native 3.3V CMOS compatibility with the Pi 5 RP1 southbridge.
 
 **31/31 tests passing. All validation tools clean. Both repos pushed and verified.**
 

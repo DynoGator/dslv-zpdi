@@ -169,7 +169,7 @@ class HardwarePanel:
         t.add_row("PPS GPIO", f"[{pps_style}]{'◉' if pps_ok else '○'} {pps_text}[/]")
 
         gpsdo_style = "bright_green" if gpsdo else "bright_red"
-        gpsdo_text = gpsdo if gpsdo else "AWAITING LBE-1420"
+        gpsdo_text = gpsdo if gpsdo else "AWAITING LBE-1421"
         if gpsdo:
             gpsdo_text += f"  fix={gpsdo_nmea['fix']} sats={gpsdo_nmea['sats']}"
         t.add_row(

@@ -97,6 +97,11 @@ class HDF5Writer:
         grp.create_dataset("r_smooth", data=packet.r_smooth)
         grp.create_dataset("r_global", data=packet.r_global)
         grp.create_dataset("payload_uuid", data=packet.payload_uuid)
+        from dslv_zpdi.layer2_core.wiring import coherence_engine
+        bl = coherence_engine.get_baseline_status()
+        grp.attrs['dynamic_threshold'] = bl.get('threshold', 0.40)
+        grp.attrs['baseline_state'] = bl.get('baseline_state', 'UNKNOWN')
+
 
         try:
             payload_dict = json.loads(original_json)

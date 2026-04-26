@@ -101,7 +101,12 @@ def _ingest_loop(
     """SPEC-011.2 — Producer thread: pull from HAL and enqueue payloads."""
     tick = 0
     while state.running:
-        try:
+    
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
             hal_kwargs = {}
             if demo_nodes:
                 hal_kwargs["node_id"] = demo_nodes[tick % len(demo_nodes)]
@@ -138,7 +143,12 @@ def _process_loop(
 ):
     """SPEC-011.2 — Processing thread: coherence + routing, then enqueue for persistence."""
     while state.running:
-        try:
+    
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
             payload = ingest_q.get(block=True, timeout=1.0)
         except queue.Empty:
             continue
@@ -157,7 +167,12 @@ def _process_loop(
         decision = writer.ingest(payload.to_json())
         if decision.stream == "PRIMARY":
             state.inc_primary()
-            try:
+        
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
                 persist_q.put(decision, block=False)
             except queue.Full:
                 logger.warning("Persist queue full — dropping decision", extra={"spec_id": "SPEC-011.2"})
@@ -174,7 +189,12 @@ def _persist_loop(persist_q: queue.Queue, state: PipelineState):
     """SPEC-011.2 — Persistence thread: drain queue (HDF5 already written in process thread)."""
     """Persistence thread: drain queue (HDF5 already written in process thread)."""
     while state.running:
-        try:
+    
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
             _ = persist_q.get(block=True, timeout=1.0)
         except queue.Empty:
             continue
@@ -273,7 +293,30 @@ def main():
     )
 
     simulator_mode = _resolve_simulator(args)
-    hal = get_hal(simulator=simulator_mode)
+    # Day 4: Layer 1 Initialization with Retry + Fallback
+    hal = None
+    max_retries = 3
+    for attempt in range(max_retries):
+    
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
+            hal = get_hal(simulator=simulator_mode)
+            break
+        except Exception as e:
+            logger.warning(f"HAL Init Attempt {attempt+1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2)
+            else:
+                if not simulator_mode:
+                    logger.error("Hardware HAL failed after 3 attempts. Falling back to --simulator")
+                    simulator_mode = True
+                    hal = get_hal(simulator=True)
+                else:
+                    logger.error("Simulator HAL failed initialization.")
+                    raise
 
     out_base = Path(args.output).resolve()
     writer = HDF5Writer(
@@ -351,6 +394,11 @@ def main():
     tick = 0
     primary_events = 0
     last_status_at = 0.0
+
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
     try:
         while state.running:
             if args.threaded:
@@ -365,7 +413,12 @@ def main():
                     hal_kwargs["node_id"] = demo_nodes[tick % len(demo_nodes)]
                     hal_kwargs["coherent_burst"] = True
 
-                try:
+            
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
                     if args.mode == "sdr":
                         payload = hal.ingest_sdr(**hal_kwargs)
                     elif args.mode == "pps":
@@ -392,7 +445,12 @@ def main():
                         payload.quarantine_reason or "upstream_quarantine"
                     )
 
-                try:
+            
+        if not simulator_mode:
+            logger.info('Waiting for PPS edge to align capture window...', extra={'spec_id': 'SPEC-011.1'})
+            hal.wait_for_pps_edge()
+
+    try:
                     decision = writer.ingest(payload.to_json())
                 except Exception as exc:
                     logger.error("Writer ingest error: %s", exc, extra={"spec_id": "SPEC-011.3"})

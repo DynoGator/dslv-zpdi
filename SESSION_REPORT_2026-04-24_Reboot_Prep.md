@@ -2,7 +2,7 @@
 
 **Session:** UX integration final sweep + reboot prep
 **Operator:** Joseph R. Fross
-**Platform:** Raspberry Pi 5 + HackRF + LBE-1420 GPSDO (pending) + 5" DSI
+**Platform:** Raspberry Pi 5 + HackRF + LBE-1421 GPSDO (pending) + 5" DSI
 **Branch:** `main` — clean working tree, 4 commits ahead of `origin/main`
 
 ## 1. Work performed (this session)

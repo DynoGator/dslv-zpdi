@@ -21,5 +21,5 @@ A clear and concise description of what the bug is.
 What should happen per the Living Master specification?
 
 **Environment:**
-- Hardware: (e.g., Raspberry Pi 5 / HackRF One / LBE-1420 GPSDO, or Simulator)
+- Hardware: (e.g., Raspberry Pi 5 / HackRF One / LBE-1421 GPSDO, or Simulator)
 - OS: (e.g., Debian 13, Termux)

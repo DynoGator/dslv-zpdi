@@ -3,7 +3,7 @@
 **Date:** 2026-04-24
 
 ## Summary
-LBE-1420 hardened operations stack with fully instrumented dashboard, automated email telemetry pipeline, interactive geospatial mapping, hardened project launcher, and field baseline coherence integration.
+LBE-1421 hardened operations stack with fully instrumented dashboard, automated email telemetry pipeline, interactive geospatial mapping, hardened project launcher, and field baseline coherence integration.
 
 ## Added
 - **Dashboard v2** (`tools/dashboard/`)
@@ -36,7 +36,7 @@ LBE-1420 hardened operations stack with fully instrumented dashboard, automated 
 - `wiring.py` — baseline state path resolution with env override (`DSLV_BASELINE_STATE_PATH`).
 - `hal_simulated.py` — simulator fidelity improvements aligned to SPEC-005A.HAL-SIM.
 - `.gitignore` — expanded to cover agent workspaces (`GEMINI-HOME/`, `CLAUDE-HOME/`), local runtime configs, and artefact directories.
-- `README.md` — bumped to Rev 4.5.0 with LBE-1420 hardened operations stack documentation.
+- `README.md` — bumped to Rev 4.5.0 with LBE-1421 hardened operations stack documentation.
 
 ## Fixed
 - Launcher race conditions on clean-boot dual-window startup (lxterminal UTF-8 codec guard, service dependency ordering).
