@@ -45,11 +45,6 @@ def run_gps_fault_injection():
         print("\n[FAILURE] Routing logic breached.")
         return False
 
-
-if __name__ == "__main__":
-    success = run_gps_fault_injection()
-    exit(0 if success else 1)
-
 def run_holdover_test():
     print("\n--- INITIATING FAULT INJECTION: LBE-1421 HOLDOVER DRIFT ---")
     router = DualStreamRouter()
@@ -80,7 +75,6 @@ def run_holdover_test():
     return False
 
 if __name__ == "__main__":
-    # The existing block will run first, then our new test
     if run_gps_fault_injection() and run_holdover_test():
         exit(0)
     exit(1)

@@ -683,7 +683,6 @@ class HardwareHAL(BaseHAL):
         return info
 
     @staticmethod
-    @staticmethod
     def verify_nmea_telemetry(
         serial_port: str = "/dev/ttyACM0",
         baud_rate: int = 9600,
