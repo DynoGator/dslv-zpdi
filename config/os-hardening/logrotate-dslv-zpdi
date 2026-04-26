@@ -1,0 +1,19 @@
+/home/dynogator/dslv-zpdi/output/secondary/quarantine.jsonl {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 dynogator dynogator
+}
+
+/home/dynogator/dslv-zpdi/logs/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 dynogator dynogator
+}

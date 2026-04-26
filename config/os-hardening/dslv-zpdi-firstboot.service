@@ -1,0 +1,14 @@
+[Unit]
+Description=DSLV-ZPDI First-Boot Auto-Configuration
+After=network.target
+Before=dslv-zpdi.service
+ConditionPathExists=!/var/lib/dslv_zpdi/.first-boot-complete
+
+[Service]
+Type=oneshot
+ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python /home/dynogator/dslv-zpdi/tools/first_boot.py
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

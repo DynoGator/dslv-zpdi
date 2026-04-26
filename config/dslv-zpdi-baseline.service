@@ -10,7 +10,8 @@ WorkingDirectory=/home/dynogator/dslv-zpdi
 ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python /home/dynogator/dslv-zpdi/tools/capture_baseline.py
 Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
-RestartSec=10
+RestartSec=20
+ExecStartPre=/bin/sleep 3
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=dslv-zpdi-baseline

@@ -1,5 +1,5 @@
 [Unit]
-Description=DSLV-ZPDI Production Pipeline (SPEC-011)
+Description=DSLV-ZPDI 72h Baseline Capture (SPEC-009)
 After=network.target chrony.service dslv-zpdi-preflight.service
 Wants=chrony.service
 Requires=dslv-zpdi-preflight.service
@@ -9,15 +9,13 @@ Type=simple
 User=dynogator
 Group=dynogator
 WorkingDirectory=/home/dynogator/dslv-zpdi
-# Default: hardware mode. Use toggle_simulator.sh to switch to simulator.
-ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline
+ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline --field
 Environment=PYTHONUNBUFFERED=1
-Environment=DSLV_OUTPUT_DIR=/home/dynogator/dslv-zpdi/output
+Environment=DSLV_CONFIG_PATH=/home/dynogator/dslv-zpdi/config/deployment.yaml
 Restart=on-failure
 RestartSec=30
-StartLimitInterval=120
-StartLimitBurst=3
-ExecStartPre=/bin/sleep 3
+StartLimitInterval=300
+StartLimitBurst=2
 Nice=-5
 IOSchedulingClass=realtime
 IOSchedulingPriority=4
@@ -41,16 +39,11 @@ MemoryDenyWriteExecute=false
 RestrictRealtime=false
 RestrictNamespaces=false
 
-# Read-write paths needed for pipeline operation.
-# NOTE: /dev/hackrf0 is intentionally omitted; it is a device node that may
-# be absent when the HackRF is unplugged, and systemd mount-namespace setup
-# fails (226/NAMESPACE) if any ReadWritePaths entry is missing. USB access
-# via /dev/bus/usb is sufficient for libusb/pyhackrf.
 ReadWritePaths=/home/dynogator/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=dslv-zpdi
+SyslogIdentifier=dslv-zpdi-baseline
 RuntimeDirectory=dslv-zpdi
 RuntimeDirectoryMode=0755
 

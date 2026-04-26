@@ -325,7 +325,7 @@ class Dashboard:
                 compact_banner() if self.compact else full_banner()
             )
         for name, panel in self._panels.items():
-            if name in self.layout:
+            if self.layout.get(name) is not None:
                 self.layout[name].update(panel.render())
         self.layout["footer"].update(footer_panel(self.compact))
 

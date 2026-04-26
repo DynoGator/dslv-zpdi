@@ -12,4 +12,8 @@ export PYTHONIOENCODING=utf-8
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 
+# Settle pause: terminal emulator may need a moment to finish initialising
+# before the Python TUI takes over the pty.
+sleep 3
+
 exec "$REPO/venv/bin/python" -m dashboard "$@"

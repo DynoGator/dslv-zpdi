@@ -1,0 +1,39 @@
+#!/usr/sbin/nft -f
+# DSLV-ZPDI Firewall — Minimal surface for field instrument
+# Allow: loopback, established, SSH (22), chrony/NTP outbound
+# Drop: everything else inbound
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Allow loopback
+        iif "lo" accept
+
+        # Allow established/related
+        ct state established,related accept
+
+        # Drop invalid
+        ct state invalid drop
+
+        # Allow ICMP (limited)
+        ip protocol icmp icmp type { echo-request, echo-reply, destination-unreachable, time-exceeded } accept
+        ip6 nexthdr icmpv6 icmpv6 type { echo-request, echo-reply, destination-unreachable, packet-too-big, time-exceeded, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
+
+        # Allow SSH (rate-limited)
+        tcp dport 22 limit rate 5/minute burst 10 packets accept
+
+        # Drop everything else
+        counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

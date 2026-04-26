@@ -9,10 +9,9 @@ Type=simple
 User=dynogator
 Group=dynogator
 WorkingDirectory=/home/dynogator/dslv-zpdi
-# Default: hardware mode. Use toggle_simulator.sh to switch to simulator.
 ExecStart=/home/dynogator/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline
 Environment=PYTHONUNBUFFERED=1
-Environment=DSLV_OUTPUT_DIR=/home/dynogator/dslv-zpdi/output
+Environment=DSLV_CONFIG_PATH=/home/dynogator/dslv-zpdi/config/deployment.yaml
 Restart=on-failure
 RestartSec=30
 StartLimitInterval=120
@@ -41,11 +40,7 @@ MemoryDenyWriteExecute=false
 RestrictRealtime=false
 RestrictNamespaces=false
 
-# Read-write paths needed for pipeline operation.
-# NOTE: /dev/hackrf0 is intentionally omitted; it is a device node that may
-# be absent when the HackRF is unplugged, and systemd mount-namespace setup
-# fails (226/NAMESPACE) if any ReadWritePaths entry is missing. USB access
-# via /dev/bus/usb is sufficient for libusb/pyhackrf.
+# Read-write paths needed for pipeline operation
 ReadWritePaths=/home/dynogator/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
 
 StandardOutput=journal

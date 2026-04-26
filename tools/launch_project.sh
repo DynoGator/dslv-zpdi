@@ -30,8 +30,8 @@ SAY "================================================================"
 
 # Warm-up pause: gives the desktop session / display server / chrony a moment
 # to finish settling before we start yanking processes and services.
-SAY "warm-up :: 5s settle pause before initiating the rest of the script"
-sleep 5
+SAY "warm-up :: 15s settle pause before initiating the rest of the script"
+sleep 15
 
 # --- 1. Kill every user-space DSLV process ------------------------------
 SAY "step 1/7 :: killing stale DSLV and SDR processes"
@@ -51,7 +51,7 @@ for proc in "${SDR_PROCS[@]}"; do
         pkill -TERM -x "$proc" 2>/dev/null || true
     fi
 done
-sleep 1
+sleep 2
 for proc in "${SDR_PROCS[@]}"; do
     pkill -KILL -x "$proc" 2>/dev/null || true
 done
@@ -66,13 +66,13 @@ else
 fi
 if [ -n "$SUDO" ]; then
     $SUDO systemctl stop dslv-zpdi.service           2>/dev/null || true
-    sleep 1
+    sleep 3
     $SUDO systemctl stop dslv-zpdi-preflight.service 2>/dev/null || true
-    sleep 1
+    sleep 3
     $SUDO systemctl stop dslv-zpdi-tuning.service    2>/dev/null || true
-    sleep 1
+    sleep 3
     $SUDO systemctl stop dslv-zpdi-baseline.service  2>/dev/null || true
-    sleep 2
+    sleep 5
 fi
 
 # --- 3. Validate venv --------------------------------------------------
@@ -87,7 +87,7 @@ OK "venv python: $PYVER"
     || ( cd "$REPO/tools" && "$VENV/bin/python" -c "import dashboard" 2>/dev/null \
          && OK "dashboard importable (from tools/)" \
          || WARN "dashboard package not importable" )
-sleep 1
+sleep 2
 
 # --- 4. HackRF + driver sanity check -----------------------------------
 SAY "step 4/7 :: HackRF and driver sanity"
@@ -115,27 +115,29 @@ else
     OK "user in 'plugdev' — HackRF usable without sudo"
 fi
 
+sleep 3
+
 if [ -e /lib/udev/rules.d/60-libhackrf0.rules ] \
    || [ -e /etc/udev/rules.d/53-hackrf.rules ]; then
     OK "HackRF udev rules present"
 else
     WARN "no HackRF udev rules found (device may need sudo to open)"
 fi
-sleep 1
+sleep 3
 
 # --- 5. Reload + start chain in order ---------------------------------
 if [ -n "$SUDO" ]; then
     SAY "step 5/7 :: starting dslv-zpdi chain (tuning → preflight → pipeline)"
     $SUDO systemctl daemon-reload
-    sleep 1
+    sleep 3
     for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service; do
         SAY "  - start $unit"
         $SUDO systemctl start "$unit" || WARN "failed to start $unit"
-        # pause between dependent unit starts so each finishes init
+        # generous pause between dependent unit starts so each finishes init
         # before the next one is asked to come up
-        sleep 2
+        sleep 5
     done
-    sleep 2
+    sleep 5
 else
     SAY "step 5/7 :: skipping systemd chain start (no sudo)"
 fi
@@ -156,13 +158,27 @@ if [ "$FAILED" -gt 0 ]; then
     WARN "$FAILED unit(s) not active — showing last 20 lines of dslv-zpdi journal"
     journalctl -u dslv-zpdi -n 20 --no-pager 2>/dev/null || true
 fi
-sleep 1
+sleep 3
 
 # --- 7. Launch dashboard + waterfall second window --------------------
 SAY "step 7/7 :: launching operations dashboard and waterfall window"
 
 TITLE_MAIN="DSLV-ZPDI :: DynoGatorLabs"
 TITLE_WF="DSLV-ZPDI :: WATERFALL"
+
+# Wait for display server to be ready before attempting to spawn terminals.
+# On boot autostart the WM/X11 may not be fully up yet.
+SAY "waiting for display server readiness..."
+for _ds_wait in {1..30}; do
+    if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        if command -v xrandr >/dev/null 2>&1 && xrandr --current >/dev/null 2>&1; then
+            OK "display server ready"
+            break
+        fi
+    fi
+    sleep 2
+done
+sleep 3
 
 # Screen-aware geometry.
 # - 5" DSI (800x480): compact terminals that actually fit the screen.
@@ -244,16 +260,16 @@ if [ "$COMPACT_MODE" = "1" ]; then
             nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -fa 'Monospace' -fs 9 -e "$DASH" \
                 >/dev/null 2>&1 & disown ;;
     esac
-    sleep 1
+    sleep 3
     OK "launch complete — compact dashboard dispatched"
 else
     # 7a — waterfall second window FIRST so it's visible under the dashboard
     SAY "  - opening waterfall window ($TERMCMD)"
     spawn_terminal "$TITLE_WF" "$GEO_WF" \
         "$DASH" --waterfall-only --no-boot
-    # give the first window a moment to register on the display server
+    # generous pause so the first window registers on the display server
     # before we fire the second one
-    sleep 2
+    sleep 5
 
     # 7b — main dashboard (spawned the same way so both survive under
     # lxterminal's single-instance behavior)
@@ -269,6 +285,6 @@ else
             nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -e "$DASH" \
                 >/dev/null 2>&1 & disown ;;
     esac
-    sleep 1
+    sleep 3
     OK "launch complete — dashboard + waterfall windows dispatched"
 fi

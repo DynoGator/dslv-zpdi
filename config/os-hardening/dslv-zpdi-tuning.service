@@ -1,0 +1,21 @@
+[Unit]
+Description=DSLV-ZPDI System Tuning (CPU governor, USB power, I/O scheduler)
+DefaultDependencies=no
+After=sysinit.target local-fs.target
+Before=dslv-zpdi-preflight.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# CPU governor lock
+ExecStart=/bin/bash -c 'for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$c"; done'
+# USB power management defeat
+ExecStart=/bin/bash -c 'for d in /sys/bus/usb/devices/*/power/control; do [ -e "$d" ] && echo on > "$d" 2>/dev/null || true; done'
+ExecStart=/bin/bash -c 'for d in /sys/bus/usb/devices/*/power/autosuspend; do [ -e "$d" ] && echo -1 > "$d" 2>/dev/null || true; done'
+# I/O scheduler (mq-deadline for SD predictability)
+ExecStart=/bin/bash -c 'for b in /sys/block/mmcblk0/queue/scheduler; do [ -e "$b" ] && echo mq-deadline > "$b" 2>/dev/null || true; done'
+# Disable transparent hugepages (reduce jitter)
+ExecStart=/bin/bash -c 'if [ -e /sys/kernel/mm/transparent_hugepage/enabled ]; then echo never > /sys/kernel/mm/transparent_hugepage/enabled; fi'
+
+[Install]
+WantedBy=multi-user.target

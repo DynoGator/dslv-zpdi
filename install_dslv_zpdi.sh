@@ -547,7 +547,8 @@ ExecStart=${PIPE_EXEC}
 ${PIPE_ENV}
 Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
-RestartSec=15
+RestartSec=30
+ExecStartPre=/bin/sleep 3
 Nice=-5
 IOSchedulingClass=realtime
 IOSchedulingPriority=4
@@ -607,7 +608,7 @@ if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
 Type=Application
 Name=DSLV-ZPDI Operations Center
 Comment=DynoGatorLabs Operations Dashboard
-Exec=lxterminal --title="DSLV-ZPDI :: DynoGatorLabs" --geometry=180x50 -e ${INSTALL_DIR}/tools/dashboard/launch.sh
+Exec=bash -c "sleep 25 && exec ${INSTALL_DIR}/tools/launch_project.sh"
 Terminal=false
 Categories=Science;Network;
 X-GNOME-Autostart-enabled=true

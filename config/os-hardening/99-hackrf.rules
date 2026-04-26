@@ -1,0 +1,6 @@
+# DSLV-ZPDI udev rules for HackRF One
+# Grants dynogator user read/write access without sudo
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6089", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="604b", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="cc15", MODE="0666", GROUP="plugdev"
+KERNEL=="hackrf*", MODE="0666", GROUP="plugdev"

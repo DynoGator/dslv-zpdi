@@ -1,0 +1,15 @@
+[Unit]
+Description=DSLV-ZPDI Hardware Preflight
+After=network.target chrony.service dslv-zpdi-tuning.service
+Wants=chrony.service dslv-zpdi-tuning.service
+Before=dslv-zpdi.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/home/dynogator/dslv-zpdi/tools/preflight.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
