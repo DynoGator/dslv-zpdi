@@ -2,7 +2,7 @@
 # DSLV-ZPDI Dashboard launcher
 set -Eeuo pipefail
 
-REPO=/home/dynogator/dslv-zpdi
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO/tools"
 
 # Rich/Unicode output (waterfall glyphs, banners) crashes on startup

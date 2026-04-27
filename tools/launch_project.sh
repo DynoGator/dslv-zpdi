@@ -11,7 +11,7 @@
 
 set -Eeuo pipefail
 
-REPO="/home/dynogator/dslv-zpdi"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="$REPO/venv"
 LOG="$REPO/logs/launch.log"
 DASH="$REPO/tools/dashboard/launch.sh"

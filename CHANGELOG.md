@@ -1,4 +1,12 @@
 # Changelog
+## [4.6.0] - 2026-04-27
+
+### Fixed
+- Installer one-shot reliability: idempotent venv creation, bootstrap shallow-clone fix
+- Dynamic REPO path resolution in preflight.sh, launch_project.sh, dashboard/launch.sh
+- SoapySDR find command precedence in Tier-1 provisioning
+- Version synchronization across pyproject.toml, README, CHANGELOG, and release notes
+
 
 All notable changes to the DSLV-ZPDI project will be documented in this file.
 

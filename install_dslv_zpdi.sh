@@ -60,7 +60,7 @@ System hardening (2026-04-19 session):
                       freeze kernel/firmware/hackrf packages, apply
                       sysctl tuning, modprobe blacklist, CPU governor
                       lock, USB power-mgmt defeat.
-  --dashboard         Install rich+textual+pyfiglet, enable desktop
+  --dashboard         Install rich+pyfiglet, enable desktop
                       autostart of the operations TUI.
   --bloatware         Remove firefox, libreoffice, nodejs, realvnc,
                       thonny, rpi-connect, mkvtoolnix, pocketsphinx,
@@ -338,7 +338,7 @@ log_ok "Repository structure validated"
 
 VENV_DIR="$INSTALL_DIR/venv"
 log_info "Creating virtual environment at $VENV_DIR"
-run_as_real_user "python3 -m venv '$VENV_DIR'" || log_fail "venv creation failed"
+run_as_real_user "python3 -m venv --clear '$VENV_DIR'" || log_fail "venv creation failed"
 
 # 2. SoapySDR Venv Linkage Logic (Rev 4.3 feature)
 # Trixie/Bookworm Python packages are managed; we link them to venv for tier1.
@@ -349,7 +349,7 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     
     if [[ -d "$SYS_DIST_PACKAGES" ]]; then
         # Use find to locate SoapySDR related files in system dist-packages
-        mapfile -t SOAPY_FILES < <(find "$SYS_DIST_PACKAGES" -maxdepth 1 -name "SoapySDR*" -o -name "_SoapySDR*")
+        mapfile -t SOAPY_FILES < <(find "$SYS_DIST_PACKAGES" -maxdepth 1 \( -name "SoapySDR*" -o -name "_SoapySDR*" \))
         for f in "${SOAPY_FILES[@]}"; do
             target="$VENV_SITE_PACKAGES/$(basename "$f")"
             if [[ ! -e "$target" ]]; then
@@ -654,8 +654,8 @@ fi
 
 if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
     log_info "Installing operations dashboard dependencies"
-    run_as_real_user "'$VENV_DIR/bin/python' -m pip install --quiet rich textual pyfiglet" \
-        || log_warn "Failed to install dashboard deps (rich/textual/pyfiglet)"
+    run_as_real_user "'$VENV_DIR/bin/python' -m pip install --quiet rich pyfiglet" \
+        || log_warn "Failed to install dashboard deps (rich/pyfiglet)"
 
     log_info "Installing desktop autostart for dashboard"
     AUTOSTART_DIR="${REAL_HOME}/.config/autostart"

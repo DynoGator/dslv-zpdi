@@ -4,6 +4,8 @@
 # missing hardware (e.g. GPSDO not yet delivered) but never blocks pipeline.
 set -uo pipefail
 
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 LOG(){ logger -t dslv-zpdi-preflight -- "$*"; echo "[preflight] $*"; }
 WARN(){ logger -t dslv-zpdi-preflight -p user.warning -- "$*"; echo "[preflight][WARN] $*" >&2; }
 
@@ -46,7 +48,7 @@ fi
 
 # 5. Verify pipeline state dir exists and is writable
 STATE_DIR=/var/lib/dslv_zpdi
-OUT_DIR=/home/dynogator/dslv-zpdi/output
+OUT_DIR="$REPO/output"
 for d in "$STATE_DIR" "$OUT_DIR" "$OUT_DIR/primary" "$OUT_DIR/secondary"; do
     if [ ! -d "$d" ]; then
         mkdir -p "$d" 2>/dev/null && LOG "created $d" || WARN "failed to create $d"
@@ -65,7 +67,7 @@ if command -v vcgencmd >/dev/null 2>&1; then
 fi
 
 # 8. Repo validation (non-fatal)
-REPO="/home/dynogator/dslv-zpdi"
+# REPO already defined at top of script
 if [ -d "$REPO" ]; then
     if "$REPO/venv/bin/python" "$REPO/tools/check_version_sync.py" >/dev/null 2>&1; then
         LOG "repo version sync OK"

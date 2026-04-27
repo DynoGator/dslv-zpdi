@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dslv-zpdi"
-version = "4.5.0"
+version = "4.6.0"
 description = "Distributed Sensor Locational Vectoring — Zero-Point Data Integration"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,12 +23,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-
-[project.scripts]
-dslv-zpdi-pipeline = 'dslv_zpdi.main_pipeline:main'
-dslv-zpdi-dashboard = 'dashboard.__main__:main'
-dslv-zpdi-preflight = 'dslv_zpdi.layer1_ingestion.hal_hardware:HardwareHAL.verify_tier1_phase_lock'
-
 dependencies = [
     "numpy>=1.21.0",
     "scipy>=1.7.0",
@@ -53,6 +47,11 @@ dev = [
     "mypy>=1.0.0",
     "ruff>=0.1.0",
 ]
+
+[project.scripts]
+dslv-zpdi-pipeline = "dslv_zpdi.main_pipeline:main"
+dslv-zpdi-dashboard = "dashboard.__main__:main"
+dslv-zpdi-preflight = "dslv_zpdi.layer1_ingestion.hal_hardware:HardwareHAL.verify_tier1_phase_lock"
 
 [tool.setuptools.packages.find]
 where = ["src"]

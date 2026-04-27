@@ -98,7 +98,7 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" pull --ff-only
 else
     log "Cloning $REPO_URL -> $TARGET_DIR (branch: $BRANCH)..."
-    git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$TARGET_DIR"
+    git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
 fi
 ok "Repo ready at $TARGET_DIR"
 
