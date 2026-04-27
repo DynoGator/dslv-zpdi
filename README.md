@@ -1,8 +1,8 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Transition - RF Metrology)  
-**Revision:** Rev 4.5.0 — LBE-1421 Hardened Operations Stack  
-**Status:** Beta — Pi 5 deployment validated, system-wide hardening applied, operations dashboard shipped. Awaiting LBE-1421 GPSDO delivery for Tier 1 baseline capture.
+**Revision:** Rev 4.6.0 — LBE-1421 Hardened Operations Stack  
+**Status:** Beta — Pi 5 deployment validated, system-wide hardening applied, operations dashboard shipped. LBE-1421 GPSDO baseline deployed. Tier 1 capture ready.
 
 ## Overview
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
