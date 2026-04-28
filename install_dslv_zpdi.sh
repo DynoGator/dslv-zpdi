@@ -1,19 +1,28 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI Unified Installer / Validator / Hardening
-# Revision: 4.5.0-LBE-1421-HARDENED
+# Revision: 4.6.1-LBE1421-RESCUE
 # OS Support: Raspberry Pi OS Bookworm (Deb 12) & Trixie (Deb 13)
-# Date: 2026-04-19
+# Date: 2026-04-27
 #
-# Mirrors the full work of the 2026-04-18 deployment and 2026-04-19
-# hardening sessions: bootstraps package + venv + editable install
-# (base), optionally applies Tier 1 timing provisioning, system hardening
-# (kernel freeze, service disable, CPU/USB tuning, sysctl, modprobe
-# blacklist), operations dashboard (rich TUI + desktop autostart),
-# bloatware removal, and passwordless-sudo. Idempotent: safe to re-run.
+# Bootstraps package + venv + editable install (base), optionally applies
+# Tier 1 timing provisioning, system hardening (kernel freeze, service disable,
+# CPU/USB tuning, sysctl, modprobe blacklist, HackRF udev rules), operations
+# dashboard (rich TUI + desktop autostart), bloatware removal, and
+# passwordless-sudo. Idempotent: safe to re-run.
+#
+# Rescue release notes (4.6.1):
+#   - Treats `pip check` as warn-only (Trixie venvs flag spurious dist conflicts)
+#   - Runs Tier 1 hardware audit non-fatally in --simulator mode
+#   - Soft-fails on usbguard/auditd/apt-mark hold gaps
+#   - Installs HackRF udev rules from config/os-hardening/99-hackrf.rules
+#   - Adds the invoking user to plugdev so HackRF doesn't need sudo
+#   - Uses bash -c (not -lc) so a flaky ~/.bashrc cannot abort install
+#   - Pre-flight import smoke test of dslv_zpdi.main_pipeline before systemd
+#   - Preserves existing ~/.config/dslv-zpdi user configs across re-installs
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.5.0"
+SCRIPT_REV="Rev 4.6.1-RESCUE"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
@@ -36,6 +45,19 @@ log_info()    { echo -e "${YELLOW}[DSLV-INFO] $*${NC}"; }
 log_ok()      { echo -e "${GREEN}[DSLV-OK] $*${NC}"; }
 log_warn()    { echo -e "${BLUE}[DSLV-WARN] $*${NC}"; }
 log_fail()    { echo -e "${RED}[DSLV-ERR] $*${NC}"; exit 1; }
+log_step()    { echo -e "\n${YELLOW}====== $* ======${NC}"; }
+
+# Run a step that is allowed to fail without aborting the whole install.
+# Used for hardening / nice-to-have steps where a failure should warn
+# but not roll back a working pipeline.
+soft() {
+    local label="$1"; shift
+    if "$@"; then
+        log_ok "$label"
+    else
+        log_warn "$label failed (continuing): $*"
+    fi
+}
 
 # 1. OS Detection Logic (Bookworm vs. Trixie compliance)
 OS_ID=$(grep '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
@@ -175,15 +197,17 @@ REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6 || true)"
 [[ -n "$REAL_HOME" ]] || REAL_HOME="/root"
 
 run_as_real_user() {
+    # Use plain bash -c (NOT -lc) so a flaky ~/.bashrc / ~/.profile cannot
+    # abort the installer mid-step.
     if [[ "$REAL_USER" == "root" ]]; then
-        bash -lc "$*"
+        bash -c "$*"
     else
-        sudo -H -u "$REAL_USER" bash -lc "$*"
+        sudo -H -u "$REAL_USER" bash -c "$*"
     fi
 }
 
 run_as_root() {
-    bash -lc "$*"
+    bash -c "$*"
 }
 
 require_cmd() {
@@ -229,8 +253,18 @@ fi
 if [[ "$SKIP_APT" -eq 0 ]]; then
     export DEBIAN_FRONTEND=noninteractive
     log_info "Installing base OS dependencies"
-    apt-get update -y || log_fail "apt-get update failed"
-    apt-get install -y "${BASE_PACKAGES[@]}" "${HARDENING_PACKAGES[@]}" || log_fail "Failed to install base packages"
+    # Retry apt update once on failure -- transient mirror flakes are common
+    # on Pi 5 over wifi during a fresh-image bootstrap.
+    if ! apt-get update -y; then
+        log_warn "apt-get update failed; retrying once after 5s"
+        sleep 5
+        apt-get update -y || log_fail "apt-get update failed twice"
+    fi
+    apt-get install -y "${BASE_PACKAGES[@]}" || log_fail "Failed to install base packages"
+    # Hardening packages are nice-to-have; keep going even if they don't
+    # all install (e.g. usbguard pulled in mid-upgrade by a held kernel).
+    apt-get install -y "${HARDENING_PACKAGES[@]}" || \
+        log_warn "Some hardening packages failed to install; usbguard/auditd steps will soft-skip"
 
     if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
         log_info "Installing Tier 1 timing/audit packages"
@@ -372,7 +406,22 @@ if ! run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' -m pip instal
 fi
 
 log_info "Running pip consistency check"
-run_as_real_user "'$VENV_DIR/bin/python' -m pip check" || log_fail "pip check reported dependency problems"
+# pip check is advisory only on Trixie: distro-supplied numpy/h5py
+# can flag spurious version conflicts that don't actually break the venv.
+if ! run_as_real_user "'$VENV_DIR/bin/python' -m pip check"; then
+    log_warn "pip check reported issues (continuing -- typical on Trixie venvs)"
+fi
+
+# Smoke-test the actual import chain before we wire systemd. Catches the
+# 'committed-but-missing-file' class of bug (config_loader / pi_watchdog)
+# locally, where the failure is recoverable, instead of letting systemd
+# crash-loop the pipeline service after install.
+log_info "Verifying dslv_zpdi.main_pipeline imports cleanly"
+if ! run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' -c 'import dslv_zpdi.main_pipeline'" ; then
+    log_fail "dslv_zpdi.main_pipeline failed to import. Check the trace above; \
+the most common cause is a source file referenced in main_pipeline.py that \
+isn't on disk (e.g. config_loader.py or watchdog/pi_watchdog.py)."
+fi
 log_ok "Python environment ready"
 
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
@@ -414,16 +463,20 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     if [[ "$SIMULATOR_MODE" -eq 1 ]]; then
         export DEV_SIMULATOR=1
     fi
-    
+
     field_flag=""
     if [[ "$FIELD_MODE" -eq 1 ]]; then
         field_flag="--field"
     fi
-    if ! run_as_root "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' tools/provision_tier1.py $field_flag"; then
-        log_fail "Tier 1 hardware audit failed."
+    if ! run_as_root "cd '$INSTALL_DIR' && DEV_SIMULATOR='${DEV_SIMULATOR:-0}' '$VENV_DIR/bin/python' tools/provision_tier1.py $field_flag"; then
+        if [[ "$SIMULATOR_MODE" -eq 1 ]]; then
+            log_warn "Tier 1 hardware audit failed in simulator mode (expected without GPSDO/HackRF) -- continuing"
+        else
+            log_fail "Tier 1 hardware audit failed. Connect GPSDO + HackRF, or re-run with --simulator."
+        fi
+    else
+        log_ok "Tier 1 hardware audit passed"
     fi
-
-    log_ok "Tier 1 hardware audit passed"
 fi
 
 # ============================================================================
@@ -600,29 +653,62 @@ BLK
     systemctl restart dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service || true
     log_ok "Systemd hardening chain installed and started"
 
-    # 9. USBGuard allow-listing (SPEC-011.1)
-    log_info "Configuring USBGuard allow-list"
-    # Generate a policy that allows the HackRF and LBE-1421
-    # HackRF: 1d50:6089
-    # LBE-1421: 1d50:604b (common Leo Bodnar) or check detected
-    usbguard generate-policy > /etc/usbguard/rules.conf
-    # Ensure HackRF is always allowed
-    if ! grep -q "1d50:6089" /etc/usbguard/rules.conf; then
-        echo "allow id 1d50:6089 serial \"*\" name \"HackRF One\" with-interface all" >> /etc/usbguard/rules.conf
+    # 9. USBGuard allow-listing (SPEC-011.1) -- soft-fail; the pipeline
+    #    works fine without USBGuard, and a half-installed usbguard would
+    #    otherwise abort the whole install on a fresh image.
+    if command -v usbguard >/dev/null 2>&1; then
+        log_info "Configuring USBGuard allow-list"
+        mkdir -p /etc/usbguard
+        if usbguard generate-policy > /etc/usbguard/rules.conf 2>/dev/null; then
+            grep -q "1d50:6089" /etc/usbguard/rules.conf || \
+                echo "allow id 1d50:6089 serial \"*\" name \"HackRF One\" with-interface all" \
+                    >> /etc/usbguard/rules.conf
+            soft "USBGuard service enabled" systemctl enable --now usbguard
+        else
+            log_warn "usbguard generate-policy failed (likely no USB devices visible to daemon yet) -- skipping"
+        fi
+    else
+        log_warn "usbguard not installed -- skipping USB allow-list step"
     fi
-    systemctl enable --now usbguard
-    log_ok "USBGuard configured and active"
 
-    # 10. Auditd monitoring (SPEC-011.2)
-    log_info "Configuring auditd for project directory"
-    cat > /etc/audit/rules.d/dslv-zpdi.rules <<AUDIT
+    # 10. Auditd monitoring (SPEC-011.2) -- soft-fail
+    if command -v augenrules >/dev/null 2>&1; then
+        log_info "Configuring auditd for project directory"
+        mkdir -p /etc/audit/rules.d
+        cat > /etc/audit/rules.d/dslv-zpdi.rules <<AUDIT
 -w ${INSTALL_DIR} -p wa -k dslv_zpdi_changes
 AUDIT
-    augenrules --load
-    systemctl enable --now auditd
-    log_ok "Auditd monitoring active on ${INSTALL_DIR}"
+        soft "auditd rules loaded" augenrules --load
+        soft "auditd service enabled" systemctl enable --now auditd
+    else
+        log_warn "auditd not installed -- skipping audit rule install"
+    fi
 
-    # 11. Air-Gap Hardening (Day 3)
+    # 10b. HackRF udev rules -- ship the project's rules from
+    #      config/os-hardening/99-hackrf.rules so the device is usable
+    #      by anyone in the plugdev group without sudo.
+    if [[ -f "${INSTALL_DIR}/config/os-hardening/99-hackrf.rules" ]]; then
+        install -m 0644 "${INSTALL_DIR}/config/os-hardening/99-hackrf.rules" \
+            /etc/udev/rules.d/99-dslv-hackrf.rules
+        soft "udev rules reloaded" udevadm control --reload-rules
+        soft "udev triggered for usb subsystem" udevadm trigger --subsystem-match=usb
+        log_ok "HackRF udev rules installed (/etc/udev/rules.d/99-dslv-hackrf.rules)"
+    fi
+
+    # 10c. Ensure invoking user is in plugdev so HackRF / serial dongles
+    #      are accessible without sudo.
+    if [[ "$REAL_USER" != "root" ]]; then
+        if ! id -nG "$REAL_USER" | tr ' ' '\n' | grep -qx plugdev; then
+            soft "user $REAL_USER added to plugdev" usermod -aG plugdev "$REAL_USER"
+        else
+            log_ok "user $REAL_USER already in plugdev"
+        fi
+    fi
+
+    # 11. Air-Gap Hardening (Day 3) -- compute FIRMWARE_CONFIG here too,
+    #     since the Tier 1 block (where it was defined first) may not have run.
+    FIRMWARE_CONFIG="${FIRMWARE_CONFIG:-/boot/firmware/config.txt}"
+    [[ -f "$FIRMWARE_CONFIG" ]] || FIRMWARE_CONFIG="/boot/config.txt"
     log_info "Disabling WiFi/Bluetooth for Air-Gap (SPEC-011.3)"
     if [[ -f "$FIRMWARE_CONFIG" ]]; then
         if ! grep -q "dtoverlay=disable-wifi" "$FIRMWARE_CONFIG"; then
@@ -656,6 +742,15 @@ if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
     log_info "Installing operations dashboard dependencies"
     run_as_real_user "'$VENV_DIR/bin/python' -m pip install --quiet rich pyfiglet" \
         || log_warn "Failed to install dashboard deps (rich/pyfiglet)"
+
+    # Smoke-test the dashboard import too -- it lives outside `src/` so
+    # editable install doesn't cover it. Pipeline still works without
+    # the dashboard, so this is warn-only.
+    if ! run_as_real_user "cd '$INSTALL_DIR/tools' && '$VENV_DIR/bin/python' -c 'import dashboard'"; then
+        log_warn "dashboard package failed to import; launch.sh may need investigation"
+    else
+        log_ok "dashboard package importable"
+    fi
 
     log_info "Installing desktop autostart for dashboard"
     AUTOSTART_DIR="${REAL_HOME}/.config/autostart"
