@@ -16,6 +16,9 @@ VENV="$REPO/venv"
 LOG="$REPO/logs/launch.log"
 DASH="$REPO/tools/dashboard/launch.sh"
 
+# tee -a will fail (and silently kill the desktop launch) if the parent dir
+# doesn't exist; ensure it exists before redirection.
+mkdir -p "$REPO/logs" 2>/dev/null || true
 exec > >(tee -a "$LOG") 2>&1
 
 STAMP() { date -Iseconds; }
@@ -28,10 +31,18 @@ SAY "================================================================"
 SAY "DSLV-ZPDI clean launch starting"
 SAY "================================================================"
 
-# Warm-up pause: gives the desktop session / display server / chrony a moment
-# to finish settling before we start yanking processes and services.
-SAY "warm-up :: 15s settle pause before initiating the rest of the script"
-sleep 15
+# Warm-up pause: only the slow auto-start path (boot) needs a long settle.
+# When the user double-clicks the desktop launcher the desktop is already up,
+# so a 15 s wait makes it look like the launcher is broken. Detect that case
+# via DSLV_LAUNCH_QUICK=1 (set by the desktop entry) or an existing display.
+if [ "${DSLV_LAUNCH_QUICK:-0}" = "1" ] \
+   || { [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; }; then
+    SAY "warm-up :: 3 s quick-launch settle (desktop session already up)"
+    sleep 3
+else
+    SAY "warm-up :: 15 s settle pause (boot autostart path)"
+    sleep 15
+fi
 
 # --- 1. Kill every user-space DSLV process ------------------------------
 SAY "step 1/7 :: killing stale DSLV and SDR processes"
@@ -245,9 +256,15 @@ if [ -z "$TERMCMD" ]; then
 fi
 
 if [ "$COMPACT_MODE" = "1" ]; then
-    # 5" DSI: one window, compact layout, no separate waterfall — the
-    # panel already stacks inside the dashboard, and a second window
-    # would not fit on 800x480 anyway.
+    # 5" DSI: spawn waterfall first, then dashboard. Both are full-screen
+    # under the compositor and the user alt-tabs (or workspace-switches)
+    # between them. Skipping the waterfall window here was the original
+    # "waterfall doesn't start" bug.
+    SAY "  - opening waterfall window in compact mode ($TERMCMD)"
+    spawn_terminal "$TITLE_WF" "$GEO_WF" \
+        "$DASH" --waterfall-only --no-boot
+    sleep 5
+
     SAY "  - opening operations dashboard in compact mode ($TERMCMD)"
     case "$TERMCMD" in
         lxterminal)
@@ -261,7 +278,7 @@ if [ "$COMPACT_MODE" = "1" ]; then
                 >/dev/null 2>&1 & disown ;;
     esac
     sleep 3
-    OK "launch complete — compact dashboard dispatched"
+    OK "launch complete — compact: waterfall + dashboard dispatched"
 else
     # 7a — waterfall second window FIRST so it's visible under the dashboard
     SAY "  - opening waterfall window ($TERMCMD)"

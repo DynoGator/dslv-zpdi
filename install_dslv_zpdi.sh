@@ -722,6 +722,29 @@ EOF
         fi
     fi
 
+    # 11b. Pi 5 PWM fan curve -- fan kicks on early so the SoC stays cool
+    #      under sustained pipeline load.  40 C low / 50 C half / 60 C full.
+    #      Hysteresis keeps the fan from chattering on the boundaries.
+    if [[ -f "$FIRMWARE_CONFIG" ]]; then
+        if ! grep -q 'DSLV-ZPDI Pi 5 PWM fan curve' "$FIRMWARE_CONFIG"; then
+            cat >> "$FIRMWARE_CONFIG" <<'FAN'
+
+# DSLV-ZPDI Pi 5 PWM fan curve (Rev 4.6.1-RESCUE)
+# 40 C : fan kicks on (low)
+# 50 C : half power
+# 60 C : full blast
+# Hysteresis 5 C so the fan does not chatter on the boundaries.
+dtparam=fan_temp0=40000,fan_temp0_hyst=5000
+dtparam=fan_temp1=50000,fan_temp1_hyst=5000
+dtparam=fan_temp2=60000,fan_temp2_hyst=5000
+dtparam=fan_temp3=60000,fan_temp3_hyst=2000
+FAN
+            log_ok "PWM fan curve appended to $FIRMWARE_CONFIG (active after reboot)"
+        else
+            log_ok "PWM fan curve already present in $FIRMWARE_CONFIG"
+        fi
+    fi
+
     # 12. USB Power & Security
     log_info "Setting usbcore.authorized_default=0 (speculative)"
     # This prevents new USB devices from being authorized by default
@@ -752,22 +775,58 @@ if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
         log_ok "dashboard package importable"
     fi
 
+    # Ensure logs dir exists -- launch_project.sh tees its output here
+    # and silently dies on first run if it doesn't.
+    install -d -o "$REAL_USER" -g "$REAL_USER" "${INSTALL_DIR}/logs"
+
     log_info "Installing desktop autostart for dashboard"
     AUTOSTART_DIR="${REAL_HOME}/.config/autostart"
     install -d -o "$REAL_USER" -g "$REAL_USER" "$AUTOSTART_DIR"
+    # Wrap the launcher in lxterminal so the user sees what's happening (and
+    # any errors) instead of staring at a silent desktop wondering if click
+    # registered. DSLV_LAUNCH_QUICK=1 trims the warm-up sleep when desktop
+    # is already up.
     cat > "$AUTOSTART_DIR/dslv-zpdi-dashboard.desktop" <<DESK
 [Desktop Entry]
 Type=Application
 Name=DSLV-ZPDI Operations Center
-Comment=DynoGatorLabs Operations Dashboard
-Exec=bash -c "sleep 25 && exec ${INSTALL_DIR}/tools/launch_project.sh"
+Comment=DynoGatorLabs Operations Dashboard (autostart)
+Exec=bash -c "sleep 25 && exec lxterminal --no-remote --title='DSLV-ZPDI Launcher' --geometry=92x28 -e ${INSTALL_DIR}/tools/launch_project.sh"
 Terminal=false
 Categories=Science;Network;
 X-GNOME-Autostart-enabled=true
 StartupNotify=false
 DESK
     chown "$REAL_USER:$REAL_USER" "$AUTOSTART_DIR/dslv-zpdi-dashboard.desktop"
+
+    # Manually-clickable launcher on the Desktop (matches what the user has
+    # there today and gives them a one-click recovery path).
+    DESKTOP_DIR="${REAL_HOME}/Desktop"
+    if [[ -d "$DESKTOP_DIR" ]]; then
+        cat > "$DESKTOP_DIR/DSLV-ZPDI.desktop" <<DESK
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=DSLV-ZPDI Operations Center
+GenericName=DSLV-ZPDI Clean Launch
+Comment=Kill stale processes, restart the pipeline (tuning -> preflight -> pipeline), open the dashboard + waterfall
+Exec=env DSLV_LAUNCH_QUICK=1 lxterminal --no-remote --title="DSLV-ZPDI Launcher" --geometry=92x28 -e ${INSTALL_DIR}/tools/launch_project.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+StartupNotify=false
+X-GNOME-Autostart-enabled=false
+DESK
+        chown "$REAL_USER:$REAL_USER" "$DESKTOP_DIR/DSLV-ZPDI.desktop"
+        chmod +x "$DESKTOP_DIR/DSLV-ZPDI.desktop"
+        # Mark trusted so PCManFM/file-manager-pcmanfm-qt don't refuse to
+        # exec it on first click.
+        soft "Desktop launcher trusted" sudo -u "$REAL_USER" -H \
+            gio set "$DESKTOP_DIR/DSLV-ZPDI.desktop" metadata::trusted true
+    fi
+
     chmod +x "${INSTALL_DIR}/tools/dashboard/launch.sh" 2>/dev/null || true
+    chmod +x "${INSTALL_DIR}/tools/launch_project.sh" 2>/dev/null || true
     log_ok "Dashboard installed. Launch: ${INSTALL_DIR}/tools/dashboard/launch.sh"
 fi
 
