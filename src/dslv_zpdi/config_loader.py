@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ClockDiscipline(BaseModel):
+    """SPEC-012.2 - Clock discipline parameters."""
     pps_required: bool = True
     pps_device: str = "/dev/pps0"
     chrony_tracking_required: bool = True
@@ -20,6 +21,7 @@ class ClockDiscipline(BaseModel):
 
 
 class HealthThresholds(BaseModel):
+    """SPEC-012.3 - System health thresholds."""
     max_calibration_drift_percent: float = 20.0
     min_confirming_nodes: int = 4
     confirmation_window_ms: int = 300
@@ -27,6 +29,7 @@ class HealthThresholds(BaseModel):
 
 
 class Spec009Config(BaseModel):
+    """SPEC-009.1 - State machine and baseline parameters."""
     baseline_duration_hours: int = 72
     min_baseline_samples: int = 240
     persist_state: bool = True
@@ -36,6 +39,7 @@ class Spec009Config(BaseModel):
 
 
 class NodeProfile(BaseModel):
+    """SPEC-012.4 - Node role and hardware profile."""
     hardware_tier: int = 1
     role: str = "institutional_anchor"
     timing_source: str = "gpsdo_clk_in"
@@ -44,6 +48,7 @@ class NodeProfile(BaseModel):
 
 
 class PipelineConfig(BaseModel):
+    """SPEC-012.5 - SDR and FFT pipeline parameters."""
     center_freq_hz: float = Field(default=100e6)
     sample_rate_hz: float = Field(default=20e6)
     num_samples: int = 262144
@@ -53,6 +58,7 @@ class PipelineConfig(BaseModel):
 
 
 class Config(BaseModel):
+    """SPEC-012 - Root configuration model."""
     version: str = "1"
     project: str = "DSLV-ZPDI"
     environment: str = "field"
@@ -69,6 +75,7 @@ class Config(BaseModel):
     @field_validator("paths", mode="before")
     @classmethod
     def _default_paths(cls, v: Any) -> Any:
+        """SPEC-012.6 - Provide default filesystem paths."""
         if not v:
             return {
                 "primary_output": "/home/dynogator/dslv-zpdi/output/primary",
@@ -80,12 +87,13 @@ class Config(BaseModel):
 
 
 def _env_override(config: Config) -> Config:
-    """Apply DSLV_* environment variables over YAML config."""
+    """SPEC-012.7 - Apply DSLV_* environment variables over YAML config."""
     env_map: Dict[str, Any] = {}
     for key, val in os.environ.items():
         if not key.startswith("DSLV_"):
             continue
         env_map[key[5:].lower()] = val
+
 
     if "primary_output_dir" in env_map:
         config.paths["primary_output"] = env_map["primary_output_dir"]

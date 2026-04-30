@@ -82,11 +82,19 @@ def main():
     parser.add_argument("--mode", choices=["sdr", "pps", "alternate"], default="sdr")
     parser.add_argument("--interval", type=float, default=0.1)
     parser.add_argument("--config", type=str, default="config/deployment.yaml")
+    parser.add_argument("--output", type=str, help="Base output directory")
     args = parser.parse_args()
 
     state = PipelineState()
     hal = get_hal(simulator=args.simulator)
-    writer = HDF5Writer()
+    
+    writer_kwargs = {}
+    if args.output:
+        base_out = Path(args.output)
+        writer_kwargs["output_path"] = str(base_out / "primary")
+        writer_kwargs["secondary_path"] = str(base_out / "secondary")
+    
+    writer = HDF5Writer(**writer_kwargs)
     monitor = TimingMonitor(simulated=args.simulator)
     monitor.start()
 

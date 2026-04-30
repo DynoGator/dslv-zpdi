@@ -11,9 +11,10 @@ from pythonjsonlogger import jsonlogger
 
 
 class _DSLVEncoder(jsonlogger.JsonFormatter):
-    """Custom JSON formatter injecting node_id, spec_id, and utc timestamp."""
+    """SPEC-013.2 - Custom JSON formatter injecting node_id, spec_id, and utc timestamp."""
 
     def __init__(self, node_id: str = "UNKNOWN", fmt: Optional[str] = None, *args: Any, **kwargs: Any):
+        """SPEC-013.2 - Initialize encoder."""
         self.node_id = node_id
         super().__init__(fmt, *args, **kwargs)
 
@@ -23,6 +24,7 @@ class _DSLVEncoder(jsonlogger.JsonFormatter):
         record: logging.LogRecord,
         message_dict: Dict[str, Any],
     ) -> None:
+        """SPEC-013.2 - Add custom fields to JSON record."""
         super().add_fields(log_record, record, message_dict)
         log_record.setdefault("timestamp_utc", self.formatTime(record))
         log_record.setdefault("level", record.levelname)
@@ -65,5 +67,5 @@ def setup_logging(
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a namespaced logger under dslv-zpdi."""
+    """SPEC-013.3 - Return a namespaced logger under dslv-zpdi."""
     return logging.getLogger(f"dslv-zpdi.{name}")
