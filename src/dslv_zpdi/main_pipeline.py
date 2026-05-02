@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 
 from dslv_zpdi.config_loader import load_config
 from dslv_zpdi.layer1_ingestion.hal_factory import get_hal
+from dslv_zpdi.layer1_ingestion.hal_simulated import SimulatedHAL
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
@@ -57,7 +58,7 @@ def _ingest_loop(hal, args, state, ingest_q):
             logger.error(f"Ingest error: {e}")
             time.sleep(0.1)
 
-def _process_loop(monitor, writer, ingest_q, state):
+def _process_loop(monitor, writer, ingest_q, state, health_reporter):
     """SPEC-011.2 | Processing consumer thread."""
     while state.running:
         try:
@@ -67,9 +68,30 @@ def _process_loop(monitor, writer, ingest_q, state):
                 payload.trust_state = "SECONDARY_QUARANTINED"
                 payload.quarantine_reason = "timing_unhealthy"
             
-            decision = writer.ingest(payload.to_json())
+            payload_json = payload.to_json()
+            decision = writer.ingest(payload_json)
+            
             if decision.stream == "PRIMARY":
                 state.primary_events += 1
+            
+            # SPEC-014 | Update dashboard health endpoint
+            bl = scorer.get_baseline_status()
+            update_data = {
+                "node_id": payload.node_id,
+                "hal_mode": payload.raw_value.get("clock_source", "internal") if payload.modality == "rf_sdr" else "pps",
+                "timing_healthy": monitor.healthy,
+                "timing_jitter_ns": monitor.last_jitter_ns,
+                "ticks": state.tick,
+                "baseline": bl,
+                "stats": writer.get_stats(),
+            }
+            if decision.packet:
+                update_data["coherence"] = {
+                    "r_smooth": decision.packet.r_smooth,
+                    "r_global": decision.packet.r_global,
+                }
+            health_reporter.update(update_data)
+
         except queue.Empty:
             continue
         except Exception as e:
@@ -87,6 +109,13 @@ def main():
 
     state = PipelineState()
     hal = get_hal(simulator=args.simulator)
+    _hw_fallback = not args.simulator and isinstance(hal, SimulatedHAL)
+    if _hw_fallback:
+        logger.warning(
+            "Hardware HAL unavailable — pipeline running in SIMULATOR mode. "
+            "Connect HackRF + GPSDO and restart the service to enable hardware ingestion."
+        )
+        args.simulator = True  # Skip PPS edge-wait; use time.sleep pacing
     
     writer_kwargs = {}
     if args.output:
@@ -97,11 +126,18 @@ def main():
     writer = HDF5Writer(**writer_kwargs)
     monitor = TimingMonitor(simulated=args.simulator)
     monitor.start()
+    
+    # SPEC-014 | Initialize dashboard health reporter
+    health_reporter = HealthReporter(interval_sec=2.0)
+    health_reporter.start()
+    if _hw_fallback:
+        health_reporter.update({"sim_fallback": True, "hal_mode": "simulator"})
 
     def _sig_handler(_signum, _frame):
         """SPEC-011.1 | Shutdown handler."""
         state.running = False
         logger.info("Shutdown initiated.")
+        health_reporter.stop()
         os._exit(0)
 
     signal.signal(signal.SIGINT, _sig_handler)
@@ -109,7 +145,7 @@ def main():
     ingest_q = queue.Queue(maxsize=1024)
 
     t_ingest = threading.Thread(target=_ingest_loop, args=(hal, args, state, ingest_q), daemon=True)
-    t_process = threading.Thread(target=_process_loop, args=(monitor, writer, ingest_q, state), daemon=True)
+    t_process = threading.Thread(target=_process_loop, args=(monitor, writer, ingest_q, state, health_reporter), daemon=True)
 
     t_ingest.start()
     t_process.start()

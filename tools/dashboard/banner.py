@@ -122,22 +122,15 @@ def full_banner() -> Panel:
 
 
 def compact_banner() -> Panel:
-    """2-row banner for the 5\" DSI compact layout.
-
-    A figlet banner does not fit in a 4-row layout slot once borders and
-    padding are accounted for, so the compact mode renders a single-line
-    brand bar + a single-line status-ish tagline instead.
-    """
+    """2-row content banner (4 rows total with panel)."""
     line1 = Text(no_wrap=True, justify="center", overflow="ellipsis")
     line1.append("◤ ", style=f"bold {NEON_CYAN}")
     line1.append("DSLV-ZPDI", style=f"bold {NEON_GREEN}")
     line1.append(" ◢ ", style=f"bold {NEON_CYAN}")
-    line1.append("DynoGatorLabs", style=f"bold {NEON_CYAN}")
-    line1.append(" · ", style="dim")
     line1.append("Tier 1 Anchor", style=f"bold {AMBER}")
 
     line2 = Text(
-        "RF Metrology · Coherence Engine · KCET-ATLAS",
+        "RF Metrology · Coherence Engine · 2026",
         style=f"italic {DIM_GREEN}",
         no_wrap=True,
         overflow="ellipsis",
@@ -147,6 +140,22 @@ def compact_banner() -> Panel:
         Group(Align.center(line1), Align.center(line2)),
         border_style=NEON_GREEN,
         padding=(0, 1),
+    )
+
+
+def ultra_compact_banner() -> Panel:
+    """Single-line content banner (3 rows total with panel)."""
+    line = Text(no_wrap=True, justify="center", overflow="ellipsis")
+    line.append("DSLV-ZPDI ", style=f"bold {NEON_GREEN}")
+    line.append("· ", style="dim")
+    line.append("DynoGatorLabs ", style=f"bold {NEON_CYAN}")
+    line.append("· ", style="dim")
+    line.append("TIER 1", style=f"bold {AMBER}")
+    
+    return Panel(
+        Align.center(line),
+        border_style=NEON_GREEN,
+        padding=0,
     )
 
 

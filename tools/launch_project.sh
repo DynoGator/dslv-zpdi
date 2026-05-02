@@ -205,10 +205,10 @@ SCREEN_H=${SCREEN_H:-0}
 if [ "${SCREEN_W:-0}" -le 1024 ] && [ "${SCREEN_H:-0}" -le 600 ] \
    && [ "${SCREEN_W:-0}" -gt 0 ]; then
     # 5" DSI: single fullscreen window, compact layout, no second terminal.
-    # 92x28 keeps the waterfall visible at 800x480 with default lxterminal
-    # font (dense enough to hit ~28-30 rows on most Pi OS installs).
-    GEO_MAIN="92x28"
-    GEO_WF="92x28"
+    # 92x30 keeps the waterfall visible at 800x480 with default lxterminal
+    # font (dense enough to hit ~30 rows on most Pi OS installs).
+    GEO_MAIN="92x30+0+0"
+    GEO_WF="92x30+0+0"
     COMPACT_MODE=1
     SAY "detected small display (${SCREEN_W}x${SCREEN_H}) - compact layout enabled"
 else

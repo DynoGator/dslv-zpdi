@@ -31,7 +31,7 @@ accent               = "bright_cyan"
 mode       = "SWEEP"
 center_hz  = 100_000_000
 span_hz    = 20_000_000
-history    = 12
+history    = 24             # Buffer size for waterfall (fills available vertical space)
 
 [dashboard.notifications]
 humor_every_s   = 4.0
@@ -39,11 +39,22 @@ glitch_every_s  = 37.0
 max_items       = 8
 
 [dashboard.logs]
-max_lines = 14
+max_lines = 10              # Maximum lines to show in wide mode (compact mode caps to 3)
 
 [dashboard.keybindings]
 quit      = "q"
 pause     = " "
-wf_mode   = "m"
-real_sdr  = "r"
-help      = "h"
+wf_mode   = "m"             # cycle SWEEP -> NARROW -> SCOPE
+real_sdr  = "r"             # toggle SIM vs HACKRF
+help      = "h"             # toggle banner
+compact   = "c"             # toggle high-density 5" layout
+tune_fine = ",/."           # fine tuning (100kHz)
+tune_crs  = "</>"           # coarse tuning (10% span) or LEFT/RIGHT
+zoom      = "z/x"           # zoom span or UP/DOWN
+gain      = "g/v"           # cycle LNA / VGA gain or +/-
+amp       = "a"             # toggle HackRF internal amp
+spectrum  = "s"             # toggle spectrum view
+palette   = "p"             # cycle color palettes
+floor     = "[/]"           # adjust floor dBm
+ceil      = "{/}"           # adjust ceil dBm
+

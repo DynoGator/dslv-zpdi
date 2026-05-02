@@ -70,7 +70,7 @@ class StormPanel:
         self.border_style = border_style
         self.feed = get_feed()
 
-    def render(self) -> Panel:
+    def render(self, compact: bool = False) -> Panel:
         snap = self.feed.snapshot()
         phase = snap.get("phase", "UNKNOWN")
         kp = snap.get("kp_now", float("nan"))
@@ -82,81 +82,35 @@ class StormPanel:
 
         glyph, phase_sty, phase_desc = _PHASE_STYLES.get(phase, _PHASE_STYLES["UNKNOWN"])
 
-        t = Table.grid(padding=(0, 2), expand=True)
+        t = Table.grid(padding=(0, 1), expand=True)
         t.add_column(style="bright_cyan", justify="right", no_wrap=True)
         t.add_column()
 
-        # Phase headline
-        head = Text()
-        head.append(f"{glyph} {phase}", style=f"bold {phase_sty}")
-        head.append(f"   {phase_desc}", style="dim")
-        t.add_row("Phase", head)
-
-        # Trend (recent Kp series compared to prior)
-        clean = [v for v in history if not (v is None or math.isnan(v))]
-        if len(clean) >= 6:
-            recent = sum(clean[-3:]) / 3.0
-            prior = sum(clean[-6:-3]) / 3.0
-            delta = recent - prior
-            arrow = "→"
-            sty = "bright_white"
-            if delta > 0.3:
-                arrow = "↗"
-                sty = "bright_yellow"
-            elif delta < -0.3:
-                arrow = "↘"
-                sty = "yellow"
-            trend_text = f"{arrow}  ΔKp = {delta:+.2f}  (now {recent:.2f}, prev {prior:.2f})"
+        if compact:
+            # Row 1: Phase + G-Scale
+            t.add_row("Strm", f"[{phase_sty}]{glyph} {phase[:8]}[/] [dim]•[/] {g}")
+            # Row 2: Alert
+            relevant = [a for a in alerts if _alert_is_relevant(a.get("headline", ""))]
+            if relevant:
+                icon, sty = _alert_priority(relevant[0].get("headline", ""))
+                t.add_row("Alrt", f"[{sty}]{icon} {relevant[0].get('headline', '')[:12]}[/]")
+            else:
+                t.add_row("Alrt", "[dim]none[/]")
         else:
-            sty = "dim"
-            trend_text = "insufficient samples"
-        t.add_row("Trend", Text(trend_text, style=sty))
+            # Status footer
+            last = snap.get("last_update", 0.0)
+            if last == 0.0:
+                footer_txt = Text("poll...", style="dim")
+            else:
+                age = int(time.time() - last)
+                footer_txt = Text(f"NOAA {age}s", style="dim")
+            t.add_row("", footer_txt)
 
-        # Storm scales
-        scales = Text()
-        scales.append(f"{g}", style=f"bold {phase_sty}")
-        scales.append(f" {_g_intensity_label(g)}", style="dim")
-        scales.append("   ")
-        scales.append(f"{r}", style=f"bold {phase_sty if r != 'R0' else 'bright_green'}")
-        scales.append("   ")
-        scales.append(f"flare {flare}", style="bright_white")
-        t.add_row("Scales", scales)
-
-        # Peak in window
-        if clean:
-            peak_kp = max(clean[-12:])
-            t.add_row("Peak Kp", Text(
-                f"{peak_kp:.2f} (last hr)",
-                style="bright_red" if peak_kp >= 7 else "bright_yellow" if peak_kp >= 5 else "bright_green"
-            ))
-
-        # Alerts
-        relevant = [a for a in alerts if _alert_is_relevant(a.get("headline", ""))][:3]
-        if not relevant:
-            t.add_row("Alerts", Text("no active CME/geomagnetic alerts", style="dim"))
-        else:
-            for a in relevant:
-                icon, sty = _alert_priority(a.get("headline", ""))
-                line = Text()
-                line.append(f"{icon} ", style=sty)
-                line.append(_esc(a.get("headline", ""))[:96], style=sty)
-                t.add_row("", line)
-
-        # Status footer
-        last = snap.get("last_update", 0.0)
-        err = snap.get("last_error")
-        if last == 0.0:
-            footer_txt = Text("connecting to NOAA SWPC…", style="dim")
-        else:
-            age = int(time.time() - last)
-            footer_txt = Text(f"NOAA · {age}s ago", style="dim")
-            if err:
-                footer_txt.append(f" · {_esc(str(err))[:40]}", style="yellow")
-        t.add_row("", footer_txt)
-
+        title = f"[bold {self.border_style}]▓ STORM ▓[/]" if compact else f"[bold {self.border_style}]▓ STORM / CME ▓[/]"
         return Panel(
             t,
-            title=f"[bold {self.border_style}]▓ CME / GEOMAGNETIC STORM ▓[/]",
+            title=title,
             border_style=self.border_style,
             padding=(0, 1),
         )
+

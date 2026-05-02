@@ -254,7 +254,7 @@ class WaterfallPanel:
     def __init__(
         self,
         width: int = 80,
-        history: int = 12,
+        history: int = 24, # Increased default from 12
         mode: str = "SWEEP",
         center_hz: int = 100_000_000,
         span_hz: int = 20_000_000,
@@ -262,10 +262,12 @@ class WaterfallPanel:
         lna_gain: int = 24,
         vga_gain: int = 20,
         amp_enabled: bool = False,
+        compact: bool = False,
     ):
         self.width = max(20, width)
-        self.history = max(4, history)
+        self.history = max(10, history) # Ensured minimum for usability
         self.rows: list[list[float]] = []  # Store normalized [0,1] rows
+        self.peak_hold: list[float] = [0.0] * self.width
         self.center_hz = center_hz
         self.span_hz = span_hz
         self.mode = mode
@@ -276,6 +278,7 @@ class WaterfallPanel:
         self.dbm_floor = -90.0
         self.dbm_ceil = -20.0
         self.show_spectrum = True
+        self.compact = compact
         
         self._t0 = time.time()
         self._sim_carriers = [
@@ -344,6 +347,23 @@ class WaterfallPanel:
         self.lna_gain = steps[(i + 1) % len(steps)]
         self._restart_stream_if_running()
 
+    def cycle_vga_gain(self):
+        steps = [0, 8, 16, 24, 32, 40, 48, 56, 62]
+        try:
+            i = steps.index(self.vga_gain)
+        except ValueError:
+            i = 0
+        self.vga_gain = steps[(i + 1) % len(steps)]
+        self._restart_stream_if_running()
+
+    def cycle_modulation(self):
+        mods = ["RAW-SWEEP", "AM", "NFM", "WFM", "LSB", "USB", "CW"]
+        try:
+            i = mods.index(getattr(self, "modulation", "RAW-SWEEP"))
+        except ValueError:
+            i = 0
+        self.modulation = mods[(i + 1) % len(mods)]
+
     def toggle_amp(self):
         self.amp_enabled = not self.amp_enabled
         self._restart_stream_if_running()
@@ -353,6 +373,7 @@ class WaterfallPanel:
         if w != self.width:
             self.width = w
             self.rows = []
+            self.peak_hold = [0.0] * self.width
             self._restart_stream_if_running()
 
     def shutdown(self):
@@ -428,6 +449,15 @@ class WaterfallPanel:
         if raw_dbm:
             floor = self._estimate_floor(raw_dbm)
             self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
+        
+        if row:
+            if len(self.peak_hold) != len(row):
+                self.peak_hold = list(row)
+            else:
+                # Decay peak hold slowly, but update immediately if new peak
+                for i in range(len(row)):
+                    self.peak_hold[i] = max(row[i], self.peak_hold[i] * 0.98)
+
         self.rows.append(row)
         if len(self.rows) > self.history:
             self.rows.pop(0)
@@ -475,13 +505,22 @@ class WaterfallPanel:
 
     def _spectrum_text(self, row: list[float], height: int = 5) -> Text:
         t = Text()
+        # Estimate noise floor for the normalized row
+        floor_val = sum(sorted(row)[:len(row)//4]) / (len(row)//4 + 1)
+        
         for y in range(height, 0, -1):
             threshold = y / height
-            for v in row:
+            for i, v in enumerate(row):
+                pk = self.peak_hold[i]
                 if v >= threshold:
                     t.append("█", style=_heat(v))
+                elif pk >= threshold:
+                    # Peak hold marker
+                    t.append("·", style="bright_red" if pk > 0.7 else "red")
                 elif v >= threshold - (1/height/2):
                     t.append("▄", style=_heat(v))
+                elif floor_val >= threshold - (1/height/2):
+                    t.append("_", style="dim blue")
                 else:
                     t.append(" ", style="dim")
             t.append("\n")
@@ -490,8 +529,13 @@ class WaterfallPanel:
     def _row_text(self, row: list[float]) -> Text:
         t = Text(no_wrap=True)
         if len(row) != self.width and len(row) > 1:
-            scale = (len(row) - 1) / (self.width - 1) if self.width > 1 else 1
-            resampled = [row[min(len(row) - 1, int(i * scale))] for i in range(self.width)]
+            # Better resampling: use max to avoid missing peaks
+            resampled = []
+            scale = len(row) / self.width
+            for i in range(self.width):
+                start = int(i * scale)
+                end = max(start + 1, int((i + 1) * scale))
+                resampled.append(max(row[start:end]))
             row = resampled
         for v in row:
             t.append("█", style=_heat(v))
@@ -504,47 +548,76 @@ class WaterfallPanel:
         span_mhz = self.span_hz / 1e6
         
         if not self.rows:
-            lines.append("\n  [ buffering... ]\n")
+            lines.append("\n  [ buffering spectrum... ]\n")
         else:
             if self.show_spectrum:
-                lines.append_text(self._spectrum_text(self.rows[-1]))
+                spec_h = 3 if self.compact else 5
+                lines.append_text(self._spectrum_text(self.rows[-1], height=spec_h))
                 lines.append("─" * self.width, style="dim")
                 lines.append("\n")
             
-            for row in reversed(self.rows):
+            # Use as much history as we have, but limit for very small screens if needed.
+            # However, the Layout ratio=1 will provide the space, so we should fill it.
+            # We don't know the exact line count here, so we'll show most of it.
+            rows_to_show = self.rows
+            if self.compact and len(self.rows) > 15:
+                rows_to_show = self.rows[-15:]
+            
+            for row in reversed(rows_to_show):
                 lines.append_text(self._row_text(row))
                 lines.append("\n")
 
         lo = center_mhz - span_mhz / 2
         hi = center_mhz + span_mhz / 2
         axis = Text()
-        axis.append(f"{lo:.2f}", style="dim bright_cyan")
-        mid_s = f"{center_mhz:.2f}MHz"
-        pad = max(0, self.width - len(f"{lo:.2f}") - len(f"{hi:.2f}") - len(mid_s))
-        axis.append(" " * (pad // 2))
-        axis.append(mid_s, style="bright_magenta")
-        axis.append(" " * (pad - pad // 2))
-        axis.append(f"{hi:.2f}", style="dim bright_cyan")
+        
+        # More descriptive axis for compact
+        lo_s = f"{lo:.2f}"
+        hi_s = f"{hi:.2f}"
+        mid_s = f" {center_mhz:.3f} MHz "
+        
+        if self.compact:
+            lo_s = f"{lo:.1f}"
+            hi_s = f"{hi:.1f}"
+            mid_s = f" {center_mhz:.2f}M "
+
+        axis.append(lo_s, style="dim bright_cyan")
+        pad = max(0, self.width - len(lo_s) - len(hi_s) - len(mid_s))
+        axis.append("─" * (pad // 2), style="dim")
+        axis.append(mid_s, style="bold bright_magenta")
+        axis.append("─" * (pad - pad // 2), style="dim")
+        axis.append(hi_s, style="dim bright_cyan")
         lines.append_text(axis)
 
         src_label = {
+            "HACKRF": "HRF",
+            "HACKRF-WAIT": "HRF…",
+            "SIM": "SIM",
+        }.get(self._last_source, "SIM") if self.compact else {
             "HACKRF": "HACKRF",
             "HACKRF-WAIT": "HACKRF…",
             "SIM": "SIM",
         }.get(self._last_source, "SIM")
-        err = self._stream.last_error()
-        err_suffix = f" · err: {_esc(err)}" if (self._want_real and err) else ""
-        gain_info = f" · floor {self.dbm_floor:.0f} ceil {self.dbm_ceil:.0f}"
-        gain_suffix = (
-            f" · lna {self.lna_gain}dB vga {self.vga_gain}dB amp {'ON' if self.amp_enabled else 'off'}"
-            if self._want_real
-            else ""
-        )
-        sweeps = self._stream.sweeps()
-        sweep_suffix = f" · sweeps {sweeps}" if self._want_real else ""
-        title = (
-            f"[bold {self.border_style}]▓ WATERFALL + SPECTRUM ▓[/] "
-            f"[dim]({self.mode} · {src_label} · "
-            f"{span_mhz:.1f}MHz BW{gain_info}{gain_suffix}{sweep_suffix}{err_suffix})[/]"
-        )
+
+        mod_label = getattr(self, "modulation", "RAW") if self.compact else getattr(self, "modulation", "RAW-SWEEP")
+        
+        if self.compact:
+            title = f"[bold {self.border_style}]▓ WF ▓[/] [dim]({self.mode}·{src_label}·{span_mhz:.1f}M·{self.dbm_floor:.0f}/{self.dbm_ceil:.0f})[/]"
+        else:
+            err = self._stream.last_error()
+            err_suffix = f" · err: {_esc(err)}" if (self._want_real and err) else ""
+            gain_info = f" · floor {self.dbm_floor:.0f} ceil {self.dbm_ceil:.0f}"
+            gain_suffix = (
+                f" · lna {self.lna_gain}dB vga {self.vga_gain}dB amp {'ON' if self.amp_enabled else 'off'}"
+                if self._want_real
+                else ""
+            )
+            sweeps = self._stream.sweeps()
+            sweep_suffix = f" · sweeps {sweeps}" if self._want_real else ""
+            title = (
+                f"[bold {self.border_style}]▓ WATERFALL + SPECTRUM ▓[/] "
+                f"[dim]({self.mode} · {src_label} · {mod_label} · "
+                f"{span_mhz:.1f}MHz BW{gain_info}{gain_suffix}{sweep_suffix}{err_suffix})[/]"
+            )
         return Panel(lines, title=title, border_style=self.border_style, padding=(0, 1))
+

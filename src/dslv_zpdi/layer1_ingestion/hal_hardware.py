@@ -43,7 +43,7 @@ except ImportError:
 
 # Fallback to pyhackrf if SoapySDR not available
 try:
-    import pyhackrf
+    import hackrf as pyhackrf
 
     PYHACKRF_AVAILABLE = True
 except ImportError:
@@ -84,9 +84,18 @@ class HardwareHAL(BaseHAL):
         self._pps_history: list[int] = []
         self._pps_history_max = 16
 
+        initialized = False
         if SOAPYSDR_AVAILABLE:
-            self._init_soapy_sdr()
-        elif PYHACKRF_AVAILABLE:
+            try:
+                self._init_soapy_sdr()
+                initialized = True
+            except (DriverUnavailableError, HardwareInitializationError) as e:
+                # Log the failure but allow fallback to pyhackrf
+                print(f"[!] SoapySDR initialization failed: {e}. Falling back to pyhackrf...")
+            except Exception as e:
+                print(f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyhackrf...")
+
+        if not initialized and PYHACKRF_AVAILABLE:
             self._verify_pyhackrf_clock()
 
     def _init_soapy_sdr(self):
@@ -165,10 +174,36 @@ class HardwareHAL(BaseHAL):
                 "Verify GPSDO 10 MHz SMA → HackRF CLKIN connection."
             ) from e
 
+    @staticmethod
+    def _probe_pyhackrf_subprocess() -> bool:
+        """
+        Run pyhackrf init in a subprocess to detect SEGV risk without killing the main process.
+        Returns True only if HackRF opens, sets up, and closes cleanly.
+        """
+        import subprocess
+        import sys
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 "import hackrf; d = hackrf.HackRF(); d.setup(); d.close(); print('ok')"],
+                capture_output=True,
+                timeout=10,
+                text=True,
+            )
+            return result.returncode == 0 and "ok" in result.stdout
+        except (subprocess.TimeoutExpired, OSError, ValueError):
+            return False
+
     def _verify_pyhackrf_clock(self):
         """
         Fallback clock verification for pyhackrf (non-SoapySDR) installations.
         """
+        if not self._probe_pyhackrf_subprocess():
+            raise ClockVerificationError(
+                "HackRF not accessible via pyhackrf (device unavailable, in use, or permissions). "
+                "Verify HackRF is connected and udev rules are applied. "
+                "Subprocess probe blocked to prevent SEGV in main process."
+            )
         try:
             device = pyhackrf.HackRF()
             device.setup()
@@ -179,7 +214,7 @@ class HardwareHAL(BaseHAL):
                 device.close()
                 raise ClockVerificationError(
                     f"Clock source: {actual}. Expected: external. "
-                    "Verify GPSDO connection before Tier 1 operations."
+                    "Verify GPSDO 10 MHz SMA → HackRF CLKIN connection."
                 )
 
             device.close()
@@ -216,15 +251,18 @@ class HardwareHAL(BaseHAL):
             except Exception as e:
                 result["warnings"].append(f"Clock verification failed: {e}")
         elif PYHACKRF_AVAILABLE:
-            try:
-                device = pyhackrf.HackRF()
-                device.setup()
-                result["clock_source"] = getattr(device, "clock_source", "unknown")
-                result["phase_lock_verified"] = result["clock_source"] == "external"
-                result["driver"] = "pyhackrf"
-                device.close()
-            except Exception as e:
-                result["warnings"].append(f"pyhackrf verification failed: {e}")
+            if not self._probe_pyhackrf_subprocess():
+                result["warnings"].append("pyhackrf probe failed — HackRF inaccessible or SEGV risk")
+            else:
+                try:
+                    device = pyhackrf.HackRF()
+                    device.setup()
+                    result["clock_source"] = getattr(device, "clock_source", "unknown")
+                    result["phase_lock_verified"] = result["clock_source"] == "external"
+                    result["driver"] = "pyhackrf"
+                    device.close()
+                except Exception as e:
+                    result["warnings"].append(f"pyhackrf verification failed: {e}")
         else:
             result["warnings"].append("No SDR driver available (SoapySDR or pyhackrf)")
 

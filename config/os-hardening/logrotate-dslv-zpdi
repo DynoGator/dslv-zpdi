@@ -1,4 +1,4 @@
-/home/dynogator/dslv-zpdi/output/secondary/quarantine.jsonl {
+/home/dynogator/Gem-home/dslv-zpdi/output/secondary/quarantine.jsonl {
     daily
     rotate 7
     compress
@@ -8,7 +8,7 @@
     create 0644 dynogator dynogator
 }
 
-/home/dynogator/dslv-zpdi/logs/*.log {
+/home/dynogator/Gem-home/dslv-zpdi/logs/*.log {
     daily
     rotate 14
     compress

@@ -209,6 +209,37 @@ def storm_phase(kp_history: list[float]) -> str:
     return "QUIET"
 
 
+def compute_trend(history: list[float], threshold: float = 0.05) -> str:
+    """General trend calculator for space weather metrics.
+    
+    Returns: RAMP_UP, PEAK, RAMP_DOWN, STABLE.
+    """
+    clean = [v for v in history if not (v is None or math.isnan(v))]
+    if len(clean) < 4:
+        return "STABLE"
+    
+    recent = clean[-2:]
+    prior = clean[-4:-2]
+    avg_recent = sum(recent) / 2
+    avg_prior = sum(prior) / 2
+    
+    # Use relative delta for metrics with vastly different scales
+    denom = abs(avg_prior) if abs(avg_prior) > 1e-9 else 1.0
+    rel_delta = (avg_recent - avg_prior) / denom
+    
+    if rel_delta > threshold:
+        return "RAMP_UP"
+    if rel_delta < -threshold:
+        return "RAMP_DOWN"
+    
+    # If it's stable but high, call it PEAK/PLATEAU
+    # (Using arbitrary 'high' thresholds for these specific metrics)
+    if avg_recent > 0: # placeholder logic, will refine per-metric if needed
+         pass
+
+    return "STABLE"
+
+
 class SpaceWeatherFeed:
     """Background poller for NOAA SWPC. Singleton-ish; instantiate once."""
 
@@ -222,11 +253,17 @@ class SpaceWeatherFeed:
             "kp_history": [],
             "g_scale": "G0",
             "speed_kms": float("nan"),
+            "speed_history": [],
+            "speed_trend": "STABLE",
             "density": float("nan"),
             "temp_k": float("nan"),
             "bt_nt": float("nan"),
+            "bt_history": [],
+            "bt_trend": "STABLE",
             "bz_nt": float("nan"),
             "flux": float("nan"),
+            "flux_history": [],
+            "flux_trend": "STABLE",
             "flare": "—",
             "r_scale": "R0",
             "f107_sfu": float("nan"),
@@ -279,14 +316,46 @@ class SpaceWeatherFeed:
             merged.update(_parse_kp(results["kp"]))
             merged["g_scale"] = _g_scale(merged.get("kp_now", float("nan")))
             merged["phase"] = storm_phase(merged.get("kp_history", []))
+        
         if results.get("plasma") is not None:
-            merged.update(_parse_plasma(results["plasma"]))
+            p = _parse_plasma(results["plasma"])
+            merged.update(p)
+            # Update history and trend for speed
+            with self._lock:
+                hist = self._snapshot["speed_history"]
+                if not math.isnan(p["speed_kms"]):
+                    hist.append(p["speed_kms"])
+                self._snapshot["speed_history"] = hist[-12:]
+                merged["speed_trend"] = compute_trend(self._snapshot["speed_history"], threshold=0.02)
+                # PEAK/PLATEAU override if high and stable
+                if merged["speed_trend"] == "STABLE" and p["speed_kms"] > 550:
+                    merged["speed_trend"] = "PEAK"
+
         if results.get("mag") is not None:
-            merged.update(_parse_mag(results["mag"]))
+            m = _parse_mag(results["mag"])
+            merged.update(m)
+            with self._lock:
+                hist = self._snapshot["bt_history"]
+                if not math.isnan(m["bt_nt"]):
+                    hist.append(m["bt_nt"])
+                self._snapshot["bt_history"] = hist[-12:]
+                merged["bt_trend"] = compute_trend(self._snapshot["bt_history"], threshold=0.05)
+                if merged["bt_trend"] == "STABLE" and m["bt_nt"] > 15:
+                    merged["bt_trend"] = "PEAK"
+
         if results.get("xray") is not None:
             x = _parse_xray(results["xray"])
             merged.update(x)
             merged["r_scale"] = _r_scale(x["flare"])
+            with self._lock:
+                hist = self._snapshot["flux_history"]
+                if not math.isnan(x["flux"]):
+                    hist.append(x["flux"])
+                self._snapshot["flux_history"] = hist[-12:]
+                merged["flux_trend"] = compute_trend(self._snapshot["flux_history"], threshold=0.10)
+                if merged["flux_trend"] == "STABLE" and x["flux"] > 1e-5: # M-class or higher
+                    merged["flux_trend"] = "PEAK"
+
         if results.get("f107") is not None:
             merged.update(_parse_f107(results["f107"]))
         if results.get("alerts") is not None:
@@ -298,6 +367,7 @@ class SpaceWeatherFeed:
 
         with self._lock:
             self._snapshot.update(merged)
+
 
 
 _FEED: SpaceWeatherFeed | None = None

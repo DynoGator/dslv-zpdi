@@ -126,7 +126,7 @@ class SystemPanel:
         self._cpu_state = {}
         self.border_style = border_style
 
-    def render(self) -> Panel:
+    def render(self, compact: bool = False) -> Panel:
         cpu_pct = _cpu_usage_percent(self._cpu_state)
         mem_used, mem_total = _mem()
         load = _load_avg()
@@ -135,7 +135,7 @@ class SystemPanel:
         thr = _throttle_status()
         up = _uptime()
 
-        t = Table.grid(padding=(0, 2), expand=True)
+        t = Table.grid(padding=(0, 1 if compact else 2), expand=True)
         t.add_column(style="bright_cyan", justify="right")
         t.add_column(style="bright_green")
 
@@ -152,21 +152,30 @@ class SystemPanel:
             "yellow" if d_pct < 90 else "bright_red"
         )
 
-        t.add_row("CPU", f"[{cpu_style}]{cpu_pct:5.1f}%[/] @ [magenta]{gov}[/]")
-        t.add_row("Mem", f"{mem_used:4.1f}/{mem_total:4.1f} GiB")
-        t.add_row("Load", f"{load[0]:.2f} {load[1]:.2f} {load[2]:.2f}")
-        t.add_row("Temp", f"[{temp_style}]{temp:4.1f}°C[/]")
-        t.add_row("Power", f"[{thr_style}]{thr}[/]")
-        t.add_row(
-            "Disk",
-            f"[{disk_style}]{d_pct:4.1f}%[/]  "
-            f"[dim]{d_used:.1f}/{d_total:.1f} GiB[/]",
-        )
-        t.add_row("Uptime", f"[dim]{up}[/]")
+        if compact:
+            # Row 1: CPU + Temp
+            t.add_row("CPU", f"[{cpu_style}]{cpu_pct:4.1f}%[/] [dim]•[/] [{temp_style}]{temp:4.1f}°C[/]")
+            # Row 2: Mem + Disk
+            t.add_row("Mem", f"{mem_used:3.1f}G [dim]•[/] Dsk [{disk_style}]{d_pct:2.0f}%[/]")
+            # Row 3: Load + Up
+            t.add_row("Ld", f"{load[0]:.1f} [dim]•[/] Up {up}")
+        else:
+            t.add_row("CPU", f"[{cpu_style}]{cpu_pct:5.1f}%[/] @ [magenta]{gov}[/]")
+            t.add_row("Mem", f"{mem_used:4.1f}/{mem_total:4.1f} GiB")
+            t.add_row("Load", f"{load[0]:.2f} {load[1]:.2f} {load[2]:.2f}")
+            t.add_row("Temp", f"[{temp_style}]{temp:4.1f}°C[/]")
+            t.add_row("Power", f"[{thr_style}]{thr}[/]")
+            t.add_row(
+                "Disk",
+                f"[{disk_style}]{d_pct:4.1f}%[/]  "
+                f"[dim]{d_used:.1f}/{d_total:.1f} GiB[/]",
+            )
+            t.add_row("Uptime", f"[dim]{up}[/]")
 
+        title = f"[bold {self.border_style}]▓ SYS ▓[/]" if compact else f"[bold {self.border_style}]▓ SYSTEM ▓[/]"
         return Panel(
             t,
-            title=f"[bold {self.border_style}]▓ SYSTEM ▓[/]",
+            title=title,
             border_style=self.border_style,
             padding=(0, 1),
         )

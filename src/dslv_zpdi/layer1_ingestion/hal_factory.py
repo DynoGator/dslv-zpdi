@@ -19,10 +19,16 @@ def get_hal(tier: int = 1, simulator: bool = False) -> HardwareHAL | SimulatedHA
 
     Returns:
         SimulatedHAL if simulator=True or DEV_SIMULATOR=1, otherwise HardwareHAL.
+        Falls back to SimulatedHAL automatically if hardware init fails.
     """
     if simulator or os.getenv("DEV_SIMULATOR") == "1":
         return SimulatedHAL()
-    return HardwareHAL()  # SoapySDR primary → pyhackrf fallback, external clock enforced
+    try:
+        return HardwareHAL()  # SoapySDR primary → pyhackrf fallback, external clock enforced
+    except Exception as e:
+        print(f"[!] HardwareHAL init failed: {e}")
+        print("[!] Falling back to SimulatedHAL. Connect HackRF + GPSDO and restart to enable hardware mode.")
+        return SimulatedHAL()
 
 
 def ingest_gps_pps(**kwargs):

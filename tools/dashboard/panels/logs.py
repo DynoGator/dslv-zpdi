@@ -102,20 +102,24 @@ class LogPanel:
         txt = line[-240:]
         return Text(txt, style=style, no_wrap=True, overflow="ellipsis")
 
-    def render(self) -> Panel:
+    def render(self, compact: bool = False) -> Panel:
         t = Text(no_wrap=True, overflow="ellipsis")
         if not self.lines:
-            t.append(f"waiting for journald (unit={self.unit})...", style="dim italic")
+            t.append(f"waiting for journald...", style="dim italic")
         else:
+            # On compact, we might only show a subset of lines if needed,
+            # but usually the layout size handles this.
             for ln in self.lines:
                 t.append_text(self._style_line(ln))
                 t.append("\n")
+        
+        title = f"[bold {self.border_style}]▓ LOG ▓[/]" if compact else (
+            f"[bold {self.border_style}]▓ LIVE LOG ▓[/] "
+            f"[dim](journalctl -u {_esc(self.unit)} -f)[/]"
+        )
         return Panel(
             t,
-            title=(
-                f"[bold {self.border_style}]▓ LIVE LOG ▓[/] "
-                f"[dim](journalctl -u {_esc(self.unit)} -f)[/]"
-            ),
+            title=title,
             border_style=self.border_style,
             padding=(0, 1),
         )

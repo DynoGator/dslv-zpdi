@@ -68,29 +68,39 @@ def _wind_style(speed: float) -> str:
     return "bright_green"
 
 
-def _magneto_state(kp: float, bz: float) -> tuple[str, str]:
+_TREND_GLYPHS = {
+    "RAMP_UP":   ("▲", "bright_red"),
+    "PEAK":      ("⬢", "bright_red"),
+    "RAMP_DOWN": ("▼", "yellow"),
+    "STABLE":    ("◦", "bright_green"),
+}
+
+
+def _magneto_state(kp: float, bz: float, trend: str = "STABLE") -> tuple[str, str, str]:
+    glyph, trend_sty = _TREND_GLYPHS.get(trend, ("?", "dim"))
     if math.isnan(kp):
-        return "?", "dim"
+        return "?", "dim", glyph
     if kp >= 7 or (not math.isnan(bz) and bz <= -15):
-        return "COMPRESSED · STORM", "bright_red"
+        return "COMPRESSED · STORM", "bright_red", glyph
     if kp >= 5 or (not math.isnan(bz) and bz <= -8):
-        return "DISTURBED", "bright_yellow"
+        return "DISTURBED", "bright_yellow", glyph
     if kp >= 4:
-        return "UNSETTLED", "yellow"
-    return "STABLE", "bright_green"
+        return "UNSETTLED", "yellow", glyph
+    return "STABLE", "bright_green", glyph
 
 
-def _iono_state(flare: str, kp: float) -> tuple[str, str]:
+def _iono_state(flare: str, kp: float, trend: str = "STABLE") -> tuple[str, str, str]:
+    glyph, trend_sty = _TREND_GLYPHS.get(trend, ("?", "dim"))
     head = flare[0] if flare and flare != "—" else ""
     if head == "X":
-        return "BLACKOUT (HF)", "bright_red"
+        return "BLACKOUT (HF)", "bright_red", glyph
     if head == "M":
-        return "DEGRADED (sunlit)", "bright_yellow"
+        return "DEGRADED (sunlit)", "bright_yellow", glyph
     if not math.isnan(kp) and kp >= 6:
-        return "TID / SCINTILLATION", "bright_yellow"
+        return "TID / SCINTILLATION", "bright_yellow", glyph
     if head == "C":
-        return "MINOR ABSORPTION", "yellow"
-    return "NOMINAL", "bright_green"
+        return "MINOR ABSORPTION", "yellow", glyph
+    return "NOMINAL", "bright_green", glyph
 
 
 def _f107_style(sfu: float) -> str:
@@ -138,7 +148,7 @@ class SpaceWeatherPanel:
         self.border_style = border_style
         self.feed = get_feed()
 
-    def render(self) -> Panel:
+    def render(self, compact: bool = False) -> Panel:
         snap = self.feed.snapshot()
         kp = snap.get("kp_now", float("nan"))
         bz = snap.get("bz_nt", float("nan"))
@@ -150,72 +160,61 @@ class SpaceWeatherPanel:
         g_scale = snap.get("g_scale", "G0")
         r_scale = snap.get("r_scale", "R0")
 
-        magneto_text, magneto_sty = _magneto_state(kp, bz)
-        iono_text, iono_sty = _iono_state(flare, kp)
+        speed_trend = snap.get("speed_trend", "STABLE")
+        bt_trend = snap.get("bt_trend", "STABLE")
+        flux_trend = snap.get("flux_trend", "STABLE")
 
-        t = Table.grid(padding=(0, 2), expand=True)
+        magneto_text, magneto_sty, mag_glyph = _magneto_state(kp, bz, bt_trend)
+        iono_text, iono_sty, iono_glyph = _iono_state(flare, kp, flux_trend)
+        wind_glyph, _ = _TREND_GLYPHS.get(speed_trend, ("?", "dim"))
+
+        t = Table.grid(padding=(0, 1), expand=True)
         t.add_column(style="bright_cyan", justify="right", no_wrap=True)
         t.add_column(no_wrap=True)
 
         # Kp + sparkline
-        kp_str = f"{kp:4.2f}" if not math.isnan(kp) else "  --"
+        kp_str = f"{kp:4.1f}" if not math.isnan(kp) else " --"
         kp_line = Text()
         kp_line.append(f"{kp_str}", style=_kp_style(kp))
-        kp_line.append(f"  [{g_scale}]", style="bold " + _kp_style(kp))
-        kp_line.append("  ")
-        kp_line.append_text(_spark(snap.get("kp_history", []), width=16))
-        t.add_row("Kp idx", kp_line)
-
-        # Solar wind
-        speed_str = f"{speed:4.0f} km/s" if not math.isnan(speed) else "    -- km/s"
-        dens_str = f"{density:4.1f} p/cc" if not math.isnan(density) else "    -- p/cc"
-        wind_line = Text()
-        wind_line.append(speed_str, style=_wind_style(speed))
-        wind_line.append("  ")
-        wind_line.append(dens_str, style="bright_white")
-        t.add_row("Sol. Wind", wind_line)
-
-        # IMF
-        bt_str = f"{bt:4.1f}" if not math.isnan(bt) else "  --"
-        bz_str = f"{bz:+5.1f}" if not math.isnan(bz) else "   --"
-        imf_line = Text()
-        imf_line.append(f"Bt {bt_str} nT", style="bright_white")
-        imf_line.append("  ")
-        imf_line.append(f"Bz {bz_str} nT", style=_bz_style(bz))
-        t.add_row("IMF", imf_line)
-
-        # X-ray / flare class + R-scale
-        xray_line = Text()
-        xray_line.append(f"{flare}", style="bold " + _flare_style(flare))
-        xray_line.append(f"  [{r_scale}]", style=_flare_style(flare))
-        t.add_row("X-ray", xray_line)
-
-        # F10.7
-        f107_str = f"{f107:5.1f} sfu" if not math.isnan(f107) else "    -- sfu"
-        t.add_row("F10.7", Text(f107_str, style=_f107_style(f107)))
-
-        # Derived state
-        t.add_row("Magneto", Text(magneto_text, style="bold " + magneto_sty))
-        t.add_row("Ionos.", Text(iono_text, style="bold " + iono_sty))
-
-        # Status footer
-        last = snap.get("last_update", 0.0)
-        if last == 0.0:
-            stat_txt = "[dim]connecting to NOAA SWPC…[/]"
+        kp_line.append(f" [{g_scale}]", style="bold " + _kp_style(kp))
+        if not compact:
+            kp_line.append(" ")
+            kp_line.append_text(_spark(snap.get("kp_history", []), width=12))
+        if compact:
+            # Row 1: Kp + Flare + F10.7
+            f107_s = f"{f107:3.0f}" if not math.isnan(f107) else " --"
+            t.add_row("Kp", f"[{_kp_style(kp)}]{kp_str} [{g_scale}][/] [dim]•[/] {f107_s}f")
+            # Row 2: Wind + IMF + Flare
+            bz_str = f"{bz:+2.0f}" if not math.isnan(bz) else "--"
+            bt_str = f"{bt:2.0f}" if not math.isnan(bt) else "--"
+            speed_str = f"{speed:4.0f}k" if not math.isnan(speed) else "--"
+            t.add_row("Wnd", f"{speed_str} [dim]•[/] Bt{bt_str} Bz{bz_str}")
+            # Row 3: Mag + Ion + Flare
+            t.add_row("Env", f"[{magneto_sty}]{magneto_text[:6]}[/] [dim]•[/] [{iono_sty}]{iono_text[:6]}[/] [{_flare_style(flare)}]{flare[:2]}[/]")
         else:
-            age = int(time.time() - last)
-            err = snap.get("last_error")
-            ok_glyph = "◉" if not err else "○"
-            ok_sty = "bright_green" if not err else "yellow"
-            stat_txt = f"[{ok_sty}]{ok_glyph}[/] [dim]NOAA · {age}s ago"
-            if err:
-                stat_txt += f" · {_esc(str(err))[:40]}"
-            stat_txt += "[/]"
-        t.add_row("", Text.from_markup(stat_txt))
+            t.add_row("Magneto", Text(f"{mag_glyph} {magneto_text}", style="bold " + magneto_sty))
+            t.add_row("Ionosph", Text(f"{iono_glyph} {iono_text}", style="bold " + iono_sty))
 
+            # Status footer (compact)
+            last = snap.get("last_update", 0.0)
+            if last == 0.0:
+                stat_txt = "[dim]poll...[/]"
+            else:
+                age = int(time.time() - last)
+                err = snap.get("last_error")
+                ok_glyph = "◉" if not err else "○"
+                ok_sty = "bright_green" if not err else "yellow"
+                stat_txt = f"[{ok_sty}]{ok_glyph}[/] [dim]NOAA {age}s"
+                if err:
+                    stat_txt += f" !"
+                stat_txt += "[/]"
+            t.add_row("", Text.from_markup(stat_txt))
+
+        title = f"[bold {self.border_style}]▓ WX ▓[/]" if compact else f"[bold {self.border_style}]▓ WEATHER ▓[/]"
         return Panel(
             t,
-            title=f"[bold {self.border_style}]▓ SPACE WEATHER ▓[/]",
+            title=title,
             border_style=self.border_style,
             padding=(0, 1),
         )
+

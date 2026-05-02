@@ -47,7 +47,7 @@ class WaterfallCfg:
     mode: str = "SWEEP"
     center_hz: int = 100_000_000
     span_hz: int = 20_000_000
-    history: int = 12
+    history: int = 24
 
 
 @dataclass
@@ -59,7 +59,7 @@ class NotificationsCfg:
 
 @dataclass
 class LogsCfg:
-    max_lines: int = 14
+    max_lines: int = 10
 
 
 @dataclass

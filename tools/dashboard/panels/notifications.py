@@ -38,7 +38,7 @@ class NotificationPanel:
             self._last_glitch = now
             self.push("GLITCH", pick_glitch())
 
-    def render(self) -> Panel:
+    def render(self, compact: bool = False) -> Panel:
         self.tick_humor()
         t = Text()
         if not self.items:
@@ -46,7 +46,8 @@ class NotificationPanel:
         else:
             for ts, lvl, msg in self.items:
                 age = int(time.time() - ts)
-                tag = f"[{age:3d}s]"
+                if age > 999: age = 999
+                tag = f"[{age:3d}s]" if not compact else f"{age:2d}s"
                 if lvl == "ERROR" or lvl == "VIOLATION":
                     sty = "bright_red"
                     icon = "✗"
@@ -62,13 +63,16 @@ class NotificationPanel:
                 else:
                     sty = "bright_green"
                     icon = "·"
-                t.append(f" {icon} ", style=sty)
+                t.append(f"{icon}", style=sty)
                 t.append(f"{tag} ", style="dim")
-                t.append(f"{lvl:<7} ", style=f"bold {sty}")
+                if not compact:
+                    t.append(f"{lvl:<7} ", style=f"bold {sty}")
                 t.append(f"{msg}\n", style=sty)
+        
+        title = f"[bold {self.border_style}]▓ NOTE ▓[/]" if compact else f"[bold {self.border_style}]▓ NOTIFICATIONS ▓[/]"
         return Panel(
             t,
-            title=f"[bold {self.border_style}]▓ NOTIFICATIONS ▓[/]",
+            title=title,
             border_style=self.border_style,
             padding=(0, 1),
         )
