@@ -247,7 +247,10 @@ class Dashboard:
             self.hw_p = HardwarePanel(border_style=cfg.theme.hardware_border)
             self._panels["hardware"] = self.hw_p
         wf_cfg = cfg.waterfall
-        wf_width = max(40 if self.compact else 60, shutil.get_terminal_size().columns - 6)
+        try:
+            wf_width = max(40 if self.compact else 60, shutil.get_terminal_size().columns - 6)
+        except Exception:
+            wf_width = 80
         if getattr(cfg.panels, "waterfall", True):
             self.wf_p = WaterfallPanel(
                 width=wf_width,
@@ -295,6 +298,7 @@ class Dashboard:
 
         self._wf_modes = ["SWEEP", "NARROW", "SCOPE"]
         self._wf_idx = 0
+        self._live: Any = None
 
     # keyboard raw mode ---
     def _enter_raw(self):
@@ -398,7 +402,8 @@ class Dashboard:
             raise KeyboardInterrupt
         if k == " ":
             self.paused = not self.paused
-            self.note_p.push("INFO", "paused" if self.paused else "resumed")
+            if "notifications" in self._panels:
+                self._panels["notifications"].push("INFO", "paused" if self.paused else "resumed")
         elif k in ("m", "M"):
             if "waterfall" in self._panels:
                 self._wf_idx = (self._wf_idx + 1) % len(self._wf_modes)
@@ -417,6 +422,8 @@ class Dashboard:
                 self.show_banner = self._banner_pref
                 panels = getattr(self, "_panels_cfg", None)
                 self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, panels)
+                if self._live is not None:
+                    self._live.update(self.layout)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
         elif k in ("c", "C"):
@@ -424,9 +431,11 @@ class Dashboard:
                 self.compact = not self.compact
                 self.show_banner = self._banner_pref
                 if "waterfall" in self._panels:
-                    self.wf_p.compact = self.compact
+                    self._panels["waterfall"].compact = self.compact
                 panels = getattr(self, "_panels_cfg", None)
                 self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, panels)
+                if self._live is not None:
+                    self._live.update(self.layout)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"compact: {'ON' if self.compact else 'OFF'}")
         elif k == "[":
@@ -515,6 +524,38 @@ class Dashboard:
                 wf.zoom(2.0)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"zoom out: {wf.span_hz / 1e6:.1f}MHz")
+        elif k in ("g", "G"):
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].cycle_gain()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+        elif k in ("v", "V"):
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].cycle_vga_gain()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"vga gain: {self._panels['waterfall'].vga_gain}dB")
+        elif k in ("d", "D"):
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].cycle_modulation()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
+        elif k in ("a", "A"):
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].toggle_amp()
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"amp: {'ON' if self._panels['waterfall'].amp_enabled else 'off'}")
+        elif k == ",":
+            if "waterfall" in self._panels:
+                wf = self._panels["waterfall"]
+                wf.tune(-int(wf.span_hz * 0.01))
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"tune fine-: {wf.center_hz / 1e6:.3f}MHz")
+        elif k == ".":
+            if "waterfall" in self._panels:
+                wf = self._panels["waterfall"]
+                wf.tune(int(wf.span_hz * 0.01))
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"tune fine+: {wf.center_hz / 1e6:.3f}MHz")
 
     def run(self):
         self._boot_animation()
@@ -524,7 +565,8 @@ class Dashboard:
             self._panels["notifications"].push("INFO", "dashboard online")
         self._enter_raw()
         try:
-            with Live(self.layout, console=self.console, refresh_per_second=max(1, int(1 / self.refresh)), screen=True) as live:
+            self._live = Live(self.layout, console=self.console, refresh_per_second=max(1, int(1 / self.refresh)), screen=True)
+            with self._live:
                 while True:
                     k = self._read_key()
                     if k:

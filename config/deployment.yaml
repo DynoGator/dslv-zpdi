@@ -1,4 +1,4 @@
-version: 1
+version: "1"
 project: DSLV-ZPDI
 environment: field
 

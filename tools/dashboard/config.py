@@ -8,6 +8,7 @@ the search path.
 from __future__ import annotations
 
 import os
+import sys
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -112,7 +113,8 @@ def load_config(path: Path | None = None) -> DashboardConfig:
     try:
         with open(path, "rb") as f:
             data = tomllib.load(f)
-    except Exception:
+    except Exception as e:
+        print(f"[dslv-zpdi] dashboard config error ({path}): {e}", file=sys.stderr)
         return cfg
 
     dash = data.get("dashboard", {})
@@ -126,5 +128,17 @@ def load_config(path: Path | None = None) -> DashboardConfig:
     _apply(dash.get("notifications", {}), cfg.notifications)
     _apply(dash.get("logs", {}), cfg.logs)
     _apply(dash.get("keybindings", {}), cfg.keys)
+
+    # Enforce safe bounds so bad config values don't crash the dashboard.
+    cfg.refresh = max(0.1, float(cfg.refresh))
+    cfg.waterfall.history = max(10, int(cfg.waterfall.history))
+    cfg.waterfall.center_hz = max(1_000_000, int(cfg.waterfall.center_hz))
+    cfg.waterfall.span_hz = max(100_000, min(500_000_000, int(cfg.waterfall.span_hz)))
+    cfg.notifications.humor_every_s = max(1.0, float(cfg.notifications.humor_every_s))
+    cfg.notifications.glitch_every_s = max(1.0, float(cfg.notifications.glitch_every_s))
+    cfg.notifications.max_items = max(1, int(cfg.notifications.max_items))
+    cfg.logs.max_lines = max(1, int(cfg.logs.max_lines))
+    if cfg.waterfall.mode not in ("SWEEP", "NARROW", "SCOPE"):
+        cfg.waterfall.mode = "SWEEP"
 
     return cfg

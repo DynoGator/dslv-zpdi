@@ -158,17 +158,21 @@ class HackrfSweepStream:
 
     def stop(self):
         self._stop.set()
-        if self._proc is not None:
-            try:
-                self._proc.terminate()
-                self._proc.wait(timeout=1.0)
-            except Exception:
-                try:
-                    self._proc.kill()
-                except Exception:
-                    pass
+        proc = self._proc
+        thread = self._thread
         self._proc = None
         self._thread = None
+        if proc is not None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=1.0)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+        if thread is not None:
+            thread.join(timeout=2.0)
 
     def _reader(self):
         assert self._proc is not None
@@ -409,13 +413,16 @@ class WaterfallPanel:
             )
 
     def _normalize(self, row: list[float]) -> list[float]:
-        return [max(0.0, min(1.0, (v - self.dbm_floor) / (self.dbm_ceil - self.dbm_floor))) for v in row]
+        span = self.dbm_ceil - self.dbm_floor
+        if span <= 0:
+            return [0.5] * len(row)
+        return [max(0.0, min(1.0, (v - self.dbm_floor) / span)) for v in row]
 
     def _sim_row(self) -> list[float]:
         t = time.time() - self._t0
         row = []
         for i in range(self.width):
-            x = i / (self.width - 1)
+            x = i / max(1, self.width - 1)
             v = 0.08 + 0.05 * random.random()
             for base_x, amp, drift in self._sim_carriers:
                 cx = (base_x + drift * t) % 1.0
@@ -541,7 +548,9 @@ class WaterfallPanel:
             t.append("█", style=_heat(v))
         return t
 
-    def render(self) -> Panel:
+    def render(self, compact: bool | None = None) -> Panel:
+        if compact is not None:
+            self.compact = compact
         self.tick()
         lines = Text()
         center_mhz = self.center_hz / 1e6

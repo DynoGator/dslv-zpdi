@@ -3,12 +3,15 @@ SPEC-012 - Runtime Configuration Loader
 Loads config/deployment.yaml with Pydantic validation and DSLV_* env overrides.
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
+
+_log = logging.getLogger(__name__)
 
 
 class ClockDiscipline(BaseModel):
@@ -103,29 +106,38 @@ def _env_override(config: Config) -> Config:
         config.paths["baseline_state"] = env_map["baseline_state_path"]
     if "baseline_hours" in env_map:
         try:
-            config.spec009.baseline_duration_hours = int(env_map["baseline_hours"])
+            config.spec009.baseline_duration_hours = max(1, int(env_map["baseline_hours"]))
         except ValueError:
-            pass
+            _log.warning("DSLV_BASELINE_HOURS=%r is not a valid integer — using default", env_map["baseline_hours"])
     if "min_baseline_samples" in env_map:
         try:
-            config.spec009.min_baseline_samples = int(env_map["min_baseline_samples"])
+            config.spec009.min_baseline_samples = max(1, int(env_map["min_baseline_samples"]))
         except ValueError:
-            pass
+            _log.warning("DSLV_MIN_BASELINE_SAMPLES=%r is not a valid integer — using default", env_map["min_baseline_samples"])
     if "center_freq_hz" in env_map:
         try:
-            config.pipeline.center_freq_hz = float(env_map["center_freq_hz"])
+            v = float(env_map["center_freq_hz"])
+            if v <= 0:
+                raise ValueError("must be positive")
+            config.pipeline.center_freq_hz = v
         except ValueError:
-            pass
+            _log.warning("DSLV_CENTER_FREQ_HZ=%r is invalid — using default", env_map["center_freq_hz"])
     if "sample_rate_hz" in env_map:
         try:
-            config.pipeline.sample_rate_hz = float(env_map["sample_rate_hz"])
+            v = float(env_map["sample_rate_hz"])
+            if v <= 0:
+                raise ValueError("must be positive")
+            config.pipeline.sample_rate_hz = v
         except ValueError:
-            pass
+            _log.warning("DSLV_SAMPLE_RATE_HZ=%r is invalid — using default", env_map["sample_rate_hz"])
     if "ingest_interval_sec" in env_map:
         try:
-            config.pipeline.ingest_interval_sec = float(env_map["ingest_interval_sec"])
+            v = float(env_map["ingest_interval_sec"])
+            if v <= 0:
+                raise ValueError("must be positive")
+            config.pipeline.ingest_interval_sec = v
         except ValueError:
-            pass
+            _log.warning("DSLV_INGEST_INTERVAL_SEC=%r is invalid — using default", env_map["ingest_interval_sec"])
 
     return config
 
