@@ -30,7 +30,9 @@ from dslv_zpdi.core.exceptions import (
     HardwareInitializationError,
 )
 from .hal_base import BaseHAL
+from .nmea_stream import NmeaStream
 from .payload import IngestionPayload, SensorModality
+from .pps_listener import PpsListener
 
 # SoapySDR support - hardware-agnostic SDR driver layer
 # Install: sudo apt install soapysdr-module-hackrf python3-soapysdr
@@ -44,6 +46,27 @@ except ImportError:
 # Fallback to pyhackrf if SoapySDR not available
 try:
     import hackrf as pyhackrf
+    from ctypes import POINTER, c_int
+
+    # pyhackrf 0.2.0 bug: hackrf_device_list_open uses 'arg_types' (ignored by
+    # ctypes) instead of 'argtypes'. Without argtypes, ctypes doesn't marshal
+    # the pointer arguments, causing SEGV when libusb state has been touched by
+    # SoapySDR or other libraries. Fix it at import time.
+    pyhackrf.libhackrf.hackrf_device_list_open.argtypes = [
+        POINTER(pyhackrf.hackrf_device_list_t),
+        c_int,
+        POINTER(pyhackrf.p_hackrf_device),
+    ]
+    # Also wrap hackrf_device_list() to call hackrf_init() first — pyhackrf
+    # skips this, which can leave libhackrf's libusb context uninitialised.
+    _pyhackrf_orig_device_list = pyhackrf.hackrf_device_list
+    def _pyhackrf_device_list_safe():
+        pyhackrf.libhackrf.hackrf_init()
+        return _pyhackrf_orig_device_list()
+    pyhackrf.hackrf_device_list = _pyhackrf_device_list_safe
+
+    # Silence pyhackrf's debug print in __del__ (emitted on every GC cycle)
+    pyhackrf.HackRF.__del__ = lambda self: self.close()
 
     PYHACKRF_AVAILABLE = True
 except ImportError:
@@ -69,20 +92,33 @@ class HardwareHAL(BaseHAL):
     Pulse width is 100 ms; use `assert_falling_edge=0` in dtoverlay.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        pps_device: str = "/dev/pps0",
+        nmea_port: str = "/dev/ttyACM0",
+    ):
         """
         SPEC-005A.HAL-HW.INIT — Initialize HAL with mandatory clock verification.
 
         Implements "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
         The HackRF will silently fail back to internal oscillator if GPSDO
         reference is lost. We must verify external clock before any ingestion.
+
+        Args:
+            pps_device: Path to kernel PPS character device (default /dev/pps0).
+                        GPIO 18 is claimed by the pps-gpio kernel driver; access
+                        goes through this device, not libgpiod.
+            nmea_port:  Serial port for LBE-1421 NMEA telemetry (default /dev/ttyACM0).
         """
         self.sdr_device = None
         self._clock_verified = False
-        # PPS jitter tracking: ring buffer of last N PPS timestamps for
-        # statistically valid interval-jitter computation.
-        self._pps_history: list[int] = []
-        self._pps_history_max = 16
+
+        # Background listeners — start before SDR init so PPS data accumulates
+        # while the potentially slow HackRF probe runs.
+        self._pps = PpsListener(device=pps_device)
+        self._pps.start()
+        self._nmea = NmeaStream(port=nmea_port)
+        self._nmea.start()
 
         initialized = False
         if SOAPYSDR_AVAILABLE:
@@ -185,7 +221,7 @@ class HardwareHAL(BaseHAL):
         try:
             result = subprocess.run(
                 [sys.executable, "-c",
-                 "import hackrf; d = hackrf.HackRF(); d.setup(); d.close(); print('ok')"],
+                 "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); assert d.device_opened; d.close(); print('ok')"],
                 capture_output=True,
                 timeout=10,
                 text=True,
@@ -197,74 +233,122 @@ class HardwareHAL(BaseHAL):
     def _verify_pyhackrf_clock(self):
         """
         Fallback clock verification for pyhackrf (non-SoapySDR) installations.
+
+        pyhackrf does not expose a clock_source attribute — HackRF has no
+        software-readable register to confirm external vs. internal lock.
+        External clock lock is established by hardware wiring (GPSDO 10 MHz
+        SMA → HackRF CLKIN); GPS lock is verified at ingest time via NMEA.
+        This method only confirms the device is accessible and initialises
+        cleanly without SEGV risk.
+
+        Retries up to 3 times with 2 s delay to handle brief hackrf_sweep
+        windows that may hold the device at pipeline startup.
         """
-        if not self._probe_pyhackrf_subprocess():
+        _max_retries = 3
+        for attempt in range(_max_retries):
+            if self._probe_pyhackrf_subprocess():
+                break
+            if attempt < _max_retries - 1:
+                print(f"[!] HackRF probe attempt {attempt + 1}/{_max_retries} failed (device busy?) — retrying in 2 s")
+                time.sleep(2)
+        else:
             raise ClockVerificationError(
-                "HackRF not accessible via pyhackrf (device unavailable, in use, or permissions). "
+                "HackRF not accessible via pyhackrf after 3 attempts (device unavailable, in use, or permissions). "
                 "Verify HackRF is connected and udev rules are applied. "
                 "Subprocess probe blocked to prevent SEGV in main process."
             )
         try:
             device = pyhackrf.HackRF()
-            device.setup()
-
-            # Attempt to verify external clock — fail closed if unknown/internal
-            actual = getattr(device, "clock_source", "unknown")
-            if actual != "external":
-                device.close()
-                raise ClockVerificationError(
-                    f"Clock source: {actual}. Expected: external. "
-                    "Verify GPSDO 10 MHz SMA → HackRF CLKIN connection."
-                )
-
             device.close()
             self._clock_verified = True
-
-        except ClockVerificationError:
-            raise
         except Exception as e:
-            raise ClockVerificationError(f"Could not verify clock source: {e}") from e
+            raise ClockVerificationError(f"Could not initialize HackRF via pyhackrf: {e}") from e
 
     def verify_tier1_phase_lock(self) -> dict:
         """
         ARCH-PHASE-2A-PIVOT §5.1 — Explicit phase-lock verification.
 
-        Forces and validates metrology-grade phase lock.
-        Must be called before initializing the Kuramoto Coherence Engine.
+        Replaces the removed pyhackrf clock_source attribute check (that
+        attribute does not exist in the pyhackrf API and always returned
+        "unknown", unconditionally blocking hardware mode).
+
+        Phase lock is verified by correlating two independent signals:
+          1. PPS regularity — ring buffer RMS jitter from PpsListener confirms
+             the GPSDO is outputting stable 1 Hz pulses (GPS-locked oscillator).
+          2. NMEA GPS fix — GGA sentence from the LBE-1421 USB-C serial port
+             confirms the GPSDO has satellite lock and is not in holdover.
+
+        The 10 MHz CLKIN → HackRF connection cannot be verified in software
+        (HackRF has no readable register for external-vs-internal clock state);
+        it is a hardware wiring assertion documented in SPEC-004A.2.
+        With SoapySDR, setClockSource("external") is called as a best-effort
+        assertion of the desired state, not a confirmation of lock.
 
         Returns:
-            Dict with lock status
+            Dict with lock status, PPS jitter, GPS fix quality, and any warnings.
         """
-        result = {
+        result: dict = {
             "phase_lock_verified": False,
-            "clock_source": "unknown",
+            "clock_source": "external_wired",   # asserted by SMA wiring, not software
             "driver": "unknown",
+            "pps_rms_jitter_ns": float("inf"),
+            "pps_history_len": 0,
+            "gps_fix": False,
+            "satellites_used": 0,
+            "hdop": 99.9,
             "warnings": [],
         }
 
+        # ── 1. PPS regularity ────────────────────────────────────────────── #
+        pps_snap = self._pps.snapshot()
+        result["pps_rms_jitter_ns"] = pps_snap["rms_jitter_ns"]
+        result["pps_history_len"] = pps_snap["history_len"]
+
+        if pps_snap["history_len"] < 2:
+            result["warnings"].append(
+                f"PPS ring buffer has {pps_snap['history_len']} sample(s) — "
+                "need ≥2 for jitter computation; waiting for GPSDO pulses"
+            )
+
+        # ── 2. NMEA GPS fix ──────────────────────────────────────────────── #
+        fix = self._nmea.latest()
+        result["gps_fix"] = fix["gps_fix"]
+        result["satellites_used"] = fix.get("satellites_used", 0)
+        result["hdop"] = fix.get("hdop", 99.9)
+
+        if not fix["gps_fix"]:
+            result["warnings"].append(
+                "NMEA: no GPS fix — GPSDO still acquiring or serial port not connected"
+            )
+        fix_age = time.time() - fix.get("ts", 0.0)
+        if fix["ts"] > 0 and fix_age > 10.0:
+            result["warnings"].append(
+                f"NMEA fix data is {fix_age:.0f} s stale — serial stream may be interrupted"
+            )
+
+        # ── 3. SoapySDR clock assertion (best-effort if driver is available) #
         if SOAPYSDR_AVAILABLE and self.sdr_device:
             try:
                 self._force_external_clock_soapy()
-                result["phase_lock_verified"] = True
                 result["clock_source"] = self.sdr_device.getClockSource()
                 result["driver"] = "SoapySDR"
-            except Exception as e:
-                result["warnings"].append(f"Clock verification failed: {e}")
+            except Exception as exc:
+                result["warnings"].append(f"SoapySDR clock assertion failed: {exc}")
         elif PYHACKRF_AVAILABLE:
-            if not self._probe_pyhackrf_subprocess():
-                result["warnings"].append("pyhackrf probe failed — HackRF inaccessible or SEGV risk")
-            else:
-                try:
-                    device = pyhackrf.HackRF()
-                    device.setup()
-                    result["clock_source"] = getattr(device, "clock_source", "unknown")
-                    result["phase_lock_verified"] = result["clock_source"] == "external"
-                    result["driver"] = "pyhackrf"
-                    device.close()
-                except Exception as e:
-                    result["warnings"].append(f"pyhackrf verification failed: {e}")
-        else:
-            result["warnings"].append("No SDR driver available (SoapySDR or pyhackrf)")
+            result["driver"] = "pyhackrf"
+            # pyhackrf exposes no clock_source attribute. External clock is
+            # the GPSDO 10 MHz SMA → HackRF CLKIN wiring; verified indirectly
+            # by GPS fix and PPS presence above.
+
+        # ── 4. Decision ──────────────────────────────────────────────────── #
+        # < 1 ms RMS jitter is a very conservative threshold; a healthy GPSDO
+        # delivers sub-microsecond stability. The looser bound accommodates
+        # scheduling latency in the PpsListener poll() wakeup.
+        jitter_ok = (
+            result["pps_history_len"] >= 2
+            and result["pps_rms_jitter_ns"] < 1_000_000.0
+        )
+        result["phase_lock_verified"] = jitter_ok and result["gps_fix"]
 
         return result
 
@@ -295,54 +379,31 @@ class HardwareHAL(BaseHAL):
             IngestionPayload with PPS timing metadata
         """
         mono_ns = time.monotonic_ns()
-        pps_jitter_ns = float("inf")
-        pps_time_ns = 0
-        pps_offset_ns = float("inf")
 
-        # Read actual PPS timestamp from kernel via ioctl (SPEC-004A.3)
-        try:
-            fd = os.open(pps_device, os.O_RDONLY)
-            try:
-                # PPS_FETCH ioctl: returns (sec, nsec, seq, flags)
-                buf = fcntl.ioctl(fd, 0x80047001, struct.pack("llll", 0, 0, 0, 0))
-                sec, nsec, _, _ = struct.unpack("llll", buf)
-                pps_time_ns = sec * 1_000_000_000 + nsec
-                mono_now_ns = time.monotonic_ns()
-                # Offset is the sub-second difference, centred around zero so
-                # that offsets near 1 s wrap correctly (e.g. 999 ms → -1 ms).
-                raw_delta = mono_now_ns - pps_time_ns
-                pps_offset_ns = float(
-                    ((raw_delta + 500_000_000) % 1_000_000_000) - 500_000_000
-                )
-            finally:
-                os.close(fd)
-        except (OSError, IOError, struct.error):
-            pps_jitter_ns = float("inf")
+        # Pull from PpsListener ring buffer — background thread handles all
+        # ioctl and poll() work; this call is non-blocking.
+        pps_snap = self._pps.snapshot()
+        pps_jitter_ns = pps_snap["rms_jitter_ns"]
+        history = pps_snap["history"]
 
-        # Track PPS timestamps in a ring buffer for interval-jitter computation.
-        # Jitter = stdev of observed intervals vs ideal 1 s interval.
-        if pps_time_ns > 0:
-            self._pps_history.append(pps_time_ns)
-            if len(self._pps_history) > self._pps_history_max:
-                self._pps_history.pop(0)
-            if len(self._pps_history) >= 2:
-                intervals = [
-                    self._pps_history[i] - self._pps_history[i - 1]
-                    for i in range(1, len(self._pps_history))
-                ]
-                # Filter pathological intervals (missed pulses > 2 s or < 0.5 s)
-                valid = [iv for iv in intervals if 500_000_000 <= iv <= 2_000_000_000]
-                if valid:
-                    arr = np.array(valid, dtype=np.float64)
-                    deviations = np.abs(arr - 1_000_000_000.0)
-                    pps_jitter_ns = float(np.std(deviations))
+        if history:
+            mono_edge_ns, pps_time_ns = history[-1]
+            mono_now_ns = time.monotonic_ns()
+            # Sub-second offset of the system monotonic clock relative to the
+            # last PPS edge. Wrapped to ±500 ms so offsets near a second
+            # boundary (e.g. 999 ms elapsed) map correctly to ~0 ms.
+            raw_delta = mono_now_ns - mono_edge_ns
+            pps_offset_ns = float(
+                ((raw_delta + 500_000_000) % 1_000_000_000) - 500_000_000
+            )
+        else:
+            pps_time_ns = 0
+            pps_offset_ns = float("inf")
 
-        # GPS lock status is inferred from valid PPS signal
-        # GPSDO provides continuous PPS only when GPS-locked
-        gps_locked = pps_time_ns > 0 and pps_jitter_ns < 1_000_000_000.0
-
-        # SPEC-004A.3-NMEA: integrate LBE-1421 telemetry
-        nmea = self.verify_nmea_telemetry()
+        # GPS lock: PPS arriving regularly AND NMEA fix confirmed.
+        # NmeaStream.latest() is non-blocking — returns cached last sentence.
+        gps_locked = pps_snap["history_len"] >= 2 and pps_jitter_ns < 1_000_000_000.0
+        nmea = self._nmea.latest()
         gps_locked = gps_locked and nmea.get("gps_fix", False)
 
         payload = IngestionPayload(
@@ -384,23 +445,18 @@ class HardwareHAL(BaseHAL):
 
     # pylint: disable=arguments-differ, too-many-arguments, too-many-positional-arguments, too-many-locals
 
-    def wait_for_pps_edge(self, pps_device: str = '/dev/pps0', timeout_s: float = 2.0):
+    def wait_for_pps_edge(self, pps_device: str = "/dev/pps0", timeout_s: float = 2.0) -> bool:
         """
-        SPEC-004A.4-SYNC — Block until the next PPS rising edge.
-        Used to align capture windows across distributed nodes.
+        SPEC-004A.4-SYNC — Block the calling thread until the next PPS rising edge.
+
+        Delegates to PpsListener which runs select.poll() on /dev/ppsX in its
+        own daemon thread. This avoids opening and closing the fd on every call
+        and never races with the listener's own poll loop.
+
+        The pps_device argument is accepted for API compatibility; the device
+        used is the one passed to __init__ (default /dev/pps0).
         """
-        try:
-            import select
-            fd = os.open(pps_device, os.O_RDONLY)
-            # PPS devices support poll/select for edge triggers
-            poller = select.poll()
-            poller.register(fd, select.POLLIN)
-            events = poller.poll(timeout_s * 1000)
-            os.close(fd)
-            return len(events) > 0
-        except Exception as e:
-            print(f'[!] PPS Edge wait failed: {e}')
-            return False
+        return self._pps.wait_for_edge(timeout_s=timeout_s)
 
     def ingest_sdr(
         self,
@@ -580,7 +636,12 @@ class HardwareHAL(BaseHAL):
         """
         try:
             hackrf_device = pyhackrf.HackRF()
-            hackrf_device.setup()
+
+            # AMP LOCKOUT — HackRF 1 front-end amp is blown; parts on order.
+            try:
+                hackrf_device.set_amp_enable(0)
+            except Exception:
+                pass
 
             # Configure frequency and sample rate
             hackrf_device.set_freq(int(center_freq))
@@ -830,8 +891,8 @@ class HardwareHAL(BaseHAL):
     def get_holdover_stats(self) -> dict:
         """
         SPEC-004A.4-HOLDOVER — Retrieve holdover tracking stats.
-        
-        Leo Bodnar LBE-1421 TCXO high-Q oscillator ensures stability 
+
+        Leo Bodnar LBE-1421 TCXO high-Q oscillator ensures stability
         (1 × 10⁻¹² @ 1000 s) during GPS loss.
         """
         return {
@@ -840,3 +901,8 @@ class HardwareHAL(BaseHAL):
             "last_sync_utc": time.time(),
             "no_frequency_jumps": True
         }
+
+    def shutdown(self) -> None:
+        """Stop background PpsListener and NmeaStream daemon threads."""
+        self._pps.stop()
+        self._nmea.stop()

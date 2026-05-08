@@ -369,8 +369,9 @@ class WaterfallPanel:
         self.modulation = mods[(i + 1) % len(mods)]
 
     def toggle_amp(self):
-        self.amp_enabled = not self.amp_enabled
-        self._restart_stream_if_running()
+        # AMP LOCKOUT — HackRF 1 front-end amp is blown; parts on order.
+        # Do not enable under any circumstances until the amp is replaced.
+        pass
 
     def resize(self, width: int):
         w = max(20, int(width))
@@ -617,7 +618,7 @@ class WaterfallPanel:
             err_suffix = f" · err: {_esc(err)}" if (self._want_real and err) else ""
             gain_info = f" · floor {self.dbm_floor:.0f} ceil {self.dbm_ceil:.0f}"
             gain_suffix = (
-                f" · lna {self.lna_gain}dB vga {self.vga_gain}dB amp {'ON' if self.amp_enabled else 'off'}"
+                f" · lna {self.lna_gain}dB vga {self.vga_gain}dB AMP-LOCK"
                 if self._want_real
                 else ""
             )

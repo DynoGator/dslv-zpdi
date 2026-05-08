@@ -185,7 +185,13 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
             if status_b:
                 layout["status_b"].split_row(*[Layout(name=n, ratio=1) for n in status_b])
         
-        if bottom and layout.get("bottom") is not None:
+        def _get_l(l, n):
+            try:
+                return l[n]
+            except KeyError:
+                return None
+        
+        if bottom and _get_l(layout, "bottom") is not None:
             layout["bottom"].split_row(*[Layout(name=n, ratio=1) for n in bottom])
         
         return layout
@@ -540,10 +546,10 @@ class Dashboard:
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
         elif k in ("a", "A"):
-            if "waterfall" in self._panels:
-                self._panels["waterfall"].toggle_amp()
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"amp: {'ON' if self._panels['waterfall'].amp_enabled else 'off'}")
+            if "notifications" in self._panels:
+                self._panels["notifications"].push(
+                    "WARN", "AMP LOCKED OUT — HackRF 1 amp blown, parts on order"
+                )
         elif k == ",":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]

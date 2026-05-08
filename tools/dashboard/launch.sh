@@ -12,6 +12,11 @@ export PYTHONIOENCODING=utf-8
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 
+# Waterfall defaults to SIM mode so the pipeline (pyhackrf) can hold the
+# HackRF exclusively. Press 'r' in the dashboard to toggle real-SDR on;
+# note that doing so will compete with the pipeline's SDR ingestion path.
+# DSLV_DASHBOARD_REAL_SDR is intentionally NOT set here.
+
 # Settle pause: terminal emulator may need a moment to finish initialising
 # before the Python TUI takes over the pty.
 sleep 3

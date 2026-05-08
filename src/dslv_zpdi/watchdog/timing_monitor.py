@@ -108,12 +108,18 @@ class TimingMonitor:
             )
             if result.returncode == 0:
                 for line in result.stdout.splitlines():
-                    if "RMS offset" in line:
-                        # Example: RMS offset     : 0.000000021 s
+                    # Use current system clock offset, not the historical RMS.
+                    # "System time" reflects the live offset; "RMS offset" is a
+                    # running average that stays large for minutes after initial lock.
+                    # Example: System time     : 0.000051829 seconds fast of NTP time
+                    if "System time" in line:
                         parts = line.split(":")
                         if len(parts) > 1:
                             val_str = parts[1].strip().split()[0]
-                            return float(val_str) * 1e9
+                            try:
+                                return abs(float(val_str)) * 1e9
+                            except ValueError:
+                                continue
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError, ValueError):
             pass  # Expected if chronyc is not running or output is unparsable
         return float("inf")
