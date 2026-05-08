@@ -26,3 +26,7 @@ CLAUDE-HOME/
 # user-level runtime config (example stays in tree)
 config/sensor_location.yaml
 config/email.yaml
+
+# dashboard stdout capture files (runtime artifacts)
+tools/dash_out.txt
+tools/dash_out_headless.txt
