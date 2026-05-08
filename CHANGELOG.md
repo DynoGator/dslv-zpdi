@@ -1,4 +1,34 @@
 # Changelog
+
+## [4.6.1] - 2026-05-08 · Tier 1 Operational Hardening
+
+### Fixed
+- **Timing monitor false SPEC-004A.3 violations** — `TimingMonitor._read_pps_jitter()`
+  now reads chronyc `System time` (current instantaneous offset) instead of `RMS offset`
+  (historical running average). RMS offset stays at 6–8 seconds during initial PPS lock
+  acquisition, causing constant false violations even with a healthy GPSDO.
+- **Double dashboard/waterfall instances on boot** — Two autostart entries
+  (`dslv-zpdi.desktop` + `dslv-zpdi-dashboard.desktop`) both called `launch_project.sh`,
+  producing duplicate windows and a second pipeline restart loop.
+  `dslv-zpdi-dashboard.desktop` disabled (`X-GNOME-Autostart-enabled=false`).
+- **HackRF device contention (pipeline vs. dashboard)** — `launch.sh` was exporting
+  `DSLV_DASHBOARD_REAL_SDR=1`, causing `hackrf_sweep` to start immediately and hold the
+  HackRF exclusively, forcing the pipeline into SimulatedHAL on every service restart.
+  Removed the auto-export; waterfall defaults to SIM, users toggle real-SDR with `r`.
+- **HackRF probe retry** — `_verify_pyhackrf_clock()` now retries 3× with 2 s delay
+  before falling back to SimulatedHAL, surviving brief contention windows at startup.
+
+### Security / Hardware
+- **HackRF amplifier hard lockout** — `WaterfallPanel.toggle_amp()` is now a permanent
+  no-op; `_ingest_pyhackrf()` explicitly calls `set_amp_enable(0)` before every SDR
+  capture; dashboard `a` key shows a hardware-fault warning instead of toggling.
+  HackRF 1 front-end amp is blown — parts on order.
+
+### System
+- **GNOME Keyring auto-unlock** — Added `~/.config/autostart/keyring-unlock.desktop` to
+  unlock the keyring via `gnome-keyring-daemon --replace --unlock` on auto-login sessions.
+  Added `pam_gnome_keyring.so auto_start` to `/etc/pam.d/lightdm-autologin`.
+
 ## [4.6.0] - 2026-04-27
 
 ### Fixed
