@@ -114,11 +114,37 @@ gnome-keyring was locked by default, requiring a manual password entry on each b
 
 ---
 
+## Chrony PPS Convergence Note
+
+During this session, the GPSDO PPS source caused chrony to make a series of 1-second step
+corrections (`Last offset: -1.061s, +0.395s, +0.525s`). The root cause is PPS second-boundary
+disambiguation: when the system clock has drifted >500 ms from UTC, chrony can assign a PPS
+pulse to the wrong second, triggering a 1-second correction that creates the opposite error.
+
+**Manual `chronyc makestep` commands during this condition made the oscillation worse.**
+The fix was a clean `systemctl restart chronyd` followed by leaving chrony alone to converge.
+
+After the restart, chrony used NTP (stratum 2, ~4 µs accuracy after first poll) to set the
+correct second, then PPS re-locked at stratum 1. The system time is slewing down at ~19 ns/s;
+expect `timing_healthy: true` within 10–15 minutes of the final chronyd restart.
+
+**Recommendation for future:** Add NMEA source to chrony config to prevent second ambiguity:
+```
+refclock NMEA /dev/ttyACM0 baud 9600 offset 0.5 poll 4 refid GPS noselect
+refclock PPS /dev/pps0 lock GPS poll 4 prefer trust
+```
+This uses the GPSDO's NMEA serial to resolve which second each PPS pulse belongs to, eliminating
+the ambiguity entirely. Note: NMEA port `/dev/ttyACM0` is also opened by the pipeline's
+`NmeaStream` — both can coexist as readers on the same serial device (it's a USB CDC-ACM
+virtual serial, not exclusive access).
+
+---
+
 ## Known Remaining Items
 
 | Item | Priority | Notes |
 |---|---|---|
-| `timing_healthy: false` | Low | Transient — chrony converging post-1s step; expect auto-resolve within 30 min |
+| `timing_healthy: false` | Low | Transient — chrony slewing at ~19 ns/s; expect auto-resolve within 10–15 min |
 | `primary_written: 0` | Low | Consequence of timing health gate; will flip to primary once timing_healthy=true |
 | NMEA serial errors | Low | Intermittent USB CDC-ACM drops on /dev/ttyACM0; retry logic handles it; hardware-level |
 | SoapySDR module missing | Low | `soapysdr-module-hackrf` not installed; pipeline falls through to pyhackrf (expected) |
@@ -168,7 +194,8 @@ hackrf_sweep: 1 instance (user-enabled REAL SDR in main dashboard via 'r')
 - [x] Timing monitor fixed
 - [x] Keyring auto-unlock configured
 - [x] PAM updated for keyring integration
-- [ ] Timing `healthy: true` — pending chrony convergence (~30 min from lock)
+- [ ] Timing `healthy: true` — chrony slewing ~19 ns/s, ETA ~10 min from session close
+- [ ] NMEA refclock in chrony config (optional hardening, prevents future PPS ambiguity)
 
 **Reboot confidence:** HIGH — all critical fixes are in place. The next boot should produce
 exactly one waterfall window + one dashboard window, pipeline in HardwareHAL, keyring
