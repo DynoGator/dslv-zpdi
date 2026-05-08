@@ -4,7 +4,7 @@
 # Exit 0 = healthy, Exit 1 = degraded, Exit 2 = critical.
 set -uo pipefail
 
-REPO="/home/dynogator/dslv-zpdi"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="$REPO/venv"
 STATE_DIR="/var/lib/dslv_zpdi"
 

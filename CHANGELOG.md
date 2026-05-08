@@ -1,5 +1,34 @@
 # Changelog
 
+## [4.6.2] - 2026-05-08 · Chrony PPS Disambiguation Research
+
+### Investigated
+- **Chrony NMEA driver unavailable** — chrony 4.6.1 on this system was compiled without
+  the NMEA refclock driver. `refclock NMEA ...` fails with "unknown refclock driver NMEA".
+  The recommended NMEA + `lock GPS` configuration from the v4.6.1 session report cannot
+  be applied without recompiling chrony or installing gpsd.
+- **`prefer` without `trust` oscillates** — removing `trust` causes 30-second NTP/PPS
+  toggle cycles as chrony alternately selects PPS and NTP pool sources. Worse than the
+  original `prefer trust` behavior.
+- **`makestep 0.5 -1` with `trust`** — unlimited stepping does not help with second-boundary
+  oscillation because `trust` causes chrony to accept PPS as absolute truth, so NTP can
+  never trigger a corrective step.
+
+### Confirmed Working
+- Restored original `refclock PPS /dev/pps0 poll 4 prefer trust` + `makestep 1 3` config.
+  After clean chronyd restart this converges to stratum 1 at 5–20 µs in ~3–5 minutes.
+
+### Known Remaining Issue
+- PPS second-boundary disambiguation has no software fix in this chrony build.
+  Long-term fix: install gpsd to read `/dev/ttyACM0`; configure chrony `refclock SOCK`
+  from gpsd (SOCK driver IS compiled in). Pipeline's `NmeaStream` must be migrated from
+  direct serial to gpsd protocol (USB CDC-ACM does not allow multiple readers).
+
+### Operational Procedure
+- If chrony PPS oscillates (NTP sources all `^x`, residual freq >1000 ppm, last offset >0.3 s):
+  `sudo systemctl restart chronyd` — do NOT run manual `chronyc makestep`.
+  Allow 10–15 min for NTP to anchor the correct second then PPS re-lock.
+
 ## [4.6.1] - 2026-05-08 · Tier 1 Operational Hardening
 
 ### Fixed

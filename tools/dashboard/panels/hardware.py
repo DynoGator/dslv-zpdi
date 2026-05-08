@@ -86,8 +86,8 @@ def _read_gga(port: str) -> dict:
                 if line.startswith("$GNGGA") or line.startswith("$GPGGA"):
                     parts = line.split(",")
                     if len(parts) >= 8:
-                        fix = parts[6]
-                        sats = parts[7]
+                        fix_raw = parts[6].strip()
+                        sats = parts[7].strip()
                         fix_map = {
                             "0": "None",
                             "1": "GPS",
@@ -95,7 +95,8 @@ def _read_gga(port: str) -> dict:
                             "4": "RTK",
                             "5": "Float",
                         }
-                        return {"fix": fix_map.get(fix, fix), "sats": sats}
+                        fix_val = fix_map.get(fix_raw, fix_raw) if fix_raw else "acq…"
+                        return {"fix": fix_val, "sats": sats or "?"}
                     break
         finally:
             os.close(fd)
