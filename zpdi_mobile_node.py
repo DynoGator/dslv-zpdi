@@ -30,7 +30,13 @@ from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketE
 # Debian proot, and a relative lookup would silently fall through to whatever
 # (if anything) the proot's own PATH resolves.
 TERMUX_SENSOR_BIN = "/data/data/com.termux/files/usr/bin/termux-sensor"
-SENSORS = ("magnetometer", "barometer", "accelerometer")
+# Exact sensor names from `termux-sensor -l` on this device. Substring matches
+# like "barometer" silently return no rows; full vendor strings are required.
+SENSORS = (
+    "ICM45631 Accelerometer",
+    "MMC5616 Magnetometer",
+    "ICP20100 Pressure Sensor",
+)
 
 DEFAULT_POLL_INTERVAL_S = float(os.environ.get("ZPDI_POLL_INTERVAL_S", "0.25"))
 DEFAULT_SENSOR_TIMEOUT_S = float(os.environ.get("ZPDI_SENSOR_TIMEOUT_S", "1.5"))
