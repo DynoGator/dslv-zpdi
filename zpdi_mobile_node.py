@@ -38,8 +38,12 @@ SENSORS = (
     "ICP20100 Pressure Sensor",
 )
 
-DEFAULT_POLL_INTERVAL_S = float(os.environ.get("ZPDI_POLL_INTERVAL_S", "0.25"))
-DEFAULT_SENSOR_TIMEOUT_S = float(os.environ.get("ZPDI_SENSOR_TIMEOUT_S", "1.5"))
+# Cadence requested from termux-sensor's streaming mode (`-d <ms>`). The
+# Termux:API service caps the true rate at whatever the slowest sensor in
+# the set can deliver; values below ~50ms typically saturate without
+# raising the effective frequency. 250ms is a reasonable production
+# default; calibrate per-deployment.
+DEFAULT_STREAM_DELAY_MS = int(os.environ.get("ZPDI_STREAM_DELAY_MS", "250"))
 DEFAULT_WSS_URI = os.environ.get("ZPDI_WSS_URI", "wss://edge.placeholder.invalid:8443/ingest")
 DEFAULT_HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "./data/zpdi_stream.h5"))
 DEFAULT_FALLBACK_LOG = Path(os.environ.get("ZPDI_FALLBACK_LOG", "./logs/zpdi_fallback.jsonl"))
@@ -81,46 +85,169 @@ def _high_res_timestamps() -> dict[str, int | float]:
     return out
 
 
-# --- Sensor polling ------------------------------------------------------------
+# --- Sensor streaming ---------------------------------------------------------
 
-async def _poll_sensors(timeout_s: float) -> dict[str, Any] | None:
-    """Invoke termux-sensor once and parse its JSON output.
+async def _release_sensors() -> None:
+    """Fire `termux-sensor -c` to tell Android to release sensor handles.
 
-    Returns None on any failure — the caller decides whether to retry. We never
-    raise out of this function; a flaky sensor must not take down the daemon.
+    Called on every stream teardown as a backstop in case the bash
+    wrapper's own SIGTERM trap did not finish its cleanup call. Failures
+    are logged at debug level; this must never block shutdown.
     """
-    cmd = [TERMUX_SENSOR_BIN, "-s", ",".join(SENSORS), "-n", "1"]
     try:
         proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            TERMUX_SENSOR_BIN, "-c",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
-    except FileNotFoundError:
-        log.error("termux-sensor binary not found at %s", TERMUX_SENSOR_BIN)
-        return None
-    except OSError as exc:
-        log.error("failed to spawn termux-sensor: %s", exc)
-        return None
-
-    try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-    except asyncio.TimeoutError:
-        proc.kill()
-        with contextlib.suppress(ProcessLookupError):
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=3.0)
+        except asyncio.TimeoutError:
+            with contextlib.suppress(ProcessLookupError):
+                proc.kill()
             await proc.wait()
-        log.warning("termux-sensor timed out after %.2fs", timeout_s)
-        return None
+    except Exception as exc:
+        log.debug("sensor release call failed: %s", exc)
 
-    if proc.returncode != 0:
-        log.warning("termux-sensor exit=%s stderr=%s", proc.returncode, stderr[:200])
-        return None
 
-    try:
-        return json.loads(stdout.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        log.warning("termux-sensor produced unparseable output: %s", exc)
-        return None
+async def _drain_stderr(stream: asyncio.StreamReader) -> None:
+    """Drain termux-sensor stderr to logs so a full pipe never blocks the writer."""
+    while True:
+        line = await stream.readline()
+        if not line:
+            return
+        log.debug("termux-sensor stderr: %s", line.decode("utf-8", errors="replace").rstrip())
+
+
+async def _consume_stream(
+    stdout: asyncio.StreamReader,
+    queues: tuple[asyncio.Queue[Payload], ...],
+) -> None:
+    """Parse termux-sensor's continuous JSON stream and fan out to queues.
+
+    termux-sensor emits pretty-printed JSON objects back-to-back on stdout
+    in streaming mode (one line per token). We accumulate lines and call
+    json.JSONDecoder.raw_decode whenever the buffer might contain a
+    complete object; raw_decode tells us where parsing stopped so we
+    keep the residue for the next iteration.
+
+    The loop runs plain `await stdout.readline()` with no `wait_for`
+    wrapper: empirically, wrapping readline in wait_for against a
+    streaming subprocess silently starves the reader on this Python /
+    asyncio build (measured 0 of 18 objects across a 6s window with
+    wait_for, 18/18 without). Stop-event responsiveness is therefore
+    delegated to the supervisor in `_stream`, which terminates the
+    subprocess on shutdown so readline returns EOF and this loop exits.
+
+    The timestamp is taken inside _build_payload at the instant
+    raw_decode returns — the closest the daemon can stamp to the moment
+    the sensor event surfaced from the kernel.
+    """
+    decoder = json.JSONDecoder()
+    buf = ""
+    while True:
+        line = await stdout.readline()
+        if not line:
+            return  # subprocess closed stdout — supervisor will decide what next
+        buf += line.decode("utf-8", errors="replace")
+        while True:
+            stripped = buf.lstrip()
+            if not stripped:
+                buf = ""
+                break
+            try:
+                reading, idx = decoder.raw_decode(stripped)
+            except json.JSONDecodeError:
+                buf = stripped  # incomplete — wait for more bytes
+                break
+            buf = stripped[idx:]
+            if not isinstance(reading, dict):
+                continue
+            payload = _build_payload(reading)
+            for q in queues:
+                if q.full():
+                    with contextlib.suppress(asyncio.QueueEmpty):
+                        q.get_nowait()
+                q.put_nowait(payload)
+
+
+async def _stream(
+    queues: tuple[asyncio.Queue[Payload], ...],
+    stop: asyncio.Event,
+) -> None:
+    """Keep a termux-sensor subprocess alive for the daemon's lifetime.
+
+    Restarts on EOF or spawn failure with capped exponential backoff so a
+    transient Termux:API hiccup never takes the node down silently.
+    """
+    backoff = 0.5
+    while not stop.is_set():
+        cmd = [
+            TERMUX_SENSOR_BIN,
+            "-s", ",".join(SENSORS),
+            "-d", str(DEFAULT_STREAM_DELAY_MS),
+        ]
+        try:
+            # start_new_session=True puts the bash wrapper into its own
+            # process group so we can SIGTERM the whole group on shutdown,
+            # not just the wrapper. Without it, the underlying termux-api
+            # streaming child is orphaned and continues holding sensor
+            # handles in the Android service, eventually starving fresh
+            # invocations until manually cleaned up.
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
+            )
+        except (FileNotFoundError, OSError) as exc:
+            log.error("failed to spawn termux-sensor: %s", exc)
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=backoff)
+                return
+            except asyncio.TimeoutError:
+                backoff = min(backoff * 2, 5.0)
+                continue
+
+        log.info("termux-sensor stream started pid=%s delay=%dms", proc.pid, DEFAULT_STREAM_DELAY_MS)
+        backoff = 0.5
+        assert proc.stdout is not None and proc.stderr is not None
+        stderr_task = asyncio.create_task(_drain_stderr(proc.stderr))
+        consume_task = asyncio.create_task(_consume_stream(proc.stdout, queues))
+        stop_task = asyncio.create_task(stop.wait())
+        try:
+            # Race the consumer against the stop signal. Whichever wins,
+            # we tear down the subprocess so the other side unblocks.
+            await asyncio.wait(
+                {consume_task, stop_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        finally:
+            # Kill the whole process group so the underlying termux-api
+            # child dies with the bash wrapper. ProcessLookupError fires
+            # if the group already exited via consumer-EOF — harmless.
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.killpg(proc.pid, signal.SIGKILL)
+                await proc.wait()
+            # Defense in depth: tell Android to release sensor handles
+            # whether or not the bash trap completed its own cleanup call.
+            await _release_sensors()
+            for t in (consume_task, stderr_task, stop_task):
+                if not t.done():
+                    t.cancel()
+            for t in (consume_task, stderr_task, stop_task):
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await t
+
+        if stop.is_set():
+            return
+        log.warning("termux-sensor stream ended (rc=%s); restarting", proc.returncode)
+        await asyncio.sleep(0.5)
 
 
 def _build_payload(reading: dict[str, Any]) -> Payload:
@@ -336,30 +463,13 @@ async def main() -> int:
         with contextlib.suppress(NotImplementedError):
             loop.add_signal_handler(sig, stop.set)
 
-    async def fanout() -> None:
-        while not stop.is_set():
-            loop_start = time.monotonic()
-            reading = await _poll_sensors(DEFAULT_SENSOR_TIMEOUT_S)
-            if reading is not None:
-                p = _build_payload(reading)
-                for q in (storage_q, transport_q):
-                    if q.full():
-                        with contextlib.suppress(asyncio.QueueEmpty):
-                            q.get_nowait()
-                    q.put_nowait(p)
-            elapsed = time.monotonic() - loop_start
-            try:
-                await asyncio.wait_for(stop.wait(), timeout=max(0.0, DEFAULT_POLL_INTERVAL_S - elapsed))
-            except asyncio.TimeoutError:
-                pass
-
     tasks = [
-        asyncio.create_task(fanout(), name="producer"),
+        asyncio.create_task(_stream((storage_q, transport_q), stop), name="stream"),
         asyncio.create_task(_storage_consumer(storage_q, hdf5_sink, stop), name="storage"),
         asyncio.create_task(_transport_consumer(transport_q, transport, stop), name="transport"),
     ]
 
-    log.info("zpdi node up — poll=%.3fs sensors=%s", DEFAULT_POLL_INTERVAL_S, SENSORS)
+    log.info("zpdi node up — stream delay=%dms sensors=%s", DEFAULT_STREAM_DELAY_MS, SENSORS)
     try:
         await stop.wait()
     finally:
