@@ -1,0 +1,34 @@
+# --- Secrets / Credentials ---
+# Reserved for the Secure Storage Token / GitHub PAT to be provided later.
+.env
+.env.*
+!.env.example
+*.pat
+*.token
+secrets/
+.credentials/
+.netrc
+
+# --- Runtime data (Tier-1 metrology artifacts) ---
+data/*.h5
+data/*.hdf5
+logs/*.log
+logs/*.jsonl
+*.pid
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- OS / Editors ---
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
