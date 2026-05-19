@@ -337,8 +337,10 @@ class FallbackLog:
             await asyncio.to_thread(self._write_sync, p)
 
     def _write_sync(self, p: Payload) -> None:
+        # Serialize the body (which includes the sha256) for the log
+        full_raw = json.dumps(p.body, sort_keys=True, separators=(",", ":")).encode("utf-8")
         with self._path.open("ab") as fh:
-            fh.write(p.raw)
+            fh.write(full_raw)
             fh.write(b"\n")
 
 
@@ -354,8 +356,13 @@ class WSSTransport:
         self._ws: websockets.WebSocketClientProtocol | None = None
         self._connect_lock = asyncio.Lock()
 
-    @staticmethod
-    def _build_ssl_ctx(ca_bundle: str | None) -> ssl.SSLContext:
+    def _build_ssl_ctx(self, ca_bundle: str | None) -> ssl.SSLContext | None:
+        # Use default context; if it's a localhost/development URI, we might
+        # need to relax this, but per production requirements we stick to secure.
+        if self._uri.startswith("ws://"):
+            # If the URI is explicitly insecure (e.g. localhost testing),
+            # websockets.connect doesn't need an SSL context.
+            return None
         ctx = ssl.create_default_context()
         if ca_bundle:
             ctx.load_verify_locations(cafile=ca_bundle)
@@ -368,10 +375,12 @@ class WSSTransport:
             if self._ws is not None and self._ws.state.name == "OPEN":
                 return True
             try:
+                # Disable SSL for localhost development if using ws://
+                is_secure = self._uri.startswith("wss://")
                 self._ws = await asyncio.wait_for(
                     websockets.connect(
                         self._uri,
-                        ssl=self._ssl_ctx,
+                        ssl=self._ssl_ctx if is_secure else None,
                         ping_interval=20,
                         ping_timeout=10,
                         close_timeout=2,
@@ -390,7 +399,9 @@ class WSSTransport:
         if await self._ensure_connection():
             try:
                 assert self._ws is not None
-                await self._ws.send(p.raw)
+                # Serialize the body (which includes the sha256) for the wire
+                full_raw = json.dumps(p.body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                await self._ws.send(full_raw)
                 return
             except (ConnectionClosed, WebSocketException, OSError) as exc:
                 log.debug("WSS send failed, will fail over: %s", exc)
