@@ -25,7 +25,7 @@ fi
 git config credential.helper '!f() { echo "username=token"; echo "password=$GITHUB_PAT"; }; f'
 
 # 2. Set remote origin
-REMOTE_URL=${GITHUB_REMOTE_URL:-"https://github.com/DynoGater/dslv-zpdi.git"}
+REMOTE_URL=${GITHUB_REMOTE_URL:-"https://github.com/DynoGator/dslv-zpdi.git"}
 if git remote | grep -q "^origin$"; then
     git remote set-url origin "$REMOTE_URL"
 else

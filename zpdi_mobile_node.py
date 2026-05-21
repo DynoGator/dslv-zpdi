@@ -24,6 +24,7 @@ from typing import Any
 import h5py
 import numpy as np
 import websockets
+from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
 
 # Absolute host path is mandatory: the Termux binary is not on $PATH inside the
@@ -283,7 +284,7 @@ class HDF5Sink:
             dtype = np.dtype([
                 ("wall_ns", "<u8"),
                 ("sha256", "S64"),
-                ("payload", h5py.special_dtype(vlen=bytes)),
+                ("payload", h5py.vlen_dtype(bytes)),
             ])
             self._dset = self._file.create_dataset(
                 HDF5_DATASET,
@@ -353,7 +354,7 @@ class WSSTransport:
         self._uri = uri
         self._ssl_ctx = self._build_ssl_ctx(ca_bundle)
         self._fallback = fallback
-        self._ws: websockets.WebSocketClientProtocol | None = None
+        self._ws: ClientConnection | None = None
         self._connect_lock = asyncio.Lock()
 
     def _build_ssl_ctx(self, ca_bundle: str | None) -> ssl.SSLContext | None:
