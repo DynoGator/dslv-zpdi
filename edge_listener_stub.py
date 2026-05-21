@@ -22,6 +22,9 @@ async def handle_connection(websocket):
     log.info("Connection from %s", addr)
     try:
         async for message in websocket:
+            if not isinstance(message, (str, bytes)):
+                log.warning("Received message of unknown type: %s", type(message))
+                continue
             try:
                 # 1. Parse JSON
                 if isinstance(message, bytes):
