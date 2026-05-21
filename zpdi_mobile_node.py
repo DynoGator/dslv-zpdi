@@ -36,6 +36,7 @@ from src.layer1_ingestion.mobile_ingestion import (
     TERMUX_SENSOR_BIN,
     score_mobile_payload,
 )
+from src.layer3_telemetry.mobile_router import route_packet, SecondaryLog
 
 # Cadence requested from termux-sensor's streaming mode (`-d <ms>`). The
 # Termux:API service caps the true rate at whatever the slowest sensor in
@@ -267,6 +268,8 @@ def _ingestion_to_legacy(ingestion: IngestionPayload) -> Payload | None:
         body["r_local"] = coherence.r_local
         body["r_smooth"] = coherence.r_smooth
         body["r_global"] = coherence.r_global
+    # Layer 3 routing decision (SPEC-007)
+    body["route"] = route_packet(body)
     # Canonical JSON without sha256 for digest computation
     canonical = {k: v for k, v in body.items() if k != "sha256"}
     raw = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -318,6 +321,10 @@ class HDF5Sink:
 
     async def append(self, p: Payload) -> None:
         if self._dset is None:
+            return
+        # SPEC-007 enforcement: primary stream only
+        route = p.body.get("route", {})
+        if route.get("stream") != "PRIMARY":
             return
         async with self._lock:
             await asyncio.to_thread(self._append_sync, p)
@@ -510,6 +517,7 @@ async def _cache_consumer(
 async def _transport_consumer(
     queue: asyncio.Queue[Payload],
     transport: WSSTransport,
+    secondary: SecondaryLog,
     stop: asyncio.Event,
 ) -> None:
     while not (stop.is_set() and queue.empty()):
@@ -517,6 +525,12 @@ async def _transport_consumer(
             p = await asyncio.wait_for(queue.get(), timeout=0.5)
         except asyncio.TimeoutError:
             continue
+        # All mobile packets are secondary — persist to exploratory JSONL
+        try:
+            await secondary.write(p)
+        except Exception as exc:
+            log.exception("secondary log write failed: %s", exc)
+        # Attempt WSS transport (placeholder URI — silent failover to fallback)
         try:
             await transport.send(p)
         except Exception as exc:
@@ -535,6 +549,8 @@ async def main() -> int:
     cache.open()
     fallback = FallbackLog(DEFAULT_FALLBACK_LOG)
     fallback.prepare()
+    secondary = SecondaryLog(DEFAULT_FALLBACK_LOG)
+    secondary.prepare()
     transport = WSSTransport(DEFAULT_WSS_URI, DEFAULT_CA_BUNDLE, fallback)
 
     # One queue per consumer so a stalled sink can't starve the other.
@@ -552,7 +568,7 @@ async def main() -> int:
         asyncio.create_task(_stream((storage_q, cache_q, transport_q), stop), name="stream"),
         asyncio.create_task(_storage_consumer(storage_q, hdf5_sink, stop), name="storage"),
         asyncio.create_task(_cache_consumer(cache_q, cache, stop), name="cache"),
-        asyncio.create_task(_transport_consumer(transport_q, transport, stop), name="transport"),
+        asyncio.create_task(_transport_consumer(transport_q, transport, secondary, stop), name="transport"),
     ]
 
     log.info("zpdi node up — stream delay=%dms sensors=%s", DEFAULT_STREAM_DELAY_MS, SENSORS)
