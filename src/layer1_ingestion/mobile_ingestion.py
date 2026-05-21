@@ -119,11 +119,11 @@ def _build_extracted_phases(sensor_name: str, reading: dict[str, Any]) -> List[f
 
 
 # ---------------------------------------------------------------------------
-# Placeholder: IngestionPayload will be hardened in STEP 3.
+# Hardened IngestionPayload — SPEC-005A.1b (Rev 3.1)
 # ---------------------------------------------------------------------------
 @dataclass
 class IngestionPayload:
-    """SPEC-005A.1b — Hardened Universal Payload (Rev 3.1) [PLACEHOLDER]"""
+    """SPEC-005A.1b — Hardened Universal Payload (Rev 3.1)"""
     spec_id: str = "SPEC-005A.1b"
     schema_version: str = "3.1"
     payload_uuid: str = ""
@@ -149,13 +149,35 @@ class IngestionPayload:
     hardware_tier: int = 2
 
     def validate(self) -> Tuple[str, Optional[str]]:
-        """SPEC-005A.2 — Payload Self-Validation (Rev 3.1) [PLACEHOLDER]"""
-        # Hardened in STEP 3.
+        """SPEC-005A.2 — Payload Self-Validation (Rev 3.1)
+
+        Returns (trust_state, quarantine_reason).
+        KILLED        = structural corruption only.
+        SECONDARY_Q   = trust insufficiency (GPS, PPS, calibration).
+        ASSEMBLED     = ready for trust gating.
+        """
+        if not self.node_id or not self.sensor_id or not self.modality:
+            return "KILLED", "Missing routing identity"
+        if self.payload_uuid == "":
+            return "KILLED", "Missing payload_uuid"
+        if self.timestamp_utc == 0.0 or not self.gps_locked:
+            return "SECONDARY_QUARANTINED", "GPS untrusted — exploratory only"
+        if self.pps_jitter_ns > 10_000.0:
+            return "SECONDARY_QUARANTINED", "PPS jitter exceeds Tier 1 threshold (10µs)"
         return "ASSEMBLED", None
 
     def to_json(self) -> Optional[str]:
-        """SPEC-005A.3 — Serialization Gate [PLACEHOLDER]"""
-        import hashlib
+        """SPEC-005A.3 — Serialization Gate (Rev 3.1)
+
+        Calls validate() first.  KILLED packets are dropped (returns None).
+        Otherwise embeds a truncated SHA-256 checksum.
+        """
+        state, reason = self.validate()
+        self.trust_state = state
+        if reason:
+            self.quarantine_reason = reason
+        if state == "KILLED":
+            return None
         d = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         raw_json = json.dumps(d, sort_keys=True, default=str)
         self.payload_checksum = hashlib.sha256(raw_json.encode()).hexdigest()[:16]
@@ -164,7 +186,12 @@ class IngestionPayload:
 
 
 def build_mobile_payload(sensor_name: str, reading: dict[str, Any]) -> IngestionPayload:
-    """Translate a single termux-sensor reading into a canonical IngestionPayload."""
+    """Translate a single termux-sensor reading into a canonical IngestionPayload.
+
+    Mobile nodes are Tier-2; gps_locked is always False and pps_jitter_ns is
+    infinite, so validate() will always route to SECONDARY_QUARANTINED unless
+    the packet is structurally corrupt (KILLED).
+    """
     phases = _build_extracted_phases(sensor_name, reading)
     payload = IngestionPayload(
         payload_uuid=str(uuid.uuid4()),
