@@ -16,6 +16,10 @@ BLOCKED_PATTERNS=(
 
 blocked=""
 while IFS= read -r staged_file; do
+    # Explicitly allow .env.example
+    if [[ "$staged_file" == ".env.example" ]]; then
+        continue
+    fi
     for pattern in "${BLOCKED_PATTERNS[@]}"; do
         if [[ "$staged_file" =~ $pattern ]]; then
             blocked="${blocked}\n  ${staged_file}"
