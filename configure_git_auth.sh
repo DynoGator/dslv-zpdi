@@ -20,9 +20,18 @@ if [ -z "$GITHUB_PAT" ]; then
 fi
 
 # 1. Configure credential helper to use the PAT.
-# We use a custom helper that echoes the password from the environment.
-# 'username=token' is the standard for GitHub PATs.
-git config credential.helper '!f() { echo "username=token"; echo "password=$GITHUB_PAT"; }; f'
+# We use a custom helper that reads GITHUB_PAT from .env at runtime
+# to avoid persisting the plaintext secret in .git/config.
+git config credential.helper '!f() { 
+    if [ -f .env ]; then
+        # Extract GITHUB_PAT from .env without exporting everything
+        PAT=$(grep "^GITHUB_PAT=" .env | cut -d= -f2- | tr -d " '\''\"")
+        if [ -n "$PAT" ]; then
+            echo "username=token"
+            echo "password=$PAT"
+        fi
+    fi
+}; f'
 
 # 2. Set remote origin
 REMOTE_URL=${GITHUB_REMOTE_URL:-"https://github.com/DynoGator/dslv-zpdi.git"}
