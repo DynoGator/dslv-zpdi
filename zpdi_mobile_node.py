@@ -48,7 +48,11 @@ DEFAULT_WSS_URI = os.environ.get("ZPDI_WSS_URI", "wss://edge.placeholder.invalid
 DEFAULT_HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "./data/zpdi_stream.h5"))
 DEFAULT_SQLITE_PATH = Path(os.environ.get("ZPDI_SQLITE_PATH", "./data/zpdi_cache.db"))
 DEFAULT_FALLBACK_LOG = Path(os.environ.get("ZPDI_FALLBACK_LOG", "./logs/zpdi_fallback.jsonl"))
+DEFAULT_HEALTH_LOG = Path(os.environ.get("ZPDI_HEALTH_LOG", "./logs/health.jsonl"))
 DEFAULT_CA_BUNDLE = os.environ.get("ZPDI_WSS_CA_BUNDLE") or None
+
+# Module-level stream liveness counter (incremented by _consume_stream)
+_stream_sample_count = 0
 
 QUEUE_MAX = 4096
 HDF5_DATASET = "payloads"
@@ -153,6 +157,8 @@ async def _consume_stream(
                 payload = _ingestion_to_legacy(ingestion)
                 if payload is None:
                     continue  # KILLED packet dropped at serialization gate
+                global _stream_sample_count
+                _stream_sample_count += 1
                 for q in queues:
                     try:
                         q.put_nowait(payload)
@@ -418,6 +424,10 @@ class WSSTransport:
         self._ws: ClientConnection | None = None
         self._connect_lock = asyncio.Lock()
 
+    @property
+    def connected(self) -> bool:
+        return self._ws is not None and self._ws.state.name == "OPEN"
+
     def _build_ssl_ctx(self, ca_bundle: str | None) -> ssl.SSLContext | None:
         # Use default context; if it's a localhost/development URI, we might
         # need to relax this, but per production requirements we stick to secure.
@@ -537,6 +547,39 @@ async def _transport_consumer(
             log.exception("transport send failed unexpectedly: %s", exc)
 
 
+async def _health_watchdog(
+    path: Path,
+    queues: tuple[asyncio.Queue[Payload], ...],
+    transport: WSSTransport,
+    stop: asyncio.Event,
+) -> None:
+    """Write health heartbeat every 30s; supervisor checks staleness."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prev_sample_count = _stream_sample_count
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=30.0)
+            return
+        except asyncio.TimeoutError:
+            pass
+        current_count = _stream_sample_count
+        sensor_alive = current_count > prev_sample_count
+        prev_sample_count = current_count
+        record = {
+            "ts_utc": time.time(),
+            "pid": os.getpid(),
+            "sensor_alive": sensor_alive,
+            "queue_depths": [q.qsize() for q in queues],
+            "wss_connected": transport.connected,
+        }
+        try:
+            with path.open("a") as fh:
+                fh.write(json.dumps(record, sort_keys=True, separators=(",", ":")))
+                fh.write("\n")
+        except Exception as exc:
+            log.debug("health write failed: %s", exc)
+
+
 async def main() -> int:
     logging.basicConfig(
         level=os.environ.get("ZPDI_LOG_LEVEL", "INFO"),
@@ -569,6 +612,7 @@ async def main() -> int:
         asyncio.create_task(_storage_consumer(storage_q, hdf5_sink, stop), name="storage"),
         asyncio.create_task(_cache_consumer(cache_q, cache, stop), name="cache"),
         asyncio.create_task(_transport_consumer(transport_q, transport, secondary, stop), name="transport"),
+        asyncio.create_task(_health_watchdog(DEFAULT_HEALTH_LOG, (storage_q, cache_q, transport_q), transport, stop), name="health"),
     ]
 
     log.info("zpdi node up — stream delay=%dms sensors=%s", DEFAULT_STREAM_DELAY_MS, SENSORS)

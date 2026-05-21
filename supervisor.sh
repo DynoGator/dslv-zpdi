@@ -46,6 +46,21 @@ while true; do
     echo "$dpid" > "$DAEMONPID"
     _log "daemon started (pid=$dpid)"
 
+    # Poll while daemon is alive; check health log age every 5s.
+    while kill -0 "$dpid" 2>/dev/null; do
+        if [ -f logs/health.jsonl ]; then
+            health_age=$(( $(date +%s) - $(stat -c %Y logs/health.jsonl 2>/dev/null || echo 0) ))
+            if [ "$health_age" -gt 90 ]; then
+                _log "health stale ${health_age}s > 90s — killing daemon (pid=$dpid)"
+                kill -SIGTERM "$dpid" 2>/dev/null || true
+                sleep 2
+                kill -SIGKILL "$dpid" 2>/dev/null || true
+                break
+            fi
+        fi
+        sleep 5
+    done
+
     wait "$dpid" 2>/dev/null
     rc=$?
     rm -f "$DAEMONPID"

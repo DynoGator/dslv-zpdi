@@ -83,8 +83,11 @@ def route_packet(payload_dict: dict[str, Any]) -> dict[str, Any]:
 class SecondaryLog:
     """JSONL sink for all SECONDARY_QUARANTINED / PRIMARY_CANDIDATE packets.
 
-    This is the canonical exploratory-stream accumulator for Tier-2 nodes.
+    Rotates at 10 MB, gzipping old chunks.  Keeps up to 5 backups.
     """
+
+    ROTATE_SIZE_BYTES = 10 * 1024 * 1024
+    MAX_BACKUPS = 5
 
     def __init__(self, path: Path) -> None:
         self._path = path
@@ -97,9 +100,30 @@ class SecondaryLog:
         async with self._lock:
             await asyncio.to_thread(self._write_sync, p)
 
+    def _rotate_if_needed(self) -> None:
+        if not self._path.exists():
+            return
+        if self._path.stat().st_size < self.ROTATE_SIZE_BYTES:
+            return
+        # Rotate existing backups upward
+        for i in range(self.MAX_BACKUPS - 1, 0, -1):
+            src = self._path.parent / f"{self._path.name}.{i}.gz"
+            dst = self._path.parent / f"{self._path.name}.{i + 1}.gz"
+            if src.exists():
+                src.replace(dst)
+        # Gzip current file to .1.gz
+        import gzip
+        rotated = self._path.parent / f"{self._path.name}.1.gz"
+        with self._path.open("rb") as f_in:
+            with gzip.open(rotated, "wb") as f_out:
+                f_out.write(f_in.read())
+        self._path.unlink()
+
     def _write_sync(self, p: Any) -> None:
+        import gzip
         body = p.body if hasattr(p, "body") else p
         full_raw = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        self._rotate_if_needed()
         with self._path.open("ab") as fh:
             fh.write(full_raw)
             fh.write(b"\n")
