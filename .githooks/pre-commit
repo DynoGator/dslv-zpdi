@@ -1,0 +1,31 @@
+#!/bin/bash
+# Block secrets, credentials, and large data artifacts from being committed.
+# Governed by .githooks/README.md — see that file for policy rationale.
+
+BLOCKED_PATTERNS=(
+    "^\.env$"
+    "^\.env\."
+    ".*\.pat$"
+    ".*\.token$"
+    "^secrets/"
+    "^\.credentials/"
+    "^data/.*\.h5$"
+    "^data/.*\.hdf5$"
+    ".*\.pid$"
+)
+
+blocked=""
+while IFS= read -r staged_file; do
+    for pattern in "${BLOCKED_PATTERNS[@]}"; do
+        if [[ "$staged_file" =~ $pattern ]]; then
+            blocked="${blocked}\n  ${staged_file}"
+            break
+        fi
+    done
+done < <(git diff --cached --name-only)
+
+if [ -n "$blocked" ]; then
+    echo "pre-commit: blocked files staged — remove them and retry:"
+    echo -e "$blocked"
+    exit 1
+fi
