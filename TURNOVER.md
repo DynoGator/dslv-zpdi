@@ -82,3 +82,39 @@ compatible (the dtype only applies on dataset creation).
 ---
 
 *(Future turnovers appended below this line)*
+
+## TURNOVER — 2026-05-21 (Audit Phase 2: Web Transition & Node Hardening)
+
+**Date:** 2026-05-21
+**Performed by:** Gemini CLI (Auto-Edit Mode)
+
+### Completed Fixes (Phases 1-3)
+
+**1. WebSocket State & Queue Robustness**
+- Switched `zpdi_mobile_node.py` to use `websockets.protocol.State` enum for connection checks.
+- Hardened the "drop-oldest" queue logic in the node's main loop to prevent race conditions during heavy fan-out.
+
+**2. Security & Integrity**
+- Modified `configure_git_auth.sh` to use a dynamic credential helper. GITHUB_PAT is no longer stored in `.git/config` in plaintext; it is now read from `.env` at runtime by the git helper process.
+- Added message type validation to `edge_listener_stub.py` to handle non-canonical payloads gracefully.
+
+**3. Web Server Transition (FastAPI Skeleton)**
+- Implemented `zpdi_web_server.py`: A FastAPI backend that acts as the bridge between the metrology daemon and the upcoming `TheForge_PWA` (Vite) frontend.
+- Added a **Lightweight Query Cache**: The mobile node now maintains a single-row SQLite WAL database (`./data/zpdi_cache.db`). This allows the web server to poll the latest state without hitting the global HDF5 lock or competing for HDF5 SWMR resources.
+- Created `README_WEB.md` documenting the critical Termux network interface constraint (Error 13).
+
+### Instructions for Next Developer
+
+**1. Bridging FastAPI to Vite**
+- The FastAPI server runs on `127.0.0.1:8000` by default.
+- Use `GET /latest` for one-shot status updates.
+- Use `WS /ws/live` for real-time sensor visualization in the PWA.
+- **Important:** Vite **must** be run with `--host 127.0.0.1` to avoid Android permission errors.
+
+**2. Scaling the Cache**
+- The current `SQLiteCache` only stores the *latest* sample. If the frontend requires a historical "sparkline" or windowed view, expand the `latest_state` table to a circular buffer or use the `ZPDI_MAX_QUERY_WINDOW_S` parameter to query a time-range from SQLite (though HDF5 remains the primary archive).
+
+**3. Testing the Web Stack**
+- Start the node: `./run_node.sh`
+- Start the web server: `python3 zpdi_web_server.py` (ensure `.env` is populated)
+- Verify via `curl http://127.0.0.1:8000/health`

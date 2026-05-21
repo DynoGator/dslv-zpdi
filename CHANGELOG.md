@@ -7,28 +7,28 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 
 ## [Unreleased]
 
+## [2026-05-21] — Audit & Architectural Upgrade
+
 ### Added
-- `supervisor.sh` — foreground daemon supervisor with exponential back-off restart.
-  Addresses the `--kill-on-exit` proot constraint that caused the daemon to die whenever
-  the launch proot session exited (the root cause of the auto-start failure).
-- `.githooks/pre-commit` — blocks `.env`, `*.pat`, `data/*.h5`, `*.pid` from commits.
-- `.githooks/pre-push` — validates `GITHUB_PAT` and rejects plaintext-credential remote URLs.
+- `zpdi_web_server.py`: FastAPI-based web backend providing `/health`, `/latest`, and `/ws/live` endpoints.
+- `SQLiteCache` in `zpdi_mobile_node.py`: Lightweight WAL-mode cache for the latest sensor state, enabling concurrent polling without HDF5 lock contention.
+- `README_WEB.md`: Detailed guide for Termux-specific network interface constraints and Vite frontend integration.
+- `ZPDI_SQLITE_PATH` and `ZPDI_WEB_*` configuration parameters to `.env.example`.
+
+### Fixed
+- `zpdi_mobile_node.py`: Fragile WebSocket state check (string comparison) replaced with `websockets.protocol.State` enum.
+- `zpdi_mobile_node.py`: Race condition in queue "drop-oldest" logic hardened with `try/except` blocks for `asyncio.QueueFull` and `asyncio.QueueEmpty`.
+- `edge_listener_stub.py`: Added defensive typing guards (`isinstance`) for received messages.
+- `configure_git_auth.sh`: Prevented plaintext GITHUB_PAT persistence in `.git/config` by using a runtime helper that reads from `.env`.
+- `.githooks/pre-commit`: Explicitly allowed `.env.example` while maintaining security for other `.env` files.
 
 ### Changed
-- `launch_daemon.sh` — rewritten to start the supervisor inside an **independent** proot
-  session (`nohup proot-distro login debian -- bash supervisor.sh`), so the daemon proot
-  survives terminal close and is not tied to the interactive session.
-- `99-start-zpdi.sh` (Termux:Boot) — updated to the same pattern; supervisor is the
-  foreground process of the boot proot, keeping it alive through device operation.
-- `configure_git_auth.sh` — fixed `DynoGater` typo → `DynoGator` in fallback remote URL.
-- `.githooks/README.md` — updated to reflect both hooks are now implemented.
-- `zpdi_mobile_node.py` — replaced deprecated `h5py.special_dtype(vlen=bytes)` with
-  `h5py.vlen_dtype(bytes)`; updated `WebSocketClientProtocol` annotation to
-  `ClientConnection` (websockets 16+ asyncio API).
+- `requirements.txt`: Added `fastapi` and `uvicorn` dependencies.
+- `zpdi_mobile_node.py`: Set `PRAGMA journal_mode=WAL` on SQLite cache for concurrent-safe access.
 
 ---
 
-## [e7b8497] 2026-05-19 — feat: finalize deployment-ready metrology node
+## [2026-05-19] — feat: finalize deployment-ready metrology node
 
 - Continuous sensor streaming via `termux-sensor -d 250` (streaming mode, not polling).
 - `asyncio.wait_for` wrapper removed from `readline()` after empirical measurement showed
