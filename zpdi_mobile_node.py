@@ -34,6 +34,7 @@ from src.layer1_ingestion.mobile_ingestion import (
     IngestionPayload,
     SENSORS,
     TERMUX_SENSOR_BIN,
+    score_mobile_payload,
 )
 
 # Cadence requested from termux-sensor's streaming mode (`-d <ms>`). The
@@ -247,6 +248,7 @@ def _ingestion_to_legacy(ingestion: IngestionPayload) -> Payload | None:
 
     trust_state is set inside ingestion.to_json() (SPEC-005A.3 gate).
     KILLED packets return None and are silently dropped.
+    Coherence scores are computed here (Layer 2) and embedded for routing.
     """
     json_str = ingestion.to_json()
     if json_str is None:
@@ -259,6 +261,12 @@ def _ingestion_to_legacy(ingestion: IngestionPayload) -> Payload | None:
         "wall_ns": int(ingestion.timestamp_utc * 1e9),
         "monotonic_ns": ingestion.ingest_monotonic_ns,
     }
+    # Layer 2 coherence scoring (SPEC-006)
+    coherence = score_mobile_payload(ingestion)
+    if coherence is not None:
+        body["r_local"] = coherence.r_local
+        body["r_smooth"] = coherence.r_smooth
+        body["r_global"] = coherence.r_global
     # Canonical JSON without sha256 for digest computation
     canonical = {k: v for k, v in body.items() if k != "sha256"}
     raw = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")

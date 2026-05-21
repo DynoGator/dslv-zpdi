@@ -24,7 +24,11 @@ from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
+from src.layer2_core.coherence import CoherenceScorer, CoherencePacket
+
 log = logging.getLogger("zpdi.layer1")
+
+_coherence_engine = CoherenceScorer()
 
 # Absolute host path is mandatory: the Termux binary is not on $PATH inside
 # the Debian proot.
@@ -206,3 +210,23 @@ def build_mobile_payload(sensor_name: str, reading: dict[str, Any]) -> Ingestion
         hardware_tier=2,
     )
     return payload
+
+
+def score_mobile_payload(payload: IngestionPayload) -> CoherencePacket | None:
+    """SPEC-006.5 — Mobile wiring: compute coherence scores for Tier-2 packets.
+
+    Pre-extracted phases from Layer 1 are fed directly into the
+    CoherenceScorer.  r_global will be zero for a single-node deployment.
+    """
+    if not payload.extracted_phases:
+        # Barometer / reference-only modalities → zero coherence
+        return CoherencePacket(
+            payload_uuid=payload.payload_uuid,
+            node_id=payload.node_id,
+            modality=payload.modality,
+            r_local=0.0,
+            r_smooth=0.0,
+            r_global=0.0,
+            trust_state="CORE_PROCESSED",
+        )
+    return _coherence_engine.update(payload.__dict__, payload.extracted_phases)
