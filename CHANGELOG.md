@@ -7,6 +7,25 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 
 ## [Unreleased]
 
+### Added
+- `src/layer1_ingestion/mobile_ingestion.py`: Canonical Layer 1 driver for Tier-2 mobile nodes with Hilbert phase extraction.
+- `src/layer2_core/coherence.py`: KCET-ATLAS CoherenceScorer with EWMA smoothing and global weighted R(t).
+- `src/layer2_core/wiring.py`: Layer 2 wiring gate (canonical + mobile variant).
+- `src/layer3_telemetry/mobile_router.py`: Dual-Stream Router enforcing Tier-2 quarantine with coherence-based categorisation.
+- `tests/test_mobile_compliance.py`: 14-test validation suite covering SPEC-005/006/007.
+- `AUDIT_VIOLATIONS.md`: SPEC violation baseline for the pre-compliance `main` branch.
+- Health watchdog (`logs/health.jsonl`) with PID, sensor liveness, queue depths, and WSS state.
+- Log rotation for `SecondaryLog` at 10 MB with gzip archival.
+
+### Changed
+- `zpdi_mobile_node.py`: Refactored from flat-file logger to three-layer architecture using `IngestionPayload`, `CoherenceScorer`, and `DualStreamRouter`.
+- `supervisor.sh`: Added health-log staleness check (>90s triggers forced restart).
+- `README.md`: Clarified Tier-2 Swarm status and institutional-grade hardware requirements.
+
+### Fixed
+- `HDF5Sink` now rejects all non-`PRIMARY_ACCEPTED` packets (mobile primary stream is intentionally empty).
+- All mobile packets correctly self-declare `hardware_tier=2` and `trust_state=SECONDARY_QUARANTINED`.
+
 ## [2026-05-21] — Audit & Architectural Upgrade
 
 ### Added

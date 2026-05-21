@@ -1,4 +1,6 @@
-# dslv-zpdi — Tier-1 mobile metrology node
+# dslv-zpdi — Tier-2 Mobile Swarm Node
+
+> **IMPORTANT:** The mobile node on `main` is a **Tier-2 Swarm deployment**. All data produced by this Pixel 9 Pro XL is exploratory/secondary stream. Institutional-grade primary output requires **Tier-1 Anchor hardware** (Raspberry Pi CM5 + Intel i210-T1 + u-blox PPS, or equivalent GPSDO RF Metrology stack per SPEC-004A.2).
 
 Local scaffold for the dslv-zpdi project, configured for a Debian
 `proot-distro` container running on a Pixel 9 Pro XL.
@@ -7,12 +9,16 @@ Local scaffold for the dslv-zpdi project, configured for a Debian
 
 | Path | Purpose |
 | --- | --- |
-| `zpdi_mobile_node.py` | Async daemon: poll → hash → HDF5 + WSS |
-| `zpdi_verifier.py` | HDF5 integrity verifier (SWMR-safe) |
+| `zpdi_mobile_node.py` | Async daemon: termux-sensor → Layer 1 ingestion → Layer 2 coherence → Layer 3 router → secondary JSONL |
+| `src/layer1_ingestion/mobile_ingestion.py` | Layer 1 driver: `IngestionPayload` builder with trust-state validation |
+| `src/layer2_core/coherence.py` | Layer 2 engine: KCET-ATLAS `CoherenceScorer` |
+| `src/layer2_core/wiring.py` | Layer 2 wiring gate between JSON and coherence engine |
+| `src/layer3_telemetry/mobile_router.py` | Layer 3 router: enforces Tier-2 quarantine and coherence categorisation |
+| `zpdi_verifier.py` | HDF5 integrity verifier (SWMR-safe) — primary stream only |
 | `edge_listener_stub.py` | WSS server stub: ingest + verify provenance |
 | `configure_git_auth.sh` | Setup script for GitHub PAT authentication |
-| `data/` | HDF5 stream (gitignored) |
-| `logs/` | Fallback JSONL log when WSS is down (gitignored) |
+| `data/` | HDF5 primary stream (intentionally empty for Tier-2) + SQLite cache |
+| `logs/` | `zpdi_fallback.jsonl` secondary exploratory stream + `health.jsonl` watchdog |
 
 ## Quick start
 
@@ -22,16 +28,20 @@ Local scaffold for the dslv-zpdi project, configured for a Debian
    pip install -r requirements.txt
    ```
 
-2. **Start the Edge Listener Stub** (for testing):
+2. **Run the test suite**:
    ```sh
-   python3 edge_listener_stub.py
+   pytest tests/ -v
    ```
 
 3. **Start the Metrology Node**:
    ```sh
-   # Point the node to the local stub
-   export ZPDI_WSS_URI=ws://localhost:8443
    python3 zpdi_mobile_node.py
+   ```
+
+4. **Verify primary HDF5 is empty and secondary JSONL is active**:
+   ```sh
+   python3 -c "import h5py; print(h5py.File('data/zpdi_stream.h5')['payloads'].shape[0])"
+   wc -l logs/zpdi_fallback.jsonl
    ```
 
 ## Provenance Verification

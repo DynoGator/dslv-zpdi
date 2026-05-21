@@ -118,3 +118,102 @@ compatible (the dtype only applies on dataset creation).
 - Start the node: `./run_node.sh`
 - Start the web server: `python3 zpdi_web_server.py` (ensure `.env` is populated)
 - Verify via `curl http://127.0.0.1:8000/health`
+
+
+## TURNOVER — 2026-05-21 (Mobile Node Architecture Compliance — SPEC-005/006/007)
+
+**Date:** 2026-05-21
+**Performed by:** Kimi Code CLI (k2.6) on behalf of J.R. Fross
+**Session directive:** Bring `main` branch into three-layer architecture compliance without breaking the running daemon.
+
+### What Was Found
+
+**1. SPEC Violations on `main` (pre-compliance)**
+- `zpdi_mobile_node.py` was a flat-file monolith with no `IngestionPayload`, no trust-state machine, no coherence engine, and no dual-stream router.
+- All sensor data was dumped into a single HDF5 file — a **SPEC-003 total pipeline kill condition** because Tier-2 mobile data was commingled with primary-stream semantics.
+- Node self-identified as `"dslv-zpdi/tier1"` despite having no PPS, no GPSDO, and no hardware clock.
+- `AUDIT_VIOLATIONS.md` was produced documenting every kill condition currently violated.
+
+### What Was Done
+
+**STEP 1 — Audit & Violation Baseline**
+- Produced `AUDIT_VIOLATIONS.md` comparing `zpdi_mobile_node.py`, `zpdi_verifier.py`, and `edge_listener_stub.py` against `V3_DSLV-ZPDI_LIVING_MASTER.md` Rev 4.3.0.
+- Committed: `docs(audit): SPEC violation baseline for mobile node`
+
+**STEP 2 — Canonical `src/` Structure**
+- Ported `src/layer1_ingestion/`, `src/layer2_core/`, `src/layer3_telemetry/` package structure from commit `3a32be4`.
+- Created `mobile_ingestion.py` with exact Pixel 9 Pro XL sensor names (`ICM45631 Accelerometer`, `MMC5616 Magnetometer`, `ICP20100 Pressure Sensor`) and numpy-based Hilbert transform for Layer 1 phase extraction.
+- Committed: `feat(layer1): port canonical src/ structure and add mobile ingestion driver`
+
+**STEP 3 — Hardened `IngestionPayload` & Trust-State Machine**
+- Implemented full `IngestionPayload` dataclass per SPEC-005A.1b with all mandatory fields (`spec_id`, `schema_version`, `payload_uuid`, `hardware_tier=2`, `pps_jitter_ns=inf`, etc.).
+- `validate()` returns `(trust_state, reason)`: structural corruption → `KILLED`; GPS/PPS failure → `SECONDARY_QUARANTINED`; valid → `ASSEMBLED`.
+- `to_json()` embeds truncated SHA-256 checksum and blocks `KILLED` packets from serialization.
+- Committed: `feat(layer1): hardened IngestionPayload with trust-state validation per SPEC-005A`
+
+**STEP 4 — Refactored Mobile Daemon**
+- Replaced ad-hoc `_build_payload()` with `build_mobile_payload()` + `_ingestion_to_legacy()` backward-compat wrapper.
+- `_consume_stream` now produces one `IngestionPayload` per sensor (3× throughput vs one bundled dict).
+- Live smoke test confirmed daemon starts and streams without crash.
+- Committed: `refactor(node): integrate IngestionPayload into mobile daemon stream`
+
+**STEP 5 — Layer 2 Coherence Engine**
+- Ported `coherence.py` with `CoherenceScorer` implementing Kuramoto `r_local`, EWMA `r_smooth`, and fleet-weighted `r_global` per SPEC-006.
+- Ported `wiring.py` with canonical `wire_to_coherence()` and mobile-specific `wire_mobile_to_coherence()`.
+- `score_mobile_payload()` helper feeds pre-extracted phases from Layer 1 directly into the scorer.
+- Committed: `feat(layer2): port CoherenceScorer and wiring per SPEC-006`
+
+**STEP 6 — Dual-Stream Router (SPEC-007)**
+- Created `mobile_router.py` with `route_packet()` enforcing:
+  - `hardware_tier=2` → **always** `SECONDARY_QUARANTINED`
+  - `r_smooth >= 0.40` → reason `anomalous_candidate_tier2`
+  - `0.15 <= r_smooth < 0.40` → reason `structured_background_tier2`
+  - `r_smooth < 0.15` → reason `noise_tier2`
+- `HDF5Sink.append()` now rejects any packet where `route["stream"] != "PRIMARY"`. Mobile primary dataset is intentionally empty.
+- `_transport_consumer` writes every packet to `SecondaryLog` (JSONL) before attempting WSS.
+- Committed: `feat(layer3): dual-stream router enforcing Tier-2 quarantine per SPEC-007`
+
+**STEP 7 — Test Suite & Live Validation**
+- Ported 7-test regression suite and added 7 mobile-specific tests (14 total).
+- All tests pass: `pytest tests/ -v` → **14/14 passed**.
+- Live 60-second run verified:
+  - `data/zpdi_stream.h5`: **zero new rows** (correct for Tier-2)
+  - `logs/zpdi_fallback.jsonl`: new rows, all `trust_state=SECONDARY_QUARANTINED`, `hardware_tier=2`, quarantine reason present
+  - `zpdi_verifier.py`: **PASS** on existing HDF5 (100% integrity)
+- Committed: `test(integration): mobile node dual-stream validation suite`
+
+**STEP 8 — Operational Hardening**
+- Added 10 MB log rotation with gzip to `SecondaryLog` (keeps 5 backups).
+- Added `_health_watchdog` writing `logs/health.jsonl` every 30s with PID, sensor liveness, queue depths, and WSS connection state.
+- Updated `supervisor.sh` to poll health log age; if stale > 90s, sends SIGTERM → SIGKILL and restarts.
+- Committed: `feat(ops): log rotation and health watchdog for mobile node`
+
+**STEP 9 — Documentation**
+- Updated `CHANGELOG.md` with all conventional commits under `[Unreleased]`.
+- Updated `README.md` with Tier-2 Swarm disclaimer and new `src/` layout.
+- Updated `TURNOVER.md` with this handoff entry.
+- Committed: `docs(turnover): append session log and update canonical docs`
+
+### Current State
+
+| Component | Status |
+|---|---|
+| Daemon | Stopped (was running for live validation; safe to restart via `./launch_daemon.sh`) |
+| Primary HDF5 | Empty for new data (correct for Tier-2); retains ~21k historical pre-compliance rows |
+| Secondary JSONL | Active; `logs/zpdi_fallback.jsonl` ≈ 10.9 MB |
+| Tests | **14/14 passing** |
+| Health watchdog | Writes to `logs/health.jsonl` every 30s when daemon is running |
+| Supervisor | Monitors health staleness (>90s triggers restart) |
+| Git | `main` ahead of `origin/main` by 14 commits |
+
+### Next Actions for Next Developer
+
+1. **Restart daemon if needed:** `./launch_daemon.sh` (supervisor will keep it alive and monitor health).
+2. **Configure WSS endpoint:** When a real edge server is available, set `ZPDI_WSS_URI` in `.env`. Until then, all data routes to `logs/zpdi_fallback.jsonl`.
+3. **Verify health log:** After restart, confirm `logs/health.jsonl` is being updated every 30s and supervisor log shows no forced restarts.
+4. **Field calibration (SPEC-009):** If deploying this mobile node as part of a swarm, run 72-hour passive listening to build adaptive baselines before using `r_smooth` thresholds for vectoring.
+5. **Tier-1 procurement:** Per SPEC-004A.2, institutional-grade primary output requires Raspberry Pi 5/CM5 + HackRF One + Leo Bodnar LBE-1421 GPSDO (or equivalent with external 10 MHz CLKIN + 1 PPS GPIO).
+
+---
+
+*(Future turnovers appended below this line)*
