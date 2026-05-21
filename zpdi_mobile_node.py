@@ -29,16 +29,11 @@ from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
 from websockets.protocol import State
 
-# Absolute host path is mandatory: the Termux binary is not on $PATH inside the
-# Debian proot, and a relative lookup would silently fall through to whatever
-# (if anything) the proot's own PATH resolves.
-TERMUX_SENSOR_BIN = "/data/data/com.termux/files/usr/bin/termux-sensor"
-# Exact sensor names from `termux-sensor -l` on this device. Substring matches
-# like "barometer" silently return no rows; full vendor strings are required.
-SENSORS = (
-    "ICM45631 Accelerometer",
-    "MMC5616 Magnetometer",
-    "ICP20100 Pressure Sensor",
+from src.layer1_ingestion.mobile_ingestion import (
+    build_mobile_payload,
+    IngestionPayload,
+    SENSORS,
+    TERMUX_SENSOR_BIN,
 )
 
 # Cadence requested from termux-sensor's streaming mode (`-d <ms>`). The
@@ -67,26 +62,6 @@ class Payload:
     body: dict[str, Any]
     raw: bytes      # canonical JSON bytes — the exact bytes that were hashed
     digest: str     # hex SHA-256 of `raw`
-
-
-# --- Timestamps ----------------------------------------------------------------
-
-def _high_res_timestamps() -> dict[str, int | float]:
-    """Return the most accurate clocks the kernel exposes.
-
-    `time.time_ns()` is wall-clock (CLOCK_REALTIME); `time.monotonic_ns()` is
-    immune to NTP slew and is the correct clock for inter-sample deltas.
-    `clock_gettime(CLOCK_BOOTTIME)` survives device suspend, which matters on
-    a mobile node where the host may sleep between polls.
-    """
-    out: dict[str, int | float] = {
-        "wall_ns": time.time_ns(),
-        "monotonic_ns": time.monotonic_ns(),
-    }
-    boottime = getattr(time, "CLOCK_BOOTTIME", None)
-    if boottime is not None:
-        out["boottime_ns"] = time.clock_gettime_ns(boottime)
-    return out
 
 
 # --- Sensor streaming ---------------------------------------------------------
@@ -167,19 +142,25 @@ async def _consume_stream(
             buf = stripped[idx:]
             if not isinstance(reading, dict):
                 continue
-            payload = _build_payload(reading)
-            for q in queues:
-                try:
-                    q.put_nowait(payload)
-                except asyncio.QueueFull:
-                    with contextlib.suppress(asyncio.QueueEmpty):
-                        q.get_nowait()
+            # termux-sensor emits one dict with all requested sensors.
+            # Produce one canonical IngestionPayload per sensor.
+            for sensor_name, sensor_reading in reading.items():
+                if sensor_name not in SENSORS:
+                    continue
+                ingestion = build_mobile_payload(sensor_name, sensor_reading)
+                payload = _ingestion_to_legacy(ingestion)
+                if payload is None:
+                    continue  # KILLED packet dropped at serialization gate
+                for q in queues:
                     try:
                         q.put_nowait(payload)
                     except asyncio.QueueFull:
-                        # Should be unreachable if we just cleared a slot, but
-                        # for absolute safety in a multi-producer race...
-                        pass
+                        with contextlib.suppress(asyncio.QueueEmpty):
+                            q.get_nowait()
+                        try:
+                            q.put_nowait(payload)
+                        except asyncio.QueueFull:
+                            pass
 
 
 async def _stream(
@@ -261,14 +242,26 @@ async def _stream(
         await asyncio.sleep(0.5)
 
 
-def _build_payload(reading: dict[str, Any]) -> Payload:
-    body = {
-        "node": "dslv-zpdi/tier1",
-        "schema": 1,
-        "timestamps": _high_res_timestamps(),
-        "sensors": reading,
+def _ingestion_to_legacy(ingestion: IngestionPayload) -> Payload | None:
+    """Convert a canonical IngestionPayload to the legacy Payload shape.
+
+    trust_state is set inside ingestion.to_json() (SPEC-005A.3 gate).
+    KILLED packets return None and are silently dropped.
+    """
+    json_str = ingestion.to_json()
+    if json_str is None:
+        return None
+    body = json.loads(json_str)
+    # Backward-compat fields for existing sinks / verifier
+    body["node"] = ingestion.node_id
+    body["schema"] = ingestion.schema_version
+    body["timestamps"] = {
+        "wall_ns": int(ingestion.timestamp_utc * 1e9),
+        "monotonic_ns": ingestion.ingest_monotonic_ns,
     }
-    raw = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    # Canonical JSON without sha256 for digest computation
+    canonical = {k: v for k, v in body.items() if k != "sha256"}
+    raw = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
     digest = hashlib.sha256(raw).hexdigest()
     body["sha256"] = digest
     return Payload(body=body, raw=raw, digest=digest)
