@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import signal
+import sqlite3
 import ssl
 import sys
 import time
@@ -26,6 +27,7 @@ import numpy as np
 import websockets
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
+from websockets.protocol import State
 
 # Absolute host path is mandatory: the Termux binary is not on $PATH inside the
 # Debian proot, and a relative lookup would silently fall through to whatever
@@ -47,6 +49,7 @@ SENSORS = (
 DEFAULT_STREAM_DELAY_MS = int(os.environ.get("ZPDI_STREAM_DELAY_MS", "250"))
 DEFAULT_WSS_URI = os.environ.get("ZPDI_WSS_URI", "wss://edge.placeholder.invalid:8443/ingest")
 DEFAULT_HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "./data/zpdi_stream.h5"))
+DEFAULT_SQLITE_PATH = Path(os.environ.get("ZPDI_SQLITE_PATH", "./data/zpdi_cache.db"))
 DEFAULT_FALLBACK_LOG = Path(os.environ.get("ZPDI_FALLBACK_LOG", "./logs/zpdi_fallback.jsonl"))
 DEFAULT_CA_BUNDLE = os.environ.get("ZPDI_WSS_CA_BUNDLE") or None
 
@@ -166,10 +169,17 @@ async def _consume_stream(
                 continue
             payload = _build_payload(reading)
             for q in queues:
-                if q.full():
+                try:
+                    q.put_nowait(payload)
+                except asyncio.QueueFull:
                     with contextlib.suppress(asyncio.QueueEmpty):
                         q.get_nowait()
-                q.put_nowait(payload)
+                    try:
+                        q.put_nowait(payload)
+                    except asyncio.QueueFull:
+                        # Should be unreachable if we just cleared a slot, but
+                        # for absolute safety in a multi-producer race...
+                        pass
 
 
 async def _stream(
@@ -345,6 +355,49 @@ class FallbackLog:
             fh.write(b"\n")
 
 
+# --- SQLite Cache (for Web Server) --------------------------------------------
+
+class SQLiteCache:
+    """Lightweight, WAL-mode cache for the latest sensor state."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._conn: sqlite3.Connection | None = None
+
+    def open(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS latest_state ("
+            "  id INTEGER PRIMARY KEY CHECK (id = 1),"
+            "  wall_ns INTEGER,"
+            "  payload TEXT"
+            ")"
+        )
+        self._conn.commit()
+
+    def close(self) -> None:
+        if self._conn:
+            self._conn.close()
+            self._conn = None
+
+    async def update(self, p: Payload) -> None:
+        if self._conn:
+            await asyncio.to_thread(self._update_sync, p)
+
+    def _update_sync(self, p: Payload) -> None:
+        assert self._conn is not None
+        # Upsert the single row with the latest sample
+        self._conn.execute(
+            "INSERT OR REPLACE INTO latest_state (id, wall_ns, payload) "
+            "VALUES (1, ?, ?)",
+            (int(p.body["timestamps"]["wall_ns"]), json.dumps(p.body))
+        )
+        self._conn.commit()
+
+
 # --- WSS transport ------------------------------------------------------------
 
 class WSSTransport:
@@ -437,6 +490,22 @@ async def _storage_consumer(
             log.exception("HDF5 append failed: %s", exc)
 
 
+async def _cache_consumer(
+    queue: asyncio.Queue[Payload],
+    cache: SQLiteCache,
+    stop: asyncio.Event,
+) -> None:
+    while not (stop.is_set() and queue.empty()):
+        try:
+            p = await asyncio.wait_for(queue.get(), timeout=0.5)
+        except asyncio.TimeoutError:
+            continue
+        try:
+            await cache.update(p)
+        except Exception as exc:
+            log.exception("SQLite cache update failed: %s", exc)
+
+
 async def _transport_consumer(
     queue: asyncio.Queue[Payload],
     transport: WSSTransport,
@@ -461,12 +530,15 @@ async def main() -> int:
 
     hdf5_sink = HDF5Sink(DEFAULT_HDF5_PATH)
     hdf5_sink.open()
+    cache = SQLiteCache(DEFAULT_SQLITE_PATH)
+    cache.open()
     fallback = FallbackLog(DEFAULT_FALLBACK_LOG)
     fallback.prepare()
     transport = WSSTransport(DEFAULT_WSS_URI, DEFAULT_CA_BUNDLE, fallback)
 
     # One queue per consumer so a stalled sink can't starve the other.
     storage_q: asyncio.Queue[Payload] = asyncio.Queue(maxsize=QUEUE_MAX)
+    cache_q: asyncio.Queue[Payload] = asyncio.Queue(maxsize=QUEUE_MAX)
     transport_q: asyncio.Queue[Payload] = asyncio.Queue(maxsize=QUEUE_MAX)
     stop = asyncio.Event()
 
@@ -476,8 +548,9 @@ async def main() -> int:
             loop.add_signal_handler(sig, stop.set)
 
     tasks = [
-        asyncio.create_task(_stream((storage_q, transport_q), stop), name="stream"),
+        asyncio.create_task(_stream((storage_q, cache_q, transport_q), stop), name="stream"),
         asyncio.create_task(_storage_consumer(storage_q, hdf5_sink, stop), name="storage"),
+        asyncio.create_task(_cache_consumer(cache_q, cache, stop), name="cache"),
         asyncio.create_task(_transport_consumer(transport_q, transport, stop), name="transport"),
     ]
 
@@ -491,6 +564,7 @@ async def main() -> int:
         await asyncio.gather(*tasks, return_exceptions=True)
         await transport.aclose()
         hdf5_sink.close()
+        cache.close()
     return 0
 
 
