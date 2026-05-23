@@ -256,16 +256,10 @@ if [ -z "$TERMCMD" ]; then
 fi
 
 if [ "$COMPACT_MODE" = "1" ]; then
-    # 5" DSI: spawn waterfall first, then dashboard. Both are full-screen
-    # under the compositor and the user alt-tabs (or workspace-switches)
-    # between them. Skipping the waterfall window here was the original
-    # "waterfall doesn't start" bug.
-    SAY "  - opening waterfall window in compact mode ($TERMCMD)"
-    spawn_terminal "$TITLE_WF" "$GEO_WF" \
-        "$DASH" --waterfall-only --no-boot
-    sleep 5
-
-    SAY "  - opening operations dashboard in compact mode ($TERMCMD)"
+    # 7" DSI: single fullscreen window — the main dashboard embeds the
+    # waterfall panel, so no separate waterfall window is needed.
+    # Spawning two windows on an 800x480 screen just fights for space.
+    SAY "  - opening single dashboard window (7\" DSI compact mode) ($TERMCMD)"
     case "$TERMCMD" in
         lxterminal)
             nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" \
@@ -278,7 +272,7 @@ if [ "$COMPACT_MODE" = "1" ]; then
                 >/dev/null 2>&1 & disown ;;
     esac
     sleep 3
-    OK "launch complete — compact: waterfall + dashboard dispatched"
+    OK "launch complete — single dashboard dispatched (waterfall embedded)"
 else
     # 7a — waterfall second window FIRST so it's visible under the dashboard
     SAY "  - opening waterfall window ($TERMCMD)"

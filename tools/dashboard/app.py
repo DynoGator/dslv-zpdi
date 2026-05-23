@@ -31,7 +31,7 @@ import tty
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
@@ -50,68 +50,110 @@ from dashboard.panels.waterfall import WaterfallPanel
 from dashboard.panels.weather import SpaceWeatherPanel
 
 
-def footer_panel(compact: bool = False) -> Panel:
-    t = Text()
-    if compact:
-        keys = [
-            ("q", "quit"), ("m", "mode"), ("r", "sdr"),
-            ("g/v", "gain"), ("z/x", "zoom"), ("</>", "tune"),
-            ("c", "wide"),
-        ]
-    else:
-        keys = [
-            ("q", "quit"),
-            ("space", "pause"),
-            ("m", "wf-mode"),
-            ("d", "mod"),
-            ("r", "real-sdr"),
-            ("p", "palette"),
-            ("s", "spec"),
-            ("[/]", "floor"),
-            ("{/}", "ceil"),
-            ("h", "banner"),
-            ("c", "compact"),
-            ("g/v", "gain"),
-            ("a", "amp"),
-            ("+/-", "gain-step"),
-            ("</>", "tune-coarse"),
-            (",/.", "tune-fine"),
-            ("z/x", "zoom"),
-        ]
-    for k, desc in keys:
-        t.append("[", style="dim")
-        t.append(k, style="bold bright_yellow")
-        t.append("]", style="dim")
-        t.append(desc, style="bright_white")
-        t.append(" ", style="dim")
-    
-    # Pulse + timestamp on the same line if compact
+def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
+    s = state or {}
+    paused      = s.get("paused", False)
+    wf_mode     = s.get("wf_mode", "SWEEP")
+    real_sdr    = s.get("real_sdr", False)
+    spectrum_on = s.get("spectrum_on", True)
+    lna_gain    = s.get("lna_gain", 24)
+    center_hz   = s.get("center_hz", 100_000_000)
+    modulation  = s.get("modulation", "RAW-SWEEP")
+    palette_nm  = s.get("palette_name", "HEAT")
+
     pulse = "●" if int(time.time() * 2) % 2 == 0 else "○"
     ts = time.strftime("%H:%M:%S", time.gmtime())
-    
-    if compact:
-        t.append(" | ", style="dim")
-        t.append(f"{pulse} {ts}", style="bold bright_cyan")
+
+    # ── Status bar ──────────────────────────────────────────────────────────
+    status = Text(no_wrap=True, overflow="ellipsis")
+
+    if paused:
+        status.append("⏸ PAUSED  ", style="bold yellow")
     else:
-        t.append("\n")
-        t.append(
+        status.append(f"{pulse} LIVE  ", style="bold bright_cyan")
+
+    def _ind(label: str, val: str, style: str = "bright_white"):
+        status.append(f"[{label}:", style="dim")
+        status.append(val, style=style)
+        status.append("] ", style="dim")
+
+    _ind("SDR",  "REAL" if real_sdr    else "SIM",
+         "bold bright_green" if real_sdr else "bold bright_yellow")
+    _ind("WF",   wf_mode, "bold bright_cyan")
+    _ind("FREQ", f"{center_hz / 1e6:.1f}MHz", "bright_magenta")
+    _ind("LNA",  f"{lna_gain}dB")
+    _ind("SPEC", "ON" if spectrum_on else "OFF",
+         "bright_green" if spectrum_on else "dim")
+    if not compact:
+        _ind("MOD",  modulation, "bright_white")
+    _ind("PAL",  palette_nm, "bright_cyan")
+    status.append(f"{ts} UTC", style="dim")
+
+    # ── Key legend ───────────────────────────────────────────────────────────
+    keys = Text(no_wrap=True, overflow="ellipsis")
+    if compact:
+        legend = [
+            ("q",    "quit"),
+            ("SPC",  "pause"),
+            ("m",    "wf-mode"),
+            ("r",    "sdr"),
+            ("p",    "palette"),
+            ("s",    "spec"),
+            ("g/v",  "LNA/VGA"),
+            ("</>",  "tune"),
+            ("z/x",  "zoom"),
+            ("c",    "wide"),
+            ("h",    "banner"),
+        ]
+    else:
+        legend = [
+            ("q",    "quit"),
+            ("space","pause"),
+            ("m",    "wf-mode"),
+            ("d",    "mod"),
+            ("r",    "real-sdr"),
+            ("p",    "palette"),
+            ("s",    "spectrum"),
+            ("[/]",  "floor±"),
+            ("{/}",  "ceil±"),
+            ("h",    "banner"),
+            ("c",    "compact"),
+            ("g/v",  "LNA/VGA-gain"),
+            ("a",    "amp"),
+            ("+/-",  "gain-step"),
+            ("</>",  "tune-coarse"),
+            (",/.",  "tune-fine"),
+            ("z/x",  "zoom"),
+        ]
+    for k, desc in legend:
+        keys.append("[", style="dim")
+        keys.append(k, style="bold bright_yellow")
+        keys.append("]", style="dim")
+        keys.append(desc, style="bright_white")
+        keys.append(" ", style="dim")
+
+    if compact:
+        content = Group(status, keys)
+    else:
+        brand = Text(
             "DSLV-ZPDI :: DynoGatorLabs :: Tier 1 Anchor :: "
-            "If it moves, it gets coherence-scored.",
+            '"If it moves, it gets coherence-scored."',
             style="italic dim bright_white",
+            no_wrap=True,
+            overflow="ellipsis",
         )
-        t.append(f"\n{pulse} LIVE  {ts} UTC", style="bold bright_cyan")
-    
-    return Panel(t, border_style="bright_black", padding=(0, 1))
+        content = Group(status, keys, brand)
+
+    return Panel(content, border_style="bright_black", padding=(0, 1))
 
 
 def _is_compact() -> bool:
-    """Compact mode when terminal is narrower than 110 cols (e.g. 5" DSI at
-    800x480, or a DSLV_DASHBOARD_COMPACT=1 override)."""
+    """Compact mode for 7" DSI (800×480 ≈ 92×30 cols/rows) and smaller screens."""
     if os.getenv("DSLV_DASHBOARD_COMPACT", "").strip() in ("1", "true", "yes"):
         return True
     try:
         cols, lines = shutil.get_terminal_size()
-        return cols < 110 or lines < 30
+        return cols < 120 or lines < 35
     except Exception:
         return False
 
@@ -134,17 +176,20 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
         except Exception:
             total_rows = 24
         
-        # Super-aggressive for very small screens (like 800x480 with default font)
-        short_screen = total_rows < 30
+        # short_screen covers 7" DSI (~30 rows) and below; critical is very tight
+        short_screen = total_rows < 33
         critical_screen = total_rows < 26
-        
+
         status_a = _enabled(("system", "pipeline", "hardware"), panels)
         status_b = _enabled(("anomaly", "weather", "storm"), panels)
         bottom = _enabled(("logs", "notifications"), panels)
 
-        footer_sz = 2 if critical_screen else 3
-        # Hide banner entirely on critical screens to save 3-4 lines
-        banner_sz = 0 if critical_screen else ((4 if total_rows >= 32 else 3) if show_banner else 0)
+        # 2-line footer (status bar + key legend); critical screens drop to 1 line
+        footer_sz = 3 if critical_screen else 4
+        # Suppress banner on 7" and smaller screens to free rows for waterfall
+        banner_sz = 0 if (critical_screen or short_screen) else (
+            (4 if total_rows >= 36 else 3) if show_banner else 0
+        )
         
         rows: list[Layout] = []
         if banner_sz:
@@ -211,7 +256,7 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
         rows.append(Layout(name="space", size=12))
     if bottom:
         rows.append(Layout(name="bottom", size=12))
-    rows.append(Layout(name="footer", size=4))
+    rows.append(Layout(name="footer", size=5))
     layout.split_column(*rows)
 
     if top:
@@ -393,7 +438,23 @@ class Dashboard:
 
         footer_l = self._get_layout("footer")
         if footer_l:
-            footer_l.update(footer_panel(self.compact))
+            footer_l.update(footer_panel(self.compact, self._get_state()))
+
+    def _get_state(self) -> dict:
+        wf = self._panels.get("waterfall")
+        return {
+            "paused":      self.paused,
+            "wf_mode":     wf.mode if wf else "SWEEP",
+            "real_sdr":    os.getenv("DSLV_DASHBOARD_REAL_SDR", "0") == "1",
+            "spectrum_on": wf.show_spectrum if wf else True,
+            "lna_gain":    wf.lna_gain if wf else 24,
+            "vga_gain":    wf.vga_gain if wf else 20,
+            "center_hz":   wf.center_hz if wf else 100_000_000,
+            "modulation":  getattr(wf, "modulation", "RAW-SWEEP") if wf else "RAW-SWEEP",
+            "palette_name": wf.palette_name if wf else "HEAT",
+            "compact":     self.compact,
+            "banner":      self.show_banner,
+        }
 
     def _boot_animation(self):
         if self.waterfall_only:

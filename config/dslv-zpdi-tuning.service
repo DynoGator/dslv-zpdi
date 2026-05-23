@@ -10,6 +10,7 @@ RemainAfterExit=yes
 ExecStart=/bin/bash -c 'for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > $c; done'
 ExecStart=/bin/bash -c 'for d in /sys/bus/usb/devices/*/power/control; do [ -e "$d" ] && echo on > $d 2>/dev/null || true; done'
 ExecStart=/bin/bash -c 'for d in /sys/bus/usb/devices/*/power/autosuspend; do [ -e "$d" ] && echo -1 > $d 2>/dev/null || true; done'
+ExecStart=/bin/bash -c 'for b in /sys/class/backlight/*/brightness; do cat ${b%brightness}max_brightness > $b 2>/dev/null || true; done'
 
 [Install]
 WantedBy=multi-user.target

@@ -303,6 +303,11 @@ class WaterfallPanel:
         global _PALETTE_IDX
         _PALETTE_IDX += 1
 
+    @property
+    def palette_name(self) -> str:
+        names = ["HEAT", "PLASMA", "VIRIDIS"]
+        return names[_PALETTE_IDX % len(_PALETTES)]
+
     def set_mode(self, mode: str):
         if mode in self.MODES:
             self.mode = mode
