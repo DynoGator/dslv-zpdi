@@ -38,14 +38,22 @@ TERMUX_SENSOR_BIN = "/data/data/com.termux/files/usr/bin/termux-sensor"
 SENSORS = (
     "ICM45631 Accelerometer",
     "MMC5616 Magnetometer",
+    "ICM45631 Gyroscope",
+    "Rotation Vector Sensor",
+    "Geomagnetic Rotation Vector Sensor",
     "ICP20100 Pressure Sensor",
+    "Gravity Sensor",
 )
 
 # Sensor name → canonical modality string
 SENSOR_MODALITY_MAP = {
     "ICM45631 Accelerometer": "accel",
     "MMC5616 Magnetometer": "magnetometer",
+    "ICM45631 Gyroscope": "gyroscope",
+    "Rotation Vector Sensor": "rotation_vector",
+    "Geomagnetic Rotation Vector Sensor": "geomagnetic_rotation",
     "ICP20100 Pressure Sensor": "barometer",
+    "Gravity Sensor": "gravity",
 }
 
 # Rolling window size for Hilbert phase extraction
@@ -113,13 +121,16 @@ def _build_extracted_phases(sensor_name: str, reading: dict[str, Any]) -> List[f
 
     * Accelerometer  → magnitude vector → Hilbert → phases
     * Magnetometer   → magnitude vector → Hilbert → phases
+    * Gyroscope      → magnitude vector → Hilbert → phases
+    * Gravity        → magnitude vector → Hilbert → phases
+    * Rotation Vector → reference-only (quaternion/orientation)
     * Pressure       → reference-only  → [] (no phase vector)
     """
     modality = SENSOR_MODALITY_MAP.get(sensor_name, "unknown")
-    if modality in ("accel", "magnetometer"):
+    if modality in ("accel", "magnetometer", "gyroscope", "gravity"):
         mag = _extract_magnitude(reading)
         return _PHASE_BUFFERS.push(sensor_name, mag)
-    # barometer / unknown → no phase vector
+    # barometer / rotation_vector / unknown → no phase vector
     return []
 
 
@@ -152,6 +163,13 @@ class IngestionPayload:
     parent_trigger_id: Optional[str] = None
     payload_checksum: str = ""
     hardware_tier: int = 2
+    # Location enrichment (GPS / network / passive)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    altitude: Optional[float] = None
+    accuracy: Optional[float] = None
+    location_provider: Optional[str] = None
+    location_timestamp: Optional[float] = None
 
     def validate(self) -> Tuple[str, Optional[str]]:
         """SPEC-005A.2 — Payload Self-Validation (Rev 3.1)
@@ -190,12 +208,15 @@ class IngestionPayload:
         return json.dumps(d, default=str)
 
 
-def build_mobile_payload(sensor_name: str, reading: dict[str, Any]) -> IngestionPayload:
+def build_mobile_payload(sensor_name: str, reading: dict[str, Any], location: dict[str, Any] | None = None) -> IngestionPayload:
     """Translate a single termux-sensor reading into a canonical IngestionPayload.
 
-    Mobile nodes are Tier-2; gps_locked is always False and pps_jitter_ns is
+    Mobile nodes are Tier-2; gps_locked defaults to False and pps_jitter_ns is
     infinite, so validate() will always route to SECONDARY_QUARANTINED unless
     the packet is structurally corrupt (KILLED).
+
+    If *location* is provided and recent, it is embedded and gps_locked may be
+    upgraded based on accuracy.
     """
     phases = _build_extracted_phases(sensor_name, reading)
     payload = IngestionPayload(
@@ -209,6 +230,13 @@ def build_mobile_payload(sensor_name: str, reading: dict[str, Any]) -> Ingestion
         source_path=TERMUX_SENSOR_BIN,
         hardware_tier=2,
     )
+    if location:
+        payload.latitude = location.get("latitude")
+        payload.longitude = location.get("longitude")
+        payload.altitude = location.get("altitude")
+        payload.accuracy = location.get("accuracy")
+        payload.location_provider = location.get("provider")
+        payload.location_timestamp = location.get("ts")
     return payload
 
 

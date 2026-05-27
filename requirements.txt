@@ -3,3 +3,4 @@ numpy>=1.26
 websockets>=12.0
 fastapi>=0.110.0
 uvicorn>=0.27.0
+cryptography>=42.0

@@ -8,6 +8,25 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 ## [Unreleased]
 
 ### Added
+- `src/layer1_ingestion/gps_poller.py`: Async GPS/Network/Passive location poller with capped exponential backoff, accuracy gating, and non-blocking integration with Layer 1 enrichment.
+- `zpdi_mobile_node.py` (Rev 3.5): Hardened WSS transport with jittered exponential backoff, circuit-breaker pattern (5-failure threshold / 30s cooldown), and Bearer token authentication via `additional_headers`.
+- SPEC-008 payload security: HMAC-SHA256 signing (`hmac` field) and optional AES-256-GCM envelope encryption controlled by `ZPDI_HMAC_SECRET` and `ZPDI_AES_KEY`.
+- Expanded sensor vectoring suite: `ICM45631 Gyroscope`, `Rotation Vector Sensor`, `Geomagnetic Rotation Vector Sensor`, `Gravity Sensor` added to `SENSORS` and `SENSOR_MODALITY_MAP`.
+- Location metadata embedding (`latitude`, `longitude`, `altitude`, `accuracy`, `location_provider`, `location_timestamp`) in every `IngestionPayload`.
+- `ZPDI_NODE_ID` environment variable for configurable edge-node identity.
+- `tests/test_mobile_compliance.py`: 5 additional hardening regression tests (HMAC, AES envelope, GPS enrichment, expanded modalities, gyroscope phase extraction).
+
+### Changed
+- `requirements.txt`: Added `cryptography>=42.0` dependency for AES-256-GCM support.
+- `.env.example`: Documented `ZPDI_WSS_TOKEN`, `ZPDI_HMAC_SECRET`, `ZPDI_AES_KEY`, `ZPDI_NODE_ID`, and GPS poller tuning variables.
+- `zpdi_mobile_node.py`: Health watchdog now reports GPS fix state and WSS circuit-breaker status.
+
+### Fixed
+- `src/layer1_ingestion/mobile_ingestion.py`: Phase extraction now correctly handles magnitude-vector modalities (accel, magnetometer, gyroscope, gravity) while treating rotation vectors and barometer as reference-only.
+
+## [2026-05-27] — feat: mobile node hardening Phase-2 (GPS, expanded vectoring, crypto, WSS auth)
+
+### Added
 - `src/layer1_ingestion/mobile_ingestion.py`: Canonical Layer 1 driver for Tier-2 mobile nodes with Hilbert phase extraction.
 - `src/layer2_core/coherence.py`: KCET-ATLAS CoherenceScorer with EWMA smoothing and global weighted R(t).
 - `src/layer2_core/wiring.py`: Layer 2 wiring gate (canonical + mobile variant).
