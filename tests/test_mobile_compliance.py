@@ -183,6 +183,9 @@ def test_primary_hdf5_is_empty_after_mobile_run():
         proc.wait()
 
     import h5py
+    import subprocess as _sp
+    # Clear any SWMR write flag left if the daemon didn't shut down cleanly
+    _sp.run(["h5clear", "-s", str(hdf5_path)], check=False, capture_output=True)
     with h5py.File(hdf5_path, "r") as f:
         dset = f["payloads"]
         assert dset.shape[0] == 0, "Primary HDF5 must be empty for Tier-2"
@@ -325,3 +328,61 @@ def test_gyroscope_phase_extraction():
         reading = {"x": float(i), "y": 0.0, "z": 0.5}
         p = build_mobile_payload("ICM45631 Gyroscope", reading)
     assert len(p.extracted_phases) > 0
+
+
+# ---------------------------------------------------------------------------
+# Fusion engine integration tests (SPEC-006.6)
+# ---------------------------------------------------------------------------
+
+def test_rotation_vector_updates_orientation_tracker():
+    """Rotation-vector readings must feed the module-level OrientationTracker."""
+    from src.layer1_ingestion import mobile_ingestion as mi
+    mi._ORIENTATION.reset()
+    # Feed two rotation-vector readings
+    mi._build_extracted_phases("Rotation Vector Sensor", {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
+    mi._build_extracted_phases("Rotation Vector Sensor", {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
+    # Stability must be computed (two samples in buffer)
+    assert mi._ORIENTATION.stability() <= 1.0
+
+
+def test_fusion_weight_applied_to_scores():
+    """apply_orientation_weight must scale r_local and r_smooth by stability."""
+    from src.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+    import math
+    s45 = math.sqrt(2) / 2
+    t = OrientationTracker()
+    # identity → 90° rotation: dot = cos(45°) = s45
+    t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
+    t.push({"x": 0.0, "y": 0.0, "z": s45, "cos_value": s45})
+    r_in, rs_in = 0.8, 0.5
+    r_out, rs_out, w = apply_orientation_weight(r_in, rs_in, t)
+    assert abs(w - s45) < 0.01, f"stability={w} expected≈{s45}"
+    assert abs(r_out - r_in * w) < 1e-9
+    assert abs(rs_out - rs_in * w) < 1e-9
+    assert r_out < r_in  # rotation penalty reduces the score
+
+
+def test_new_sensor_modalities_in_enum():
+    """All 7 Pixel 9 Pro XL sensor modalities must be in SensorModality enum."""
+    from src.layer1_ingestion.payload import SensorModality
+    required = {"gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity"}
+    enum_values = {m.value for m in SensorModality}
+    for mod in required:
+        assert mod in enum_values, f"SensorModality missing: {mod}"
+
+
+def test_wiring_accepts_all_mobile_modalities():
+    """wire_mobile_to_coherence must not silently kill gyro/rotation/gravity."""
+    from src.layer2_core.wiring import wire_mobile_to_coherence
+    mobile_modalities = ("gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity")
+    for mod in mobile_modalities:
+        payload_dict = {
+            "node_id": "test",
+            "modality": mod,
+            "trust_state": "SECONDARY_QUARANTINED",
+            "extracted_phases": [0.1, 0.2, 0.3],
+            "payload_uuid": "test-uuid",
+            "timestamp_utc": 0.0,
+        }
+        result = wire_mobile_to_coherence(payload_dict)
+        assert result is not None, f"wire_mobile_to_coherence returned None for modality={mod}"

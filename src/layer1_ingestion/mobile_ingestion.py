@@ -25,6 +25,7 @@ from typing import Any, List, Optional, Tuple
 import numpy as np
 
 from src.layer2_core.coherence import CoherenceScorer, CoherencePacket
+from src.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
 
 log = logging.getLogger("zpdi.layer1")
 
@@ -103,6 +104,7 @@ class _PhaseBuffers:
 
 
 _PHASE_BUFFERS = _PhaseBuffers()
+_ORIENTATION = OrientationTracker(window=8)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +132,10 @@ def _build_extracted_phases(sensor_name: str, reading: dict[str, Any]) -> List[f
     if modality in ("accel", "magnetometer", "gyroscope", "gravity"):
         mag = _extract_magnitude(reading)
         return _PHASE_BUFFERS.push(sensor_name, mag)
-    # barometer / rotation_vector / unknown → no phase vector
+    if modality in ("rotation_vector", "geomagnetic_rotation"):
+        # Feed orientation quaternion into fusion tracker (no phase vector produced)
+        _ORIENTATION.push(reading)
+    # barometer / rotation_vector / geomagnetic_rotation / unknown → no phase vector
     return []
 
 
@@ -241,13 +246,14 @@ def build_mobile_payload(sensor_name: str, reading: dict[str, Any], location: di
 
 
 def score_mobile_payload(payload: IngestionPayload) -> CoherencePacket | None:
-    """SPEC-006.5 — Mobile wiring: compute coherence scores for Tier-2 packets.
+    """SPEC-006.5/6.6 — Mobile wiring: compute orientation-fused coherence scores.
 
-    Pre-extracted phases from Layer 1 are fed directly into the
-    CoherenceScorer.  r_global will be zero for a single-node deployment.
+    Pre-extracted phases from Layer 1 are fed into CoherenceScorer. The raw
+    r_local and r_smooth are then weighted by the current orientation-stability
+    score from the rotation-vector fusion engine (SPEC-006.6).  r_global is
+    left unmodified because it aggregates across the fleet.
     """
     if not payload.extracted_phases:
-        # Barometer / reference-only modalities → zero coherence
         return CoherencePacket(
             payload_uuid=payload.payload_uuid,
             node_id=payload.node_id,
@@ -257,4 +263,10 @@ def score_mobile_payload(payload: IngestionPayload) -> CoherencePacket | None:
             r_global=0.0,
             trust_state="CORE_PROCESSED",
         )
-    return _coherence_engine.update(payload.__dict__, payload.extracted_phases)
+    packet = _coherence_engine.update(payload.__dict__, payload.extracted_phases)
+    r_fused, rs_fused, w_orient = apply_orientation_weight(
+        packet.r_local, packet.r_smooth, _ORIENTATION
+    )
+    packet.r_local = r_fused
+    packet.r_smooth = rs_fused
+    return packet
