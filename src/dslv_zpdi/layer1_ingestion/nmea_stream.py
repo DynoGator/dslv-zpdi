@@ -115,7 +115,9 @@ class NmeaStream:
         while not self._stop.is_set():
             try:
                 raw = ser.readline()
-            except serial.SerialException:
+            except serial.SerialException as exc:
+                if "readiness to read but returned no data" in str(exc):
+                    continue
                 raise  # propagate to _run for reconnect handling
             if not raw:
                 continue  # timeout with no data

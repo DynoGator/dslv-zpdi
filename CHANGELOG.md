@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.7.1] - 2026-05-30 · Tier 1 / Tier 2 Node Optimization & Communication Refinement
+
+### Fixed
+- **pyhackrf LNA/VGA Gain Log Spam** — removed redundant print statements in `pyhackrf` site-package that caused severe stdout spam during rapid SDR capture cycles.
+- **ComplexWarning in hal_hardware.py** — corrected the pyhackrf ingestion flow which was redundantly converting complex data from `read_samples` into interleaved structures, discarding the imaginary parts and raising a `ComplexWarning`.
+- **NMEA Stream Serial Exception** — implemented exception handling for the `pyserial` bug where the device reports readiness to read but returns no data, avoiding pipeline restarts and silent drops on `/dev/ttyACM0`.
+- **Chronyc Jitter Monitor Stability** — resolved large PPS jitter reporting by forcing chronyc to step the system clock (`chronyc makestep`), aligning the system time with the GPSDO time.
+
 ## [4.7.0] - 2026-05-30 · Node Bridging, HDF5 Multi-Node Aggregation & Dashboard Finalisation
 
 ### Added

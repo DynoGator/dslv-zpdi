@@ -663,12 +663,8 @@ class HardwareHAL(BaseHAL):
             hackrf_device.set_vga_gain(20)
 
             # Capture samples
-            iq_int8 = hackrf_device.read_samples(num_samples)
+            iq_complex = hackrf_device.read_samples(num_samples)
             hackrf_device.close()
-
-            # Convert int8 to complex float normalized to [-1, 1]
-            iq_raw = iq_int8.astype(np.float32) / 128.0
-            iq_complex = iq_raw[0::2] + 1j * iq_raw[1::2]
 
             # Phase extraction from complex baseband IQ (already analytic)
             phases = np.angle(iq_complex).tolist()[:64]
