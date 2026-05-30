@@ -183,10 +183,7 @@ def test_primary_hdf5_is_empty_after_mobile_run():
         proc.wait()
 
     import h5py
-    import subprocess as _sp
-    # Clear any SWMR write flag left if the daemon didn't shut down cleanly
-    _sp.run(["h5clear", "-s", str(hdf5_path)], check=False, capture_output=True)
-    with h5py.File(hdf5_path, "r") as f:
+    with h5py.File(hdf5_path, "r", swmr=True) as f:
         dset = f["payloads"]
         assert dset.shape[0] == 0, "Primary HDF5 must be empty for Tier-2"
 

@@ -11,7 +11,6 @@ class SensorModality(Enum):
     ACCEL = "accel"
     MAGNETOMETER = "magnetometer"
     BAROMETER = "barometer"
-    # Mobile Tier-2 modalities (Pixel 9 Pro XL sensor suite)
     GYROSCOPE = "gyroscope"
     ROTATION_VECTOR = "rotation_vector"
     GEOMAGNETIC_ROTATION = "geomagnetic_rotation"

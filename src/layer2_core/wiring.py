@@ -70,7 +70,10 @@ def wire_mobile_to_coherence(payload_dict: dict) -> Optional[CoherencePacket]:
     try:
         SensorModality(modality_str)
     except ValueError:
-        if modality_str not in {"accel", "magnetometer", "barometer"}:
+        if modality_str not in {
+                "accel", "magnetometer", "barometer",
+                "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
+            }:
             return None
 
     trust_state = payload_dict.get('trust_state', '')
