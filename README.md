@@ -1,8 +1,9 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Transition — RF Metrology)
-**Revision:** Rev 4.6.0 — LBE-1421 Hardened Operations Stack
-**Status:** Beta — Pi 5 deployment validated, system-wide hardening applied, operations dashboard shipped.
+**Revision:** Rev 4.7.0 — Node Bridging, HDF5 Multi-Node Aggregation & Dashboard Finalisation
+**Date:** 2026-05-30
+**Status:** Beta — Tier 1 Pi 5 anchor operational, Pixel 9 Pro XL mobile node bridged via PiRepo hotspot, web dashboard active, all 47 tests passing.
 
 ---
 
@@ -43,13 +44,16 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 ## Hardware Stack (Phase 2A Primary)
 
-| Component       | Model                    | Purpose                                                   |
-|-----------------|--------------------------|-----------------------------------------------------------|
-| Compute         | Raspberry Pi 5 (16 GB)   | FFT processing, HDF5 storage                             |
-| SDR             | HackRF One               | RF ingestion, 20 MHz BW, external CLKIN                  |
-| Clock Authority | Leo Bodnar LBE-1421 GPSDO| 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS       |
-| Antenna         | Great Scott Gadgets ANT500 | 75 MHz – 1 GHz coverage                               |
-| RF Interconnect | SMA Male-to-Male (50 Ω)  | GPSDO Output → HackRF CLKIN (≤ 1 ft)                    |
+| Component           | Model                         | Purpose                                                          |
+|---------------------|-------------------------------|------------------------------------------------------------------|
+| Tier 1 Compute      | Raspberry Pi 5 (16 GB)        | FFT processing, HDF5 storage, hotspot AP, pipeline anchor        |
+| Mobile Node         | Pixel 9 Pro XL (GrapheneOS)   | Remote swarm telemetry over PiRepo Wi-Fi (10.42.0.x)            |
+| Display             | 7" DSI (800×480)              | On-device Rich TUI dashboard                                     |
+| SDR                 | HackRF One                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, parts on order) |
+| Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
+| Antenna             | Great Scott Gadgets ANT500    | 75 MHz – 1 GHz coverage                                         |
+| RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → HackRF CLKIN (≤ 1 ft)                           |
+| Future: Radon Sensor| EcoSense RadonEye Pro         | Radon ingestion via SPEC-015 (staging endpoint live, promotion pending) |
 
 ### Physical Wiring Protocol
 
@@ -66,6 +70,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 ### Prerequisites
 
+**Core hardware (Tier 1 Anchor)**
 - Raspberry Pi 5 (16 GB) or compatible (see Hardware Agnosticism section)
 - HackRF One with 10 MHz CLKIN connected to GPSDO
 - Leo Bodnar LBE-1421 GPSDO (USB-C, NMEA, 3.3 V CMOS)
@@ -73,6 +78,17 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 - SMA Male-to-Male 50 Ω coax, ≤ 1 ft
 - Female-to-female jumper wire (2.54 mm pitch) for PPS
 - GPS antenna with clear sky view
+- 7" DSI display (800×480) — optional; dashboard runs headless if absent
+
+**Mobile node (optional but supported)**
+- Google Pixel 9 Pro XL running GrapheneOS
+- Connect to `PiRepo` Wi-Fi hotspot (see Network Configuration below)
+- Telemetry sender POSTs JSON to `http://10.42.0.1:5775/api/v1/ingest`
+
+**Python dependencies (beyond standard requirements.txt)**
+```bash
+pip install flask psutil   # required for node-receiver and web dashboard
+```
 
 ### One-Shot Bootstrap (Recommended)
 
@@ -238,11 +254,20 @@ python -m dashboard --wide             # Force wide layout
 python -m dashboard --no-banner        # Hide ASCII banner
 python -m dashboard --no-boot          # Skip boot animation
 python -m dashboard --waterfall-only   # Render only the waterfall (no panels)
-python -m dashboard --real-sdr         # Start with live HackRF active
+python -m dashboard --no-real-sdr      # Start with SDR in SIM mode (default is REAL/HackRF ON)
 python -m dashboard --refresh 0.25     # Set refresh rate (seconds)
 python -m dashboard --config /path/to/dashboard.toml
 python -m dashboard --print-config     # Dump resolved config and exit
 python -m dashboard --headless         # Run without TUI (logging only)
+```
+
+> **Note (v4.7.0):** HackRF real-SDR mode is **ON by default**. The dashboard sets
+> `DSLV_DASHBOARD_REAL_SDR=1` at startup. Use `--no-real-sdr` to start in simulated mode.
+> The amp (`a` key) is locked out — HackRF One amp is blown, parts on order.
+
+**Web dashboard** (read-only, auto-refresh, accessible from any device on the PiRepo LAN):
+```
+http://10.42.0.1:8080/
 ```
 
 The dashboard **auto-launches** at desktop login if installed with `--dashboard`.
@@ -441,6 +466,51 @@ All keys are case-insensitive unless noted.
 
 ---
 
+## Network Configuration (PiRepo Hotspot)
+
+The Pi 5 acts as a Wi-Fi access point (`PiRepo`) for swarm node communication.
+
+### Activate the hotspot
+
+```bash
+sudo cp config/PiRepo.nmconnection /etc/NetworkManager/system-connections/
+sudo chmod 600 /etc/NetworkManager/system-connections/PiRepo.nmconnection
+sudo nmcli connection reload
+sudo nmcli connection up PiRepo
+```
+
+The Pi holds static IP `10.42.0.1/24`. Connected devices receive `10.42.0.x` via DHCP.
+
+### Connect the Pixel 9 Pro XL
+
+1. Open **Settings → Network → Wi-Fi** on the Pixel 9 Pro XL (GrapheneOS).
+2. Connect to `PiRepo`.
+3. The device will receive a `10.42.0.x` IP automatically.
+4. Node telemetry is sent to `http://10.42.0.1:5775/api/v1/ingest`.
+5. The web dashboard is viewable at `http://10.42.0.1:8080/`.
+
+### Node Receiver API (SPEC-014)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/ingest` | POST | JSON telemetry from any swarm node |
+| `/api/v1/ingest/radoneye` | POST | EcoSense RadonEye Pro staging (SPEC-015 pending) |
+| `/api/v1/health` | GET | Service health + HDF5 writer stats |
+
+**RadonEye Pro integration path** (future — SPEC-015 pending):
+```json
+POST http://10.42.0.1:5775/api/v1/ingest/radoneye
+{
+  "source": "EcoSense_RadonEye_Pro",
+  "radon_bq_m3": 12.5,
+  "timestamp_utc": 1748560000.0,
+  "unit_id": "RE200-XXXXXX"
+}
+```
+Packets stage to `output/secondary/radoneye_staging.jsonl` until SPEC-015 is ratified.
+
+---
+
 ## Pipeline Operation
 
 ### Service Chain
@@ -448,16 +518,31 @@ All keys are case-insensitive unless noted.
 Services start in dependency order (managed by systemd):
 
 ```
-dslv-zpdi-tuning.service    (Nice=-5, I/O realtime scheduling)
+dslv-zpdi-tuning.service         (Nice=-5, I/O realtime scheduling)
     ↓ After=
-dslv-zpdi-preflight.service (hardware checks: HackRF, PPS, chrony)
+dslv-zpdi-hackrf-init.service    [NEW] (wakes HackRF via hackrf_info; non-fatal if absent)
+    ↓ Before=
+dslv-zpdi-preflight.service      (hardware checks: HackRF, PPS, chrony)
     ↓ After=
-dslv-zpdi.service           (main_pipeline.py — runs indefinitely)
+dslv-zpdi.service                (main_pipeline.py — runs indefinitely)
+    ↓ After=
+dslv-zpdi-node-receiver.service  [NEW] (Flask receiver on port 5775)
+dslv-zpdi-webdash.service        [NEW] (HTML dashboard on port 8080)
+```
+
+**Enable new services (run once after install):**
+```bash
+for svc in dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash; do
+    sudo cp config/${svc}.service /etc/systemd/system/
+done
+sudo systemctl daemon-reload
+sudo systemctl enable --now dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash
 ```
 
 ```bash
 # Check full chain status:
-systemctl status dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi
+systemctl status dslv-zpdi-tuning dslv-zpdi-hackrf-init dslv-zpdi-preflight dslv-zpdi \
+                 dslv-zpdi-node-receiver dslv-zpdi-webdash
 
 # Follow live pipeline logs:
 journalctl -u dslv-zpdi -f

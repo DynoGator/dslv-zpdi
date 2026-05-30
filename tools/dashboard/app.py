@@ -667,7 +667,7 @@ def main(cfg=None):
     parser.add_argument("--waterfall-only", action="store_true", help="render only the waterfall panel")
     parser.add_argument("--compact", action="store_true", help='force compact layout (5" DSI)')
     parser.add_argument("--wide", action="store_true", help="force wide layout (disable compact auto-detect)")
-    parser.add_argument("--real-sdr", action="store_true", help="start with real-SDR mode already on")
+    parser.add_argument("--no-real-sdr", action="store_true", help="start with real-SDR mode OFF (default is ON)")
     parser.add_argument("--headless", action="store_true", help="run without TUI (journald only)")
     parser.add_argument("--config", type=str, default="", help="use a custom dashboard.toml")
     parser.add_argument("--print-config", action="store_true", help="dump resolved config and exit")
@@ -689,8 +689,8 @@ def main(cfg=None):
     elif args.wide:
         compact = False
 
-    if args.real_sdr:
-        os.environ["DSLV_DASHBOARD_REAL_SDR"] = "1"
+    # HackRF is ON by default; --no-real-sdr flag allows explicit opt-out.
+    os.environ["DSLV_DASHBOARD_REAL_SDR"] = "0" if args.no_real_sdr else "1"
 
     show_banner = False if args.no_banner else cfg.show_banner
     

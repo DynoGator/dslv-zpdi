@@ -1,0 +1,33 @@
+[Unit]
+Description=DSLV-ZPDI Web Dashboard (port 8080)
+# Read-only HTML dashboard accessible from PiRepo LAN (10.42.0.x).
+# Pixel 9 Pro XL and any Wi-Fi-connected device can browse http://10.42.0.1:8080/
+After=network.target dslv-zpdi.service
+Wants=dslv-zpdi.service
+
+[Service]
+Type=simple
+User=dynogator
+Group=dynogator
+WorkingDirectory=/home/dynogator/Gem-home/dslv-zpdi
+ExecStart=/home/dynogator/Gem-home/dslv-zpdi/venv/bin/python -m dashboard.web_server
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/dynogator/Gem-home/dslv-zpdi/tools
+Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/Gem-home/dslv-zpdi/output/primary
+Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/Gem-home/dslv-zpdi/output/secondary
+Environment=DSLV_WEBDASH_PORT=8080
+Restart=on-failure
+RestartSec=15
+
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=true
+ReadWritePaths=/home/dynogator/Gem-home/dslv-zpdi/output
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dslv-zpdi-webdash
+
+[Install]
+WantedBy=multi-user.target

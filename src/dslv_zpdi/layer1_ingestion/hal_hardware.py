@@ -121,18 +121,29 @@ class HardwareHAL(BaseHAL):
         self._nmea.start()
 
         initialized = False
+        _soapy_exc = None
         if SOAPYSDR_AVAILABLE:
             try:
                 self._init_soapy_sdr()
                 initialized = True
             except (DriverUnavailableError, HardwareInitializationError) as e:
-                # Log the failure but allow fallback to pyhackrf
+                _soapy_exc = e
                 print(f"[!] SoapySDR initialization failed: {e}. Falling back to pyhackrf...")
             except Exception as e:
+                _soapy_exc = e
                 print(f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyhackrf...")
 
-        if not initialized and PYHACKRF_AVAILABLE:
-            self._verify_pyhackrf_clock()
+        if not initialized:
+            if PYHACKRF_AVAILABLE:
+                self._verify_pyhackrf_clock()
+            elif _soapy_exc is not None:
+                # SoapySDR was available but found no usable device, and there
+                # is no pyhackrf fallback — surface the original error so the
+                # caller knows which driver path failed.
+                raise _soapy_exc
+            # If neither driver is installed at all (both flags False from env),
+            # allow construction — ingest_sdr() will return error payloads
+            # (graceful no-hardware / CI mode).
 
     def _init_soapy_sdr(self):
         """

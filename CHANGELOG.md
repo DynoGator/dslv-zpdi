@@ -1,5 +1,52 @@
 # Changelog
 
+## [4.7.0] - 2026-05-30 · Node Bridging, HDF5 Multi-Node Aggregation & Dashboard Finalisation
+
+### Added
+- **PiRepo hotspot configuration** (`config/PiRepo.nmconnection`) — NetworkManager keyfile
+  to create a 2.4 GHz AP (SSID `PiRepo`) on `wlan0`. The Pi 5 holds static IP
+  `10.42.0.1/24`. Pixel 9 Pro XL (GrapheneOS) and additional swarm nodes connect here.
+- **HackRF boot initialisation service** (`config/dslv-zpdi-hackrf-init.service`) — runs
+  `hackrf_info` once after udev settles USB, waking the device out of cold-start before
+  the pipeline preflight. Failure is non-fatal (pipeline falls back to SimulatedHAL).
+- **Mobile node telemetry receiver** (`src/dslv_zpdi/layer3_telemetry/node_receiver.py`,
+  `config/dslv-zpdi-node-receiver.service`) — Flask micro-service on port 5775 that
+  accepts JSON telemetry POSTs from any swarm node (Pixel 9 Pro XL, future nodes) and
+  forwards them into the local HDF5Writer pipeline.
+- **RadonEye Pro staging endpoint** (`POST /api/v1/ingest/radoneye`) — SPEC-015
+  placeholder; validates EcoSense RadonEye Pro payloads and writes them to
+  `secondary/radoneye_staging.jsonl`. Full primary-stream promotion deferred pending
+  SPEC-015 calibration baseline ratification.
+- **Web dashboard** (`tools/dashboard/web_server.py`, `config/dslv-zpdi-webdash.service`)
+  — read-only HTML dashboard at port 8080 displaying system, pipeline, swarm node, and
+  SDR status panels. Auto-refreshes every 5 s. Accessible to any device on the PiRepo LAN.
+- **`source_node` attestation field** in HDF5 writer — every primary-stream group now
+  carries a `source_node` HDF5 attribute identifying which physical node produced the
+  packet, enabling per-node provenance tracing in aggregated files.
+
+### Fixed
+- **HardwareHAL SoapySDR/pyhackrf fallback** — when SoapySDR raises `DriverUnavailableError`
+  and `PYHACKRF_AVAILABLE` is False (no fallback driver), the original exception is now
+  re-raised instead of being silently swallowed. Previously the constructor succeeded with
+  no SDR initialised, masking the configuration error. Fixes
+  `test_no_devices_found_raises_driver_unavailable`.
+- **Concurrent HDF5 writes** — `HDF5Writer._write_primary` now acquires a
+  `threading.Lock` before touching the HDF5 file handle, preventing data corruption when
+  the pipeline and the node-receiver HTTP server write to the same file concurrently.
+
+### Changed
+- **HackRF / real-SDR ON by default** — dashboard now sets
+  `DSLV_DASHBOARD_REAL_SDR=1` at startup. Use `--no-real-sdr` CLI flag to start in
+  simulated mode. Waterfall panel and footer SDR indicator reflect live HackRF data
+  immediately on launch.
+- **HDF5 file version bumped** to `3.3` (reflects `source_node` field addition and
+  concurrent-write safety).
+- `HDF5Writer.__init__` accepts an optional `source_node` parameter (default
+  `"tier1-anchor"`) used to stamp every attestation block.
+
+### Tests
+- All 47 tests passing (previously 1 failing).
+
 ## [4.6.2] - 2026-05-08 · Chrony PPS Disambiguation Research
 
 ### Investigated

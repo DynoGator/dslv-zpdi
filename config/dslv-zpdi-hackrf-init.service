@@ -1,0 +1,21 @@
+[Unit]
+Description=DSLV-ZPDI HackRF USB Initialisation
+# Runs once after udev has settled USB devices so the HackRF is visible to
+# libusb before the main pipeline starts. Uses hackrf_info (part of
+# hackrf-tools) to wake the device out of USB cold-start and log firmware.
+After=udev.settle.service
+Before=dslv-zpdi-preflight.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/hackrf_info
+# A missing device is not fatal — pipeline falls back to SimulatedHAL.
+ExecStart=-/bin/sh -c 'echo "[dslv-zpdi-hackrf-init] HackRF ready" | systemd-cat -t dslv-zpdi-hackrf-init'
+TimeoutStartSec=15
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dslv-zpdi-hackrf-init
+
+[Install]
+WantedBy=multi-user.target

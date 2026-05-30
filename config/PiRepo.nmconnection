@@ -1,0 +1,34 @@
+# NetworkManager keyfile — Pi 5 Wi-Fi hotspot for DSLV-ZPDI swarm networking.
+# Install path: /etc/NetworkManager/system-connections/PiRepo.nmconnection
+# Permissions must be 0600 root:root, then:
+#   sudo nmcli connection reload
+#   sudo nmcli connection up PiRepo
+#
+# The Pixel 9 Pro XL (GrapheneOS) and any additional swarm nodes join this
+# 2.4/5 GHz AP. The Pi 5 IP on this interface is static 10.42.0.1/24.
+# The node-receiver service (dslv-zpdi-node-receiver) listens on
+# 10.42.0.1:5775 for JSON telemetry POSTs from mobile nodes.
+
+[connection]
+id=PiRepo
+uuid=a1b2c3d4-e5f6-7890-abcd-ef1234567890
+type=wifi
+interface-name=wlan0
+autoconnect=true
+
+[wifi]
+mode=ap
+ssid=PiRepo
+band=bg
+channel=6
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk=2444666667
+
+[ipv4]
+method=shared
+address1=10.42.0.1/24
+
+[ipv6]
+method=ignore

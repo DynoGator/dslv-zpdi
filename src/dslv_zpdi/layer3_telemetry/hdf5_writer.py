@@ -3,11 +3,13 @@ SPEC-007 | Trust Tier: Institutional Persistence
 Layer 3 implementation of HDF5 storage with SHA-256 attestation and HMAC.
 """
 
+import fcntl
 import hashlib
 import hmac
 import json
 import logging
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Dict, Optional
@@ -24,7 +26,7 @@ except ImportError:
     HDF5_AVAILABLE = False
 
 logger = logging.getLogger("dslv-zpdi.hdf5")
-FILE_VERSION = "3.2"
+FILE_VERSION = "3.3"
 MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
 
@@ -37,6 +39,7 @@ class HDF5Writer:
         output_path="./output/primary",
         secondary_path="./output/secondary",
         hardware_enclave_key: Optional[bytes] = None,
+        source_node: str = "tier1-anchor",
     ):
         """SPEC-007.1 — Initialize writer with output paths and attestation key."""
         self.output_dir = Path(output_path)
@@ -45,8 +48,11 @@ class HDF5Writer:
         self.secondary_dir.mkdir(parents=True, exist_ok=True)
         self.router = DualStreamRouter()
         self.key = hardware_enclave_key or b"dev_key_replace_before_field_deploy"
+        self.source_node = source_node
         self.current_file = None
         self.current_filepath: Optional[Path] = None
+        self._write_lock = threading.Lock()
+        self._lockfile_handle: Optional[object] = None
         self.event_count = 0
         self.stats: Dict[str, int] = {
             "primary_written": 0,
@@ -84,10 +90,20 @@ class HDF5Writer:
         return decision
 
     def _write_primary(self, packet: CoherencePacket, original_json: str):
-        """SPEC-007 — Write institutional-grade packet to HDF5 with attestation."""
+        """SPEC-007 — Write institutional-grade packet to HDF5 with attestation.
+
+        Thread-safe: acquires self._write_lock so that concurrent ingest calls
+        from the local pipeline and the node-receiver HTTP server do not corrupt
+        the HDF5 file.
+        """
         if not HDF5_AVAILABLE:
             logger.warning("h5py not installed — primary write skipped")
             return
+        with self._write_lock:
+            self._write_primary_locked(packet, original_json)
+
+    def _write_primary_locked(self, packet: CoherencePacket, original_json: str):
+        """Inner write — called with _write_lock held."""
         if self.current_file is None or self._file_size_exceeded():
             self._rotate_file()
 
@@ -112,6 +128,7 @@ class HDF5Writer:
 
         attestation = {
             "node_id": packet.node_id,
+            "source_node": self.source_node,
             "modality": packet.modality,
             "trust_state": packet.trust_state,
             "event_window_id": packet.event_window_id or "",
