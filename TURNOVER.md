@@ -81,7 +81,7 @@ compatible (the dtype only applies on dataset creation).
 
 ---
 
-*(Future turnovers appended below this line)*
+*(Future turnovers appended below this line — do not edit above this line)*
 
 ## TURNOVER — 2026-05-21 (Audit Phase 2: Web Transition & Node Hardening)
 
@@ -217,3 +217,64 @@ compatible (the dtype only applies on dataset creation).
 ---
 
 *(Future turnovers appended below this line)*
+
+---
+
+## TURNOVER — 2026-05-30 (Rev 3.5 Integration & Pre-Reboot Handoff)
+
+**Date:** 2026-05-30
+**Performed by:** Claude Code (claude-sonnet-4-6) on behalf of J.R. Fross
+
+### What Was Done
+
+**Rev 3.5 Integration (Tier-1 server ↔ Tier-2 mobile node)**
+
+Ported all KIMI-HOME Rev 3.5 features into the canonical dslv-zpdi working tree and wired the mobile node for SPEC-008 integration with the Tier-1 ingestion server:
+
+| Component | Change |
+|---|---|
+| `src/layer2_core/fusion_engine.py` | NEW — SPEC-006.6 OrientationTracker + apply_orientation_weight |
+| `src/layer1_ingestion/gps_poller.py` | NEW — SPEC-005A.4-GPS async termux-location wrapper |
+| `tier1_ingestion_server.py` | NEW — SPEC-008 WSS ingestion server (Bearer auth, HMAC, AES-256-GCM) |
+| `tests/test_tier1_server.py` | NEW — 19 crypto-pipeline tests |
+| `zpdi_mobile_node.py` | Rev 3.4 → Rev 3.5: HMAC signing, AES-256-GCM, Bearer token, circuit-breaker WSS, GPS task |
+| `src/layer1_ingestion/mobile_ingestion.py` | Rev 3.1 → Rev 3.5: 4 new sensors, GPS fields, orientation-fused coherence, schema 3.5 |
+| `src/layer1_ingestion/payload.py` | +4 SensorModality values (gyroscope, rotation_vector, geomagnetic_rotation, gravity) |
+| `src/layer2_core/wiring.py` | New modality allowlist in both wiring gates |
+| `requirements.txt` | +cryptography>=42.0 |
+| `.venv` | cryptography 48.0.0 installed |
+
+**Tests:** 42/42 passing (14 SPEC compliance + 17 mobile-specific + 11 tier1 server).
+
+**GitHub:** Pushed to `feat/mobile-node-hardening-phase2` (commit `62f9a85`). Note: remote `main` is v4.7.0 Tier-1 hardware node — a separate codebase. Mobile Tier-2 work lives on the feature branch.
+
+**Pre-Reboot Checklist Completed**
+- Vite serve process (PID 7677/7656, port 5173) — gracefully stopped (SIGTERM)
+- zpdi daemon — already stopped (supervisor killed it at 15:18 after stale health detection)
+- HDF5 file — verified clean via `h5clear`, 21,711 rows, SWMR-readable
+- `.venv` — cryptography 48.0.0 installed; all Rev 3.5 imports verified OK
+- Git — clean working tree on `mobile-node-rev35` tracking `origin/feat/mobile-node-hardening-phase2`
+
+### Current State at Reboot
+
+| Component | Status |
+|---|---|
+| Working branch | `mobile-node-rev35` → `origin/feat/mobile-node-hardening-phase2` |
+| zpdi daemon | Stopped — Termux:Boot will auto-restart via `supervisor.sh` |
+| Primary HDF5 | 21,711 historical rows; Tier-2 writes blocked (0 new rows since compliance) |
+| Secondary JSONL | `logs/zpdi_fallback.jsonl` + 2 gzip archives |
+| Supervisor | 90s health-staleness watchdog active; restarts daemon with capped backoff |
+| `.env` | ZPDI_WSS_URI=ws://127.0.0.1:8443/ingest — token/secret/key empty until Tier-1 is live |
+
+### Next Actions After Reboot
+
+1. **Verify daemon restarted:** `tail -f /root/dslv-zpdi/logs/supervisor.log` — expect daemon start entry within ~5s of boot.
+2. **Verify health log:** `tail -f /root/dslv-zpdi/logs/health.jsonl` — entry every 30s; confirm `sensor_alive`, `wss_connected`, `gps_fix`.
+3. **Configure Tier-1 credentials in `.env`**, then restart: `bash /root/dslv-zpdi/launch_daemon.sh`
+   ```
+   ZPDI_WSS_URI=ws://<tier1-ip>:8443/ingest
+   ZPDI_WSS_TOKEN=<shared-token>
+   ZPDI_HMAC_SECRET=<shared-secret>
+   ZPDI_AES_KEY=<base64-32-byte-key>   # optional
+   ```
+4. **Start Tier-1 server (if local):** `python3 tier1_ingestion_server.py`
