@@ -45,6 +45,21 @@ nodes:
     baseline_learning_enabled: false
     allow_primary_output: false
 
+  # Registered Tier 2 mobile nodes — identified by static LAN IP.
+  # The Pi anchor and Pixel are on the shared 10.128.24.x/24 LAN.
+  registered:
+    - node_id: pixel-9-pro-xl
+      hardware_tier: 2
+      role: mobile_swarm
+      ip: "10.128.24.165"
+      # liveness probe — the Termux npx-serve file server (always running)
+      probe_url: "http://10.128.24.165:5173/"
+      # telemetry ingest — POST JSON to the Pi receiver
+      receiver_url: "http://10.128.24.69:5775/api/v1/ingest"
+      platform: GrapheneOS / Termux
+      description: "Google Pixel 9 Pro XL — Tier 2 mobile node, The Forge PWA"
+      allow_primary_output: false
+
 env:
   DSLV_PRIMARY_OUTPUT_DIR: /home/dynogator/Gem-home/dslv-zpdi/output/primary
   DSLV_SECONDARY_OUTPUT_DIR: /home/dynogator/Gem-home/dslv-zpdi/output/secondary

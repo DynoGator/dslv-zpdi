@@ -40,6 +40,31 @@ except ImportError:
 
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
+
+def _update_node_registry(node_id: str) -> None:
+    """Write/update last-seen timestamp for a node in the secondary registry."""
+    reg_path = os.path.join(
+        os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary"),
+        "node_registry.jsonl",
+    )
+    try:
+        os.makedirs(os.path.dirname(reg_path), exist_ok=True)
+        entries: dict = {}
+        if os.path.exists(reg_path):
+            with open(reg_path) as f:
+                for line in f:
+                    try:
+                        e = json.loads(line)
+                        entries[e.get("node_id", "?")] = e
+                    except Exception:
+                        pass
+        entries[node_id] = {"node_id": node_id, "last_seen_utc": time.time()}
+        with open(reg_path, "w") as f:
+            for entry in entries.values():
+                f.write(json.dumps(entry) + "\n")
+    except Exception as exc:
+        logger.warning("node registry update failed: %s", exc)
+
 logger = logging.getLogger("dslv-zpdi.node-receiver")
 
 _writer: HDF5Writer | None = None
@@ -86,10 +111,15 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
         # Ensure timestamp
         payload.setdefault("timestamp_utc", time.time())
 
+        node_id = payload["node_id"]
         decision = _get_writer().ingest(json.dumps(payload))
+
+        # Update node registry so the web dashboard can track last-seen time.
+        _update_node_registry(node_id)
+
         logger.info(
             "INGEST node=%s stream=%s reason=%s",
-            payload.get("node_id"),
+            node_id,
             decision.stream,
             decision.reason,
         )
