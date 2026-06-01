@@ -14,7 +14,6 @@ from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.table import Table
 
-
 _HACKRF_TTL = 3.0   # seconds
 _CHRONY_TTL = 1.5   # seconds
 _GPSDO_TTL = 5.0    # seconds
@@ -60,7 +59,7 @@ def _pps_device() -> bool:
 
 def _pps_module_loaded() -> bool:
     try:
-        with open("/proc/modules", "r", encoding="utf-8") as f:
+        with open("/proc/modules", encoding="utf-8") as f:
             return "pps_gpio" in f.read()
     except Exception:
         return False
@@ -155,7 +154,7 @@ class HardwarePanel:
 
         hrf_style = "bright_green" if hrf["detected"] else "bright_red"
         hrf_glyph = "◉" if hrf["detected"] else "○"
-        
+
         rms = chr_["rms_ns"]
         if rms != rms:  # NaN
             rms_txt = "--"
@@ -202,7 +201,8 @@ class HardwarePanel:
             )
 
             rms_styled = f"[bright_green]{rms_txt}[/]" if rms < 1000 else f"[yellow]{rms_txt}[/]" if rms < 1000000 else f"[bright_red]{rms_txt}[/]"
-            if rms != rms: rms_styled = "[dim]--[/]"
+            if rms != rms:  # NaN guard
+                rms_styled = "[dim]--[/]"
 
             t.add_row(
                 "Chrony",

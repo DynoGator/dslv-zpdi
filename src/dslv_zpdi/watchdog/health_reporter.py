@@ -3,12 +3,14 @@ SPEC-014 — Machine-Readable Health Endpoint
 Writes /run/dslv-zpdi/health.json every N seconds for external orchestrators.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import time
 from pathlib import Path
 from threading import Event, Thread
-from typing import Any, Dict, Optional
+from typing import Any
 
 from dslv_zpdi.logging_config import get_logger
 
@@ -29,10 +31,10 @@ class HealthReporter:
         self.interval_sec = interval_sec
         self.path = Path(path)
         self._stop_event = Event()
-        self._thread: Optional[Thread] = None
-        self._state: Dict[str, Any] = {}
+        self._thread: Thread | None = None
+        self._state: dict[str, Any] = {}
 
-    def update(self, state: Dict[str, Any]) -> None:
+    def update(self, state: dict[str, Any]) -> None:
         """Merge new state into the health snapshot (thread-safe via GIL dict)."""
         self._state.update(state)
 

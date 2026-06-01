@@ -1,5 +1,46 @@
 # Changelog
 
+## [4.7.2] - 2026-06-01 · Robustness, Reliability & Security Hardening
+
+Quality-and-hardening pass focused on system stability and trustworthy data
+output. No functional behaviour of the trust pipeline changed; the work tightens
+shutdown safety, the swarm receiver's attack surface, and overall code health.
+
+### Fixed
+- **Graceful pipeline shutdown (data-integrity)** — `main_pipeline.py` no longer
+  calls `os._exit(0)` from the signal handler, which could leave the active HDF5
+  file truncated. SIGINT/SIGTERM now cooperatively drain the worker threads and
+  flush/close the writer, the timing monitor, and the health reporter. SIGTERM
+  (used by systemd) is now handled in addition to SIGINT.
+- **`cm5_ingestion` import crash (latent bug)** — the deprecation shim imported
+  `BaseHAL` from `hal_factory`, which never exported it; importing the module
+  raised `ImportError`. `hal_factory` now re-exports the canonical HAL surface
+  (`__all__`), and all 31 package submodules import cleanly.
+
+### Security
+- **Node receiver request-size cap** — the Flask swarm receiver now enforces
+  `MAX_CONTENT_LENGTH` (1 MiB), rejecting oversized bodies before they are
+  buffered into memory.
+- **Concurrent node-registry safety** — `node_registry.jsonl` updates are now
+  serialized under a lock and written atomically (`tmp` + `os.replace`), removing
+  a read-modify-write corruption race under concurrent POSTs.
+- **RadonEye input validation** — non-numeric `radon_bq_m3` now returns a clean
+  `422` instead of surfacing a `500`.
+- **Insecure attestation key is now loud** — `HDF5Writer` emits a warning when it
+  falls back to the development HMAC key so it cannot silently reach the field.
+
+### Changed
+- **Code health** — ruff is clean across `src/`, `tools/`, and `tests/`
+  (~240 issues resolved: import hygiene, PEP 585/604 type modernization behind
+  `from __future__ import annotations`, whitespace, bare `except`, dead variables,
+  unsafe comparisons). Pylint rating improved from 9.31 to 9.64/10.
+- **Single-source version** — `dslv_zpdi.__version__` is now defined and is
+  enforced against `pyproject.toml` by `tools/check_version_sync.py`.
+- **Structured logging** — the HAL factory hardware-fallback path now logs via the
+  `dslv-zpdi.hal` logger instead of `print()`.
+- **Hardening of timing probes** — subprocess clock probes specify `check=False`
+  explicitly and catch narrow, expected exceptions instead of bare `except`.
+
 ## [4.7.1] - 2026-05-30 · Tier 1 / Tier 2 Node Optimization & Communication Refinement
 
 ### Fixed

@@ -1,16 +1,15 @@
 """Tests for real HDF5 file rotation behavior (SPEC-007)."""
 
 import json
-import os
 import tempfile
 import time
 import uuid
 from unittest import mock
 
 from dslv_zpdi.core.states import RouteStream, TrustState
+from dslv_zpdi.layer2_core.coherence import CoherencePacket
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.layer3_telemetry.router import RoutingDecision
-from dslv_zpdi.layer2_core.coherence import CoherencePacket
 
 
 def _primary_decision():

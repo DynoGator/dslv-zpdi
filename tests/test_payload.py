@@ -1,7 +1,7 @@
 """Unit tests for IngestionPayload contract."""
 
 import json
-import hashlib
+
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
 

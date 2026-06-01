@@ -3,7 +3,8 @@ SPEC-007 | Trust Tier: Institutional Persistence
 Layer 3 implementation of HDF5 storage with SHA-256 attestation and HMAC.
 """
 
-import fcntl
+from __future__ import annotations
+
 import hashlib
 import hmac
 import json
@@ -12,10 +13,10 @@ import subprocess
 import threading
 import time
 from pathlib import Path
-from typing import Dict, Optional
 
 from dslv_zpdi.core.states import RouteStream
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
+
 from .router import DualStreamRouter, RoutingDecision
 
 try:
@@ -38,7 +39,7 @@ class HDF5Writer:
         self,
         output_path="./output/primary",
         secondary_path="./output/secondary",
-        hardware_enclave_key: Optional[bytes] = None,
+        hardware_enclave_key: bytes | None = None,
         source_node: str = "tier1-anchor",
     ):
         """SPEC-007.1 — Initialize writer with output paths and attestation key."""
@@ -47,14 +48,25 @@ class HDF5Writer:
         self.secondary_dir = Path(secondary_path)
         self.secondary_dir.mkdir(parents=True, exist_ok=True)
         self.router = DualStreamRouter()
-        self.key = hardware_enclave_key or b"dev_key_replace_before_field_deploy"
+        if hardware_enclave_key:
+            self.key = hardware_enclave_key
+        else:
+            # SPEC-007.1 — Fall back to a well-known development key, but make the
+            # weakened attestation guarantee loud so it cannot reach the field
+            # unnoticed. Provide a real hardware_enclave_key in production.
+            self.key = b"dev_key_replace_before_field_deploy"
+            logger.warning(
+                "SPEC-007.1: HDF5Writer using INSECURE development HMAC key — "
+                "attestation is NOT field-trustworthy. Supply hardware_enclave_key "
+                "before deployment."
+            )
         self.source_node = source_node
         self.current_file = None
-        self.current_filepath: Optional[Path] = None
+        self.current_filepath: Path | None = None
         self._write_lock = threading.Lock()
-        self._lockfile_handle: Optional[object] = None
+        self._lockfile_handle: object | None = None
         self.event_count = 0
-        self.stats: Dict[str, int] = {
+        self.stats: dict[str, int] = {
             "primary_written": 0,
             "secondary_logged": 0,
             "rejected": 0,
@@ -219,7 +231,7 @@ class HDF5Writer:
             self.current_file.close()
             self.current_file = None
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """SPEC-007 — Return pipeline statistics."""
         return {**self.stats, **self.router.stats}
 

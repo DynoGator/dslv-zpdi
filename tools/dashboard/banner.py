@@ -16,7 +16,6 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-
 NEON_GREEN = "bright_green"
 NEON_CYAN = "bright_cyan"
 NEON_MAGENTA = "bright_magenta"
@@ -151,7 +150,7 @@ def ultra_compact_banner() -> Panel:
     line.append("DynoGatorLabs ", style=f"bold {NEON_CYAN}")
     line.append("· ", style="dim")
     line.append("TIER 1", style=f"bold {AMBER}")
-    
+
     return Panel(
         Align.center(line),
         border_style=NEON_GREEN,

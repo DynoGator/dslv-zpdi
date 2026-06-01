@@ -73,6 +73,7 @@ class PpsListener:
     # ------------------------------------------------------------------ #
 
     def start(self) -> None:
+        """SPEC-004A.3 — Start the background PPS edge listener thread (idempotent)."""
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
@@ -83,6 +84,7 @@ class PpsListener:
         logger.info("PpsListener: started on %s", self._device)
 
     def stop(self) -> None:
+        """SPEC-004A.3 — Signal the listener thread to stop and join it."""
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3.0)

@@ -21,10 +21,9 @@ import os
 import socket
 import subprocess
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Optional
 
 try:
     from flask import Flask, Response
@@ -205,7 +204,7 @@ setInterval(refresh,5000);
 
 # ── Node liveness probe ───────────────────────────────────────────────────────
 
-def _probe_node(probe_url: str, timeout: float = 3.0) -> tuple[bool, Optional[int]]:
+def _probe_node(probe_url: str, timeout: float = 3.0) -> tuple[bool, int | None]:
     """HTTP GET probe. Returns (online, latency_ms)."""
     try:
         t0 = time.monotonic()
@@ -392,7 +391,7 @@ def _register_node_seen(node_id: str) -> None:
 
 # ── Flask application ─────────────────────────────────────────────────────────
 
-def create_app() -> "Flask":
+def create_app() -> Flask:
     if not FLASK_AVAILABLE:
         raise RuntimeError("flask is required for the web dashboard (pip install flask)")
 

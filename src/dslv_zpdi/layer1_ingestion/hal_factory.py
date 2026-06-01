@@ -3,10 +3,29 @@ SPEC-005A.4 — Canonical HAL factory (Rev 4.4.0).
 Dynamic selection between hardware and simulated ingestion layers.
 """
 
+from __future__ import annotations
+
+import logging
 import os
 
+from .hal_base import BaseHAL
 from .hal_hardware import HardwareHAL
 from .hal_simulated import SimulatedHAL
+
+logger = logging.getLogger("dslv-zpdi.hal")
+
+# SPEC-005A.4 — Canonical public surface for the HAL layer. Re-exported so the
+# deprecated `cm5_ingestion` shim and any legacy callers resolve `BaseHAL` from
+# the canonical factory module.
+__all__ = [
+    "BaseHAL",
+    "HardwareHAL",
+    "SimulatedHAL",
+    "get_hal",
+    "ingest_gps_pps",
+    "ingest_sdr",
+    "verify_hardware_lock",
+]
 
 
 def get_hal(tier: int = 1, simulator: bool = False) -> HardwareHAL | SimulatedHAL:
@@ -25,9 +44,12 @@ def get_hal(tier: int = 1, simulator: bool = False) -> HardwareHAL | SimulatedHA
         return SimulatedHAL()
     try:
         return HardwareHAL()  # SoapySDR primary → pyhackrf fallback, external clock enforced
-    except Exception as e:
-        print(f"[!] HardwareHAL init failed: {e}")
-        print("[!] Falling back to SimulatedHAL. Connect HackRF + GPSDO and restart to enable hardware mode.")
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.warning("HardwareHAL init failed: %s", exc)
+        logger.warning(
+            "Falling back to SimulatedHAL. Connect HackRF + GPSDO and restart "
+            "to enable hardware mode."
+        )
         return SimulatedHAL()
 
 

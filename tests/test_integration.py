@@ -9,8 +9,6 @@ import sys
 import time
 from pathlib import Path
 
-import pytest
-
 
 def test_integration_pipeline_creates_output_and_health():
     output_dir = Path("/tmp/dslv-zpdi-integration-test")
@@ -57,7 +55,7 @@ def test_integration_pipeline_creates_output_and_health():
     # Verify health endpoint fallback
     health_file = Path("/tmp/health.json")
     if health_file.exists():
-        with open(health_file, "r", encoding="utf-8") as f:
+        with open(health_file, encoding="utf-8") as f:
             health = json.load(f)
         assert "timestamp_utc" in health
         assert "uptime_s" in health

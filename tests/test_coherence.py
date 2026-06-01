@@ -1,6 +1,7 @@
 """Unit tests for CoherenceScorer engine."""
 
 import numpy as np
+
 from dslv_zpdi.layer2_core.coherence import CoherenceScorer
 
 

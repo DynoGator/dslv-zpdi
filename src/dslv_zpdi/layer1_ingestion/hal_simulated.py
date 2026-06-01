@@ -20,7 +20,7 @@ from .payload import IngestionPayload, SensorModality
 class SimulatedHAL(BaseHAL):
     """
     SPEC-005A.HAL-SIM — Virtual hardware for testing and CI/CD.
-    
+
     Simulates the RF Metrology stack:
     - GPSDO providing 10 MHz reference and 1 PPS
     - HackRF One with external clock lock
@@ -30,7 +30,7 @@ class SimulatedHAL(BaseHAL):
     def ingest_gps_pps(self, **kwargs) -> IngestionPayload:
         """
         SPEC-005A.4a — Mock GPS/PPS Ingestion (LBE-1421 simulation).
-        
+
         Emulates dual outputs (Out1=1PPS), 1e-12 stability, 100ms pulse,
         and NMEA sentences per datasheet.
         """
@@ -93,14 +93,14 @@ class SimulatedHAL(BaseHAL):
         # Emulate phase noise based on LBE-1421 datasheet p.2
         # -145 dBc/Hz @ 10kHz offset
         noise_std = 0.001 if gps_locked else 0.1
-        
+
         rng = np.random.default_rng(hash(node_id) & 0xFFFFFFFF)
         if coherent_burst:
             phases = (rng.normal(0.0, noise_std, 64)).tolist()
         else:
             t = np.linspace(0, 1, 64)
             phases = (2 * np.pi * 10 * t + rng.normal(0, noise_std, 64)).tolist()
-            
+
         iq_samples = [[float(np.cos(p)), float(np.sin(p))] for p in phases]
 
         payload = IngestionPayload(
@@ -138,7 +138,7 @@ class SimulatedHAL(BaseHAL):
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict:
         """
         SPEC-004A.3 — Simulated GPSDO/HackRF verification.
-        
+
         Returns simulated lock status for CI/CD testing.
         """
         return {

@@ -3,9 +3,11 @@ SPEC-013 - Structured JSON Logging Configuration
 Replaces unstructured print() with journald-ingestible JSON logs.
 """
 
+from __future__ import annotations
+
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pythonjsonlogger import jsonlogger
 
@@ -13,16 +15,16 @@ from pythonjsonlogger import jsonlogger
 class _DSLVEncoder(jsonlogger.JsonFormatter):
     """SPEC-013.2 - Custom JSON formatter injecting node_id, spec_id, and utc timestamp."""
 
-    def __init__(self, node_id: str = "UNKNOWN", fmt: Optional[str] = None, *args: Any, **kwargs: Any):
+    def __init__(self, node_id: str = "UNKNOWN", fmt: str | None = None, *args: Any, **kwargs: Any):
         """SPEC-013.2 - Initialize encoder."""
         self.node_id = node_id
         super().__init__(fmt, *args, **kwargs)
 
     def add_fields(
         self,
-        log_record: Dict[str, Any],
+        log_record: dict[str, Any],
         record: logging.LogRecord,
-        message_dict: Dict[str, Any],
+        message_dict: dict[str, Any],
     ) -> None:
         """SPEC-013.2 - Add custom fields to JSON record."""
         super().add_fields(log_record, record, message_dict)

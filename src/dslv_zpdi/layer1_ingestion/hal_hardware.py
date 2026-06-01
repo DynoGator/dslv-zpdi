@@ -15,12 +15,10 @@ Added NMEA serial verification for GPS fix confirmation.
 
 # pylint: disable=duplicate-code
 
-import fcntl
-import os
-import struct
+from __future__ import annotations
+
 import time
 import uuid
-from typing import List, Optional
 
 import numpy as np
 
@@ -29,6 +27,7 @@ from dslv_zpdi.core.exceptions import (
     DriverUnavailableError,
     HardwareInitializationError,
 )
+
 from .hal_base import BaseHAL
 from .nmea_stream import NmeaStream
 from .payload import IngestionPayload, SensorModality
@@ -45,8 +44,9 @@ except ImportError:
 
 # Fallback to pyhackrf if SoapySDR not available
 try:
-    import hackrf as pyhackrf
     from ctypes import POINTER, c_int
+
+    import hackrf as pyhackrf
 
     # pyhackrf 0.2.0 bug: hackrf_device_list_open uses 'arg_types' (ignored by
     # ctypes) instead of 'argtypes'. Without argtypes, ctypes doesn't marshal
@@ -89,7 +89,7 @@ class HardwareHAL(BaseHAL):
 
     CRITICAL WARNING (RP1 Southbridge):
     The Pi 5's RP1 southbridge uses strictly 3.3V logic. LBE-1421 provides native
-    3.3V CMOS (1.65V into 50 Ω), making it safe for direct connection. 
+    3.3V CMOS (1.65V into 50 Ω), making it safe for direct connection.
     Pulse width is 100 ms; use `assert_falling_edge=0` in dtoverlay.
     """
 
@@ -173,7 +173,7 @@ class HardwareHAL(BaseHAL):
                 )
 
             # Initialize device
-            self.sdr_device = SoapySDR.Device(dict(driver="hackrf"))
+            self.sdr_device = SoapySDR.Device({"driver": "hackrf"})
 
             # FORCE external clock (GPSDO reference) - "Silent Traitor" mitigation
             self._force_external_clock_soapy()
@@ -237,6 +237,7 @@ class HardwareHAL(BaseHAL):
                 capture_output=True,
                 timeout=10,
                 text=True,
+                check=False,
             )
             return result.returncode == 0 and "ok" in result.stdout
         except (subprocess.TimeoutExpired, OSError, ValueError):
@@ -513,7 +514,7 @@ class HardwareHAL(BaseHAL):
             IngestionPayload with GPS-locked IQ samples and phase extraction
         """
         mono_ns = time.monotonic_ns()
-        phases: List[float] = []
+        phases: list[float] = []
         raw_val = {}
 
         if not SOAPYSDR_AVAILABLE and not PYHACKRF_AVAILABLE:
@@ -846,7 +847,7 @@ class HardwareHAL(BaseHAL):
                                 result["gps_fix"] = q > 0
                                 # Fix quality 0 = invalid, 1 = GPS fix, 2 = DGPS fix
                                 # If we had a fix but now quality is 0, we might be in holdover
-                                result["holdover"] = (q == 0) 
+                                result["holdover"] = q == 0
                             except ValueError:
                                 pass
                         if len(parts) > 7:
@@ -877,7 +878,7 @@ class HardwareHAL(BaseHAL):
 
         except ImportError:
             result["warnings"].append("pyserial not installed: pip install pyserial")
-        except (OSError, IOError) as e:
+        except OSError as e:
             result["warnings"].append(f"Serial port error: {e}")
 
         return result
@@ -885,10 +886,10 @@ class HardwareHAL(BaseHAL):
     def configure_lbe1421(self, out1_mode: str = "1PPS", out2_freq: int = 10000000) -> bool:
         """
         SPEC-004A.4-CONFIG — Configure LBE-1421 dual outputs.
-        
+
         Out1: set to "1PPS" for timing pulse.
         Out2: set to frequency in Hz (default 10 MHz).
-        
+
         Note: Actual configuration commands depend on Leo Bodnar serial API.
         This is a stub implementing the requested dual-output config logic.
         """

@@ -2,9 +2,10 @@
 SPEC-008 | Trust Tier: Swarm Validation
 """
 
+from __future__ import annotations
+
 import math
 import time
-from typing import List
 
 SPEED_OF_LIGHT_M_S = 299_792_458.0
 
@@ -18,7 +19,7 @@ class SwarmIntegrityMonitor:
         self.regional_baselines: dict = {}
 
     # pylint: disable=too-many-locals
-    def evaluate_swarm_trigger(self, swarm_packets: List[dict]) -> tuple:
+    def evaluate_swarm_trigger(self, swarm_packets: list[dict]) -> tuple:
         """SPEC-008.2 — Enhanced with temporal freshness check."""
         if len(swarm_packets) < 2:
             return True, "single_node_trigger"

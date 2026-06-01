@@ -3,12 +3,13 @@ SPEC-005A | Trust Tier: Ingested (Layer 1 Payload Contract)
 Hardware-anchored ingestion payload with full SHA-256 attestation.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 from dslv_zpdi.core.states import TrustState
 
@@ -35,8 +36,8 @@ class IngestionPayload:
     modality: str
     timestamp_utc: float
     ingest_monotonic_ns: int = 0
-    raw_value: Dict[str, Any] = field(default_factory=dict)
-    extracted_phases: List[float] = field(default_factory=list)
+    raw_value: dict[str, Any] = field(default_factory=dict)
+    extracted_phases: list[float] = field(default_factory=list)
     gps_locked: bool = False
     pps_jitter_ns: float = 0.0
     calibration_valid: bool = False
@@ -45,12 +46,12 @@ class IngestionPayload:
     source_path: str = ""
     hardware_tier: int = 1
     trust_state: str = TrustState.ASSEMBLED.value
-    quarantine_reason: Optional[str] = None
+    quarantine_reason: str | None = None
     schema_version: str = "3.2"
     payload_checksum: str = ""
     checksum_algo: str = "sha256"  # SPEC-005A.2a: Full checksum metadata
 
-    def validate(self) -> tuple[str, Optional[str]]:
+    def validate(self) -> tuple[str, str | None]:
         """SPEC-003 / SPEC-005A.3 — Validate packet trust state."""
         if not all([self.node_id, self.sensor_id, self.modality]):
             return TrustState.KILLED.value, "missing_identity"

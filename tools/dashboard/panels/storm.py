@@ -7,16 +7,13 @@ from the planetary K-index trend, plus the most recent NOAA alerts
 
 from __future__ import annotations
 
-import math
 import time
 
-from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from dashboard.noaa import get_feed
-
 
 _PHASE_STYLES = {
     "QUIET":      ("◯", "bright_green",  "no active geomagnetic disturbance"),
@@ -73,11 +70,7 @@ class StormPanel:
     def render(self, compact: bool = False) -> Panel:
         snap = self.feed.snapshot()
         phase = snap.get("phase", "UNKNOWN")
-        kp = snap.get("kp_now", float("nan"))
         g = snap.get("g_scale", "G0")
-        r = snap.get("r_scale", "R0")
-        flare = snap.get("flare", "—")
-        history = snap.get("kp_history", [])
         alerts = snap.get("alerts", []) or []
 
         glyph, phase_sty, phase_desc = _PHASE_STYLES.get(phase, _PHASE_STYLES["UNKNOWN"])

@@ -3,10 +3,12 @@ SPEC-012 - Runtime Configuration Loader
 Loads config/deployment.yaml with Pydantic validation and DSLV_* env overrides.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -65,13 +67,13 @@ class Config(BaseModel):
     version: str = "1"
     project: str = "DSLV-ZPDI"
     environment: str = "field"
-    paths: Dict[str, str] = Field(default_factory=dict)
+    paths: dict[str, str] = Field(default_factory=dict)
     clock_discipline: ClockDiscipline = Field(default_factory=ClockDiscipline)
     health_thresholds: HealthThresholds = Field(default_factory=HealthThresholds)
     spec009: Spec009Config = Field(default_factory=Spec009Config)
-    nodes: Dict[str, NodeProfile] = Field(default_factory=dict)
+    nodes: dict[str, NodeProfile] = Field(default_factory=dict)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
-    env: Dict[str, str] = Field(default_factory=dict)
+    env: dict[str, str] = Field(default_factory=dict)
 
     model_config = {"extra": "allow"}
 
@@ -91,7 +93,7 @@ class Config(BaseModel):
 
 def _env_override(config: Config) -> Config:
     """SPEC-012.7 - Apply DSLV_* environment variables over YAML config."""
-    env_map: Dict[str, Any] = {}
+    env_map: dict[str, Any] = {}
     for key, val in os.environ.items():
         if not key.startswith("DSLV_"):
             continue
@@ -142,7 +144,7 @@ def _env_override(config: Config) -> Config:
     return config
 
 
-def load_config(path: Optional[str] = None) -> Config:
+def load_config(path: str | None = None) -> Config:
     """SPEC-012.1 - Load runtime configuration.
 
     Priority: env vars > YAML file > defaults.
@@ -150,9 +152,9 @@ def load_config(path: Optional[str] = None) -> Config:
     config_path = path or os.getenv("DSLV_CONFIG_PATH", "config/deployment.yaml")
     config_file = Path(config_path)
 
-    raw: Dict[str, Any] = {}
+    raw: dict[str, Any] = {}
     if config_file.is_file():
-        with open(config_file, "r", encoding="utf-8") as f:
+        with open(config_file, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
 
     config = Config.model_validate(raw)

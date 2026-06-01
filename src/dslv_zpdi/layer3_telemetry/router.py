@@ -4,10 +4,11 @@ SPEC-003 | Dual-Stream Protocol enforcer with Swarm Integrity verification.
 Kill condition: Any packet reaching HDF5Writer without passing through this router.
 """
 
-from dataclasses import dataclass
-from typing import List, Optional
+from __future__ import annotations
 
-from dslv_zpdi.core.states import TrustState, RouteStream
+from dataclasses import dataclass
+
+from dslv_zpdi.core.states import RouteStream, TrustState
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
 from dslv_zpdi.layer2_core.swarm_integrity import SwarmIntegrityMonitor
 from dslv_zpdi.layer2_core.wiring import coherence_engine, wire_to_coherence
@@ -19,7 +20,7 @@ class RoutingDecision:
 
     stream: str
     reason: str
-    packet: Optional[CoherencePacket] = None
+    packet: CoherencePacket | None = None
     trust_state: str = TrustState.ASSEMBLED.value
 
 
@@ -91,7 +92,7 @@ class DualStreamRouter:
             TrustState.SECONDARY_QUARANTINED.value,
         )
 
-    def validate_swarm_cluster(self, packets: List[dict]) -> bool:
+    def validate_swarm_cluster(self, packets: list[dict]) -> bool:
         """SPEC-008.1 — Interface for multi-node swarm validation."""
         is_valid, _ = self.swarm_monitor.evaluate_swarm_trigger(packets)
         if not is_valid:

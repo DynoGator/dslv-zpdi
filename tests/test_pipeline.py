@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 import json
-import math
-import uuid
 import time
+import uuid
 
-from dslv_zpdi.core.states import TrustState, RouteStream
+from dslv_zpdi.core.states import TrustState
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 from dslv_zpdi.layer2_core.coherence import CoherenceScorer
 from dslv_zpdi.layer2_core.wiring import wire_to_coherence
@@ -87,7 +86,7 @@ def test_coherence_math():
     print("  TEST 5 PASS: Coherence Math ✅")
 
 
-def test_global_R():
+def test_global_r():
     scorer = CoherenceScorer()
     scorer.fleet_state["RF"] = {
         "r_smooth": 0.8,
@@ -110,7 +109,9 @@ def test_killed_packet():
 
 
 def test_attestation():
-    import hmac, hashlib
+    import hashlib
+    import hmac
+
     from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
     w = HDF5Writer(hardware_enclave_key=b"key")
@@ -148,7 +149,7 @@ def main():
         test_state_machine,
         test_full_pipeline,
         test_coherence_math,
-        test_global_R,
+        test_global_r,
         test_killed_packet,
         test_attestation,
         test_rotation,

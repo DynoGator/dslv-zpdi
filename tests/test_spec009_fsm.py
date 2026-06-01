@@ -1,7 +1,6 @@
 """SPEC-009 — Three-state FSM tests: NOT_STARTED → LEARNING → LOCKED.
 Tests state transitions, regression prevention, persistence, and duration gate."""
 
-import json
 import os
 import tempfile
 import time

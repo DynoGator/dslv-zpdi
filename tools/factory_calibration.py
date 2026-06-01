@@ -3,11 +3,11 @@ SPEC-004A.CAL | Factory Calibration & Drift Analysis (Rev 4.2.0)
 Measures static PPS jitter and oscillator drift to establish node baseline.
 """
 
-import time
+import hashlib
+import json
 import os
 import sys
-import json
-import hashlib
+import time
 
 
 def measure_drift(duration_s=60):

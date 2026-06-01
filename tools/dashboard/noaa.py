@@ -22,7 +22,6 @@ import time
 import urllib.error
 import urllib.request
 
-
 _TIMEOUT = 6.0
 _USER_AGENT = "DSLV-ZPDI-Dashboard/1.0 (+https://dynogatorlabs)"
 
@@ -211,27 +210,27 @@ def storm_phase(kp_history: list[float]) -> str:
 
 def compute_trend(history: list[float], threshold: float = 0.05) -> str:
     """General trend calculator for space weather metrics.
-    
+
     Returns: RAMP_UP, PEAK, RAMP_DOWN, STABLE.
     """
     clean = [v for v in history if not (v is None or math.isnan(v))]
     if len(clean) < 4:
         return "STABLE"
-    
+
     recent = clean[-2:]
     prior = clean[-4:-2]
     avg_recent = sum(recent) / 2
     avg_prior = sum(prior) / 2
-    
+
     # Use relative delta for metrics with vastly different scales
     denom = abs(avg_prior) if abs(avg_prior) > 1e-9 else 1.0
     rel_delta = (avg_recent - avg_prior) / denom
-    
+
     if rel_delta > threshold:
         return "RAMP_UP"
     if rel_delta < -threshold:
         return "RAMP_DOWN"
-    
+
     # If it's stable but high, call it PEAK/PLATEAU
     # (Using arbitrary 'high' thresholds for these specific metrics)
     if avg_recent > 0: # placeholder logic, will refine per-metric if needed
@@ -316,7 +315,7 @@ class SpaceWeatherFeed:
             merged.update(_parse_kp(results["kp"]))
             merged["g_scale"] = _g_scale(merged.get("kp_now", float("nan")))
             merged["phase"] = storm_phase(merged.get("kp_history", []))
-        
+
         if results.get("plasma") is not None:
             p = _parse_plasma(results["plasma"])
             merged.update(p)

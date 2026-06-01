@@ -1,4 +1,6 @@
-import sys, time, uuid
+import sys
+import time
+import uuid
 from pathlib import Path
 
 global_storage = {}
@@ -55,10 +57,9 @@ class MockFile:
 
 class MockH5py:
     @staticmethod
-    def File(name, mode="r", **kwargs):
+    def File(name, mode="r", **kwargs):  # noqa: N802 — mirrors the real h5py.File API
         Path(name).parent.mkdir(parents=True, exist_ok=True)
-        with open(name, "a") as f:
-            pass
+        Path(name).touch()
         if mode == "w":
             global_storage[str(name)] = MockFile(name)
         return global_storage.get(str(name))
@@ -78,7 +79,7 @@ class MockPacket:
         self.event_window_id = f"EVT-GOLDEN-{int(time.time())}"
 
 
-from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
+from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer  # noqa: E402
 
 
 def run_golden_sample():
@@ -104,7 +105,7 @@ def run_golden_sample():
     with h5py.File(golden_file, "r") as f:
         grp = f.groups.get(f"event_{0:08d}_{perfect_packet.payload_uuid[:8]}")
         if grp:
-            print(f"[*] Found Institutional Event Group!")
+            print("[*] Found Institutional Event Group!")
             print(f"    -> Hardware Node: {grp.attrs.get('node_id')}")
             print(f"    -> Event Window: {grp.attrs.get('event_window_id')}")
             print(f"    -> HMAC SHA-256 Attestation: {grp.attrs.get('hmac_sha256')}")

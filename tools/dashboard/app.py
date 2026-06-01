@@ -37,7 +37,12 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from dashboard.banner import compact_banner, full_banner, ultra_compact_banner, startup_animation_frames
+from dashboard.banner import (
+    compact_banner,
+    full_banner,
+    startup_animation_frames,
+    ultra_compact_banner,
+)
 from dashboard.config import DashboardConfig, load_config
 from dashboard.panels.anomaly import RFAnomalyPanel
 from dashboard.panels.hardware import HardwarePanel
@@ -175,7 +180,7 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
             _, total_rows = shutil.get_terminal_size()
         except Exception:
             total_rows = 24
-        
+
         # short_screen covers 7" DSI (~30 rows) and below; critical is very tight
         short_screen = total_rows < 33
         critical_screen = total_rows < 26
@@ -190,20 +195,20 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
         banner_sz = 0 if (critical_screen or short_screen) else (
             (4 if total_rows >= 36 else 3) if show_banner else 0
         )
-        
+
         rows: list[Layout] = []
         if banner_sz:
             rows.append(Layout(name="banner", size=banner_sz))
-        
+
         if short_screen:
             # Combine status panels into two info-dense rows
             if status_a:
                 rows.append(Layout(name="status_row_a", size=5))
             if status_b:
                 rows.append(Layout(name="status_row_b", size=5))
-            
+
             rows.append(Layout(name="waterfall", ratio=1))
-            
+
             # Hide bottom panels if screen is too short for both waterfall + logs
             if bottom and total_rows >= 22:
                 rows.append(Layout(name="bottom", size=5))
@@ -215,7 +220,7 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
             rows.append(Layout(name="waterfall", ratio=1))
             if bottom:
                 rows.append(Layout(name="bottom", size=5))
-        
+
         rows.append(Layout(name="footer", size=footer_sz))
         layout.split_column(*rows)
 
@@ -229,16 +234,16 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
                 layout["status_a"].split_row(*[Layout(name=n, ratio=1) for n in status_a])
             if status_b:
                 layout["status_b"].split_row(*[Layout(name=n, ratio=1) for n in status_b])
-        
-        def _get_l(l, n):
+
+        def _get_l(layout_obj, n):
             try:
-                return l[n]
+                return layout_obj[n]
             except KeyError:
                 return None
-        
+
         if bottom and _get_l(layout, "bottom") is not None:
             layout["bottom"].split_row(*[Layout(name=n, ratio=1) for n in bottom])
-        
+
         return layout
 
     # Wide layout
@@ -693,7 +698,7 @@ def main(cfg=None):
     os.environ["DSLV_DASHBOARD_REAL_SDR"] = "0" if args.no_real_sdr else "1"
 
     show_banner = False if args.no_banner else cfg.show_banner
-    
+
     if args.headless:
         print("[+] Headless mode active. Dashboard logic running in background. Check journalctl -u dslv-zpdi")
         # Minimal loop to keep process alive and handle signals

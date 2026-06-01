@@ -1,6 +1,7 @@
+import json
 import time
 import uuid
-import json
+
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 from dslv_zpdi.layer3_telemetry.router import DualStreamRouter
 
@@ -48,11 +49,11 @@ def run_gps_fault_injection():
 def run_holdover_test():
     print("\n--- INITIATING FAULT INJECTION: LBE-1421 HOLDOVER DRIFT ---")
     router = DualStreamRouter()
-    
+
     # Simulate gradual drift during GPS loss
     # LBE-1421 has "no frequency/phase jumps", but drift accumulates.
     print("[*] Simulating holdover state (GPS loss but valid holdover)...")
-    
+
     holdover_payload = IngestionPayload(
         payload_uuid=str(uuid.uuid4()),
         node_id="PI5-ALPHA-TEST",
@@ -64,10 +65,10 @@ def run_holdover_test():
         calibration_valid=True,
         extracted_phases=[0.1, 0.2, 0.3, 0.4] * 10,
     )
-    
+
     decision = router.route(holdover_payload.to_json())
     print(f"Holdover (Low Jitter) -> Stream: {decision.stream}, State: {decision.trust_state}")
-    
+
     # Even with low jitter, SPEC-003 says GPS loss must route to SECONDARY
     if decision.stream == "SECONDARY":
         print("[SUCCESS] Holdover correctly routed to SECONDARY despite low jitter.")

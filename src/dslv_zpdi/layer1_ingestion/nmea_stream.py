@@ -15,7 +15,6 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Optional
 
 logger = logging.getLogger("dslv-zpdi.nmea")
 
@@ -48,7 +47,7 @@ class NmeaStream:
 
         self._lock = threading.Lock()
         self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._latest: dict = _empty_fix()
 
     # ------------------------------------------------------------------ #
@@ -56,6 +55,7 @@ class NmeaStream:
     # ------------------------------------------------------------------ #
 
     def start(self) -> None:
+        """SPEC-004A.4 — Start the background NMEA reader thread (idempotent)."""
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
@@ -66,6 +66,7 @@ class NmeaStream:
         logger.info("NmeaStream: started on %s @ %d baud", self._port, self._baud)
 
     def stop(self) -> None:
+        """SPEC-004A.4 — Signal the reader thread to stop and join it."""
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3.0)
@@ -151,7 +152,7 @@ def _empty_fix() -> dict:
     }
 
 
-def parse_gga(sentence: str) -> Optional[dict]:
+def parse_gga(sentence: str) -> dict | None:
     """
     SPEC-004A.4 — Parse a single GPSDO GGA sentence.
 

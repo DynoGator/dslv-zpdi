@@ -7,6 +7,8 @@ Kill condition: Any coherence calculation on packets below CAL_TRUSTED state,
 or any direct hardware access from this layer.
 """
 
+from __future__ import annotations
+
 import cmath
 import json
 import logging
@@ -15,7 +17,6 @@ import time
 import uuid
 from collections import deque
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -35,7 +36,7 @@ class CoherencePacket:
     r_smooth: float
     r_global: float
     trust_state: str = "UNKNOWN"
-    event_window_id: Optional[str] = None
+    event_window_id: str | None = None
 
 
 # pylint: disable=too-many-instance-attributes
@@ -65,9 +66,9 @@ class CoherenceScorer:
         self.alpha = alpha
         self.window_ms = window_ms
         self.min_nodes = min_nodes
-        self.history: Dict[str, deque] = {}
-        self.fleet_state: Dict[str, Dict] = {}
-        self.global_events: List[Dict] = []
+        self.history: dict[str, deque] = {}
+        self.fleet_state: dict[str, dict] = {}
+        self.global_events: list[dict] = []
         self.event_cooldown_s = event_cooldown_s
 
         # SPEC-009: Baseline FSM state
@@ -75,14 +76,14 @@ class CoherenceScorer:
         self.min_baseline_samples = min_baseline_samples
         self.baseline_duration_hours = baseline_duration_hours
         self._baseline_state = BaselineState.NOT_STARTED
-        self.baseline_samples: List[float] = []
+        self.baseline_samples: list[float] = []
         self.dynamic_threshold = 0.40
         self.baseline_started_utc = 0.0
 
         # Load persisted baseline state
         if self.baseline_state_path and os.path.exists(self.baseline_state_path):
             try:
-                with open(self.baseline_state_path, "r", encoding="utf-8") as f:
+                with open(self.baseline_state_path, encoding="utf-8") as f:
                     data = json.load(f)
                     persisted = data.get("baseline_state", "NOT_STARTED")
                     if persisted == BaselineState.LOCKED.value:
@@ -158,12 +159,12 @@ class CoherenceScorer:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, self.baseline_state_path)
-        except (IOError, OSError) as e:
+        except OSError as e:
             logger.error("Baseline persistence failed: %s", e)
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
-    def compute_local_r(self, phases: List[float]) -> float:
+    def compute_local_r(self, phases: list[float]) -> float:
         """SPEC-006.1 — Compute Kuramoto order parameter r(t).
         r(t) = | (1/N) * sum(e^(i*phi_k)) |"""
         if not phases:
@@ -219,7 +220,7 @@ class CoherenceScorer:
         self._save_baseline_state()
         return self.dynamic_threshold
 
-    def update(self, payload: Dict, phases: List[float]) -> CoherencePacket:
+    def update(self, payload: dict, phases: list[float]) -> CoherencePacket:
         """SPEC-006.3 — Main entry point with EWMA smoothing per Section 5.5.3."""
         node_id = payload.get("node_id", "UNKNOWN")
         modality = payload.get("modality", "unknown")

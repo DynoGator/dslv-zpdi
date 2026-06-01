@@ -13,7 +13,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from tkinter import Tk, StringVar, BooleanVar, Text, END, messagebox, ttk
+from tkinter import END, BooleanVar, StringVar, Text, Tk, messagebox, ttk
 
 try:
     import yaml  # optional but preferred
@@ -145,7 +145,8 @@ def run():
     ttk.Checkbutton(tab_opt, text="Include tier 2 (secondary JSONL)", variable=inc_s).pack(anchor="w", padx=8, pady=4)
     ttk.Checkbutton(tab_opt, text="Include rendered satellite map", variable=inc_m).pack(anchor="w", padx=8, pady=4)
 
-    f = ttk.Frame(tab_opt); f.pack(fill="x", padx=8, pady=8)
+    f = ttk.Frame(tab_opt)
+    f.pack(fill="x", padx=8, pady=8)
     ttk.Label(f, text="Subject prefix:").grid(row=0, column=0, sticky="w")
     ttk.Entry(f, textvariable=prefix).grid(row=0, column=1, sticky="ew", padx=6)
     ttk.Label(f, text="Max attachment MB:").grid(row=1, column=0, sticky="w", pady=(6, 0))
@@ -206,6 +207,5 @@ if __name__ == "__main__":
         run()
     except Exception as e:
         print(f"GUI failed: {e}", file=sys.stderr)
-        print("Tip: edit {} by hand (copy {} first).".format(
-            CONFIG_PATH, EXAMPLE_PATH), file=sys.stderr)
+        print(f"Tip: edit {CONFIG_PATH} by hand (copy {EXAMPLE_PATH} first).", file=sys.stderr)
         sys.exit(1)

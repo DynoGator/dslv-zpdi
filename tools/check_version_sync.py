@@ -58,4 +58,18 @@ if readme_version != project_version:
 if project_version not in changelog_text:
     fail(f"CHANGELOG.md does not mention current version {project_version}")
 
+# Enforce that the in-process __version__ matches packaging metadata so a
+# released wheel can never report a different version than the repo claims.
+init_path = ROOT / "src" / "dslv_zpdi" / "__init__.py"
+init_text = read_text(init_path)
+im = re.search(r'^__version__\s*=\s*"([^"]+)"', init_text, re.M)
+if not im:
+    fail("Could not find __version__ in src/dslv_zpdi/__init__.py")
+init_version = im.group(1)
+if init_version != project_version:
+    fail(
+        f"src/dslv_zpdi/__init__.py __version__ {init_version} does not match "
+        f"pyproject version {project_version}"
+    )
+
 print(f"[OK] Version sync clean: {project_version}")

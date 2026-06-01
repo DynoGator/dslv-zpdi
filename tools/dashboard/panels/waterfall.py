@@ -14,7 +14,6 @@ from __future__ import annotations
 import math
 import os
 import random
-import shutil
 import subprocess
 import threading
 import time
@@ -22,7 +21,6 @@ import time
 from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.text import Text
-
 
 _PALETTES = [
     # Classic Heat
@@ -195,7 +193,7 @@ class HackrfSweepStream:
                     continue
                 try:
                     hz_low = float(parts[2])
-                    hz_high = float(parts[3])
+                    float(parts[3])  # validate hz_high column without binding it
                     bin_w = float(parts[4])
                     powers = [float(x) for x in parts[6:]]
                 except ValueError:
@@ -283,7 +281,7 @@ class WaterfallPanel:
         self.dbm_ceil = -20.0
         self.show_spectrum = True
         self.compact = compact
-        
+
         self._t0 = time.time()
         self._sim_carriers = [
             (0.25, 0.80, 0.00030),
@@ -462,7 +460,7 @@ class WaterfallPanel:
         if raw_dbm:
             floor = self._estimate_floor(raw_dbm)
             self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
-        
+
         if row:
             if len(self.peak_hold) != len(row):
                 self.peak_hold = list(row)
@@ -520,7 +518,7 @@ class WaterfallPanel:
         t = Text()
         # Estimate noise floor for the normalized row
         floor_val = sum(sorted(row)[:len(row)//4]) / (len(row)//4 + 1)
-        
+
         for y in range(height, 0, -1):
             threshold = y / height
             for i, v in enumerate(row):
@@ -561,7 +559,7 @@ class WaterfallPanel:
         lines = Text()
         center_mhz = self.center_hz / 1e6
         span_mhz = self.span_hz / 1e6
-        
+
         if not self.rows:
             lines.append("\n  [ buffering spectrum... ]\n")
         else:
@@ -570,14 +568,14 @@ class WaterfallPanel:
                 lines.append_text(self._spectrum_text(self.rows[-1], height=spec_h))
                 lines.append("─" * self.width, style="dim")
                 lines.append("\n")
-            
+
             # Use as much history as we have, but limit for very small screens if needed.
             # However, the Layout ratio=1 will provide the space, so we should fill it.
             # We don't know the exact line count here, so we'll show most of it.
             rows_to_show = self.rows
             if self.compact and len(self.rows) > 15:
                 rows_to_show = self.rows[-15:]
-            
+
             for row in reversed(rows_to_show):
                 lines.append_text(self._row_text(row))
                 lines.append("\n")
@@ -585,12 +583,12 @@ class WaterfallPanel:
         lo = center_mhz - span_mhz / 2
         hi = center_mhz + span_mhz / 2
         axis = Text()
-        
+
         # More descriptive axis for compact
         lo_s = f"{lo:.2f}"
         hi_s = f"{hi:.2f}"
         mid_s = f" {center_mhz:.3f} MHz "
-        
+
         if self.compact:
             lo_s = f"{lo:.1f}"
             hi_s = f"{hi:.1f}"
@@ -615,7 +613,7 @@ class WaterfallPanel:
         }.get(self._last_source, "SIM")
 
         mod_label = getattr(self, "modulation", "RAW") if self.compact else getattr(self, "modulation", "RAW-SWEEP")
-        
+
         if self.compact:
             title = f"[bold {self.border_style}]▓ WF ▓[/] [dim]({self.mode}·{src_label}·{span_mhz:.1f}M·{self.dbm_floor:.0f}/{self.dbm_ceil:.0f})[/]"
         else:

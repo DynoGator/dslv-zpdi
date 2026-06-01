@@ -37,11 +37,11 @@ def _systemctl_show(unit: str) -> dict:
 
 def _proc_uptime_seconds(pid: int) -> float:
     try:
-        with open(f"/proc/{pid}/stat", "r", encoding="utf-8") as f:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
             parts = f.read().split()
         starttime_clk = int(parts[21])
         hz = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
-        with open("/proc/uptime", "r", encoding="utf-8") as f:
+        with open("/proc/uptime", encoding="utf-8") as f:
             sys_up = float(f.read().split()[0])
         return sys_up - starttime_clk / hz
     except Exception:
@@ -58,7 +58,7 @@ def _read_health() -> dict:
     for p in ("/run/dslv-zpdi/health.json", "/tmp/health.json"):
         try:
             mtime = os.stat(p).st_mtime
-            with open(p, "r", encoding="utf-8") as f:
+            with open(p, encoding="utf-8") as f:
                 data = json.load(f)
             data["_stale"] = (time.time() - mtime) > _HEALTH_STALE_S
             return data
@@ -150,10 +150,10 @@ def _fmt_jitter(jitter_ns) -> str:
         v = float(jitter_ns)
     except (TypeError, ValueError):
         return "[dim]--[/]"
-    
+
     if not math.isfinite(v):
         return "[dim]--[/]"
-    
+
     if v < 1_000:
         return f"[bright_green]{v:.0f}ns[/]"
     if v < 1_000_000:
@@ -236,7 +236,7 @@ class PipelinePanel:
         ticks = health.get("ticks", 0)
         hal_mode = health.get("hal_mode", "?")
         node_id = health.get("node_id", "?")
-        
+
         r_smooth = coherence.get("r_smooth", 0.0)
         r_global = coherence.get("r_global", 0.0)
 

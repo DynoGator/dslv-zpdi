@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from http import HTTPStatus
 
@@ -40,34 +41,51 @@ except ImportError:
 
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
+logger = logging.getLogger("dslv-zpdi.node-receiver")
+
+# SPEC-014 — Reject oversized request bodies before they are buffered into
+# memory. Swarm telemetry packets are small; anything larger is malformed or
+# hostile and must not be allowed to exhaust receiver memory.
+MAX_CONTENT_LENGTH_BYTES = 1 * 1024 * 1024  # 1 MiB
+
+# SPEC-015 — Minimum schema a RadonEye Pro packet must satisfy before staging.
+_RADONEYE_REQUIRED_FIELDS = {"source", "radon_bq_m3", "timestamp_utc", "unit_id"}
+
+_writer: HDF5Writer | None = None
+_registry_lock = threading.Lock()
+
 
 def _update_node_registry(node_id: str) -> None:
-    """SPEC-014 — Write last-seen metadata for a swarm node."""
+    """SPEC-014 — Write last-seen metadata for a swarm node.
+
+    Serialized through ``_registry_lock`` so concurrent POSTs handled by the
+    threaded Flask server cannot interleave the read-modify-write and corrupt
+    ``node_registry.jsonl``.
+    """
     reg_path = os.path.join(
         os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary"),
         "node_registry.jsonl",
     )
     try:
-        os.makedirs(os.path.dirname(reg_path), exist_ok=True)
-        entries: dict = {}
-        if os.path.exists(reg_path):
-            with open(reg_path) as f:
-                for line in f:
-                    try:
-                        e = json.loads(line)
-                        entries[e.get("node_id", "?")] = e
-                    except Exception:
-                        pass
-        entries[node_id] = {"node_id": node_id, "last_seen_utc": time.time()}
-        with open(reg_path, "w") as f:
-            for entry in entries.values():
-                f.write(json.dumps(entry) + "\n")
-    except Exception as exc:
+        with _registry_lock:
+            os.makedirs(os.path.dirname(reg_path), exist_ok=True)
+            entries: dict = {}
+            if os.path.exists(reg_path):
+                with open(reg_path, encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            e = json.loads(line)
+                            entries[e.get("node_id", "?")] = e
+                        except json.JSONDecodeError:
+                            continue
+            entries[node_id] = {"node_id": node_id, "last_seen_utc": time.time()}
+            tmp_path = reg_path + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                for entry in entries.values():
+                    f.write(json.dumps(entry) + "\n")
+            os.replace(tmp_path, reg_path)
+    except OSError as exc:
         logger.warning("node registry update failed: %s", exc)
-
-logger = logging.getLogger("dslv-zpdi.node-receiver")
-
-_writer: HDF5Writer | None = None
 
 
 def _get_writer() -> HDF5Writer:
@@ -81,12 +99,13 @@ def _get_writer() -> HDF5Writer:
     return _writer
 
 
-def create_app(writer: HDF5Writer | None = None) -> "Flask":
+def create_app(writer: HDF5Writer | None = None) -> Flask:
     """SPEC-014 — Create the Flask receiver for swarm telemetry ingestion."""
     if not FLASK_AVAILABLE:
         raise RuntimeError("flask is required for the node receiver (pip install flask)")
 
     app = Flask("dslv-zpdi-node-receiver")
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH_BYTES
 
     if writer is not None:
         global _writer
@@ -132,8 +151,6 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
     # baseline specification. For now, validated packets go to the secondary
     # (quarantine) JSONL stream only.
 
-    _RADONEYE_REQUIRED_FIELDS = {"source", "radon_bq_m3", "timestamp_utc", "unit_id"}
-
     @app.route("/api/v1/ingest/radoneye", methods=["POST"])
     def ingest_radoneye() -> Response:
         """SPEC-015 — Stage EcoSense RadonEye Pro sensor readings."""
@@ -150,6 +167,16 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
         if missing:
             return (
                 jsonify({"error": f"missing required fields: {sorted(missing)}"}),
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+
+        # SPEC-015 — Validate radon reading is numeric before it is staged so a
+        # malformed sensor value yields a clean 422 rather than a later 500.
+        try:
+            radon_value = float(payload["radon_bq_m3"])
+        except (TypeError, ValueError):
+            return (
+                jsonify({"error": "radon_bq_m3 must be numeric"}),
                 HTTPStatus.UNPROCESSABLE_ENTITY,
             )
 
@@ -176,7 +203,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
         logger.info(
             "RADONEYE STAGING: unit=%s radon=%.2f Bq/m³",
             payload.get("unit_id"),
-            float(payload.get("radon_bq_m3", 0)),
+            radon_value,
         )
         return (
             jsonify(

@@ -18,7 +18,6 @@ import getpass
 import hashlib
 import io
 import json
-import os
 import socket
 import subprocess
 import sys
@@ -79,11 +78,13 @@ def _load_yaml(path: Path) -> dict:
             out[k] = v.lower() == "true"
             continue
         try:
-            out[k] = int(v); continue
+            out[k] = int(v)
+            continue
         except ValueError:
             pass
         try:
-            out[k] = float(v); continue
+            out[k] = float(v)
+            continue
         except ValueError:
             pass
         out[k] = v
@@ -196,7 +197,7 @@ def build_message(cfg: dict, tarball: bytes, manifest: dict) -> EmailMessage:
     subject = f"{prefix} Telemetry bundle {ts} - {host}"
 
     lines = [
-        f"DSLV-ZPDI automated telemetry bundle",
+        "DSLV-ZPDI automated telemetry bundle",
         f"Host:       {host}",
         f"Generated:  {manifest['generated_utc']}",
         "",

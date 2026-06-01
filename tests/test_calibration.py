@@ -1,7 +1,8 @@
 """Unit tests for Factory Calibration."""
 
-import os
 import json
+import os
+
 from tools.factory_calibration import generate_calibration_artifact
 
 
@@ -14,7 +15,7 @@ def test_calibration_artifact_generation():
     path = "dslv_zpdi_cal.json"
     assert os.path.exists(path)
 
-    with open(path, "r") as f:
+    with open(path) as f:
         data = json.load(f)
         assert data["node_id"] == node_id
         assert data["drift_percent"] == drift

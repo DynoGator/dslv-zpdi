@@ -3,10 +3,13 @@ SPEC-004A.3 | GPSDOLockMonitor (Rev 4.6.0-LBE1421)
 Robust timing verification for production SIGINT.
 """
 
+from __future__ import annotations
+
 import logging
-import time
 import subprocess
-from typing import Dict, Any
+import time
+from typing import Any
+
 from .hal_hardware import HardwareHAL
 
 logger = logging.getLogger("dslv-zpdi.layer1.lock")
@@ -29,12 +32,12 @@ class GPSDOLockMonitor:
         self.jitter_threshold = jitter_threshold_ns
         self.unlock_threshold = unlock_threshold_s
         self.jitter_grace_period = jitter_grace_period_s
-        
+
         self.last_lock_time = time.time()
         self.jitter_violation_start = None
         self.is_quarantined = False
 
-    def check_lock_state(self, hardware_hal: HardwareHAL) -> Dict[str, Any]:
+    def check_lock_state(self, hardware_hal: HardwareHAL) -> dict[str, Any]:
         """
         SPEC-004A.3.CHECK | Performs triple-validation and returns stability metrics.
         Returns: Dict containing 'healthy', 'quarantine', and metrics.
@@ -48,18 +51,18 @@ class GPSDOLockMonitor:
 
         # 1. NMEA Validation
         gps_fix = metrics["nmea"].get("gps_fix", False)
-        
+
         # 2. chronyc RMS offset (Kernel PPS jitter)
         metrics["pps_jitter_ns"] = self._get_chronyc_jitter()
-        
+
         # 3. HackRF Silent Traitor check
         metrics["hackrf_lock"] = self._verify_hackrf_clock()
 
         now = time.time()
-        
+
         # Stability Logic
         healthy_jitter = metrics["pps_jitter_ns"] < self.jitter_threshold
-        
+
         if gps_fix and metrics["hackrf_lock"] and healthy_jitter:
             self.last_lock_time = now
             self.jitter_violation_start = None
@@ -71,7 +74,7 @@ class GPSDOLockMonitor:
                     self.jitter_violation_start = now
                 elif now - self.jitter_violation_start > self.jitter_grace_period:
                     self.is_quarantined = True
-            
+
             # Handle total unlock with short threshold
             if now - self.last_lock_time > self.unlock_threshold:
                 self.is_quarantined = True
@@ -87,12 +90,12 @@ class GPSDOLockMonitor:
         try:
             result = subprocess.run(
                 ["chronyc", "tracking"],
-                capture_output=True, text=True, timeout=1
+                capture_output=True, text=True, timeout=1, check=False
             )
             for line in result.stdout.splitlines():
                 if "RMS offset" in line:
                     return float(line.split(":")[1].strip().split()[0]) * 1e9
-        except:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError, ValueError, IndexError):
             pass
         return float('inf')
 
@@ -101,9 +104,9 @@ class GPSDOLockMonitor:
         try:
             result = subprocess.run(
                 ["hackrf_debug", "--clock_source"],
-                capture_output=True, text=True, timeout=1
+                capture_output=True, text=True, timeout=1, check=False
             )
             return "external" in result.stdout.lower()
-        except:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             pass
         return False

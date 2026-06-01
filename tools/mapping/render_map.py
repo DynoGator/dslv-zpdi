@@ -27,10 +27,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import folium
-from folium.plugins import MarkerCluster, HeatMap
+from folium.plugins import HeatMap, MarkerCluster
 
 from mapping.aggregate import Anchor, MapEvent, collect_all
-
 
 DEFAULT_OUT = Path.home() / ".local" / "share" / "dslv-zpdi" / "map.html"
 

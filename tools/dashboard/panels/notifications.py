@@ -6,7 +6,7 @@ import time
 from rich.panel import Panel
 from rich.text import Text
 
-from dashboard.humor import pick_scan, pick_glitch
+from dashboard.humor import pick_glitch, pick_scan
 
 
 class NotificationPanel:
@@ -46,7 +46,7 @@ class NotificationPanel:
         else:
             for ts, lvl, msg in self.items:
                 age = int(time.time() - ts)
-                if age > 999: age = 999
+                age = min(age, 999)
                 tag = f"[{age:3d}s]" if not compact else f"{age:2d}s"
                 if lvl == "ERROR" or lvl == "VIOLATION":
                     sty = "bright_red"
@@ -68,7 +68,7 @@ class NotificationPanel:
                 if not compact:
                     t.append(f"{lvl:<7} ", style=f"bold {sty}")
                 t.append(f"{msg}\n", style=sty)
-        
+
         title = f"[bold {self.border_style}]▓ NOTE ▓[/]" if compact else f"[bold {self.border_style}]▓ NOTIFICATIONS ▓[/]"
         return Panel(
             t,

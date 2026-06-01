@@ -10,7 +10,6 @@ from __future__ import annotations
 import math
 import time
 
-from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -154,11 +153,9 @@ class SpaceWeatherPanel:
         bz = snap.get("bz_nt", float("nan"))
         bt = snap.get("bt_nt", float("nan"))
         speed = snap.get("speed_kms", float("nan"))
-        density = snap.get("density", float("nan"))
         flare = snap.get("flare", "—")
         f107 = snap.get("f107_sfu", float("nan"))
         g_scale = snap.get("g_scale", "G0")
-        r_scale = snap.get("r_scale", "R0")
 
         speed_trend = snap.get("speed_trend", "STABLE")
         bt_trend = snap.get("bt_trend", "STABLE")
@@ -206,7 +203,7 @@ class SpaceWeatherPanel:
                 ok_sty = "bright_green" if not err else "yellow"
                 stat_txt = f"[{ok_sty}]{ok_glyph}[/] [dim]NOAA {age}s"
                 if err:
-                    stat_txt += f" !"
+                    stat_txt += " !"
                 stat_txt += "[/]"
             t.add_row("", Text.from_markup(stat_txt))
 

@@ -10,7 +10,7 @@ from rich.table import Table
 
 def _read(path: str, default: str = "") -> str:
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
         return default
@@ -27,7 +27,7 @@ def _cpu_temp_c() -> float:
 def _cpu_usage_percent(prev_state: dict) -> float:
     """Compute CPU % since last call. prev_state is a mutable dict."""
     try:
-        with open("/proc/stat", "r", encoding="utf-8") as f:
+        with open("/proc/stat", encoding="utf-8") as f:
             fields = f.readline().split()[1:8]
         vals = [int(x) for x in fields]
         idle = vals[3] + vals[4]
@@ -48,7 +48,7 @@ def _cpu_usage_percent(prev_state: dict) -> float:
 def _mem() -> tuple:
     try:
         meminfo = {}
-        with open("/proc/meminfo", "r", encoding="utf-8") as f:
+        with open("/proc/meminfo", encoding="utf-8") as f:
             for line in f:
                 k, v = line.split(":", 1)
                 meminfo[k] = int(v.split()[0])  # kB
@@ -62,7 +62,7 @@ def _mem() -> tuple:
 
 def _load_avg() -> tuple:
     try:
-        with open("/proc/loadavg", "r", encoding="utf-8") as f:
+        with open("/proc/loadavg", encoding="utf-8") as f:
             parts = f.read().split()
         return float(parts[0]), float(parts[1]), float(parts[2])
     except Exception:

@@ -7,6 +7,7 @@ Implemented "Silent Traitor" clock failure detection per ARCH-PHASE-2A-PIVOT.
 """
 
 import argparse
+import importlib.util
 import os
 import subprocess
 import sys
@@ -44,7 +45,7 @@ def check_rp1_voltage_guard() -> bool:
     """
     cal_path = "/etc/dslv_zpdi_cal.json"
     if os.path.exists(cal_path):
-        with open(cal_path, "r", encoding="utf-8") as f:
+        with open(cal_path, encoding="utf-8") as f:
             content = f.read()
             if "LBE-1421" in content:
                 print("[HARD] LBE-1421 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
@@ -58,13 +59,13 @@ def check_soapy_sdr():
     try:
         import SoapySDR
         results = SoapySDR.Device.enumerate()
-        
+
         hackrf_found = False
         for result in results:
             if 'hackrf' in str(result).lower():
                 hackrf_found = True
                 break
-        
+
         if hackrf_found:
             print("[*] SoapySDR installed with HackRF support.")
             return True
@@ -102,7 +103,7 @@ def check_hackrf_presence():
 def check_hackrf_clock_source():
     """
     ARCH-PHASE-2A-PIVOT §5.1 — Verify HackRF is receiving external 10 MHz reference.
-    
+
     Critical: Without external clock, phase coherence is impossible.
     Implements "Silent Traitor" detection - HackRF silently falls back to internal osc.
     """
@@ -112,7 +113,7 @@ def check_hackrf_clock_source():
             import SoapySDR
             device = SoapySDR.Device(dict(driver="hackrf"))
             clock_source = device.getClockSource()
-            
+
             if clock_source == "external":
                 print("[*] HackRF clock source: EXTERNAL (GPSDO locked) ✅")
                 print("    Phase-lock verified. SDR slaved to GPSDO 10MHz reference.")
@@ -123,7 +124,7 @@ def check_hackrf_clock_source():
                 return False
         except ImportError:
             pass
-        
+
         # Fallback to hackrf_debug
         res = subprocess.run(
             ["hackrf_debug", "--clock_source"],
@@ -138,7 +139,7 @@ def check_hackrf_clock_source():
                 print("[!] HackRF clock source: INTERNAL (not GPSDO locked) ❌")
                 print("    [SILENT TRAITOR DETECTED] Verify GPSDO 10 MHz → CLKIN")
                 return False
-        
+
         print("[WARN] Cannot verify HackRF clock source automatically.")
         print("       Manually verify: GPSDO 10 MHz → HackRF CLKIN")
         return True  # Don't fail provisioning for this
@@ -169,11 +170,11 @@ def check_udev_rules():
         rules_found.append("PPS")
     if os.path.exists("/etc/udev/rules.d/52-hackrf.rules"):
         rules_found.append("HackRF")
-    
+
     if rules_found:
         print(f"[*] udev rules found: {', '.join(rules_found)}")
         return True
-    
+
     print("[WARN] udev rules incomplete. Some devices might require root.")
     return False
 
@@ -183,23 +184,21 @@ def check_python_dependencies():
     SPEC-005A — Verify Python dependencies for RF Metrology stack.
     """
     all_ok = True
-    
+
     # Check SoapySDR (preferred)
-    try:
-        import SoapySDR
+    if importlib.util.find_spec("SoapySDR") is not None:
         print("[*] SoapySDR Python library installed.")
-    except ImportError:
+    else:
         print("[!] SoapySDR Python bindings not installed.")
         print("    Install: sudo apt install python3-soapysdr")
         all_ok = False
-    
+
     # Check pyhackrf (fallback)
-    try:
-        import pyhackrf
+    if importlib.util.find_spec("pyhackrf") is not None:
         print("[*] pyhackrf Python library installed (fallback).")
-    except ImportError:
+    else:
         print("[WARN] pyhackrf not installed. SoapySDR will be used.")
-    
+
     return all_ok
 
 
@@ -208,9 +207,9 @@ def check_chrony_pps_config():
     ARCH-PHASE-2A-PIVOT §4.3 — Verify chrony is configured for PPS priority.
     """
     try:
-        with open('/etc/chrony/chrony.conf', 'r') as f:
+        with open('/etc/chrony/chrony.conf') as f:
             config = f.read()
-        
+
         if 'refclock PPS /dev/pps0' in config:
             print("[*] Chrony configured for PPS priority ✅")
             return True
@@ -229,9 +228,9 @@ def check_pps_gpio_overlay():
     ARCH-PHASE-2A-PIVOT §4.2 — Verify PPS-GPIO overlay is configured.
     """
     try:
-        with open('/boot/firmware/config.txt', 'r') as f:
+        with open('/boot/firmware/config.txt') as f:
             config = f.read()
-        
+
         if 'dtoverlay=pps-gpio' in config:
             print("[*] PPS-GPIO overlay configured ✅")
             return True
@@ -264,7 +263,7 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
         print("[WARN] pyserial not installed. Cannot verify NMEA.")
         print("       Install: pip install pyserial")
         return True  # Don't fail provisioning for this
-    except (OSError, IOError):
+    except OSError:
         print(f"[WARN] Cannot open {serial_port} for NMEA verification.")
         print("       Ensure LBE-1421 is connected via USB-C.")
         return True  # Don't fail provisioning for this
@@ -300,7 +299,7 @@ def main():
         os.environ["DEV_SIMULATOR"] = "1"
 
     print_rp1_warning()
-    
+
     print("=" * 60)
     print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.4.0)")
     print("=" * 60)
@@ -311,7 +310,7 @@ def main():
     print("  - GPSDO 1 PPS → Pi 5 GPIO 18 (UTC timestamp)")
     print("  - ⚠️  VERIFY 3.3V LOGIC LEVEL BEFORE CONNECTING PPS!")
     print()
-    
+
     if os.environ.get("DEV_SIMULATOR") == "1":
         print("[*] Simulation environment (DEV_SIMULATOR=1) - skipping hardware audit.")
         sys.exit(0)
@@ -343,7 +342,7 @@ def main():
     print("=" * 60)
     print("Audit Summary:")
     print("=" * 60)
-    
+
     all_passed = True
     for name, result in checks:
         status = "✅ PASS" if result else "❌ FAIL"

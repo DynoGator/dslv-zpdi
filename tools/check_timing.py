@@ -4,8 +4,8 @@ Validates GPSDO/PPS lock and sub-microsecond jitter.
 """
 
 import os
-import subprocess
 import re
+import subprocess
 import sys
 
 

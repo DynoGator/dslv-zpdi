@@ -152,7 +152,7 @@ class RFAnomalyPanel:
                 age = int(time.time() - self.session_peak_at)
                 sess = Text()
                 sess.append(f"{self.session_peak_dbm:6.1f} dBm", style="bold " + _dbm_style(self.session_peak_dbm))
-                sess.append(f"  @ ", style="dim")
+                sess.append("  @ ", style="dim")
                 sess.append(_fmt_freq(self.session_peak_freq_hz), style="bright_white")
                 sess.append(f"  ({age}s ago)", style="dim")
                 t.add_row("Sess. Peak", sess)

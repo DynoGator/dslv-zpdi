@@ -13,16 +13,14 @@ secondary events land on a jittered secondary ring.
 
 from __future__ import annotations
 
-import glob
 import hashlib
 import json
 import math
-import os
 import random
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
 
 try:
     import h5py
