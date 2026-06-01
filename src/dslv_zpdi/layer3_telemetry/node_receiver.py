@@ -42,7 +42,7 @@ from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
 
 def _update_node_registry(node_id: str) -> None:
-    """Write/update last-seen timestamp for a node in the secondary registry."""
+    """SPEC-014 — Write last-seen metadata for a swarm node."""
     reg_path = os.path.join(
         os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary"),
         "node_registry.jsonl",
@@ -71,6 +71,7 @@ _writer: HDF5Writer | None = None
 
 
 def _get_writer() -> HDF5Writer:
+    """SPEC-014 — Lazily construct the telemetry writer for node packets."""
     global _writer
     if _writer is None:
         _writer = HDF5Writer(
@@ -81,6 +82,7 @@ def _get_writer() -> HDF5Writer:
 
 
 def create_app(writer: HDF5Writer | None = None) -> "Flask":
+    """SPEC-014 — Create the Flask receiver for swarm telemetry ingestion."""
     if not FLASK_AVAILABLE:
         raise RuntimeError("flask is required for the node receiver (pip install flask)")
 
@@ -94,7 +96,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
 
     @app.route("/api/v1/ingest", methods=["POST"])
     def ingest_node() -> Response:
-        """Accept a JSON telemetry payload from any swarm node."""
+        """SPEC-014 — Accept a JSON telemetry payload from any swarm node."""
         raw = request.get_data(as_text=True)
         if not raw:
             return jsonify({"error": "empty body"}), HTTPStatus.BAD_REQUEST
@@ -134,7 +136,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
 
     @app.route("/api/v1/ingest/radoneye", methods=["POST"])
     def ingest_radoneye() -> Response:
-        """[PLACEHOLDER] Accept EcoSense RadonEye Pro sensor readings."""
+        """SPEC-015 — Stage EcoSense RadonEye Pro sensor readings."""
         raw = request.get_data(as_text=True)
         if not raw:
             return jsonify({"error": "empty body"}), HTTPStatus.BAD_REQUEST
@@ -191,6 +193,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
 
     @app.route("/api/v1/health", methods=["GET"])
     def health() -> Response:
+        """SPEC-014 — Report node receiver health and writer statistics."""
         stats = _get_writer().get_stats() if _writer else {}
         return jsonify({"status": "ok", "stats": stats}), HTTPStatus.OK
 
@@ -198,6 +201,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
 
 
 def main() -> None:
+    """SPEC-014 — Run the node receiver service entrypoint."""
     port = int(os.getenv("DSLV_RECEIVER_PORT", "5775"))
     app = create_app()
     logger.info("DSLV-ZPDI node receiver starting on 0.0.0.0:%d", port)

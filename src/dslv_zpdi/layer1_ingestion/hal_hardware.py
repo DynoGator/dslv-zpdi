@@ -61,6 +61,7 @@ try:
     # skips this, which can leave libhackrf's libusb context uninitialised.
     _pyhackrf_orig_device_list = pyhackrf.hackrf_device_list
     def _pyhackrf_device_list_safe():
+        """SPEC-005A.HAL-HW — Initialize libhackrf before enumerating devices."""
         pyhackrf.libhackrf.hackrf_init()
         return _pyhackrf_orig_device_list()
     pyhackrf.hackrf_device_list = _pyhackrf_device_list_safe

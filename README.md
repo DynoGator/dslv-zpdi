@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2A (Hardware Transition — RF Metrology)
-**Revision:** Rev 4.7.0 — Node Bridging, HDF5 Multi-Node Aggregation & Dashboard Finalisation
+**Revision:** Rev 4.7.1 — Dependency and Validation Alignment
 **Date:** 2026-05-30
 **Status:** Beta — Tier 1 Pi 5 anchor operational, Pixel 9 Pro XL mobile node bridged via PiRepo hotspot, web dashboard active, all 47 tests passing.
 

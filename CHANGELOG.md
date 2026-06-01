@@ -7,6 +7,10 @@
 - **ComplexWarning in hal_hardware.py** — corrected the pyhackrf ingestion flow which was redundantly converting complex data from `read_samples` into interleaved structures, discarding the imaginary parts and raising a `ComplexWarning`.
 - **NMEA Stream Serial Exception** — implemented exception handling for the `pyserial` bug where the device reports readiness to read but returns no data, avoiding pipeline restarts and silent drops on `/dev/ttyACM0`.
 - **Chronyc Jitter Monitor Stability** — resolved large PPS jitter reporting by forcing chronyc to step the system clock (`chronyc makestep`), aligning the system time with the GPSDO time.
+- **Validation Compliance Repair** — restored clean version-sync and orphan-checker results by adding v4.7.1 release notes, synchronizing the README revision, and adding missing SPEC-ID coverage in new ingestion and node receiver paths.
+
+### Added
+- **Shared Collaboration Workspace** — added `docs/collaboration/` as the common operating layer for Gemini CLI, Claude Code, Kimi Code, and Codex CLI with setup, validation, turnover, asset, and next-step guidance.
 
 ## [4.7.0] - 2026-05-30 · Node Bridging, HDF5 Multi-Node Aggregation & Dashboard Finalisation
 

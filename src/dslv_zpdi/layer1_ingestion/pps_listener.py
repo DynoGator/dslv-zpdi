@@ -35,6 +35,8 @@ _PPS_TIME_INVALID = 0x1         # timeout.flags: return last timestamp, do not w
 
 class PpsListener:
     """
+    SPEC-004A.3 — Continuous timing health monitor for kernel PPS edges.
+
     Background daemon thread that captures 1 PPS rising edges from /dev/ppsX.
 
     Maintains a ring buffer of (monotonic_ns, kernel_pps_ns) tuples — one
@@ -92,6 +94,8 @@ class PpsListener:
 
     def wait_for_edge(self, timeout_s: float = 2.0) -> bool:
         """
+        SPEC-004A.3 — Wait for a trusted PPS edge before timestamping ingestion.
+
         Block the calling thread until the next PPS rising edge or timeout.
 
         Clears the internal event before waiting so a previous pulse does
@@ -103,7 +107,7 @@ class PpsListener:
         return self._edge_event.wait(timeout=timeout_s)
 
     def snapshot(self) -> dict:
-        """Return a thread-safe copy of the current listener state."""
+        """SPEC-004A.3 — Return a copy of the current PPS health state."""
         with self._lock:
             return {
                 "last_edge_mono_ns": self.last_edge_mono_ns,
@@ -160,6 +164,8 @@ class PpsListener:
 
     def _fetch_kernel_ts(self, fd: int) -> int:
         """
+        SPEC-004A.3 — Fetch the kernel timestamp for the latest PPS edge.
+
         Issue PPS_FETCH ioctl to read the kernel-timestamped edge time.
 
         The timeout field is set to PPS_TIME_INVALID so the ioctl returns
@@ -183,6 +189,8 @@ class PpsListener:
 
     def _recompute_jitter(self) -> None:
         """
+        SPEC-004A.3 — Recompute RMS PPS jitter from recent edge intervals.
+
         Compute RMS jitter from CLOCK_MONOTONIC inter-arrival intervals.
 
         Monotonic timestamps are immune to NTP slew, so this captures

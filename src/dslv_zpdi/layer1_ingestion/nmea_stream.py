@@ -22,6 +22,8 @@ logger = logging.getLogger("dslv-zpdi.nmea")
 
 class NmeaStream:
     """
+    SPEC-004A.4 — Background GPSDO NMEA reader.
+
     Background NMEA reader that caches the latest GGA fix without blocking.
 
     Usage:
@@ -74,7 +76,7 @@ class NmeaStream:
     # ------------------------------------------------------------------ #
 
     def latest(self) -> dict:
-        """Return a thread-safe copy of the most recently parsed GGA sentence."""
+        """SPEC-004A.4 — Return the most recently parsed GGA sentence."""
         with self._lock:
             return dict(self._latest)
 
@@ -138,6 +140,7 @@ class NmeaStream:
 # ------------------------------------------------------------------ #
 
 def _empty_fix() -> dict:
+    """SPEC-004A.4 — Build the default untrusted GPS fix state."""
     return {
         "gps_fix": False,
         "fix_quality": 0,
@@ -150,6 +153,8 @@ def _empty_fix() -> dict:
 
 def parse_gga(sentence: str) -> Optional[dict]:
     """
+    SPEC-004A.4 — Parse a single GPSDO GGA sentence.
+
     Parse a single GGA sentence with NMEA checksum validation.
 
     Returns a fix dict on success, None on checksum failure or missing fields.
