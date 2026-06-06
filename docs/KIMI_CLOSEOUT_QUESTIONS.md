@@ -74,20 +74,14 @@ The only keys present are the ed25519 keys generated in this session, both of wh
 
 Without a working authentication method, the feature branch cannot be pushed and `main` cannot be merged.
 
-## Q5 — No existing SSH key found anywhere on this Pi (BLOCKING)
+## Q5 — No existing SSH key found anywhere on this Pi (BLOCKING) → RESOLVED
 
 Searched the entire filesystem for SSH private keys and public keys. Only findings:
 - `/etc/ssh/ssh_host_*` (system host keys — not user auth keys)
 - `/home/dynogator/.ssh/id_ed25519` and `.pub` (generated in this session, rejected by GitHub)
 
-There is no `id_rsa`, `id_ecdsa`, or any other user SSH key on `PI5-ALPH`.
-
-**Decision required:**
-1. **HTTPS + PAT fallback** — provide a token so the closeout can complete now.
-2. **Operator pushes manually** — you handle the push/merge from a machine that already has GitHub auth; I will document the exact steps and state.
-
-I cannot proceed with push/merge until one of these is chosen.
+Operator authorized HTTPS + PAT fallback. PAT was used for push/merge only, then removed from the remote URL. No token remains on disk.
 
 ---
 
-*Additional questions will be appended here if any ambiguities arise during closeout.*
+*Closeout complete. No further blockers.*

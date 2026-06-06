@@ -1,0 +1,37 @@
+=== git status ===
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+
+=== git branch -vv ===
+* main                            56b7c41 [origin/main] merge: Phase 2B radon metrology stack into main
+  phase-2b/radon-metrology-fusion 06c17e5 [origin/phase-2b/radon-metrology-fusion] docs: Phase 2B closeout prep — auth log, state snapshot, questions
+
+=== git log --oneline --graph --decorate --all -20 ===
+*   56b7c41 (HEAD -> main, tag: v4.8.0, origin/main, origin/HEAD) merge: Phase 2B radon metrology stack into main
+|\  
+| * 06c17e5 (origin/phase-2b/radon-metrology-fusion, phase-2b/radon-metrology-fusion) docs: Phase 2B closeout prep — auth log, state snapshot, questions
+| * fcf6bff docs: Phase 2B reporting deliverables (SESSION_REPORT, CHANGELOG v4.8.0, TURNOVER)
+| * b554a36 docs: correct LBE-1420→LBE-1421 dual-output references in living master and build sheet; document second output independence
+| * 18a6925 feat(dashboard): SPEC-021 — RADON + MOBILE/T2 + BCI panels with glitch aesthetic, new humor lines, zero regression to existing panels
+| * 7c891ca feat(orchestrator): SPEC-020 — 48-hour radon session orchestrator with resume, finalize, human summary, and 8-test suite
+| * 0ff6467 feat(layer2): SPEC-019 — Barometric Coherence Index engine with pilot thresholds, RH weighting, and 8-test suite
+| * fd75ac5 feat(layer3): SPEC-018 — HDF5 schema extension with certified_crm, macro_atmosphere, space_weather, mobile_node_tier2, validation_index branches, signed manifest, and 6-test suite
+| * a80d3be feat(layer1): SPEC-017 — Uplink manager with online/offline/degraded detection, backfill coordination, and 8-test suite
+| * bf6e3f3 feat(layer1): SPEC-016 — Pixel 9 Pro XL mobile node bridge with HTTP polling, trust scoring, simulator path, and 14-test suite
+| * 1d86335 feat(layer1): SPEC-015 — RadonEye Pro RD200P ingestor with BLE primary, HTTP fallback, simulator path, GATT map, and 12-test suite
+| * 76252ad fix(specs): Rev 4.7.1 — close 27 pre-existing SPEC-ID gaps in node_receiver, pps_listener, nmea_stream, hal_hardware; realign SPEC-014 stub
+* | d8a4f89 chore(hardening): Rev 4.7.2 — robustness, reliability & security pass
+* | 4e58c6c chore(collab): Rev 4.7.1 — align validation and agent workspace
+|/  
+* 5399333 chore: update version to 4.7.1 and add flask/psutil dependencies
+* 5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+* d16eccd (origin/main-tier1-anchor) feat: integrate Pixel 9 Pro XL as live Tier 2 node (10.128.24.165)
+* 0c7618b feat(v4.7.0): node bridging, HDF5 multi-node aggregation, dashboard finalisation
+* 2755485 feat(dashboard): 7" screen optimisation, enhanced legend, single-window boot, fan/brightness
+* a089664 chore: ignore dashboard stdout capture files
+
+=== git for-each-ref heads ===
+main 56b7c41
+phase-2b/radon-metrology-fusion 06c17e5
