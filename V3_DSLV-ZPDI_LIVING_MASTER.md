@@ -188,7 +188,7 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 ### SPEC-004A.4 — Leo Bodnar LBE-1421 GPSDO (Clock Authority)
 
 **SYSTEM FUNCTION:** Provide the primary 10 MHz reference and 1 PPS epoch anchor for the SIGINT network.
-**OPERATIONAL INTENT:** The LBE-1421 replaces the deprecated LBE-1421 to provide simultaneous high-frequency reference and physical PPS.
+**OPERATIONAL INTENT:** The LBE-1421 replaces the deprecated LBE-1420 to provide simultaneous high-frequency reference and physical PPS.
 
 **Datasheet Verbatim Specifications:**
 - **Dual Outputs:** 
@@ -202,7 +202,7 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 - **Holdover:** TCXO high-Q oscillator ensures stability during transient GPS loss.
 - **Telemetry:** NMEA virtual serial output for lock status, satellite count, and DOP.
 
-**KILL CONDITION:** Any Tier 1 node utilizing a single-output GPSDO (e.g., LBE-1421) that cannot provide simultaneous 10 MHz + 1 PPS.
+**KILL CONDITION:** Any Tier 1 node utilizing a single-output GPSDO (e.g., LBE-1420) that cannot provide simultaneous 10 MHz + 1 PPS.
 
 ### SPEC-004A.3 — CONTINUOUS TIMING HEALTH MONITORING (Rev 4.1)
 
