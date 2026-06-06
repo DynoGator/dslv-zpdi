@@ -1,0 +1,5 @@
+# Development dependencies — mobile Tier-2 node
+# Install: pip install -r requirements.txt -r requirements-dev.txt
+ruff>=0.15
+pytest>=9.0
+httpx>=0.28

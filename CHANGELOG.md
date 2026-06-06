@@ -8,6 +8,17 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 ## [Unreleased]
 
 ### Added
+- `docs/collaboration/` — multi-agent workspace protocol (ported from main Rev 4.7.1, mobile-adapted).
+- `COLLABORATION_GUIDE.md`, `GROK_BUILD_MEMORY.md` — collaboration entry point and Grok Build session memory.
+- `tools/health_check_mobile.sh` — Tier-2 mobile health validator (8 subsystems).
+- `tools/orphan_checker.py`, `specs/` stubs — SPEC-ID compliance tooling for mobile branch.
+- `requirements-dev.txt` — ruff, pytest, httpx dev dependencies.
+
+### Changed
+- `supervisor.sh` — load `.env` into daemon, truncate stale health log, 35s grace before staleness kill.
+- Ruff auto-fix: unused imports and minor lint across `zpdi_*.py`, `src/`, `tests/`.
+
+### Added (prior unreleased)
 - `src/layer1_ingestion/gps_poller.py`: Async GPS/Network/Passive location poller with capped exponential backoff, accuracy gating, and non-blocking integration with Layer 1 enrichment.
 - `zpdi_mobile_node.py` (Rev 3.5): Hardened WSS transport with jittered exponential backoff, circuit-breaker pattern (5-failure threshold / 30s cooldown), and Bearer token authentication via `additional_headers`.
 - SPEC-008 payload security: HMAC-SHA256 signing (`hmac` field) and optional AES-256-GCM envelope encryption controlled by `ZPDI_HMAC_SECRET` and `ZPDI_AES_KEY`.

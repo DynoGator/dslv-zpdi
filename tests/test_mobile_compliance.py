@@ -21,12 +21,11 @@ from src.layer1_ingestion.mobile_ingestion import (
     build_mobile_payload,
     score_mobile_payload,
     SENSORS,
-    TERMUX_SENSOR_BIN,
 )
 from src.layer1_ingestion.payload import SensorModality
-from src.layer2_core.coherence import CoherenceScorer, CoherencePacket
+from src.layer2_core.coherence import CoherenceScorer
 from src.layer2_core.wiring import wire_mobile_to_coherence
-from src.layer3_telemetry.mobile_router import route_packet, SecondaryLog
+from src.layer3_telemetry.mobile_router import route_packet
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +155,24 @@ def test_mobile_node_produces_only_secondary_stream():
 
 
 def test_primary_hdf5_is_empty_after_mobile_run():
-    """Live integration: 10-second mobile run → zero HDF5 rows, non-zero JSONL."""
+    """Live integration: 10-second mobile run → zero HDF5 rows, non-zero JSONL.
+
+    Skipped automatically if a production daemon is already running,
+    because termux-sensor allows only one streaming instance at a time.
+    """
+    # Detect running production daemon
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "zpdi_mobile_node.py"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            pytest.skip("Production daemon already running — termux-sensor singleton prevents parallel streaming")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
     hdf5_path = Path("./data/zpdi_test_primary.h5")
     jsonl_path = Path("./logs/zpdi_test_secondary.jsonl")
     hdf5_path.unlink(missing_ok=True)
@@ -312,7 +328,7 @@ def test_aes_encryption_envelope():
 
 def test_expanded_sensor_modalities():
     """Rev 3.5 expanded sensor list must map to canonical modalities."""
-    from src.layer1_ingestion.mobile_ingestion import SENSORS, SENSOR_MODALITY_MAP
+    from src.layer1_ingestion.mobile_ingestion import SENSOR_MODALITY_MAP
     for s in SENSORS:
         assert s in SENSOR_MODALITY_MAP, f"{s} missing from modality map"
         assert SENSOR_MODALITY_MAP[s] != "unknown"

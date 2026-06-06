@@ -278,3 +278,46 @@ Ported all KIMI-HOME Rev 3.5 features into the canonical dslv-zpdi working tree 
    ZPDI_AES_KEY=<base64-32-byte-key>   # optional
    ```
 4. **Start Tier-1 server (if local):** `python3 tier1_ingestion_server.py`
+
+---
+
+## TURNOVER — 2026-06-06 (Grok Build — Workspace Maximization & Shutdown Prep)
+
+**Date:** 2026-06-06
+**Performed by:** Grok Build (xAI) on behalf of J.R. Fross
+
+### What Was Done
+
+- Fetched `origin/main` at Rev 4.7.2 (`d8a4f89`); confirmed Kimi merge still in progress
+- Created multi-agent collaboration docs: `COLLABORATION_GUIDE.md`, `docs/collaboration/`
+- Added mobile tooling: `tools/health_check_mobile.sh`, `tools/orphan_checker.py`, `specs/` stubs
+- Hardened `supervisor.sh` (`.env` export, health grace period, stale log truncate)
+- Ruff lint clean (11 auto-fixes); ruff added to `.venv` via `requirements-dev.txt`
+- Created `GROK_BUILD_MEMORY.md` persistent session state for Grok Build
+- Health check: **0 warnings, 0 criticals** — daemon, WSS, web API all online
+
+### Validation
+
+```
+pytest tests/ -v          → 41 passed, 1 skipped
+ruff check                → All checks passed
+health_check_mobile.sh    → severity 0
+orphan_checker.py         → 29 class-level SPEC gaps (documented, post-merge task)
+```
+
+### Current State
+
+| Component | Status |
+|---|---|
+| Branch | `mobile-node-rev35` → `origin/feat/mobile-node-hardening-phase2` |
+| Daemon | Running under supervisor |
+| WSS | Connected to local Tier-1 :8443 |
+| Web API | Up on :8000 |
+| GitHub push to main | **HOLD** — awaiting Kimi restructure completion |
+
+### Next Actions
+
+1. Joe confirms Kimi merge complete → reconcile branch layout
+2. Backfill 29 class-level SPEC-IDs for orphan_checker clean pass
+3. Wire TheForge PWA to local FastAPI backend
+4. SPEC-009 72-hour passive baseline on secondary stream

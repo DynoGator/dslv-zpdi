@@ -120,7 +120,6 @@ class SecondaryLog:
         self._path.unlink()
 
     def _write_sync(self, p: Any) -> None:
-        import gzip
         body = p.body if hasattr(p, "body") else p
         full_raw = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
         self._rotate_if_needed()

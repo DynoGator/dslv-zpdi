@@ -33,7 +33,6 @@ import websockets
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
-from websockets.protocol import State
 
 from src.layer1_ingestion.gps_poller import GPSPoller
 from src.layer1_ingestion.mobile_ingestion import (
