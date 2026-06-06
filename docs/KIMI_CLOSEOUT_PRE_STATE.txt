@@ -1,0 +1,62 @@
+=== git status ===
+On branch phase-2b/radon-metrology-fusion
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/KIMI_CLOSEOUT_AUTH.txt
+	docs/KIMI_CLOSEOUT_PRE_STATE.txt
+	docs/KIMI_CLOSEOUT_QUESTIONS.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+
+=== git branch -vv ===
+  main                            5399333 [origin/main: behind 2] chore: update version to 4.7.1 and add flask/psutil dependencies
+* phase-2b/radon-metrology-fusion fcf6bff docs: Phase 2B reporting deliverables (SESSION_REPORT, CHANGELOG v4.8.0, TURNOVER)
+
+=== git log --oneline --graph --decorate --all -40 ===
+* 5e4a942 (origin/feat/mobile-node-hardening-phase2) chore(collab): Rev 3.5 — Grok Build workspace maximization and multi-agent handoff
+* 29613bc docs(readme): complete Rev 3.5 README — Tier-1 integration, credential generation, full env reference
+* 99b336e docs(turnover): pre-reboot handoff — Rev 3.5 integration complete, cryptography installed in venv
+* 62f9a85 feat(layer1/layer2/test): Rev 3.5 finalization — orientation fusion, GPS enrichment, sensor suite expansion
+* dd65da6 feat: deploy automated Termux/PRoot edge node installer
+* 5084fd3 feat(tier1): Tier-1 crypto-ingestion server, orientation-fusion engine, and Termux:Boot auto-start
+* acd27f1 feat(mobile): Phase-2 hardening — GPS poller, expanded vectoring sensors, AES-256-GCM/HMAC auth, circuit-breaker WSS
+* aec9c20 (tag: v3.4.0-mobile) chore(release): v3.4.0-mobile Tier-2 architecture compliance
+* e6c3d9b (origin/feat/mobile-architecture-compliance) docs(turnover): append session log and update canonical docs
+* 4e01020 feat(ops): log rotation and health watchdog for mobile node
+* 3ad1f5c test(integration): mobile node dual-stream validation suite
+* 3fa17de feat(layer3): dual-stream router enforcing Tier-2 quarantine per SPEC-007
+* 6727cb8 feat(layer2): port CoherenceScorer and wiring per SPEC-006
+* 8a41e0a refactor(node): integrate IngestionPayload into mobile daemon stream
+* 4b518c5 feat(layer1): hardened IngestionPayload with trust-state validation per SPEC-005A
+* abebc68 feat(layer1): port canonical src/ structure and add mobile ingestion driver
+* 3057667 docs(audit): SPEC violation baseline for mobile node
+* 0b9cce1 docs: finalise audit report and changelog for 2026-05-21
+* f544de7 fix(git): allow .env.example to be committed
+* 420aa86 feat(web): add FastAPI skeleton and SQLite WAL query cache
+* 375a25c fix(git): secure credential helper by reading PAT from .env at runtime
+* 4dcd769 fix(stub): add defensive typing guards for websocket messages
+* ad19197 fix(node): harden websocket state checks and queue drop-oldest logic
+* 47fe138 docs: add CHANGELOG and TURNOVER for 2026-05-21 audit session
+* 8fd8262 fix(node): replace deprecated h5py and websockets APIs
+* 13a7fc3 feat(ops): implement pre-commit and pre-push git hooks
+* b41baca feat(ops): add supervisor for crash-resilient auto-start
+* e7b8497 feat: finalize deployment-ready metrology node
+* 7c4fbda refactor(node): switch sensor IPC to continuous streaming mode
+* c48fd94 fix(node): use exact sensor names from termux-sensor -l
+* f75d5c0 build(deps): pin requirements.lock for tier-1 reproducibility
+* 61c0f95 feat(verifier): add SHA-256 provenance verifier for HDF5 stream
+* df3f14f feat(node): add async metrology daemon zpdi_mobile_node.py
+* b7cd356 chore(scaffold): initialize dslv-zpdi tier-1 node workspace
+* fcf6bff (HEAD -> phase-2b/radon-metrology-fusion) docs: Phase 2B reporting deliverables (SESSION_REPORT, CHANGELOG v4.8.0, TURNOVER)
+* b554a36 docs: correct LBE-1420→LBE-1421 dual-output references in living master and build sheet; document second output independence
+* 18a6925 feat(dashboard): SPEC-021 — RADON + MOBILE/T2 + BCI panels with glitch aesthetic, new humor lines, zero regression to existing panels
+* 7c891ca feat(orchestrator): SPEC-020 — 48-hour radon session orchestrator with resume, finalize, human summary, and 8-test suite
+* 0ff6467 feat(layer2): SPEC-019 — Barometric Coherence Index engine with pilot thresholds, RH weighting, and 8-test suite
+* fd75ac5 feat(layer3): SPEC-018 — HDF5 schema extension with certified_crm, macro_atmosphere, space_weather, mobile_node_tier2, validation_index branches, signed manifest, and 6-test suite
+
+=== git stash list ===
+
+=== git status --porcelain ===
+?? docs/KIMI_CLOSEOUT_AUTH.txt
+?? docs/KIMI_CLOSEOUT_PRE_STATE.txt
+?? docs/KIMI_CLOSEOUT_QUESTIONS.md
