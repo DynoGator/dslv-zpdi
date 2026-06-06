@@ -22,6 +22,7 @@ class SensorModality(Enum):
     ACOUSTIC = "acoustic"
     MAGNETOMETER = "magnetometer"
     INERTIAL = "inertial"
+    RADON = "radon"
 
 
 # pylint: disable=too-many-instance-attributes
