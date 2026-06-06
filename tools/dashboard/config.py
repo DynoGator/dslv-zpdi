@@ -39,6 +39,9 @@ class PanelsCfg:
     anomaly: bool = True
     weather: bool = True
     storm: bool = True
+    radon: bool = True
+    mobile: bool = True
+    bci: bool = True
     logs: bool = True
     notifications: bool = True
 
