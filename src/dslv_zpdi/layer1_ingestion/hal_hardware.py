@@ -60,6 +60,7 @@ try:
     # Also wrap hackrf_device_list() to call hackrf_init() first — pyhackrf
     # skips this, which can leave libhackrf's libusb context uninitialised.
     _pyhackrf_orig_device_list = pyhackrf.hackrf_device_list
+    # SPEC-005A.4b — Safe pyhackrf device list wrapper (handles missing init)
     def _pyhackrf_device_list_safe():
         pyhackrf.libhackrf.hackrf_init()
         return _pyhackrf_orig_device_list()

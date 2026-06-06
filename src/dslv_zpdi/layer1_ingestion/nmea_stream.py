@@ -22,6 +22,8 @@ logger = logging.getLogger("dslv-zpdi.nmea")
 
 class NmeaStream:
     """
+    SPEC-004A.3 — Non-blocking NMEA GGA stream reader.
+
     Background NMEA reader that caches the latest GGA fix without blocking.
 
     Usage:
@@ -137,6 +139,7 @@ class NmeaStream:
 # Module-level helpers (also importable for testing)                 #
 # ------------------------------------------------------------------ #
 
+# SPEC-004A.3-NMEA — Default fix dict for unknown/unparsed state
 def _empty_fix() -> dict:
     return {
         "gps_fix": False,
@@ -148,6 +151,7 @@ def _empty_fix() -> dict:
     }
 
 
+# SPEC-004A.3-NMEA — GGA sentence parser with NMEA checksum validation
 def parse_gga(sentence: str) -> Optional[dict]:
     """
     Parse a single GGA sentence with NMEA checksum validation.

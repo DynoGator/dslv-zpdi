@@ -35,6 +35,8 @@ _PPS_TIME_INVALID = 0x1         # timeout.flags: return last timestamp, do not w
 
 class PpsListener:
     """
+    SPEC-004A.4 — Kernel PPS edge listener via /dev/ppsX character device.
+
     Background daemon thread that captures 1 PPS rising edges from /dev/ppsX.
 
     Maintains a ring buffer of (monotonic_ns, kernel_pps_ns) tuples — one

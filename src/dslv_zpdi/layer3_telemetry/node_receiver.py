@@ -41,6 +41,7 @@ except ImportError:
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
 
+# SPEC-014.1 — Node registry maintenance
 def _update_node_registry(node_id: str) -> None:
     """Write/update last-seen timestamp for a node in the secondary registry."""
     reg_path = os.path.join(
@@ -70,6 +71,7 @@ logger = logging.getLogger("dslv-zpdi.node-receiver")
 _writer: HDF5Writer | None = None
 
 
+# SPEC-014.2 — Lazy HDF5 writer singleton
 def _get_writer() -> HDF5Writer:
     global _writer
     if _writer is None:
@@ -80,6 +82,7 @@ def _get_writer() -> HDF5Writer:
     return _writer
 
 
+# SPEC-014.3 — Flask application factory
 def create_app(writer: HDF5Writer | None = None) -> "Flask":
     if not FLASK_AVAILABLE:
         raise RuntimeError("flask is required for the node receiver (pip install flask)")
@@ -93,6 +96,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
     # ── Mobile-node telemetry (Pixel 9 Pro XL / any swarm node) ─────────────
 
     @app.route("/api/v1/ingest", methods=["POST"])
+    # SPEC-014.4 — Swarm node telemetry ingestion endpoint
     def ingest_node() -> Response:
         """Accept a JSON telemetry payload from any swarm node."""
         raw = request.get_data(as_text=True)
@@ -133,6 +137,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
     _RADONEYE_REQUIRED_FIELDS = {"source", "radon_bq_m3", "timestamp_utc", "unit_id"}
 
     @app.route("/api/v1/ingest/radoneye", methods=["POST"])
+    # SPEC-014.5 — RadonEye Pro staging endpoint (secondary stream only)
     def ingest_radoneye() -> Response:
         """[PLACEHOLDER] Accept EcoSense RadonEye Pro sensor readings."""
         raw = request.get_data(as_text=True)
@@ -190,6 +195,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
     # ── Health check ─────────────────────────────────────────────────────────
 
     @app.route("/api/v1/health", methods=["GET"])
+    # SPEC-014.6 — Service health endpoint
     def health() -> Response:
         stats = _get_writer().get_stats() if _writer else {}
         return jsonify({"status": "ok", "stats": stats}), HTTPStatus.OK
@@ -197,6 +203,7 @@ def create_app(writer: HDF5Writer | None = None) -> "Flask":
     return app
 
 
+# SPEC-014.7 — CLI entry point
 def main() -> None:
     port = int(os.getenv("DSLV_RECEIVER_PORT", "5775"))
     app = create_app()
