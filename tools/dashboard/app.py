@@ -45,10 +45,13 @@ from dashboard.banner import (
 )
 from dashboard.config import DashboardConfig, load_config
 from dashboard.panels.anomaly import RFAnomalyPanel
+from dashboard.panels.bci import BCIPanel
 from dashboard.panels.hardware import HardwarePanel
 from dashboard.panels.logs import LogPanel
+from dashboard.panels.mobile import MobilePanel
 from dashboard.panels.notifications import NotificationPanel
 from dashboard.panels.pipeline import PipelinePanel
+from dashboard.panels.radon import RadonPanel
 from dashboard.panels.storm import StormPanel
 from dashboard.panels.system import SystemPanel
 from dashboard.panels.waterfall import WaterfallPanel
@@ -186,7 +189,7 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
         critical_screen = total_rows < 26
 
         status_a = _enabled(("system", "pipeline", "hardware"), panels)
-        status_b = _enabled(("anomaly", "weather", "storm"), panels)
+        status_b = _enabled(("anomaly", "weather", "storm", "radon", "mobile", "bci"), panels)
         bottom = _enabled(("logs", "notifications"), panels)
 
         # 2-line footer (status bar + key legend); critical screens drop to 1 line
@@ -248,7 +251,7 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
 
     # Wide layout
     top = _enabled(("system", "pipeline", "hardware", "anomaly"), panels)
-    space = _enabled(("weather", "storm"), panels)
+    space = _enabled(("weather", "storm", "radon", "mobile", "bci"), panels)
     bottom = _enabled(("logs", "notifications"), panels)
 
     rows: list[Layout] = []
@@ -328,6 +331,15 @@ class Dashboard:
         if getattr(cfg.panels, "storm", True):
             self.storm_p = StormPanel()
             self._panels["storm"] = self.storm_p
+        if getattr(cfg.panels, "radon", True):
+            self.radon_p = RadonPanel(border_style="bright_green")
+            self._panels["radon"] = self.radon_p
+        if getattr(cfg.panels, "mobile", True):
+            self.mobile_p = MobilePanel(border_style="bright_blue")
+            self._panels["mobile"] = self.mobile_p
+        if getattr(cfg.panels, "bci", True):
+            self.bci_p = BCIPanel(border_style="bright_magenta")
+            self._panels["bci"] = self.bci_p
         if getattr(cfg.panels, "logs", True):
             max_l = 3 if self.compact else cfg.logs.max_lines
             self.log_p = LogPanel(
@@ -428,7 +440,7 @@ class Dashboard:
                 )
 
         # Priority: render critical metrics first
-        for name in ("system", "pipeline", "hardware", "anomaly", "weather", "storm", "logs", "notifications", "waterfall"):
+        for name in ("system", "pipeline", "hardware", "anomaly", "weather", "storm", "radon", "mobile", "bci", "logs", "notifications", "waterfall"):
             panel = self._panels.get(name)
             panel_l = self._get_layout(name)
             if panel and panel_l:

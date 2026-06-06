@@ -37,6 +37,7 @@ class PpsListener:
     """
     SPEC-004A.3 — Continuous timing health monitor for kernel PPS edges.
 
+
     Background daemon thread that captures 1 PPS rising edges from /dev/ppsX.
 
     Maintains a ring buffer of (monotonic_ns, kernel_pps_ns) tuples — one

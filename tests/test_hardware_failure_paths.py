@@ -1,5 +1,7 @@
 """Mock-based tests for hardware failure paths (Priority 1, Item 9)."""
 
+import subprocess
+import sys
 from unittest import mock
 
 import pytest
@@ -11,6 +13,35 @@ from dslv_zpdi.core.exceptions import (
 )
 from dslv_zpdi.layer1_ingestion import hal_hardware as hal_hw_module
 from dslv_zpdi.layer1_ingestion.hal_hardware import HardwareHAL
+
+
+def _hackrf_hardware_accessible() -> bool:
+    """Probe whether a real HackRF is accessible via pyhackrf.
+
+    The pyhackrf clock-source tests patch hal_hardware's module dict with
+    mocks, but HardwareHAL._verify_pyhackrf_clock spawns a subprocess that
+    imports the real `hackrf` module. If real hardware is present, the probe
+    succeeds and the mocks are bypassed, causing the tests to flap. Skipping
+    when hardware is present keeps CI honest while avoiding false failures on
+    nodes with a HackRF attached.
+    """
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); d.close()",
+            ],
+            capture_output=True,
+            timeout=10,
+            text=True,
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        return False
+
+
+_HACKRF_HARDWARE_ACCESSIBLE = _hackrf_hardware_accessible()
 
 
 class TestSoapySDRFailurePaths:
@@ -55,6 +86,10 @@ class TestSoapySDRFailurePaths:
 
 
 class TestPyhackrfFailurePaths:
+    @pytest.mark.skipif(
+        _HACKRF_HARDWARE_ACCESSIBLE,
+        reason="Subprocess probe uses real hackrf module; real hardware bypasses mocks",
+    )
     def test_pyhackrf_internal_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "internal"
@@ -69,6 +104,10 @@ class TestPyhackrfFailurePaths:
             with pytest.raises(ClockVerificationError):
                 HardwareHAL()
 
+    @pytest.mark.skipif(
+        _HACKRF_HARDWARE_ACCESSIBLE,
+        reason="Subprocess probe uses real hackrf module; real hardware bypasses mocks",
+    )
     def test_pyhackrf_unknown_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "unknown"

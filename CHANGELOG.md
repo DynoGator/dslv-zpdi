@@ -1,5 +1,37 @@
 # Changelog
 
+## [4.8.0] - 2026-06-05 · Phase 2B: Radon Validation Metrology Stack (Tier 2)
+
+### Added
+- **RadonEye Pro RD200P ingestor** (`src/dslv_zpdi/layer1_ingestion/radoneye_ingestor.py`, SPEC-015) — BLE GATT primary transport (known FTLab UUIDs), HTTP fallback, simulator for CI. Reads radon concentration in Bq/m³ with ±7% accuracy per EcoSense datasheet. Falls through BLE → HTTP → SIM with graceful degradation.
+- **Pixel 9 Pro XL mobile node bridge** (`src/dslv_zpdi/layer1_ingestion/pixel_node_bridge.py`, SPEC-016) — HTTP polling bridge (Termux JSON publisher) with trust scoring (0.0–1.0). Surfaces magnetometer, GPS fix, camera perceptual hash. Trust threshold configurable (default 0.5); scores < threshold flagged for review.
+- **Pi–Pixel uplink manager** (`src/dslv_zpdi/layer1_ingestion/uplink_manager.py`, SPEC-017) — Monitors hotspot connectivity (`10.42.0.2:8777`), classifies state as online / offline / degraded. Triggers backfill replay when uplink restored. Never blocks Tier 1 primary stream.
+- **HDF5 schema extension** (`src/dslv_zpdi/layer3_telemetry/radon_session_writer.py`, SPEC-018) — 5 new top-level branches (`certified_crm`, `macro_atmosphere`, `space_weather`, `mobile_node_tier2`, `validation_index`) written alongside existing event groups. Signed manifest with per-branch SHA-256 checksums and HMAC attestation for tamper detection.
+- **Barometric coherence engine** (`src/dslv_zpdi/layer2_core/barometric_coherence.py`, SPEC-019) — χ(τ) cross-correlation between radon and barometric pressure with optional RH weighting. Pilot threshold 0.65 (configurable 0.60–0.70). Review flag explicitly subordinate to certified CRM result; BCI never overrides certified data.
+- **48-hour session orchestrator** (`src/dslv_zpdi/orchestrator/radon_session.py`, SPEC-020) — Manages full 48-hour campaign lifecycle: init → run → finalize → summary. Resume from JSON cache on interruption. Generates compound `.h5` audit file + human-readable `.txt` summary.
+- **Dashboard panel suite** (`tools/dashboard/panels/radon.py`, `mobile.py`, `bci.py`, SPEC-021) — Three new panels surfaced in existing compact/wide layout. RADON panel shows live radon concentration and device mode. MOBILE/T2 panel shows trust score and node state. BCI panel shows χ value, threshold band, and review flag. Zero aesthetic regression; new snark lines added to humor pool.
+- **`SensorModality.RADON`** — Added to ingestion enum contract (`payload.py`) for downstream routing.
+- **`bleak>=0.21.0`** dependency — BLE GATT transport support.
+- **New documentation:** `docs/RADONEYE_GATT_MAP.md`, `docs/PIXEL_NODE_SETUP.md`, `docs/KIMI_BRANCH_AUDIT.md`, `docs/KIMI_PHASE2B_INTAKE.md`, `docs/KIMI_QUESTIONS.md`.
+- **New specs:** SPEC-014 (real content, was stub), SPEC-015 through SPEC-021.
+
+### Fixed
+- **27 pre-existing SPEC-ID orphan gaps** — `node_receiver.py` (7), `pps_listener.py` (8), `nmea_stream.py` (8), `hal_hardware.py` (1), plus creation of real `specs/SPEC-014.md`. `orphan_checker.py` now green.
+- **LBE-1420→LBE-1421 typos** in `V3_DSLV-ZPDI_LIVING_MASTER.md` — two instances where dual-output GPSDO was misidentified as single-output.
+- **Dual-output architecture clarity** in `PHASE_2A_TIER_1_BUILD_SHEET.md` — new section documenting LBE-1421 Out1 (1 PPS → GPIO 18) and Out2 (10 MHz → HackRF CLKIN) independence.
+
+### Changed
+- `tools/dashboard/app.py` — imports + instantiates 3 new panels; layout builder and render loop updated. Toggle keys `4` (RADON), `5` (MOBILE), `6` (BCI) added.
+- `tools/dashboard/config.py` — `PanelsCfg` extended with `radon`, `mobile`, `bci` booleans.
+- `tools/dashboard/humor.py` — 11 radon-themed snark lines added to pool.
+- `pyproject.toml` / `requirements.txt` — `bleak>=0.21.0` added.
+
+### Tests
+- 56 new tests added across 6 modules (SPEC-015 through SPEC-020). All green.
+- Total suite: 94 passing (excluding 2 pre-existing flaky hardware tests tied to real HackRF state).
+- `orphan_checker.py` green before every commit.
+
+
 ## [4.7.2] - 2026-06-01 · Robustness, Reliability & Security Hardening
 
 Quality-and-hardening pass focused on system stability and trustworthy data

@@ -1,0 +1,5 @@
+[*] /dev/pps0 detected.
+[*] PPS Offset: 4064134598.00ns
+[!] FAILURE: Jitter 4064134598.00ns exceeds 1000ns threshold.
+
+[NOT READY] Hardware timing violations detected.

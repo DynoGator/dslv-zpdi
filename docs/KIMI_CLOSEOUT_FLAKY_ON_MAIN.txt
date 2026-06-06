@@ -1,0 +1,67 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /home/dynogator/dslv-zpdi/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/dynogator/dslv-zpdi
+configfile: pyproject.toml
+plugins: cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification FAILED [ 50%]
+tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification FAILED [100%]
+
+=================================== FAILURES ===================================
+_ TestPyhackrfFailurePaths.test_pyhackrf_internal_clock_raises_clock_verification _
+
+self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fff83dcac10>
+
+    def test_pyhackrf_internal_clock_raises_clock_verification(self):
+        mock_device = mock.MagicMock()
+        mock_device.clock_source = "internal"
+        mock_pyhackrf = mock.MagicMock()
+        mock_pyhackrf.HackRF.return_value = mock_device
+        patches = {
+            "pyhackrf": mock_pyhackrf,
+            "SOAPYSDR_AVAILABLE": False,
+            "PYHACKRF_AVAILABLE": True,
+        }
+        with mock.patch.dict(hal_hw_module.__dict__, patches):
+>           with pytest.raises(ClockVerificationError):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'dslv_zpdi.core.exceptions.ClockVerificationError'>
+
+tests/test_hardware_failure_paths.py:69: Failed
+----------------------------- Captured stdout call -----------------------------
+[!] HackRF probe attempt 1/3 failed (device busy?) — retrying in 2 s
+------------------------------ Captured log call -------------------------------
+WARNING  dslv-zpdi.nmea:nmea_stream.py:104 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+_ TestPyhackrfFailurePaths.test_pyhackrf_unknown_clock_raises_clock_verification _
+
+self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fff831374d0>
+
+    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+        mock_device = mock.MagicMock()
+        mock_device.clock_source = "unknown"
+        mock_pyhackrf = mock.MagicMock()
+        mock_pyhackrf.HackRF.return_value = mock_device
+        patches = {
+            "pyhackrf": mock_pyhackrf,
+            "SOAPYSDR_AVAILABLE": False,
+            "PYHACKRF_AVAILABLE": True,
+        }
+        with mock.patch.dict(hal_hw_module.__dict__, patches):
+>           with pytest.raises(ClockVerificationError):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'dslv_zpdi.core.exceptions.ClockVerificationError'>
+
+tests/test_hardware_failure_paths.py:83: Failed
+----------------------------- Captured stdout call -----------------------------
+[!] HackRF probe attempt 1/3 failed (device busy?) — retrying in 2 s
+[!] HackRF probe attempt 2/3 failed (device busy?) — retrying in 2 s
+------------------------------ Captured log call -------------------------------
+WARNING  dslv-zpdi.nmea:nmea_stream.py:104 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+WARNING  dslv-zpdi.nmea:nmea_stream.py:104 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+=========================== short test summary info ============================
+FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification
+FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification
+============================== 2 failed in 9.20s ===============================

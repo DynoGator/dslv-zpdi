@@ -1,0 +1,143 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /home/dynogator/dslv-zpdi/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/dynogator/dslv-zpdi
+configfile: pyproject.toml
+plugins: cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 103 items
+
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_correlated_series_raises_review_flag PASSED [  0%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_uncorrelated_series_clears_flag PASSED [  1%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_insufficient_data_returns_none PASSED [  2%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_rh_weighting_reduces_score_at_high_humidity PASSED [  3%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_chi_clamped_to_unit_range PASSED [  4%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_reset_clears_state PASSED [  5%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_lag_alignment PASSED [  6%]
+tests/test_barometric_coherence.py::TestBarometricCoherenceEngine::test_pilot_threshold_configurable PASSED [  7%]
+tests/test_calibration.py::test_calibration_artifact_generation PASSED   [  8%]
+tests/test_coherence.py::test_baseline_calculation PASSED                [  9%]
+tests/test_coherence.py::test_outlier_detection PASSED                   [ 10%]
+tests/test_ewma_and_routing.py::test_ewma_smoothing_dampens_spikes PASSED [ 11%]
+tests/test_ewma_and_routing.py::test_ewma_converges_over_multiple_updates PASSED [ 12%]
+tests/test_ewma_and_routing.py::test_global_r_weighted_by_modality PASSED [ 13%]
+tests/test_ewma_and_routing.py::test_router_only_two_streams PASSED      [ 14%]
+tests/test_ewma_and_routing.py::test_structured_background_routes_to_secondary PASSED [ 15%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_no_devices_found_raises_driver_unavailable PASSED [ 16%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_hackrf_not_found_raises_hardware_initialization PASSED [ 17%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_clock_mismatch_raises_clock_verification PASSED [ 18%]
+tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification PASSED [ 19%]
+tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification FAILED [ 20%]
+tests/test_hardware_failure_paths.py::TestIngestionFailurePaths::test_ingest_sdr_no_driver_returns_error_payload PASSED [ 21%]
+tests/test_hardware_failure_paths.py::TestIngestionFailurePaths::test_ingest_sdr_unverified_clock_raises PASSED [ 22%]
+tests/test_hardware_failure_paths.py::TestNMEAFailurePaths::test_no_nmea_sentences PASSED [ 23%]
+tests/test_hardware_failure_paths.py::TestNMEAFailurePaths::test_serial_timeout PASSED [ 24%]
+tests/test_hardware_failure_paths.py::TestHDF5Unavailable::test_primary_write_skipped_when_hdf5_unavailable PASSED [ 25%]
+tests/test_hdf5_rotation.py::test_real_file_rotation PASSED              [ 26%]
+tests/test_hdf5_rotation.py::test_event_count_resets_on_rotation PASSED  [ 27%]
+tests/test_integration.py::test_integration_pipeline_creates_output_and_health PASSED [ 28%]
+tests/test_payload.py::test_payload_validation PASSED                    [ 29%]
+tests/test_payload.py::test_payload_to_json_harden PASSED                [ 30%]
+tests/test_pipeline.py::test_quarantine_vs_kill PASSED                   [ 31%]
+tests/test_pipeline.py::test_serialization_roundtrip PASSED              [ 32%]
+tests/test_pipeline.py::test_state_machine PASSED                        [ 33%]
+tests/test_pipeline.py::test_full_pipeline PASSED                        [ 33%]
+tests/test_pipeline.py::test_coherence_math PASSED                       [ 34%]
+tests/test_pipeline.py::test_global_R PASSED                             [ 35%]
+tests/test_pipeline.py::test_killed_packet PASSED                        [ 36%]
+tests/test_pipeline.py::test_attestation PASSED                          [ 37%]
+tests/test_pipeline.py::test_rotation PASSED                             [ 38%]
+tests/test_pipeline.py::test_baseline PASSED                             [ 39%]
+tests/test_pixel_node_bridge.py::TestPixelTrustScorer::test_perfect_telemetry PASSED [ 40%]
+tests/test_pixel_node_bridge.py::TestPixelTrustScorer::test_missing_gps_penalty PASSED [ 41%]
+tests/test_pixel_node_bridge.py::TestPixelTrustScorer::test_coarse_gps_penalty PASSED [ 42%]
+tests/test_pixel_node_bridge.py::TestPixelTrustScorer::test_mag_anomaly PASSED [ 43%]
+tests/test_pixel_node_bridge.py::TestPixelTrustScorer::test_stale_data PASSED [ 44%]
+tests/test_pixel_node_bridge.py::TestPixelTrustScorer::test_no_tamper_evidence PASSED [ 45%]
+tests/test_pixel_node_bridge.py::TestPixelSimulator::test_simulator_returns_telemetry PASSED [ 46%]
+tests/test_pixel_node_bridge.py::TestPixelSimulator::test_simulator_camera_hash_periodic PASSED [ 47%]
+tests/test_pixel_node_bridge.py::TestPixelHttpTransport::test_unreachable_returns_stale_or_empty PASSED [ 48%]
+tests/test_pixel_node_bridge.py::TestPixelHttpTransport::test_cached_stale_on_repeated_failure PASSED [ 49%]
+tests/test_pixel_node_bridge.py::TestPixelNodeBridge::test_bridge_poll_uses_http_when_available PASSED [ 50%]
+tests/test_pixel_node_bridge.py::TestPixelNodeBridge::test_bridge_falls_back_to_sim PASSED [ 51%]
+tests/test_pixel_node_bridge.py::TestPixelNodeBridge::test_payload_serialization PASSED [ 52%]
+tests/test_pixel_node_bridge.py::TestPixelNodeBridge::test_payload_modality_mag_when_no_gps PASSED [ 53%]
+tests/test_radon_session.py::TestSessionLifecycle::test_session_initialization PASSED [ 54%]
+tests/test_radon_session.py::TestSessionLifecycle::test_start_creates_files PASSED [ 55%]
+tests/test_radon_session.py::TestSessionLifecycle::test_finalize_produces_summary PASSED [ 56%]
+tests/test_radon_session.py::TestSessionLifecycle::test_cache_roundtrip PASSED [ 57%]
+tests/test_radon_session.py::TestSessionLifecycle::test_resume_returns_false_when_no_cache PASSED [ 58%]
+tests/test_radon_session.py::TestSessionLifecycle::test_completed_session_not_resumed PASSED [ 59%]
+tests/test_radon_session.py::TestSessionAsyncLoop::test_short_run_finalizes PASSED [ 60%]
+tests/test_radon_session.py::TestSessionAsyncLoop::test_stop_request_finalizes PASSED [ 61%]
+tests/test_radon_session_writer.py::TestRadonSessionWriter::test_create_and_close PASSED [ 62%]
+tests/test_radon_session_writer.py::TestRadonSessionWriter::test_write_all_branches PASSED [ 63%]
+tests/test_radon_session_writer.py::TestRadonSessionWriter::test_manifest_checksum_roundtrip PASSED [ 64%]
+tests/test_radon_session_writer.py::TestRadonSessionWriter::test_certified_report_archive PASSED [ 65%]
+tests/test_radon_session_writer.py::TestRadonSessionWriter::test_additive_existing_file PASSED [ 66%]
+tests/test_radon_session_writer.py::TestRadonSessionWriter::test_48_hour_mock_envelope PASSED [ 66%]
+tests/test_radoneye_ingestor.py::TestRadonEyeSimulator::test_simulator_returns_positive_values PASSED [ 67%]
+tests/test_radoneye_ingestor.py::TestRadonEyeSimulator::test_simulator_diurnal_variation PASSED [ 68%]
+tests/test_radoneye_ingestor.py::TestRadonEyeSimulator::test_simulator_pCiL_conversion_accuracy PASSED [ 69%]
+tests/test_radoneye_ingestor.py::TestRadonBleParsing::test_parse_valid_payload PASSED [ 70%]
+tests/test_radoneye_ingestor.py::TestRadonBleParsing::test_parse_short_payload_raises PASSED [ 71%]
+tests/test_radoneye_ingestor.py::TestRadonBleParsing::test_parse_unexpected_header_warns PASSED [ 72%]
+tests/test_radoneye_ingestor.py::TestRadonHttpParsing::test_parse_json_normalizes_fields PASSED [ 73%]
+tests/test_radoneye_ingestor.py::TestRadonHttpParsing::test_parse_json_fallback_keys PASSED [ 74%]
+tests/test_radoneye_ingestor.py::TestRadonSampleToPayload::test_payload_structure PASSED [ 75%]
+tests/test_radoneye_ingestor.py::TestRadonSampleToPayload::test_payload_checksum_present PASSED [ 76%]
+tests/test_radoneye_ingestor.py::TestRadonEyeIngestorFailover::test_ingestor_falls_back_to_sim PASSED [ 77%]
+tests/test_radoneye_ingestor.py::TestRadonEyeIngestorFailover::test_ingestor_http_first_then_sim PASSED [ 78%]
+tests/test_spec009_fsm.py::test_fsm_initial_state_is_not_started PASSED  [ 79%]
+tests/test_spec009_fsm.py::test_fsm_not_started_to_learning PASSED       [ 80%]
+tests/test_spec009_fsm.py::test_fsm_learning_to_locked PASSED            [ 81%]
+tests/test_spec009_fsm.py::test_fsm_locked_cannot_restart PASSED         [ 82%]
+tests/test_spec009_fsm.py::test_fsm_persistence_roundtrip PASSED         [ 83%]
+tests/test_spec009_fsm.py::test_fsm_duration_gate_enforced PASSED        [ 84%]
+tests/test_spec009_fsm.py::test_finalize_not_started_returns_none PASSED [ 85%]
+tests/test_spec009_state_machine.py::test_baseline_lifecycle_and_persistence PASSED [ 86%]
+tests/test_spec009_state_machine.py::test_router_blocks_primary_during_baseline_learning PASSED [ 87%]
+tests/test_timing_monitor.py::test_lbe1421_stability_mock PASSED         [ 88%]
+tests/test_timing_monitor.py::test_lbe1421_jitter_quarantine PASSED      [ 89%]
+tests/test_timing_monitor.py::test_lbe1421_holdover_seamless PASSED      [ 90%]
+tests/test_uplink_manager.py::TestUplinkManager::test_check_returns_status PASSED [ 91%]
+tests/test_uplink_manager.py::TestUplinkManager::test_localhost_pixel_considered_reachable PASSED [ 92%]
+tests/test_uplink_manager.py::TestUplinkManager::test_unreachable_pixel_offline_mode PASSED [ 93%]
+tests/test_uplink_manager.py::TestUplinkManager::test_offline_then_online_triggers_backfill PASSED [ 94%]
+tests/test_uplink_manager.py::TestUplinkManager::test_degraded_mode_no_internet PASSED [ 95%]
+tests/test_uplink_manager.py::TestUplinkManager::test_last_status_cached PASSED [ 96%]
+tests/test_uplink_manager.py::TestOfflineCacheCoordinator::test_tag_when_online PASSED [ 97%]
+tests/test_uplink_manager.py::TestOfflineCacheCoordinator::test_tag_when_offline PASSED [ 98%]
+tests/test_watchdog.py::test_watchdog_healthy PASSED                     [ 99%]
+tests/test_watchdog.py::test_watchdog_unhealthy PASSED                   [100%]
+
+=================================== FAILURES ===================================
+_ TestPyhackrfFailurePaths.test_pyhackrf_unknown_clock_raises_clock_verification _
+
+self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fffa15ffc50>
+
+    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+        mock_device = mock.MagicMock()
+        mock_device.clock_source = "unknown"
+        mock_pyhackrf = mock.MagicMock()
+        mock_pyhackrf.HackRF.return_value = mock_device
+        patches = {
+            "pyhackrf": mock_pyhackrf,
+            "SOAPYSDR_AVAILABLE": False,
+            "PYHACKRF_AVAILABLE": True,
+        }
+        with mock.patch.dict(hal_hw_module.__dict__, patches):
+>           with pytest.raises(ClockVerificationError):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'dslv_zpdi.core.exceptions.ClockVerificationError'>
+
+tests/test_hardware_failure_paths.py:83: Failed
+------------------------------ Captured log call -------------------------------
+WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
+=========================== short test summary info ============================
+FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification
+=================== 1 failed, 102 passed in 98.82s (0:01:38) ===================

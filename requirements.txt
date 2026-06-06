@@ -4,3 +4,4 @@ h5py>=3.6.0
 pyserial>=3.5
 pyhackrf>=0.2.0
 pytest>=7.0.0
+bleak>=0.21.0

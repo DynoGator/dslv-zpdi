@@ -23,6 +23,7 @@ class NmeaStream:
     """
     SPEC-004A.4 — Background GPSDO NMEA reader.
 
+
     Background NMEA reader that caches the latest GGA fix without blocking.
 
     Usage:
@@ -140,6 +141,7 @@ class NmeaStream:
 # Module-level helpers (also importable for testing)                 #
 # ------------------------------------------------------------------ #
 
+# SPEC-004A.3-NMEA — Default fix dict for unknown/unparsed state
 def _empty_fix() -> dict:
     """SPEC-004A.4 — Build the default untrusted GPS fix state."""
     return {
@@ -153,6 +155,7 @@ def _empty_fix() -> dict:
 
 
 def parse_gga(sentence: str) -> dict | None:
+
     """
     SPEC-004A.4 — Parse a single GPSDO GGA sentence.
 

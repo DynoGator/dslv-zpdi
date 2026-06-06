@@ -55,6 +55,7 @@ _writer: HDF5Writer | None = None
 _registry_lock = threading.Lock()
 
 
+# SPEC-014.1 — Node registry maintenance
 def _update_node_registry(node_id: str) -> None:
     """SPEC-014 — Write last-seen metadata for a swarm node.
 
@@ -88,6 +89,7 @@ def _update_node_registry(node_id: str) -> None:
         logger.warning("node registry update failed: %s", exc)
 
 
+# SPEC-014.2 — Lazy HDF5 writer singleton
 def _get_writer() -> HDF5Writer:
     """SPEC-014 — Lazily construct the telemetry writer for node packets."""
     global _writer
@@ -101,6 +103,7 @@ def _get_writer() -> HDF5Writer:
 
 def create_app(writer: HDF5Writer | None = None) -> Flask:
     """SPEC-014 — Create the Flask receiver for swarm telemetry ingestion."""
+
     if not FLASK_AVAILABLE:
         raise RuntimeError("flask is required for the node receiver (pip install flask)")
 
@@ -114,6 +117,7 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
     # ── Mobile-node telemetry (Pixel 9 Pro XL / any swarm node) ─────────────
 
     @app.route("/api/v1/ingest", methods=["POST"])
+    # SPEC-014.4 — Swarm node telemetry ingestion endpoint
     def ingest_node() -> Response:
         """SPEC-014 — Accept a JSON telemetry payload from any swarm node."""
         raw = request.get_data(as_text=True)
@@ -152,6 +156,7 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
     # (quarantine) JSONL stream only.
 
     @app.route("/api/v1/ingest/radoneye", methods=["POST"])
+    # SPEC-014.5 — RadonEye Pro staging endpoint (secondary stream only)
     def ingest_radoneye() -> Response:
         """SPEC-015 — Stage EcoSense RadonEye Pro sensor readings."""
         raw = request.get_data(as_text=True)
@@ -219,6 +224,7 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
     # ── Health check ─────────────────────────────────────────────────────────
 
     @app.route("/api/v1/health", methods=["GET"])
+    # SPEC-014.6 — Service health endpoint
     def health() -> Response:
         """SPEC-014 — Report node receiver health and writer statistics."""
         stats = _get_writer().get_stats() if _writer else {}
@@ -227,6 +233,7 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
     return app
 
 
+# SPEC-014.7 — CLI entry point
 def main() -> None:
     """SPEC-014 — Run the node receiver service entrypoint."""
     port = int(os.getenv("DSLV_RECEIVER_PORT", "5775"))

@@ -56,6 +56,15 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 **Step 4.** **Power & Telemetry:** Connect LBE-1421 via USB-C to Pi 5. This provides power (250mA draw) and enables NMEA telemetry on `/dev/ttyACM0`.
 **Step 5.** Connect HackRF One to Pi 5 via USB 3.0. Connect antennas to respective ports.
 
+### Dual-Output Architecture (LBE-1421)
+
+The LBE-1421 has **two independent outputs**, unlike the deprecated LBE-1420 single-output unit:
+
+- **Out1** → 1 PPS to Pi 5 GPIO 18 (UTC epoch anchoring via `pps-gpio` + `chronyd`)
+- **Out2** → 10 MHz to HackRF CLKIN (hardware ADC phase-lock)
+
+Because the outputs are independent, **Out2 can be reconfigured** (e.g., to a verification frequency or to discipline a second device) without affecting the 1 PPS timing on Out1. For Phase 2B, Out2 is the primary 10 MHz reference; the second output role is reserved for future expansion (e.g., a second SDR or a standalone frequency counter for timing-health cross-check).
+
 ---
 
 ## 5. OS Configuration & Verification
