@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """dslv-zpdi Tier-1 WSS Ingestion Server — SPEC-008 crypto pipeline.
 
 Receives, authenticates, decrypts, and verifies payloads from Tier-2 mobile
@@ -42,7 +45,7 @@ from websockets.asyncio.server import ServerConnection, serve
 from websockets.datastructures import Headers
 from websockets.http11 import Request, Response
 
-from src.layer3_telemetry.mobile_router import route_packet, SecondaryLog
+from dslv_zpdi.layer3_telemetry.mobile_router import route_packet, SecondaryLog
 
 logging.basicConfig(
     level=os.environ.get("ZPDI_LOG_LEVEL", "INFO"),

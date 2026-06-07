@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """dslv-zpdi Tier-1 provenance verifier.
 
 Opens the HDF5 stream in SWMR-read mode (so it is safe to run while the

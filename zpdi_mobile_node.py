@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """dslv-zpdi Tier-1 mobile metrology node (Rev 3.5 — Hardened).
 
 Asynchronous daemon that polls Termux sensors from inside a Debian proot,
@@ -34,15 +37,15 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
 
-from src.layer1_ingestion.gps_poller import GPSPoller
-from src.layer1_ingestion.mobile_ingestion import (
+from dslv_zpdi.layer1_ingestion.gps_poller import GPSPoller
+from dslv_zpdi.layer1_ingestion.mobile_ingestion import (
     build_mobile_payload,
     IngestionPayload,
     SENSORS,
     TERMUX_SENSOR_BIN,
     score_mobile_payload,
 )
-from src.layer3_telemetry.mobile_router import route_packet, SecondaryLog
+from dslv_zpdi.layer3_telemetry.mobile_router import route_packet, SecondaryLog
 
 # ---------------------------------------------------------------------------
 # Environment-configurable constants

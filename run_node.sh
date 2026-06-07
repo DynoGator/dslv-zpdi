@@ -1,7 +1,9 @@
 #!/bin/bash
 cd /root/dslv-zpdi
 source .venv/bin/activate
-echo "Starting dslv-zpdi daemon..."
+# Mirror GitHub master package layout (src/dslv_zpdi) + mobile overlays
+export PYTHONPATH="$PWD/src:${PYTHONPATH:-}"
+echo "Starting dslv-zpdi daemon (package layout)..."
 python3 zpdi_mobile_node.py
 echo ""
 echo "========================================"

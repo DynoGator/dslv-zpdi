@@ -32,3 +32,9 @@ venv/
 *~
 .vscode/
 .idea/
+# Per-agent local workspaces (never commit)
+CLAUDE-HOME/
+GEM-HOME/
+GROK-HOME/
+KIMI-HOME/
+* -HOME/

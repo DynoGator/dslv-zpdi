@@ -97,3 +97,9 @@ Each handoff must include: agent name, branch, commits, validation results, stas
 | **Codex CLI** | Validation contracts, CI, repo guard |
 | **Gemini CLI** | Web stack, FastAPI ↔ Vite bridge |
 | **Joe Fross** | Hardware procurement, credentials, merge approval |
+## Agent Home Folders (Local Only)
+
+Folders such as CLAUDE-HOME/, GEM-HOME/, GROK-HOME/ etc. are **per-developer local workspaces** used by different CLI agents (Claude, Gemini, Grok, Kimi). They are listed in .gitignore and must never be committed to the shared repo. They may contain session notes, local clones, or scratch files.
+
+See also: COLLABORATION_GUIDE.md and root-level *-HOME symlinks or mounts in the development environment.
+

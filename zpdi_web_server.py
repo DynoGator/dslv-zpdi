@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """FastAPI web server for dslv-zpdi.
 
 Provides a REST API and WebSocket gateway to access the latest sensor state

@@ -104,3 +104,17 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 ## [df3f14f] 2026-05-19 — feat(node): add async metrology daemon zpdi_mobile_node.py
 
 ## [b7cd356] 2026-05-19 — chore(scaffold): initialize dslv-zpdi tier-1 node workspace
+
+## [Unreleased] — continued (Grok sync 2026-06-06)
+
+### Changed
+- **Repo layout sync to GitHub main**: phone tree now mirrors origin/main v4.7.2+ packaged structure (`src/dslv_zpdi/...` + pyproject.toml). Flat `src/layer*` removed after port.
+- Mobile Tier-2 code (gps_poller, mobile_ingestion + termux driver + phases, fusion_engine orientation, mobile_router always-secondary) overlaid into package and imports adapted.
+- Added mobile wiring shim + extended SensorModality for full phone sensor support while using canonical payload/states/router from master.
+- Launch scripts (supervisor, run_node) now export PYTHONPATH=src for package execution. All 41 tests pass (1 skip for daemon singleton).
+- Preserved full phone hardening (crypto, WSS breaker, proot supervisor, Tier-2 quarantine, local web + tier1 WSS receiver, no primary writes).
+
+### Notes
+- Compatible with Termux/proot constraints and existing .env / termux-boot.
+- Use `PYTHONPATH=src python3 zpdi_mobile_node.py` (or install -e . in venv).
+- See TURNOVER for full handoff details. Hold pushes.

@@ -16,6 +16,9 @@ cd "$SCRIPT_DIR"
 
 source .venv/bin/activate
 
+# Mirror GitHub master package layout (src/dslv_zpdi) + mobile Tier-2 adaptations
+export PYTHONPATH="$SCRIPT_DIR/src:${PYTHONPATH:-}"
+
 # Load node environment (WSS URI, tokens, paths, etc.)
 # set -a ensures all variables are exported to the daemon child process.
 set -a

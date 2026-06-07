@@ -321,3 +321,25 @@ orphan_checker.py         → 29 class-level SPEC gaps (documented, post-merge t
 2. Backfill 29 class-level SPEC-IDs for orphan_checker clean pass
 3. Wire TheForge PWA to local FastAPI backend
 4. SPEC-009 72-hour passive baseline on secondary stream
+
+## 2026-06-06 — GitHub main sync + phone layout mirror (Grok)
+
+**Performed by:** Grok (this session) on the Pixel proot mobile node.
+
+### Changes
+- Searched system, read SESSION_CONTEXT, established GROK-HOME.
+- Fetched origin/main (now at v4.7.2+/Phase 2B closeout 985d8ca with full restructure, SPEC-016 Pixel bridge, packaged src/dslv_zpdi/, HAL, contracts, wiring, pyproject.toml).
+- Compared local flat `src/layer*` (Rev 3.5 mobile) vs GitHub master template (via git archive + MCP).
+- **Restructured phone files to mirror GitHub**: removed flat src/layers, installed `src/dslv_zpdi/` tree from origin/main (core, contracts, layers with hal/pixel_bridge/router/hdf5 etc, watchdog, main_pipeline, logging_config), pyproject + package find=src.
+- **Overlay + adapt mobile Tier-2 code**:
+  - Ported gps_poller.py, mobile_ingestion.py (termux-sensor driver + hilbert phases + builder), fusion_engine.py (orientation Kuramoto), mobile_router.py (always-SECONDARY + tier2 categories) into the package subdirs.
+  - Extended master's payload SensorModality with full mobile set (accel/gyro/rotation/baro/gravity...).
+  - Added wire_mobile_to_coherence shim to master's layer2_core/wiring.py (bypasses Tier-1 trust gates for phone SECONDARY path).
+  - Fixed all imports (package + root entries/tests) "src.layer..." → "dslv_zpdi....".
+- Updated launchers (run_node.sh, supervisor.sh) to export PYTHONPATH=.../src so python zpdi_*.py works with package (preserves proot/supervisor behavior, termux singleton, 127.0.0.1 etc).
+- Tests: 41 passed / 1 skipped (mobile compliance + tier1) after shim + 1-line API case fix. Tier-2 enforcement verified (hardware_tier=2 → SECONDARY always).
+- Preserved: crypto/WSS/circuit-breaker in zpdi_mobile_node, local web/tier1 receiver, supervisor grace/health, SECONDARY-only, no PRIMARY, .env/data/logs, specs.
+- New: pyproject.toml (master), requirements-core. PYTHONPATH or `pip install -e .` (add web deps) supported.
+- GitHub master is now canonical; local is adapted mobile overlay on top. Hold remote ops per context.
+
+## Session Log (append below)
