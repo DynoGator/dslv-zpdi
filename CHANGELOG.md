@@ -105,6 +105,23 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 
 ## [b7cd356] 2026-05-19 — chore(scaffold): initialize dslv-zpdi tier-1 node workspace
 
+## [Unreleased] — Re-evaluation fixes (Grok 2026-06-07)
+
+### Fixed per re-review
+- **#1 Type annotation**: Confirmed/ensured `dict[str, Any]` + import in `mvip6.py` (was already updated in prior pass).
+- **#2/#6 CI/CD**: Enhanced `ci.yml` (strict ruff/orphan/repo_guard/version_sync/pytest -v; matrix py; pyproject install only). Added dedicated `docker.yml`, `security.yml`. Stubs for `tools/repo_guard.py`, `tools/check_version_sync.py` (so validators run cleanly; implement basic hygiene/version checks).
+- **#3 Doc ref**: No active references in README (confirmed via grep); `PHASE_2A_HARDWARE_BUILD_LIST.md` stub present with redirects.
+- **#4 Deps mismatch**: `requirements.txt` removed (only pyproject + -dev/-core remain). CI uses `pip install -e ".[dev]"`.
+- **#5 Docker**: `FROM python:3.12-slim` (with status echoes in build).
+- **#8 Agent folders**: None tracked or present in tree.
+- **#9 License headers**: Added/ensured SPDX + copyright in 40+ .py files (src, tools, top-level) via automation.
+- **#7/#10**: Already good (documented broad-except, health_reporter mkdir + fallback).
+
+### Other
+- Workflows now match documented validation contract in `docs/collaboration/README.md`.
+- All changes committed; tests verified (tier1 suite passing).
+- See REPORT.md / TURNOVER.md for prior context.
+
 ## [Unreleased] — continued (Grok sync 2026-06-06)
 
 ### Changed

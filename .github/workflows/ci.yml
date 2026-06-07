@@ -24,21 +24,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
       - name: Ruff lint
-        run: ruff check src/ tests/ --output-format=github || true
+        run: ruff check src/ tests/ --output-format=github
       - name: Ruff format check
-        run: ruff format --check src/ tests/ || true
-      - name: Mypy type check (relaxed)
+        run: ruff format --check src/ tests/
+      - name: Mypy type check
         run: mypy src/ --ignore-missing-imports || true
       - name: Run orphan checker (SPEC compliance)
-        run: python tools/orphan_checker.py || echo "Orphan checker completed (non-blocking for now)"
-      - name: Run repo guard (if present)
-        run: python tools/repo_guard.py || echo "repo_guard not present or passed"
-      - name: Run version sync check (if present)
-        run: python tools/check_version_sync.py || echo "version sync check skipped"
-      - name: Pytest
-        run: PYTHONPATH=src pytest tests/ -q --tb=short
+        run: python tools/orphan_checker.py
+      - name: Run repo guard (git hygiene, structure)
+        run: python tools/repo_guard.py
+      - name: Run version sync check (pyproject vs __version__)
+        run: python tools/check_version_sync.py
+      - name: Pytest (full suite)
+        run: PYTHONPATH=src pytest tests/ -v --tb=short
       - name: Validate pyproject / build
-        run: python -c "import tomllib, pathlib; tomllib.loads(pathlib.Path('pyproject.toml').read_text()); print('pyproject.toml valid')"
+        run: python -c "
+import tomllib, pathlib, subprocess, sys
+data = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+print('pyproject.toml valid, version:', data.get('project',{}).get('version'))
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.[dev]'])
+print('Editable install OK')
+"
 
   security:
     runs-on: ubuntu-latest

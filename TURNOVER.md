@@ -393,3 +393,15 @@ Addressed every item in the provided GitHub project review (10 issues):
 - Re-verify: python imports, WSS, web UI, sensor stream.
 - Continue from open tasks in memory (SPEC backfill, PWA wiring, etc.).
 All review items closed. Installers now robust for production/field use.
+
+## 2026-06-07 Re-review Fixes (Grok)
+Addressed all items from re-evaluation:
+- #1: mvip6.py type (Any) confirmed fixed + header.
+- #2/6: Enhanced ci.yml (full pytest -v, strict ruff/orphan/repo_guard/version_sync, pyproject -e only); added docker.yml + security.yml. Created tool stubs for validators.
+- #3: Confirmed 0 refs in README; stub PHASE_2A_HARDWARE_BUILD_LIST.md present.
+- #4: requirements.txt removed (pyproject sole source).
+- #5: Dockerfile 3.12-slim.
+- #8: Agent homes clean (none tracked/present).
+- #9: SPDX headers added/ensured across .py files (40+).
+- #7/10 already good.
+CI now comprehensive per docs/collaboration. Tests targeted pass (in venv). Committed.
