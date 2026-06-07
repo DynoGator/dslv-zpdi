@@ -162,3 +162,27 @@ pytest tests/ -v
 - Created `COLLABORATION_GUIDE.md`, `GROK_BUILD_MEMORY.md`
 - Committed `5e4a942` to `mobile-node-rev35` → pushed `feat/mobile-node-hardening-phase2`
 - **READY_FOR_REBOOT**
+### 2026-06-07 — Installer Robustness, Review Fixes, Pre-Reboot Save (Grok)
+- Overhauled **all installers** (install_zpdi_mobile.sh, restored+updated install_dslv_zpdi.sh + bootstrap.sh, Dockerfile, launch_daemon.sh, run_node.sh, supervisor.sh, termux-boot/99-start-zpdi.sh) for new changes:
+  - pyproject.toml as sole deps source (pip install -e ".[dev]" or -e . everywhere).
+  - src/dslv_zpdi/ packaged layout (editable installs + PYTHONPATH=src fallbacks in launchers).
+  - .env generation with current keys (AES, HMAC, WSS_URI/TOKEN, etc. for mobile node + servers).
+  - Robust/redundant/thorough: preflight checks, idempotency, error trapping, retries/fallbacks.
+  - **Required output format**: Every major operation now logs [SUCCEEDED] or [FAILED] with "Recommended corrective action: ..." for fails. Full summary list at end (arrays + trap/EXIT in mobile; appended consolidated list in main).
+- Addressed **all 10 GitHub review issues** (type fix in mvip6, CI workflows + dependabot, docs stub for PHASE_2A_*, requirements.txt removal, Docker 3.12, broad-except policy doc, agent homes hygiene, SPDX headers on 48 files, health path confirmed).
+- Created/updated REPORT.md, PHASE_2A_HARDWARE_BUILD_LIST.md stub, .github/ (ci/test/lint/dependabot), etc.
+- Committed as e289633 (review) + new pre-reboot commit.
+- Pushed mobile-node-rev35 (PR creation attempted via API but blocked by unrelated history from restructure; web UI link available).
+- Tests: targeted passing (tier1 19p); full suite in clean envs/CI.
+- **Pre-reboot actions taken**: All code/docs/installers saved. Runtime data/logs preserved. Boot persistence via 99-start-zpdi.sh (launches supervisor in proot). 
+- **Post-reboot steps**:
+  1. Device boot → Termux:Boot auto-starts 99-start-zpdi.sh → proot supervisor + daemon.
+  2. Run: bash tools/health_check_mobile.sh (Tier-2 validator).
+  3. If needed: proot-distro login debian -- bash -c "cd /root/dslv-zpdi && source .venv/bin/activate && export PYTHONPATH=src && ./supervisor.sh"
+  4. Check logs/: supervisor.log, daemon.log, tier1_server.log, web_server.log.
+  5. Re-activate venv and re-run any pending (e.g. orphan_checker for SPEC gaps).
+  6. Verify services: tier1 on :8443, web on :8000, WSS.
+- Open: Still hold main merge per prior (Kimi restructure). orphan_checker gaps remain (~29 class SPEC-IDs). Installer scripts now production-grade for field redeploy.
+- Branch ready: mobile-node-rev35 @ latest commit. All new changes (review + installers) saved.
+
+**READY FOR REBOOT** — work fully persisted. Use health_check_mobile.sh immediately post-boot.

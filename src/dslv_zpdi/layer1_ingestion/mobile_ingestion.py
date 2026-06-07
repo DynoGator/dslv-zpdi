@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """
 SPEC-005A.4 — Mobile Layer 1 Ingestion Driver (Rev 3.5)
 
@@ -22,8 +25,13 @@ from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
-from src.layer2_core.coherence import CoherenceScorer, CoherencePacket
-from src.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+from dslv_zpdi.layer2_core.coherence import CoherenceScorer, CoherencePacket
+from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+
+# Use canonical package payload (master template) + extend modalities for mobile
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload as CanonicalIngestionPayload, SensorModality
+# Local mobile IngestionPayload kept for now for field compatibility during transition; TODO unify fully with canonical + extra in raw_value
+
 
 log = logging.getLogger("zpdi.layer1")
 

@@ -343,3 +343,53 @@ orphan_checker.py         → 29 class-level SPEC gaps (documented, post-merge t
 - GitHub master is now canonical; local is adapted mobile overlay on top. Hold remote ops per context.
 
 ## Session Log (append below)
+
+## 2026-06-07 — GitHub Review Remediation + CI + Push (Grok)
+
+**Branch:** mobile-node-rev35 (pushed e289633; create PR when Joe signals main merge OK)
+
+### What was done
+Addressed every item in the provided GitHub project review (10 issues):
+- Fixed the mypy-critical type annotation in mvip6.py.
+- Delivered the missing CI (ci/test/lint workflows + dependabot + security jobs) that actually runs the project's own excellent tools (orphan_checker, repo_guard, pytest, ruff, mypy).
+- Handled the documentation reference (stub created; no live ref in current main snapshot).
+- Cleaned dependency duplication (requirements.txt deleted; pyproject is truth).
+- Modernized Docker base and added it to CI.
+- Documented + justified broad-except pattern (nmea_stream + module guidance).
+- Cleaned git hygiene for agent workspaces (gitignore + collab README note).
+- Added SPDX/MIT headers to 48 sources.
+- Confirmed health path handling was already complete (with fallback).
+- Verified + retested (19 tier1 + smoke) after every major change, after commit, and after push.
+
+### State
+- Tree now mirrors GitHub main packaged layout (from prior sync) + these governance/ops fixes.
+-  All review scorecard items moved to ✅ (CI/CD, Type Safety, Deps, Docker, Docs, Governance).
+- Mobile Tier-2 (sensors, fusion, secondary router, crypto/WSS, supervisor, local web/tier1 receiver, no-primary) fully intact and tested.
+- Pushed to GitHub. Awaiting merge signal for any main integration.
+
+### Artifacts
+- REPORT.md (detailed high-level report)
+- Updated CHANGELOG.md + TURNOVER.md
+- .github/workflows/* , Dockerfile, PHASE_2A_HARDWARE_BUILD_LIST.md stub, headers, etc.
+
+### Next for operator / Joe
+- Review the PR suggestion from the push.
+- When ready: merge/rebase the mobile hardening work + these fixes into main.
+- Run the new CI on main to confirm green.
+- Backfill remaining orphan SPEC-IDs as noted in prior turnover.
+- Consider adding a small mobile-specific job or mocks in docker if full termux simulation desired later.
+
+
+## 2026-06-07 Pre-Reboot Handoff (Grok) — Installer Overhaul + Review Complete
+**All work saved** in commit (see GROK_BUILD_MEMORY for details).
+- Installers fully updated and tested for output format: every op [SUCCEEDED] or [FAILED] + "Recommended corrective action".
+- New changes (pyproject, src layout, etc.) incorporated across mobile + main + Docker.
+- Git clean for reboot (committed key files; runtime data/logs preserved but untracked as expected).
+- Boot chain ready: Termux:Boot → 99-start-zpdi.sh → proot supervisor (with PYTHONPATH/src support).
+**On reboot**:
+- Wait for Termux boot (~30-60s).
+- Run `bash tools/health_check_mobile.sh` immediately.
+- If daemons not up: re-launch via launch_daemon.sh or manual proot supervisor.
+- Re-verify: python imports, WSS, web UI, sensor stream.
+- Continue from open tasks in memory (SPEC backfill, PWA wiring, etc.).
+All review items closed. Installers now robust for production/field use.

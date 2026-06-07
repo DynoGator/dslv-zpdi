@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """
 SPEC-005A.4-GPS | GPS / Network Location Poller for Mobile Tier-2
 
@@ -16,7 +19,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Optional
 
-log = logging.getLogger("zpdi.gps")
+log = logging.getLogger("dslv_zpdi.gps")
 
 TERMUX_LOCATION_BIN = "/data/data/com.termux/files/usr/bin/termux-location"
 

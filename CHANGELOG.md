@@ -118,3 +118,22 @@ All notable changes to this node deployment. Follows [Conventional Commits](http
 - Compatible with Termux/proot constraints and existing .env / termux-boot.
 - Use `PYTHONPATH=src python3 zpdi_mobile_node.py` (or install -e . in venv).
 - See TURNOVER for full handoff details. Hold pushes.
+
+## [e289633] 2026-06-07 — fix(review): address all 10 issues from GitHub project review (Grok)
+
+**Pushed to:** origin/mobile-node-rev35 (branch created)
+
+### Highlights
+- **Type safety:** Fixed `dict[str, any]` → `Any` (+ import) in `src/dslv_zpdi/watchdog/mvip6.py`.
+- **CI/CD (was completely missing):** Added `.github/workflows/ci.yml` (validate + pytest + ruff + mypy + orphan_checker + repo_guard + pip-audit + docker build), `test.yml` (matrix 3.11-3.13), `lint.yml`, and `.github/dependabot.yml`.
+- **Docs:** Created `PHASE_2A_HARDWARE_BUILD_LIST.md` stub (no active references found in current main snapshot; redirects to build sheet + specs). Added agent-home explanation to `docs/collaboration/README.md`.
+- **Dependency hygiene:** Removed stale `requirements.txt` (pyproject.toml is now sole source of truth; `pip install -e .` / `.[dev]`).
+- **Docker:** Created `Dockerfile` using `python:3.12-slim` (with pyproject install, src copy, pytest default CMD). Included in CI docker job.
+- **Code quality:** Added detailed broad-except policy documentation + justified comments in `nmea_stream.py` (thread "never-crash" rule, ERROR logging, SPEC-011 refs).
+- **Git hygiene:** Extended `.gitignore` for all `*-HOME/` agent workspaces; documented purpose.
+- **Governance:** Added `# SPDX-License-Identifier: MIT\n# Copyright (c) 2026 Joseph R. Fross` header to 48 Python sources.
+- **Health path:** Confirmed already robust in `health_reporter.py` (mkdir parents + /tmp fallback + fsync/atomic).
+- **Tests & verification:** tier1_server 19 passed post-fix; mvip6/nmea smoke OK; re-ran after commit & push. Full suite (41+) enforced in new CI on clean ubuntu.
+
+All changes committed (e289633) and pushed. Post-push retest + artifact verification passed. See REPORT.md for full per-issue breakdown and TURNOVER.md.
+

@@ -1,0 +1,132 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
+"""
+SPEC-004A.3 — Continuous Timing Health Monitoring
+"""
+
+import logging
+import math
+import os
+import random
+import subprocess
+from threading import Event, Thread
+from typing import Callable, Optional
+
+logger = logging.getLogger("dslv-zpdi.timing")
+
+
+class TimingMonitor:
+    """SPEC-004A.3 — Runtime GPSDO/PPS jitter monitoring with automatic quarantine trigger."""
+
+    def __init__(
+        self,
+        check_interval_seconds: float = 10,
+        jitter_threshold_ns: int = 50000,
+        simulated: bool = False,
+        jitter_source: Optional[Callable[[], float]] = None,
+    ):
+        self.check_interval = check_interval_seconds
+        self.threshold_ns = jitter_threshold_ns
+        self.simulated = simulated
+        self._jitter_source = jitter_source
+        self._stop_event = Event()
+        self._thread = None
+        self.last_jitter_ns = float("inf")
+        # Optimistic startup: assume healthy until first reading proves otherwise.
+        # Prevents the start-up race where payloads are dropped while we wait
+        # for the first chronyc poll.
+        self.healthy = True
+
+    def start(self):
+        """Start monitoring thread."""
+        self._thread = Thread(target=self._monitor_loop, daemon=True)
+        self._thread.start()
+        logger.info("Timing Monitor started (threshold: %d ns)", self.threshold_ns)
+
+    def stop(self):
+        """Signal thread to stop."""
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+
+    def _monitor_loop(self):
+        """Continuous monitoring loop."""
+        while not self._stop_event.is_set():
+            try:
+                jitter = self._read_pps_jitter()
+                self.last_jitter_ns = jitter
+                self.healthy = jitter < self.threshold_ns
+
+                if not self.healthy:
+                    if not math.isfinite(jitter):
+                        logger.warning(
+                            "SPEC-004A.3 COLD-START: chronyc unavailable or returned "
+                            "non-finite jitter — no valid timing reference this cycle. "
+                            "Skipping quarantine trigger."
+                        )
+                    else:
+                        logger.error(
+                            "SPEC-004A.3 VIOLATION: PPS jitter %d ns exceeds %d ns threshold",
+                            int(jitter),
+                            self.threshold_ns,
+                        )
+                        # Trigger system-wide quarantine via MVIP-6 hooks (Phase 2B integration)
+                        self._trigger_timing_quarantine()
+
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Timing monitoring error: %s", e)
+                self.healthy = False
+
+            self._stop_event.wait(self.check_interval)
+
+    def _read_pps_jitter(self) -> float:
+        """Read current PPS jitter.
+
+        - If a custom jitter_source was provided, use it.
+        - In simulated mode, generate a synthetic value matching the
+          DSLV_SIM_TIMING profile (gpsdo: ~10 ns, ntp: ~3 ms). This decouples
+          sim runs from host chronyc health.
+        - Otherwise read RMS offset from `chronyc tracking`.
+        """
+        if self._jitter_source is not None:
+            try:
+                return float(self._jitter_source())
+            except (TypeError, ValueError):
+                return float("inf")
+
+        if self.simulated:
+            mode = os.getenv("DSLV_SIM_TIMING", "gpsdo").strip().lower()
+            if mode == "ntp":
+                return float(abs(random.gauss(3_000_000.0, 1_000_000.0)))
+            return float(abs(random.gauss(10.0, 5.0)))
+
+        try:
+            result = subprocess.run(
+                ["chronyc", "tracking"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    # Use current system clock offset, not the historical RMS.
+                    # "System time" reflects the live offset; "RMS offset" is a
+                    # running average that stays large for minutes after initial lock.
+                    # Example: System time     : 0.000051829 seconds fast of NTP time
+                    if "System time" in line:
+                        parts = line.split(":")
+                        if len(parts) > 1:
+                            val_str = parts[1].strip().split()[0]
+                            try:
+                                return abs(float(val_str)) * 1e9
+                            except ValueError:
+                                continue
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError, ValueError):
+            pass  # Expected if chronyc is not running or output is unparsable
+        return float("inf")
+
+    def _trigger_timing_quarantine(self):
+        """Emit signal to quarantine all Tier 1 data until timing recovers."""
+        # Integration point with MVIP-6 watchdog - to be refined in Phase 2B
