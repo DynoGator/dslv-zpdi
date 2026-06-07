@@ -1,4 +1,4 @@
-# dslv-zpdi — Tier-2 Mobile Swarm Node (Rev 3.5)
+# dslv-zpdi — Tier-2 Mobile Swarm Node (Rev 4.7.2 / mobile hardening on main v4.7.2)
 
 > **Tier classification:** This node runs on a Pixel 9 Pro XL inside a Debian proot-distro container. It is a **Tier-2 Swarm node** — it has no GPS-disciplined oscillator, no PPS hardware, and no external clock. Every packet it produces is `SECONDARY_QUARANTINED` by design. Institutional-grade primary-stream data requires Tier-1 Anchor hardware (Raspberry Pi CM5 + Intel i210-T1 + u-blox GPSDO or equivalent per SPEC-004A.2).
 
@@ -549,7 +549,7 @@ pytest tests/test_mobile_compliance.py::test_primary_hdf5_is_empty_after_mobile_
 
 ```
 dslv-zpdi/
-├── zpdi_mobile_node.py          Tier-2 async daemon (Rev 3.5)
+├── zpdi_mobile_node.py          Tier-2 async daemon (Rev 4.7.2 / mobile hardening)
 ├── tier1_ingestion_server.py    Tier-1 WSS ingestion server (SPEC-008)
 ├── zpdi_web_server.py           FastAPI REST + WebSocket API
 ├── zpdi_verifier.py             HDF5 integrity verifier

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Joseph R. Fross
 
-"""dslv-zpdi Tier-1 mobile metrology node (Rev 3.5 — Hardened).
+"""dslv-zpdi Tier-1 mobile metrology node (v4.7.2 — Rev 3.5 mobile hardening).
 
 Asynchronous daemon that polls Termux sensors from inside a Debian proot,
 enriches each payload with GPS location when available, signs with
