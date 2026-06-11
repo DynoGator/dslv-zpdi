@@ -27,8 +27,13 @@ def measure_drift(duration_s=60):
     return drift_percent
 
 
-def generate_calibration_artifact(node_id, drift_percent):
-    """SPEC-004A.CAL — Write signed calibration artifact."""
+def generate_calibration_artifact(node_id, drift_percent, path="/etc/dslv_zpdi_cal.json"):
+    """SPEC-004A.CAL — Write signed calibration artifact.
+
+    Writes to ``path`` (default ``/etc/dslv_zpdi_cal.json``). If that location is
+    not writable, falls back to ``dslv_zpdi_cal.json`` in the current directory.
+    Returns the path actually written so callers do not have to guess.
+    """
     artifact = {
         "node_id": node_id,
         "calibration_timestamp_utc": time.time(),
@@ -41,15 +46,17 @@ def generate_calibration_artifact(node_id, drift_percent):
     signature = hashlib.sha256(artifact_json.encode()).hexdigest()
     artifact["signature_sha256"] = signature
 
-    path = "/etc/dslv_zpdi_cal.json"
     try:
         with open(path, "w") as f:
             json.dump(artifact, f, indent=4)
         print(f"[SUCCESS] Calibration artifact saved to {path}")
-    except PermissionError:
-        print(f"[WARN] Permission denied writing to {path}. Saving to local dir.")
-        with open("dslv_zpdi_cal.json", "w") as f:
+        return path
+    except (PermissionError, OSError) as exc:
+        fallback = "dslv_zpdi_cal.json"
+        print(f"[WARN] Could not write to {path} ({exc}). Saving to {fallback}.")
+        with open(fallback, "w") as f:
             json.dump(artifact, f, indent=4)
+        return fallback
 
 
 if __name__ == "__main__":
