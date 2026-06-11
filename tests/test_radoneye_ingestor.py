@@ -4,18 +4,16 @@ SPEC-015.8 — RadonEye ingestor unit and integration tests.
 All tests run without hardware (simulator-first).
 """
 
-import json
 import struct
 
 import pytest
 
 from dslv_zpdi.layer1_ingestion.radoneye_ingestor import (
-    RadonEyeSimulator,
+    _BQ_M3_TO_PCI_L,
     RadonEyeBleTransport,
     RadonEyeHttpTransport,
     RadonEyeIngestor,
-    RadonSample,
-    _BQ_M3_TO_PCI_L,
+    RadonEyeSimulator,
 )
 
 
@@ -36,7 +34,7 @@ class TestRadonEyeSimulator:
         for s in samples:
             assert 50 <= s.radon_Bqm3 <= 200
 
-    def test_simulator_pCiL_conversion_accuracy(self):
+    def test_simulator_pCiL_conversion_accuracy(self):  # noqa: N802 - unit-encoded name (pCi/L)
         sim = RadonEyeSimulator(baseline_bq_m3=111.0, noise_sigma=0.0)
         s = sim.read()
         # 111 Bq/m³ ≈ 3.0 pCi/L (allow diurnal swing ±20)

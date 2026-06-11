@@ -5,11 +5,9 @@ Proves the engine flags correlated series and clears uncorrelated series.
 """
 
 import numpy as np
-import pytest
 
 from dslv_zpdi.layer2_core.barometric_coherence import (
     BarometricCoherenceEngine,
-    BCIResult,
 )
 
 

@@ -33,7 +33,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("dslv-zpdi.radon-session")
 
@@ -48,7 +48,7 @@ class SessionConfig:
     session_name: str = "radon-session"
     operator_id: str = "operator_unknown"
     output_dir: str = "./output/secondary"
-    radon_device_address: Optional[str] = None
+    radon_device_address: str | None = None
     pixel_host: str = "10.42.0.2"
     pixel_http_port: int = 8777
     gpsdo_port: str = "/dev/ttyACM0"
@@ -73,8 +73,8 @@ class SessionState:
     samples_mobile: int = 0
     samples_validation: int = 0
     last_cache_utc: float = 0.0
-    timing_health: Dict[str, Any] = field(default_factory=dict)
-    error_log: List[str] = field(default_factory=list)
+    timing_health: dict[str, Any] = field(default_factory=dict)
+    error_log: list[str] = field(default_factory=list)
 
 
 class RadonSessionOrchestrator:
@@ -92,7 +92,7 @@ class RadonSessionOrchestrator:
         self._cache_path = Path(config.output_dir) / f"{config.session_name}_state.json"
         self._hdf5_path = Path(config.output_dir) / f"{config.session_name}.h5"
         self._stop_requested = False
-        self._components: Dict[str, Any] = {}
+        self._components: dict[str, Any] = {}
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -225,7 +225,6 @@ class RadonSessionOrchestrator:
     # ── Ingestion helpers ──────────────────────────────────────────────────
 
     async def _ingest_radon(self):
-        from dslv_zpdi.layer1_ingestion.radoneye_ingestor import RadonEyeIngestor
         from dslv_zpdi.layer3_telemetry.radon_session_writer import CertifiedCRMRecord
 
         ingestor = self._components.get("radon")
@@ -295,7 +294,6 @@ class RadonSessionOrchestrator:
                 self.state.samples_validation += 1
 
     async def _ingest_mobile(self):
-        from dslv_zpdi.layer1_ingestion.pixel_node_bridge import PixelNodeBridge
         from dslv_zpdi.layer3_telemetry.radon_session_writer import MobileNodeRecord
 
         bridge = self._components.get("pixel")
@@ -332,8 +330,8 @@ class RadonSessionOrchestrator:
         )
 
     def _init_ingestors(self):
-        from dslv_zpdi.layer1_ingestion.radoneye_ingestor import RadonEyeIngestor
         from dslv_zpdi.layer1_ingestion.pixel_node_bridge import PixelNodeBridge, PixelSimulator
+        from dslv_zpdi.layer1_ingestion.radoneye_ingestor import RadonEyeIngestor
         from dslv_zpdi.layer2_core.barometric_coherence import BarometricCoherenceEngine
 
         self._components["radon"] = RadonEyeIngestor(
@@ -381,8 +379,8 @@ class RadonSessionOrchestrator:
             "",
             "## Sample Counts",
             "",
-            f"| Source | Count |",
-            f"|--------|-------|",
+            "| Source | Count |",
+            "|--------|-------|",
             f"| Certified CRM | {self.state.samples_radon} |",
             f"| Macro Atmosphere | {self.state.samples_atmosphere} |",
             f"| Space Weather | {self.state.samples_space_weather} |",

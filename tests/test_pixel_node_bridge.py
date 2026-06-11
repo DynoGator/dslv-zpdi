@@ -7,11 +7,11 @@ All tests run without hardware (simulator-first).
 import pytest
 
 from dslv_zpdi.layer1_ingestion.pixel_node_bridge import (
-    PixelSimulator,
-    PixelTrustScorer,
     PixelHttpTransport,
     PixelNodeBridge,
+    PixelSimulator,
     PixelTelemetry,
+    PixelTrustScorer,
 )
 
 

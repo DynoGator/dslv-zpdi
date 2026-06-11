@@ -2,14 +2,12 @@
 SPEC-017.4 — Uplink manager unit tests.
 """
 
-import time
 
-import pytest
 
 from dslv_zpdi.layer1_ingestion.uplink_manager import (
-    UplinkManager,
     NetworkStatus,
     OfflineCacheCoordinator,
+    UplinkManager,
 )
 
 

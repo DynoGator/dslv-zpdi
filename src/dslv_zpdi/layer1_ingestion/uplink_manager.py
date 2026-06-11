@@ -10,8 +10,8 @@ Design Principles
   still written to local HDF5 and flagged "offline_cached".  When the uplink
   returns, a backfill flag is set so upstream consumers know a gap may exist.
 - The manager is read-only w.r.t. the actual network interface.  It uses
-  psutil and ICMP echo (ping) to assess reachability, never modifying
-  routing tables or NetworkManager state.
+  `ip route` parsing and ICMP echo (ping) to assess reachability, never
+  modifying routing tables or NetworkManager state.
 - Hotspot detection is heuristic: look for a default route on a Wi-Fi
   interface whose gateway is in the Pixel's expected subnet.
 """
@@ -19,13 +19,9 @@ Design Principles
 from __future__ import annotations
 
 import logging
-import platform
 import subprocess
 import time
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-
-import psutil
+from dataclasses import dataclass
 
 logger = logging.getLogger("dslv-zpdi.uplink")
 
@@ -43,7 +39,7 @@ class NetworkStatus:
     pixel_reachable: bool = False
     internet_reachable: bool = False
     dns_working: bool = False
-    offline_since: Optional[float] = None
+    offline_since: float | None = None
     backfill_pending: bool = False
     mode: str = "unknown"  # online | offline | degraded
 
@@ -79,7 +75,7 @@ class UplinkManager:
         self.check_interval = check_interval_sec
         self.offline_threshold = offline_threshold_sec
         self._last_status = NetworkStatus()
-        self._offline_since: Optional[float] = None
+        self._offline_since: float | None = None
         self._backfill_pending = False
 
     def check(self) -> NetworkStatus:
@@ -130,11 +126,9 @@ class UplinkManager:
     def last_status(self) -> NetworkStatus:
         return self._last_status
 
-    def _detect_default_route(self) -> tuple[Optional[str], Optional[str]]:
+    def _detect_default_route(self) -> tuple[str | None, str | None]:
         """Return (interface_name, gateway_ip) for the current default route."""
         try:
-            net_if_addrs = psutil.net_if_addrs()
-            # Get default route from /proc/net/route or equivalent
             # psutil does not expose routes directly, so we parse `ip route`
             result = subprocess.run(
                 ["ip", "route", "show", "default"],

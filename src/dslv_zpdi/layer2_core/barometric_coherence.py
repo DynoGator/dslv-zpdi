@@ -23,10 +23,8 @@ it does NOT replace or depend on the Kuramoto order parameter r(t).
 from __future__ import annotations
 
 import logging
-import math
 from collections import deque
 from dataclasses import dataclass
-from typing import List, Optional
 
 import numpy as np
 
@@ -76,14 +74,14 @@ class BarometricCoherenceEngine:
         self._rh: deque = deque(maxlen=window_minutes * 2)
         self._timestamps: deque = deque(maxlen=window_minutes * 2)
 
-        self._last_result: Optional[BCIResult] = None
+        self._last_result: BCIResult | None = None
 
     def ingest(
         self,
         timestamp_utc: float,
-        radon_pCiL: float,
-        pressure_hPa: float,
-        rh_pct: Optional[float] = None,
+        radon_pCiL: float,  # noqa: N803 - unit-encoded contract arg (pCi/L)
+        pressure_hPa: float,  # noqa: N803 - unit-encoded contract arg (hPa)
+        rh_pct: float | None = None,
     ):
         """SPEC-019.3 — Ingest a new observation triple."""
         self._timestamps.append(timestamp_utc)
@@ -91,7 +89,7 @@ class BarometricCoherenceEngine:
         self._pressure.append(pressure_hPa)
         self._rh.append(rh_pct if rh_pct is not None else 50.0)
 
-    def compute(self) -> Optional[BCIResult]:
+    def compute(self) -> BCIResult | None:
         """SPEC-019.4 — Compute BCI from the current rolling window."""
         if len(self._radon) < self.window_minutes // 2:
             return None  # Insufficient data
@@ -185,7 +183,7 @@ class BarometricCoherenceEngine:
         return result
 
     @property
-    def last_result(self) -> Optional[BCIResult]:
+    def last_result(self) -> BCIResult | None:
         return self._last_result
 
     def reset(self):

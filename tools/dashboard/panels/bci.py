@@ -1,6 +1,7 @@
 """SPEC-021.3 — Barometric Coherence Index (BCI) panel."""
 
 import time
+
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text

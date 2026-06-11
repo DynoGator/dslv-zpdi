@@ -36,7 +36,6 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -57,8 +56,8 @@ class CertifiedCRMRecord:
     """SPEC-018.1 — Single certified CRM radon reading."""
 
     timestamp_utc: float
-    radon_pCiL: float
-    radon_Bqm3: float
+    radon_pCiL: float  # noqa: N815 - unit-encoded schema field (pCi/L)
+    radon_Bqm3: float  # noqa: N815 - unit-encoded schema field (Bq/m^3)
     device_serial: str
     sample_quality: str = "good"
 
@@ -68,12 +67,12 @@ class AtmosphereRecord:
     """SPEC-018.2 — Macro-atmosphere boundary-layer reading."""
 
     timestamp_utc: float
-    pressure_hPa: Optional[float] = None
-    dp_dt_hPa_h: Optional[float] = None
-    relative_humidity_pct: Optional[float] = None
-    wind_speed_ms: Optional[float] = None
-    wind_dir_deg: Optional[float] = None
-    local_temp_c: Optional[float] = None
+    pressure_hPa: float | None = None  # noqa: N815 - unit-encoded schema field (hPa)
+    dp_dt_hPa_h: float | None = None  # noqa: N815 - unit-encoded schema field (hPa/h)
+    relative_humidity_pct: float | None = None
+    wind_speed_ms: float | None = None
+    wind_dir_deg: float | None = None
+    local_temp_c: float | None = None
 
 
 @dataclass
@@ -81,10 +80,10 @@ class SpaceWeatherRecord:
     """SPEC-018.3 — Space weather snapshot."""
 
     timestamp_utc: float
-    kp_index: Optional[float] = None
-    imf_bz_nt: Optional[float] = None
-    solar_wind_density_cm3: Optional[float] = None
-    solar_wind_speed_kms: Optional[float] = None
+    kp_index: float | None = None
+    imf_bz_nt: float | None = None
+    solar_wind_density_cm3: float | None = None
+    solar_wind_speed_kms: float | None = None
 
 
 @dataclass
@@ -92,14 +91,14 @@ class MobileNodeRecord:
     """SPEC-018.4 — Tier 2 mobile node sample."""
 
     timestamp_utc: float
-    magnetometer_ut: Optional[List[float]] = None
-    gps_lat: Optional[float] = None
-    gps_lon: Optional[float] = None
-    gps_alt: Optional[float] = None
-    gps_accuracy: Optional[float] = None
-    camera_frame_hash: Optional[str] = None
+    magnetometer_ut: list[float] | None = None
+    gps_lat: float | None = None
+    gps_lon: float | None = None
+    gps_alt: float | None = None
+    gps_accuracy: float | None = None
+    camera_frame_hash: str | None = None
     trust_score: float = 0.0
-    trust_flags: List[str] = field(default_factory=list)
+    trust_flags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -120,7 +119,7 @@ class RadonSessionWriter:
         self,
         filepath: str,
         operator_id: str = "operator_unknown",
-        enclave_key: Optional[bytes] = None,
+        enclave_key: bytes | None = None,
     ):
         if not HDF5_AVAILABLE:
             raise RuntimeError("h5py is required for RadonSessionWriter")
@@ -129,8 +128,8 @@ class RadonSessionWriter:
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
         self.operator_id = operator_id
         self.key = enclave_key or b"dev_key_replace_before_field_deploy"
-        self._file: Optional[h5py.File] = None
-        self._branch_counts: Dict[str, int] = {}
+        self._file: h5py.File | None = None
+        self._branch_counts: dict[str, int] = {}
         self._open()
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
