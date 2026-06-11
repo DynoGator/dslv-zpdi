@@ -14,9 +14,11 @@ or metrology behavior was changed.**
 - **Remote:** `https://github.com/DynoGator/dslv-zpdi.git` (no token in remote URL).
 - **Starting commit (origin/main):** `985d8ca` — local checkout was stale at
   `d8a4f89` and was fast-forwarded to `985d8ca` (v4.8.0 / Phase 2B) at session start.
-- **Branch:** `chore/repository-hardening`
-- **PR:** #<PR> (see GitHub)
-- **Ending main commit:** merge of PR #<PR> into `main`.
+- **Branch:** `chore/repository-hardening` (PR #1, merged as `4b8a2be`); CI workflow
+  landed via follow-up branch `ci/real-validation-matrix` (PR #2) once the `workflow`
+  token scope was granted.
+- **PR:** #1 (hardening, merged) + #2 (CI workflow, merged).
+- **Ending main commit:** PR #2 merge (see GitHub); `main` green on the new matrix.
 
 ## Starting State Found On `main` (985d8ca)
 
