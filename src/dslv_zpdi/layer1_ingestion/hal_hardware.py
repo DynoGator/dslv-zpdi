@@ -11,6 +11,7 @@ Rev 4.1-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
 Added "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
 Rev 4.4.0: Migrated to LBE-1421 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
 Added NMEA serial verification for GPS fix confirmation.
+Rev 4.8.x: Broadened native import guards (ImportError, OSError) for simulator hosts (libhackrf etc).
 """
 
 # pylint: disable=duplicate-code
@@ -35,14 +36,23 @@ from .pps_listener import PpsListener
 
 # SoapySDR support - hardware-agnostic SDR driver layer
 # Install: sudo apt install soapysdr-module-hackrf python3-soapysdr
+# Rev 4.8.x: SoapySDR (and downstream native libs) can raise OSError at import
+# time on hosts without the .so (e.g. simulator-only proot Pixel with no
+# libhackrf). Broaden guard so missing native degrades to simulator path.
+# Governed by SPEC-005A.HAL-HW (do not invent new SPEC-ID).
 try:
     import SoapySDR
 
     SOAPYSDR_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     SOAPYSDR_AVAILABLE = False
 
 # Fallback to pyhackrf if SoapySDR not available
+# Rev 4.8.x: pyhackrf package does CDLL('libhackrf.so.0') at *import time* (not
+# inside a function), raising OSError (not ImportError) when .so absent on this
+# host. The bare except ImportError let it escape and block test collection for
+# any test importing hal_hardware (directly or via lock_monitor). Broaden to
+# (ImportError, OSError) for graceful simulator fallback. SPEC-005A.HAL-HW.
 try:
     from ctypes import POINTER, c_int
 
@@ -71,7 +81,7 @@ try:
     pyhackrf.HackRF.__del__ = lambda self: self.close()
 
     PYHACKRF_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     PYHACKRF_AVAILABLE = False
 
 

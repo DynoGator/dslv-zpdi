@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.8.1] — Grok autonomous Pixel simulator session (2026-06-11)
+
+### Fixed
+- **Task A (critical)**: `hal_hardware.py` SoapySDR and pyhackrf top-level guards changed from bare `except ImportError:` to `except (ImportError, OSError):`. The `hackrf` package (and Soapy) execute `CDLL('libhackrf.so.0')` (and equiv) at *import time*, raising `OSError` (not `ImportError`) when the native shared object is absent (this proot Pixel / GrapheneOS simulator-only host has no libhackrf). This previously caused 0 tests collected (test_hardware_failure_paths + test_timing_monitor via lock_monitor). Now 113 tests collected + passing on no-hw host. Added Rev 4.8.x explanatory comments referencing governing `SPEC-005A.HAL-HW`.
+- Audit of sibling native guards: broadened h5py guards in `hdf5_writer.py` (SPEC-007) and `radon_session_writer.py` (SPEC-018); broadened bleak/dbus guards (existing + bare `from bleak` sites) in `radoneye_ingestor.py` (SPEC-015). Pure-Python guards (flask in node_receiver.py, pyserial inside funcs in hal_hardware.py:827 and nmea_stream.py:92) left as `ImportError`-only — they never load .so at import time; their OSErrors are runtime port/serial conditions already handled separately. Justified in work report.
+- **Task B**: stray hardcoded "Rev 4.7.1" in `tests/test_pipeline.py:145` replaced by `from dslv_zpdi import __version__` (now prints Rev 4.8.1 and can never desync). `check_version_sync.py` remains clean. Cosmetic banner appends in hal_*.py docstrings (no orphan noise).
+- **Task C** (per NEXT_STEPS P2): added 10 new contract tests in `tests/test_node_receiver.py` (SPEC-014.8) covering `/api/v1/ingest`, `/api/v1/ingest/radoneye`, `/api/v1/health` for malformed JSON, missing required, writer-failure (500), and concurrent POSTs. Uses Flask test client + injected writers for isolation. Node receiver coverage lifted from 0%. Extended `specs/SPEC-014.md` with test section. No new public contracts; RadonEye remains secondary-only. No Tier-1 promotion, no metrology changes.
+- All per `AGENTS.md` / `CONTRIBUTING.md` / orphan_checker / repo_guard. Full §2 contract green before/after each commit. 113 passed / ruff clean / version-sync clean / coverage ~53%+ (node_receiver now exercised).
+
+### Changed
+- Version bump 4.8.0 → 4.8.1 (behavior change for simulator hosts + new test surface coverage). All authorities synchronized: pyproject.toml, __init__.py, README revision line, CHANGELOG.md, new RELEASE_NOTES_v4.8.1.md.
+
 ## [Unreleased] · Repository Hardening (2026-06-10)
 
 Repository infrastructure and trust hardening. No runtime/hardware behavior of the

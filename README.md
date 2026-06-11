@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2)
-**Revision:** Rev 4.8.0 — Phase 2B: Radon Validation Metrology Stack
+**Revision:** Rev 4.8.1 — Phase 2B: Radon Validation Metrology Stack (OSError guard fix + node receiver contract tests)
 **Date:** 2026-06-10
 **Status:** Beta — Tier 1 Pi 5 anchor operational, Pixel 9 Pro XL mobile node bridged via PiRepo hotspot, RadonEye RD200P + barometric coherence stack integrated, web dashboard active, 103 simulator tests passing, ruff clean, pylint 9.44/10.
 

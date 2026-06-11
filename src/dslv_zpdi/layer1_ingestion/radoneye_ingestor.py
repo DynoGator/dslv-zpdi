@@ -160,8 +160,12 @@ class RadonEyeBleTransport:
         """Scan for RadonEye by name or address."""
         try:
             from bleak import BleakScanner
-        except ImportError:
-            logger.error("bleak not installed — pip install bleak")
+        except (ImportError, OSError) as exc:
+            # Rev 4.8.x: bleak + dbus/bluez native stack on linux can raise
+            # OSError (or dbus errors surfaced as such) at import time on
+            # hosts without bluetooth libs / bus (simulator hosts). Broaden
+            # per audit of native guards. SPEC-015.
+            logger.error("bleak not installed — pip install bleak: %s", exc)
             return None
 
         logger.info("RadonEye BLE: scanning for device...")
@@ -178,7 +182,17 @@ class RadonEyeBleTransport:
 
     async def read(self) -> RadonSample:
         """Connect, request data, parse response, return sample."""
-        from bleak import BleakClient
+        try:
+            from bleak import BleakClient
+        except (ImportError, OSError) as exc:
+            # Rev 4.8.x: guard bare import of BleakClient (native load via dbus)
+            # so hosts without bleak/dbus degrade with clear error instead of
+            # uncaught exception. SPEC-015.
+            logger.error("bleak transport unavailable: %s", exc)
+            raise RuntimeError(
+                "RadonEye BLE: bleak not available (pip install bleak); "
+                "use simulator or HTTP fallback"
+            ) from exc
 
         address = self.device_address or await self._find_device()
         if not address:
@@ -248,7 +262,14 @@ class RadonEyeBleTransport:
 
     async def probe_and_map(self) -> dict[str, Any]:
         """SPEC-015.5 — Discovery helper: connect and log all service/char UUIDs."""
-        from bleak import BleakClient
+        try:
+            from bleak import BleakClient
+        except (ImportError, OSError) as exc:
+            # Rev 4.8.x: guard bare import of BleakClient (native load via dbus)
+            # so hosts without bleak/dbus degrade with clear error instead of
+            # uncaught exception. SPEC-015.
+            logger.error("bleak transport unavailable: %s", exc)
+            return {"error": "bleak not available (pip install bleak)"}
 
         address = self.device_address or await self._find_device()
         if not address:
