@@ -1,0 +1,61 @@
+# DSLV-ZPDI container orchestration.
+#
+# Default service runs the software-only validation contract in simulator mode
+# with no hardware, no privileged access, and no host networking. The optional
+# `hardware` profile is documented but opt-in only.
+#
+#   docker compose up validate            # simulator validation contract
+#   docker compose run --rm shell         # interactive simulator shell
+#   docker compose --profile hardware up node   # opt-in, requires real devices
+
+services:
+  # Software-only validation: the same contract CI and the installer enforce.
+  validate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dslv-zpdi:sim
+    environment:
+      DEV_SIMULATOR: "1"
+    command: >
+      sh -c "python -m pip check &&
+             python tools/check_version_sync.py &&
+             python tools/orphan_checker.py &&
+             python tools/repo_guard.py &&
+             pytest -q tests"
+    # No ports, no privileged flags, no host networking by default.
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+
+  # Interactive simulator shell for development.
+  shell:
+    image: dslv-zpdi:sim
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DEV_SIMULATOR: "1"
+    entrypoint: ["/bin/bash"]
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+
+  # OPT-IN hardware profile. Requires a real HackRF / GPSDO / radon device on the
+  # host and is never started by a plain `docker compose up`. Device passthrough
+  # and any elevated capabilities must be reviewed before use on a Tier 1 node.
+  node:
+    profiles: ["hardware"]
+    image: dslv-zpdi:sim
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DEV_SIMULATOR: "0"
+    command: ["python", "-m", "dslv_zpdi.main_pipeline"]
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"   # HackRF / USB SDR passthrough
+    # Add PPS/serial device mappings here for the specific Tier 1 host.
+    security_opt:
+      - no-new-privileges:true

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dslv-zpdi"
-version = "4.7.2"
+version = "4.8.0"
 description = "Distributed Sensor Locational Vectoring — Zero-Point Data Integration"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -45,6 +45,7 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=3.0.0",
+    "pytest-asyncio>=0.21.0",
     "black>=22.0.0",
     "pylint>=2.12.0",
     "mypy>=1.0.0",
@@ -62,6 +63,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
+markers = [
+    "asyncio: mark a coroutine test to run under the asyncio event loop",
+]
 
 [tool.mypy]
 python_version = "3.10"
@@ -80,3 +85,24 @@ ignore = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.coverage.run]
+branch = true
+source = ["dslv_zpdi"]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+# Conservative floor set just below the 4.8.0 simulator baseline (~53%). Raise
+# deliberately as legacy modules (main_pipeline, watchdog) gain coverage.
+fail_under = 50
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

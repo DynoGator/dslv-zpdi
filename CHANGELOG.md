@@ -1,5 +1,55 @@
 # Changelog
 
+## [Unreleased] · Repository Hardening (2026-06-10)
+
+Repository infrastructure and trust hardening. No runtime/hardware behavior of the
+trust pipeline, RF ingestion, GPSDO/timing, HDF5 schema, or metrology algorithms
+was changed.
+
+### Fixed
+- **4 failing tests on `main`** — the Phase 2B async tests (SPEC-015/020) were
+  marked `@pytest.mark.asyncio` but `pytest-asyncio` was absent, so the coroutines
+  never executed. Added the dev dependency and `asyncio_mode=auto`; full suite now
+  103 passed.
+- **Version desync** — `pyproject.toml` / `__init__.py` / README declared 4.7.2
+  while the `v4.8.0` tag and CHANGELOG already named 4.8.0. Reconciled all version
+  authorities to 4.8.0 and added `RELEASE_NOTES_v4.8.0.md`. `check_version_sync`
+  clean.
+- Removed two dead local assignments; logged Pixel poll latency at debug instead
+  of discarding it; dropped an unused `psutil` import.
+
+### Changed
+- **117 ruff findings cleared** across the Phase 2B modules (annotation
+  modernization, import hygiene). Unit-encoded schema identifiers
+  (`radon_pCiL`, `radon_Bqm3`, `pressure_hPa`, `dp_dt_hPa_h`) were preserved with
+  scoped `# noqa`, not renamed.
+
+### CI/CD
+- Rewrote `.github/workflows/dslv_zpdi_ci.yml` from an orphan-checker + 10-test
+  smoke into a full matrix (Python 3.10–3.13) running editable install, `pip
+  check`, version sync, orphan checker, repo guard, ruff, the full pytest suite
+  with coverage, the pipeline smoke test, and a separate package-build job with a
+  clean-wheel install smoke test. Least-privilege token, timeouts, pip caching,
+  and concurrency cancellation.
+
+### Security
+- Added `SECURITY.md` (private vulnerability reporting, evidence-integrity scope,
+  redaction policy).
+- Added `.github/dependabot.yml` for pip, github-actions, and docker ecosystems.
+- Enabled Dependabot vulnerability alerts and automated security updates.
+
+### Packaging
+- Added `[tool.coverage]` configuration (branch coverage, `fail_under=50`;
+  simulator baseline ~53%).
+- Verified `python -m build` + `twine check` + clean-venv wheel install at 4.8.0.
+
+### Repository management
+- Added structured YAML issue forms (`bug_report`, `feature_request`,
+  `hardware_incident`) + `config.yml`, replacing the single markdown bug template.
+- Added `CODEOWNERS`, `docs/README.md` index, `compose.yaml` (simulator-first,
+  opt-in hardware profile), and `.dockerignore`.
+- Extended `.gitignore` for coverage/build artifacts.
+
 ## [4.8.0] - 2026-06-05 · Phase 2B: Radon Validation Metrology Stack (Tier 2)
 
 ### Added

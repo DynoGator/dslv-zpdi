@@ -34,7 +34,7 @@ import math
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("dslv-zpdi.pixel-bridge")
 
@@ -49,18 +49,18 @@ class PixelTelemetry:
 
     spec_id: str = "SPEC-016.1"
     timestamp_utc: float = 0.0
-    magnetometer_ut: Optional[List[float]] = None  # [x, y, z]
-    gps_lat: Optional[float] = None
-    gps_lon: Optional[float] = None
-    gps_alt: Optional[float] = None
-    gps_accuracy: Optional[float] = None
-    camera_frame_hash: Optional[str] = None
-    camera_frame_path: Optional[str] = None
-    accelerometer: Optional[List[float]] = None
-    light_lux: Optional[float] = None
-    pressure_hpa: Optional[float] = None
+    magnetometer_ut: list[float] | None = None  # [x, y, z]
+    gps_lat: float | None = None
+    gps_lon: float | None = None
+    gps_alt: float | None = None
+    gps_accuracy: float | None = None
+    camera_frame_hash: str | None = None
+    camera_frame_path: str | None = None
+    accelerometer: list[float] | None = None
+    light_lux: float | None = None
+    pressure_hpa: float | None = None
     trust_score: float = 0.0
-    trust_flags: List[str] = field(default_factory=list)
+    trust_flags: list[str] = field(default_factory=list)
     transport: str = "sim"  # http | sim
     hardware_tier: int = 2
 
@@ -129,9 +129,9 @@ class PixelTrustScorer:
         self.max_gps_accuracy = max_gps_accuracy_m
         self.staleness_sec = staleness_sec
 
-    def score(self, data: dict, received_utc: float) -> tuple[float, List[str]]:
+    def score(self, data: dict, received_utc: float) -> tuple[float, list[str]]:
         """Return (trust_score, trust_flags)."""
-        flags: List[str] = []
+        flags: list[str] = []
         score = 1.0
 
         # GPS quality
@@ -193,14 +193,14 @@ class PixelHttpTransport:
         self.endpoint = endpoint
         self.timeout = timeout_sec
         self.retries = retries
-        self._last_good: Optional[PixelTelemetry] = None
+        self._last_good: PixelTelemetry | None = None
 
     def _fetch(self) -> dict:
         import urllib.request
 
         url = f"{self.base_url}{self.endpoint}"
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        last_exc: Optional[Exception] = None
+        last_exc: Exception | None = None
         for attempt in range(self.retries + 1):
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
@@ -218,6 +218,7 @@ class PixelHttpTransport:
         try:
             data = self._fetch()
             latency_ms = (time.perf_counter() - t0) * 1000.0
+            logger.debug("Pixel poll latency: %.1f ms", latency_ms)
             received_utc = time.time()
             score, flags = trust_scorer.score(data, received_utc)
 
@@ -330,7 +331,7 @@ class PixelNodeBridge:
         http_port: int = 8777,
         timeout_sec: float = 5.0,
         trust_threshold: float = 0.5,
-        simulator: Optional[PixelSimulator] = None,
+        simulator: PixelSimulator | None = None,
     ):
         self.trust_scorer = PixelTrustScorer()
         self.trust_threshold = trust_threshold
@@ -354,7 +355,7 @@ class PixelNodeBridge:
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 # SPEC-016.8 — Safe float coercion helper
-def _safe_float(value: Any) -> Optional[float]:
+def _safe_float(value: Any) -> float | None:
     if value is None:
         return None
     try:

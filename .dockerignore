@@ -1,0 +1,42 @@
+# Keep the build context small and free of host runtime state / captures.
+.git
+.gitignore
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Runtime artifacts and field data — never bake into an image.
+output/
+data/
+*.h5
+*.hdf5
+*.log
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+build/
+dist/
+
+# Local config / secrets (examples are restored by the package, not needed here).
+.env
+config/local_*.yaml
+config/sensor_location.yaml
+config/email.yaml
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+
+# Agent workspaces and generated PDFs (not needed for the container).
+CLAUDE-HOME/
+GEM-HOME/
+GEMINI-HOME/
+docs/build-guides/*.pdf

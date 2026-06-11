@@ -1,0 +1,59 @@
+name: Feature Request
+description: Propose a capability that advances the DSLV-ZPDI mission.
+title: "feat(scope): brief description"
+labels: ["enhancement"]
+assignees: ["DynoGator"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every new capability must map to a real SPEC-ID (existing or proposed).
+        Theoretical speculation must stay isolated from the institutional data
+        pipeline.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What gap or limitation does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: SPEC-ID mapping
+      description: Existing SPEC-ID this extends, or proposed new SPEC-ID.
+      placeholder: "SPEC-015 / proposed SPEC-022"
+    validations:
+      required: true
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Node tier / layer
+      options:
+        - Tier 1 (Pi 5 anchor)
+        - Tier 2 (mobile / node bridge)
+        - Layer 1 ingestion
+        - Layer 2 core
+        - Layer 3 telemetry
+        - Tooling / dashboard
+    validations:
+      required: true
+  - type: dropdown
+    id: hardware
+    attributes:
+      label: Hardware dependency
+      options:
+        - "None — simulator-validatable"
+        - "Requires SDR / GPSDO / radon / mobile hardware"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

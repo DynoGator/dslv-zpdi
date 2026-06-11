@@ -37,7 +37,7 @@ import struct
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("dslv-zpdi.radoneye")
 
@@ -56,14 +56,14 @@ class RadonSample:
     """SPEC-015.1 — Normalized radon telemetry sample."""
 
     spec_id: str = "SPEC-015.1"
-    radon_pCiL: float = 0.0
-    radon_Bqm3: float = 0.0
+    radon_pCiL: float = 0.0  # noqa: N815 - unit-encoded schema field (pCi/L)
+    radon_Bqm3: float = 0.0  # noqa: N815 - unit-encoded schema field (Bq/m^3)
     sample_timestamp_utc: float = 0.0
     device_serial: str = ""
     firmware: str = ""
     transport: str = "sim"  # ble | http | sim
     sample_quality: str = "good"  # good | suspect | poor
-    provenance: Dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, Any] = field(default_factory=dict)
     hardware_tier: int = 2
 
     def to_ingestion_payload(self, node_id: str = "PI5-ALPH", sensor_id: str = "RD200P-01") -> dict:
@@ -109,8 +109,8 @@ class RadonEyeSimulator:
 
     def read(self) -> RadonSample:
         """Generate a synthetic sample with diurnal drift + Gaussian noise."""
-        import random
         import math
+        import random
 
         self._call_count += 1
         t = time.time()
@@ -143,7 +143,7 @@ class RadonEyeBleTransport:
 
     def __init__(
         self,
-        device_address: Optional[str] = None,
+        device_address: str | None = None,
         service_uuid: str = _RD200_SERVICE_UUID,
         cmd_char_uuid: str = _RD200_CMD_CHAR_UUID,
         data_char_uuid: str = _RD200_DATA_CHAR_UUID,
@@ -154,9 +154,9 @@ class RadonEyeBleTransport:
         self.cmd_char_uuid = cmd_char_uuid
         self.data_char_uuid = data_char_uuid
         self.timeout = timeout_sec
-        self._discovered_uuids: List[str] = []
+        self._discovered_uuids: list[str] = []
 
-    async def _find_device(self) -> Optional[str]:
+    async def _find_device(self) -> str | None:
         """Scan for RadonEye by name or address."""
         try:
             from bleak import BleakScanner
@@ -185,7 +185,7 @@ class RadonEyeBleTransport:
             raise RuntimeError("RadonEye BLE: no device address known and scan found nothing")
 
         t0 = time.perf_counter()
-        rssi: Optional[int] = None
+        rssi: int | None = None
 
         try:
             async with BleakClient(address, timeout=self.timeout) as client:
@@ -246,7 +246,7 @@ class RadonEyeBleTransport:
             },
         )
 
-    async def probe_and_map(self) -> Dict[str, Any]:
+    async def probe_and_map(self) -> dict[str, Any]:
         """SPEC-015.5 — Discovery helper: connect and log all service/char UUIDs."""
         from bleak import BleakClient
 
@@ -254,7 +254,7 @@ class RadonEyeBleTransport:
         if not address:
             return {"error": "no device found"}
 
-        result: Dict[str, Any] = {"address": address, "services": {}}
+        result: dict[str, Any] = {"address": address, "services": {}}
         try:
             async with BleakClient(address, timeout=self.timeout) as client:
                 for service in client.services:
@@ -329,10 +329,10 @@ class RadonEyeIngestor:
 
     def __init__(
         self,
-        device_address: Optional[str] = None,
+        device_address: str | None = None,
         http_url: str = "http://192.168.4.1",
         http_endpoint: str = "/data",
-        simulator: Optional[RadonEyeSimulator] = None,
+        simulator: RadonEyeSimulator | None = None,
         prefer_ble: bool = True,
     ):
         self.prefer_ble = prefer_ble
@@ -373,6 +373,6 @@ class RadonEyeIngestor:
             loop = asyncio.get_event_loop()
             return loop.run_until_complete(self.read())
 
-    async def probe(self) -> Dict[str, Any]:
+    async def probe(self) -> dict[str, Any]:
         """Run GATT discovery and return map of services/characteristics."""
         return await self.ble.probe_and_map()

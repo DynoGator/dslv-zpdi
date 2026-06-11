@@ -2,7 +2,6 @@
 SPEC-020.6 — Radon session orchestrator unit and integration tests.
 """
 
-import json
 import tempfile
 import time
 from pathlib import Path
@@ -10,10 +9,8 @@ from pathlib import Path
 import pytest
 
 from dslv_zpdi.orchestrator.radon_session import (
-    SessionConfig,
-    SessionState,
     RadonSessionOrchestrator,
-    SESSION_DURATION_HOURS,
+    SessionConfig,
 )
 
 

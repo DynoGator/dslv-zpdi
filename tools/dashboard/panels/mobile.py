@@ -1,6 +1,7 @@
 """SPEC-021.2 — Pixel 9 Pro XL Tier 2 mobile node panel."""
 
 import time
+
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text

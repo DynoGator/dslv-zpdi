@@ -1,0 +1,19 @@
+# DSLV-ZPDI code ownership
+# Single-maintainer repository: the owner reviews all changes by default.
+# (GitHub uses the last matching pattern, so specific rules go below the catch-all.)
+
+*                               @DynoGator
+
+# Canonical law layer — changes here ripple across the whole project.
+/MASTER_SPEC.md                 @DynoGator
+/V3_DSLV-ZPDI_LIVING_MASTER.md  @DynoGator
+/repo_manifest.yaml             @DynoGator
+/specs/                         @DynoGator
+
+# Validation contract tooling.
+/tools/orphan_checker.py        @DynoGator
+/tools/check_version_sync.py    @DynoGator
+/tools/repo_guard.py            @DynoGator
+
+# CI / security infrastructure.
+/.github/                       @DynoGator

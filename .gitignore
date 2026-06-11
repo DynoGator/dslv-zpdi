@@ -19,6 +19,17 @@ output/
 config/local_*.yaml
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+
+# coverage artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# build artifacts
+build/
+dist/
 
 # agent workspaces (not source of truth)
 GEMINI-HOME/
