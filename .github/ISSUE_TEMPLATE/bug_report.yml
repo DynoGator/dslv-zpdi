@@ -1,0 +1,88 @@
+name: Bug Report
+description: Report a defect in the DSLV-ZPDI pipeline, tooling, or dashboard.
+title: "fix(scope): brief description"
+labels: ["bug"]
+assignees: ["DynoGator"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a precise report. DSLV-ZPDI is SPEC-driven; tie the
+        defect to a SPEC-ID where possible. **Redact GPS coordinates, device
+        serials, and credentials** from any logs you attach.
+  - type: input
+    id: revision
+    attributes:
+      label: Revision / commit
+      description: Output of `python -c "import dslv_zpdi; print(dslv_zpdi.__version__)"` plus `git rev-parse --short HEAD`.
+      placeholder: "4.8.0 @ 985d8ca"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Simulator (DEV_SIMULATOR=1)
+        - Hardware (Tier 1 Pi 5)
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Layer 1 — ingestion / HAL
+        - Layer 2 — coherence core
+        - Layer 3 — telemetry / HDF5
+        - Node receiver API
+        - Dashboard
+        - Installer / tooling
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: SPEC-ID impact
+      description: Which canonical SPEC-ID does this violate or relate to?
+      placeholder: "SPEC-019"
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. export DEV_SIMULATOR=1
+        2. python tests/test_pipeline.py
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs observed behavior
+      description: What should happen per the Living Master, and what actually happened?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (redacted)
+      description: Paste relevant logs. Redact coordinates, serials, keys.
+      render: shell
+  - type: dropdown
+    id: integrity
+    attributes:
+      label: Data-integrity impact
+      options:
+        - "No — cosmetic / non-data"
+        - "Maybe — needs investigation"
+        - "Yes — affects recorded evidence / HDF5 / trust state"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Debian 13, Python 3.13"
