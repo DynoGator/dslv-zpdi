@@ -1,36 +1,111 @@
-name: DSLV-ZPDI Architecture CI
+name: DSLV-ZPDI CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate-architecture:
+  validate:
+    name: Validate (py${{ matrix.python }})
     runs-on: ubuntu-latest
-
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      DEV_SIMULATOR: "1"
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
-        
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: 🛡️ Run Pre-Commit Orphan Checker
-      run: python tools/orphan_checker.py
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
 
-    - name: 🧪 Run 10-Test Regression Suite
-      env:
-        PYTHONPATH: src:.
-        DEV_SIMULATOR: 1
-      run: python tests/test_pipeline.py
+      - name: Install system libraries (HackRF / USB)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libhackrf-dev libusb-1.0-0-dev
+
+      - name: Editable install with dev extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: pip check
+        run: python -m pip check
+
+      - name: Version sync
+        run: python tools/check_version_sync.py
+
+      - name: SPEC-ID orphan checker
+        run: python tools/orphan_checker.py
+
+      - name: Repository guard
+        run: python tools/repo_guard.py
+
+      - name: Ruff lint
+        run: python -m ruff check src/ tools/ tests/
+
+      - name: Pytest (simulator) with coverage
+        run: python -m pytest tests/ -v --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Pipeline smoke test
+        run: python tests/test_pipeline.py
+
+      - name: Upload coverage report
+        if: matrix.python == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn
+
+  package:
+    name: Package build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Build tooling
+        run: python -m pip install --upgrade pip build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Validate distribution metadata
+        run: python -m twine check dist/*
+
+      - name: Clean-environment wheel install smoke test
+        run: |
+          python -m venv /tmp/wheelcheck
+          /tmp/wheelcheck/bin/pip install dist/*.whl
+          /tmp/wheelcheck/bin/python -c "import dslv_zpdi; print('installed version:', dslv_zpdi.__version__)"
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
