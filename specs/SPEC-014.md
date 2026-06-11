@@ -33,6 +33,9 @@ Flask-based HTTP micro-service that accepts JSON telemetry POSTs from Tier 2 swa
 ### main
 **SPEC-014.7** — CLI entry point. Reads DSLV_RECEIVER_PORT from environment.
 
+### Contract Tests (HTTP surface)
+**SPEC-014.8** — Contract tests exercising the public endpoints for malformed input, missing fields, writer/storage failure paths, and concurrent POST handling. Uses Flask test client with injected writers for isolation. Covers /api/v1/ingest, /api/v1/ingest/radoneye, /api/v1/health.
+
 ## Kill Conditions
 - Missing payload_uuid → KILLED
 - Invalid JSON → 400 Bad Request
