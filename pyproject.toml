@@ -85,3 +85,24 @@ ignore = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.coverage.run]
+branch = true
+source = ["dslv_zpdi"]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+# Conservative floor set just below the 4.8.0 simulator baseline (~53%). Raise
+# deliberately as legacy modules (main_pipeline, watchdog) gain coverage.
+fail_under = 50
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
