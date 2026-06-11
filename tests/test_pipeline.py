@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 
+from dslv_zpdi import __version__
 from dslv_zpdi.core.states import TrustState
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 from dslv_zpdi.layer2_core.coherence import CoherenceScorer
@@ -142,7 +143,7 @@ def test_baseline():
 
 
 def main():
-    print("=" * 40 + "\nDSLV-ZPDI Rev 4.7.1 Tests\n" + "=" * 40)
+    print("=" * 40 + f"\nDSLV-ZPDI Rev {__version__} Tests\n" + "=" * 40)
     for t in [
         test_quarantine_vs_kill,
         test_serialization_roundtrip,

@@ -4,6 +4,7 @@ Deterministic simulation of RF Metrology Tier 1 hardware for CI/CD and virtual v
 
 Simulates: Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO
 Rev 4.1: Updated to match HackRF + GPSDO RF Metrology architecture.
+Rev 4.8.x: Paired with hal_hardware OSError guard hardening for simulator-only hosts.
 """
 
 # pylint: disable=duplicate-code
