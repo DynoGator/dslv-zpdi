@@ -66,11 +66,13 @@ def test_real_file_rotation():
                 event_count_1 = writer.event_count
 
                 assert file_1 is not None
-                assert file_1.exists()
+                # Atomic finalization: the open file is .partial until closed/rotated.
+                partial_1 = file_1.with_suffix(".h5.partial")
+                assert partial_1.exists()
                 assert event_count_1 == 1
                 assert decision.stream == RouteStream.PRIMARY.value
 
-                # Second write — should rotate to file_2
+                # Second write — should rotate: file_1 finalized to .h5, then file_2 opened as .partial
                 with mock.patch.object(
                     writer, "verify_packet_integrity", return_value=True
                 ):
@@ -85,9 +87,12 @@ def test_real_file_rotation():
                 event_count_2 = writer.event_count
 
                 assert file_2 is not None
-                assert file_2.exists()
+                partial_2 = file_2.with_suffix(".h5.partial")
+                assert partial_2.exists()
                 assert file_2 != file_1
                 assert event_count_2 == 1  # Reset after rotation
+                # Previous file should now be finalized
+                assert file_1.exists()
         finally:
             HDF5Writer._file_size_exceeded = original_method
             writer.close()
