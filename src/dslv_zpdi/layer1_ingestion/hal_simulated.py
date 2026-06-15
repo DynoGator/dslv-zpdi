@@ -152,3 +152,7 @@ class SimulatedHAL(BaseHAL):
             "frequency_range": "1 MHz - 6 GHz",
             "simulated": True,
         }
+
+    def close(self) -> None:
+        """SPEC-005A.HAL-SIM — No-op close for simulated HAL."""
+        pass

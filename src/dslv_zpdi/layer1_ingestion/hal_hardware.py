@@ -926,3 +926,7 @@ class HardwareHAL(BaseHAL):
         """Stop background PpsListener and NmeaStream daemon threads."""
         self._pps.stop()
         self._nmea.stop()
+
+    def close(self) -> None:
+        """SPEC-005A.HAL — Release timing resources."""
+        self.shutdown()
