@@ -229,7 +229,10 @@ class TestRadonSessionWriter:
                     )
 
                 manifest = writer.write_manifest()
-                assert manifest["branches"]["certified_crm"]["record_count"] == hours * samples_per_hour
+                assert (
+                    manifest["branches"]["certified_crm"]["record_count"]
+                    == hours * samples_per_hour
+                )
                 assert manifest["branches"]["macro_atmosphere"]["record_count"] == hours
                 assert manifest["branches"]["space_weather"]["record_count"] == hours // 3
                 assert manifest["branches"]["mobile_node_tier2"]["record_count"] == hours * 2

@@ -84,7 +84,9 @@ class SystemdCredentialKeyProvider(KeyProvider):
     def get_key(self) -> bytes:
         cred_dir = os.getenv("CREDENTIALS_DIRECTORY")
         if not cred_dir:
-            raise SecurityError("CREDENTIALS_DIRECTORY not set; not running under systemd with LoadCredential=")
+            raise SecurityError(
+                "CREDENTIALS_DIRECTORY not set; not running under systemd with LoadCredential="
+            )
         path = Path(cred_dir) / self.credential_id
         if not path.exists():
             raise SecurityError(f"Systemd credential not found: {path}")
@@ -148,6 +150,4 @@ class ProductionKeyResolver(KeyProvider):
                 return provider.get_key()
             except SecurityError as exc:
                 errors.append(f"{provider.name}: {exc}")
-        raise SecurityError(
-            "No production HMAC key available; " + "; ".join(errors)
-        )
+        raise SecurityError("No production HMAC key available; " + "; ".join(errors))

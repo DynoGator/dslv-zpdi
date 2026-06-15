@@ -242,9 +242,7 @@ class CoherenceScorer:
         # Update fleet state for global R(t) with mean phase
         mean_phase = 0.0
         if phases:
-            mean_phase = cmath.phase(
-                sum(cmath.exp(1j * phi) for phi in phases) / len(phases)
-            )
+            mean_phase = cmath.phase(sum(cmath.exp(1j * phi) for phi in phases) / len(phases))
         self.fleet_state[node_id] = {
             "r_smooth": r_smooth,
             "mean_phase": mean_phase,

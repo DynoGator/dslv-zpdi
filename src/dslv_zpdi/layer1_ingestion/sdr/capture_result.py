@@ -4,7 +4,7 @@ SPEC-004A | Capture result and SDR health data structures.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -108,7 +108,9 @@ class CaptureResult:
             "rf_bandwidth_hz": self.rf_bandwidth_hz,
             "gain_settings_db": list(self.gain_settings_db),
             "device_temperature_c": self.device_temperature_c,
-            "clock_attestation": self.clock_attestation.summary() if self.clock_attestation else None,
+            "clock_attestation": self.clock_attestation.summary()
+            if self.clock_attestation
+            else None,
             "configuration_hash": self.configuration_hash,
             "backend_name": self.backend_name,
             "uri": self.uri,

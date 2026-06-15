@@ -70,11 +70,13 @@ try:
     # Also wrap hackrf_device_list() to call hackrf_init() first — pyhackrf
     # skips this, which can leave libhackrf's libusb context uninitialised.
     _pyhackrf_orig_device_list = pyhackrf.hackrf_device_list
+
     # SPEC-005A.4b — Safe pyhackrf device list wrapper (handles missing init)
     def _pyhackrf_device_list_safe():
         """SPEC-005A.HAL-HW — Initialize libhackrf before enumerating devices."""
         pyhackrf.libhackrf.hackrf_init()
         return _pyhackrf_orig_device_list()
+
     pyhackrf.hackrf_device_list = _pyhackrf_device_list_safe
 
     # Silence pyhackrf's debug print in __del__ (emitted on every GC cycle)
@@ -143,7 +145,9 @@ class HardwareHAL(BaseHAL):
                 print(f"[!] SoapySDR initialization failed: {e}. Falling back to pyhackrf...")
             except Exception as e:
                 _soapy_exc = e
-                print(f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyhackrf...")
+                print(
+                    f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyhackrf..."
+                )
 
         if not initialized:
             if PYHACKRF_AVAILABLE:
@@ -200,9 +204,7 @@ class HardwareHAL(BaseHAL):
         ):
             raise
         except Exception as e:
-            raise HardwareInitializationError(
-                f"SoapySDR initialization failed: {e}"
-            ) from e
+            raise HardwareInitializationError(f"SoapySDR initialization failed: {e}") from e
 
     def _force_external_clock_soapy(self):
         """
@@ -241,10 +243,14 @@ class HardwareHAL(BaseHAL):
         """
         import subprocess
         import sys
+
         try:
             result = subprocess.run(
-                [sys.executable, "-c",
-                 "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); assert d.device_opened; d.close(); print('ok')"],
+                [
+                    sys.executable,
+                    "-c",
+                    "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); assert d.device_opened; d.close(); print('ok')",
+                ],
                 capture_output=True,
                 timeout=10,
                 text=True,
@@ -273,7 +279,9 @@ class HardwareHAL(BaseHAL):
             if self._probe_pyhackrf_subprocess():
                 break
             if attempt < _max_retries - 1:
-                print(f"[!] HackRF probe attempt {attempt + 1}/{_max_retries} failed (device busy?) — retrying in 2 s")
+                print(
+                    f"[!] HackRF probe attempt {attempt + 1}/{_max_retries} failed (device busy?) — retrying in 2 s"
+                )
                 time.sleep(2)
         else:
             raise ClockVerificationError(
@@ -313,7 +321,7 @@ class HardwareHAL(BaseHAL):
         """
         result: dict = {
             "phase_lock_verified": False,
-            "clock_source": "external_wired",   # asserted by SMA wiring, not software
+            "clock_source": "external_wired",  # asserted by SMA wiring, not software
             "driver": "unknown",
             "pps_rms_jitter_ns": float("inf"),
             "pps_history_len": 0,
@@ -368,10 +376,7 @@ class HardwareHAL(BaseHAL):
         # < 1 ms RMS jitter is a very conservative threshold; a healthy GPSDO
         # delivers sub-microsecond stability. The looser bound accommodates
         # scheduling latency in the PpsListener poll() wakeup.
-        jitter_ok = (
-            result["pps_history_len"] >= 2
-            and result["pps_rms_jitter_ns"] < 1_000_000.0
-        )
+        jitter_ok = result["pps_history_len"] >= 2 and result["pps_rms_jitter_ns"] < 1_000_000.0
         result["phase_lock_verified"] = jitter_ok and result["gps_fix"]
 
         return result
@@ -417,9 +422,7 @@ class HardwareHAL(BaseHAL):
             # last PPS edge. Wrapped to ±500 ms so offsets near a second
             # boundary (e.g. 999 ms elapsed) map correctly to ~0 ms.
             raw_delta = mono_now_ns - mono_edge_ns
-            pps_offset_ns = float(
-                ((raw_delta + 500_000_000) % 1_000_000_000) - 500_000_000
-            )
+            pps_offset_ns = float(((raw_delta + 500_000_000) % 1_000_000_000) - 500_000_000)
         else:
             pps_time_ns = 0
             pps_offset_ns = float("inf")
@@ -580,9 +583,7 @@ class HardwareHAL(BaseHAL):
             calibration_age_s=0.0,
             drift_percent=0.0,
             source_path=(
-                "/dev/hackrf0"
-                if (SOAPYSDR_AVAILABLE or PYHACKRF_AVAILABLE)
-                else "sdr_unavailable"
+                "/dev/hackrf0" if (SOAPYSDR_AVAILABLE or PYHACKRF_AVAILABLE) else "sdr_unavailable"
             ),
             trust_state="ASSEMBLED",
             hardware_tier=1,
@@ -599,9 +600,7 @@ class HardwareHAL(BaseHAL):
 
         return payload
 
-    def _ingest_soapy(
-        self, center_freq: float, sample_rate: float, num_samples: int
-    ) -> dict:
+    def _ingest_soapy(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
         """
         SoapySDR-based ingestion (hardware-agnostic).
         """
@@ -620,9 +619,7 @@ class HardwareHAL(BaseHAL):
             buff = np.empty(num_samples, np.complex64)
             sr = sdr.readStream(rx_stream, [buff], num_samples)
             if sr.ret < 0:
-                raise RuntimeError(
-                    f"SoapySDR readStream error: {SoapySDR.errToStr(sr.ret)}"
-                )
+                raise RuntimeError(f"SoapySDR readStream error: {SoapySDR.errToStr(sr.ret)}")
             actual_samples = sr.ret
             if actual_samples < num_samples:
                 buff = buff[:actual_samples]
@@ -652,9 +649,7 @@ class HardwareHAL(BaseHAL):
                 "driver": "SoapySDR",
             }
 
-    def _ingest_pyhackrf(
-        self, center_freq: float, sample_rate: float, num_samples: int
-    ) -> dict:
+    def _ingest_pyhackrf(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
         """
         pyhackrf fallback ingestion.
         """
@@ -683,9 +678,7 @@ class HardwareHAL(BaseHAL):
             phases = np.angle(iq_complex).tolist()[:64]
 
             return {
-                "iq_samples": [
-                    [float(x.real), float(x.imag)] for x in iq_complex[:64]
-                ],
+                "iq_samples": [[float(x.real), float(x.imag)] for x in iq_complex[:64]],
                 "center_freq": center_freq,
                 "sample_rate": sample_rate,
                 "clock_source": "external",
@@ -702,8 +695,9 @@ class HardwareHAL(BaseHAL):
                 "driver": "pyhackrf",
             }
 
-
-    def ingest_thermal(self, node_id: str = "PI5-ALPHA", sensor_id: str = "THERMAL-01") -> IngestionPayload:
+    def ingest_thermal(
+        self, node_id: str = "PI5-ALPHA", sensor_id: str = "THERMAL-01"
+    ) -> IngestionPayload:
         """
         SPEC-005A.THERMAL — Thermal modality ingest hook (Layer 1 only).
         Returns a placeholder payload for future thermal sensor integration.
@@ -722,7 +716,9 @@ class HardwareHAL(BaseHAL):
             hardware_tier=1,
         )
 
-    def ingest_acoustic(self, node_id: str = "PI5-ALPHA", sensor_id: str = "ACOUSTIC-01") -> IngestionPayload:
+    def ingest_acoustic(
+        self, node_id: str = "PI5-ALPHA", sensor_id: str = "ACOUSTIC-01"
+    ) -> IngestionPayload:
         """
         SPEC-005A.ACOUSTIC — Acoustic modality ingest hook (Layer 1 only).
         Returns a placeholder payload for future acoustic sensor integration.
@@ -881,7 +877,7 @@ class HardwareHAL(BaseHAL):
                     parts = line.split(",")
                     if len(parts) > 2:
                         status = parts[2].strip()
-                        if status == "V": # Void (no fix)
+                        if status == "V":  # Void (no fix)
                             result["gps_fix"] = result.get("gps_fix", False) and False
 
             ser.close()
@@ -919,7 +915,7 @@ class HardwareHAL(BaseHAL):
             "in_holdover": False,
             "stability_metric": 1e-12,
             "last_sync_utc": time.time(),
-            "no_frequency_jumps": True
+            "no_frequency_jumps": True,
         }
 
     def shutdown(self) -> None:

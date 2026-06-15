@@ -11,17 +11,17 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from typing import Any, Callable
+from typing import Callable
 
 import numpy as np
 
 from dslv_zpdi.layer1_ingestion.sdr.base import SdrBackend
-from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.sdr.capabilities import (
     AppliedConfiguration,
     CaptureProfile,
     SdrCapabilities,
 )
+from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.timing.attestation import ClockAttestation
 
 
@@ -121,8 +121,9 @@ class SimulatedSdrBackend(SdrBackend):
         # Simulate a tone + noise
         t = np.arange(num_samples) / request.sample_rate_sps
         tone = np.exp(2j * np.pi * 100_000 * t).astype(np.complex64)
-        noise = (self._rng.normal(0, 0.01, num_samples) +
-                 1j * self._rng.normal(0, 0.01, num_samples)).astype(np.complex64)
+        noise = (
+            self._rng.normal(0, 0.01, num_samples) + 1j * self._rng.normal(0, 0.01, num_samples)
+        ).astype(np.complex64)
         samples = tone + noise
 
         sample_loss = 0

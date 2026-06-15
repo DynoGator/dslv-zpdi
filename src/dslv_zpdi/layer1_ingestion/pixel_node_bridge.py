@@ -114,6 +114,7 @@ class PixelTelemetry:
 
 # ── Trust Scorer ──────────────────────────────────────────────────────────
 
+
 class PixelTrustScorer:
     """SPEC-016.3 — Compute trust score and flags from raw telemetry."""
 
@@ -178,6 +179,7 @@ class PixelTrustScorer:
 
 # ── HTTP Transport ────────────────────────────────────────────────────────
 
+
 class PixelHttpTransport:
     """SPEC-016.4 — Poll the Pixel's Termux JSON publisher over HTTP."""
 
@@ -207,7 +209,9 @@ class PixelHttpTransport:
                     return json.loads(resp.read().decode("utf-8"))
             except Exception as exc:
                 last_exc = exc
-                logger.debug("Pixel HTTP fetch attempt %d/%d failed: %s", attempt + 1, self.retries + 1, exc)
+                logger.debug(
+                    "Pixel HTTP fetch attempt %d/%d failed: %s", attempt + 1, self.retries + 1, exc
+                )
                 if attempt < self.retries:
                     time.sleep(1.0)
         raise RuntimeError(f"Pixel HTTP unreachable after {self.retries + 1} attempts: {last_exc}")
@@ -258,6 +262,7 @@ class PixelHttpTransport:
 
 
 # ── Simulator ─────────────────────────────────────────────────────────────
+
 
 class PixelSimulator:
     """SPEC-016.5 — Deterministic simulator for CI and offline development."""
@@ -322,6 +327,7 @@ class PixelSimulator:
 
 # ── Unified Bridge ────────────────────────────────────────────────────────
 
+
 class PixelNodeBridge:
     """SPEC-016.6 — Unified Pixel bridge with auto-failover HTTP → SIM."""
 
@@ -353,6 +359,7 @@ class PixelNodeBridge:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
+
 
 # SPEC-016.8 — Safe float coercion helper
 def _safe_float(value: Any) -> float | None:

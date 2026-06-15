@@ -22,9 +22,16 @@ def test_integration_pipeline_creates_output_and_health():
 
     proc = subprocess.Popen(
         [
-            sys.executable, "-m", "dslv_zpdi.main_pipeline",
-            "--simulator", "--mode", "sdr", "--interval", "0.1",
-            "--output", str(output_dir),
+            sys.executable,
+            "-m",
+            "dslv_zpdi.main_pipeline",
+            "--simulator",
+            "--mode",
+            "sdr",
+            "--interval",
+            "0.1",
+            "--output",
+            str(output_dir),
         ],
         env=env,
         stdout=subprocess.PIPE,

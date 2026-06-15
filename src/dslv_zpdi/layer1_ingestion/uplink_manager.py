@@ -172,6 +172,7 @@ class UplinkManager:
         """Resolve a known hostname to verify DNS is functional."""
         try:
             import socket
+
             socket.setdefaulttimeout(timeout_sec)
             socket.getaddrinfo(self.dns_probe_host, None)
             return True

@@ -46,10 +46,16 @@ def test_global_r_weighted_by_modality():
 
     # Two nodes: one RF (w=3), one thermal (w=1), both at r=0.8
     scorer.fleet_state["RF-01"] = {
-        "r_smooth": 0.8, "mean_phase": 0.0, "modality": "rf_sdr", "ts": 0,
+        "r_smooth": 0.8,
+        "mean_phase": 0.0,
+        "modality": "rf_sdr",
+        "ts": 0,
     }
     scorer.fleet_state["THERM-01"] = {
-        "r_smooth": 0.8, "mean_phase": 0.0, "modality": "thermal", "ts": 0,
+        "r_smooth": 0.8,
+        "mean_phase": 0.0,
+        "modality": "thermal",
+        "ts": 0,
     }
 
     # Same r_smooth, same phase → weighted average should still be 0.8
@@ -68,14 +74,18 @@ def test_global_r_weighted_by_modality():
 def test_router_only_two_streams():
     """SPEC-003/SPEC-007: Router must return only PRIMARY or SECONDARY."""
     from dslv_zpdi.layer2_core.wiring import coherence_engine
+
     coherence_engine.finalize_baseline(force=True)  # Ensure baseline is locked
 
     router = DualStreamRouter()
 
     # Craft a valid CAL_TRUSTED payload with low r_smooth
     payload = {
-        "node_id": "N1", "sensor_id": "S1", "modality": "rf_sdr",
-        "payload_uuid": str(uuid.uuid4()), "timestamp_utc": time.time(),
+        "node_id": "N1",
+        "sensor_id": "S1",
+        "modality": "rf_sdr",
+        "payload_uuid": str(uuid.uuid4()),
+        "timestamp_utc": time.time(),
         "trust_state": TrustState.CAL_TRUSTED.value,
         "extracted_phases": [0.5, 1.5, 2.5, 3.5] * 10,
     }
@@ -89,12 +99,16 @@ def test_router_only_two_streams():
 def test_structured_background_routes_to_secondary():
     """SPEC-003: Packets with 0.15 <= r_smooth < 0.40 route to SECONDARY."""
     from dslv_zpdi.layer2_core.wiring import coherence_engine
+
     coherence_engine.finalize_baseline(force=True)
 
     router = DualStreamRouter()
     payload = {
-        "node_id": "N1", "sensor_id": "S1", "modality": "rf_sdr",
-        "payload_uuid": str(uuid.uuid4()), "timestamp_utc": time.time(),
+        "node_id": "N1",
+        "sensor_id": "S1",
+        "modality": "rf_sdr",
+        "payload_uuid": str(uuid.uuid4()),
+        "timestamp_utc": time.time(),
         "trust_state": TrustState.CAL_TRUSTED.value,
         "extracted_phases": [0.5, 1.5, 2.5, 3.5] * 10,
     }

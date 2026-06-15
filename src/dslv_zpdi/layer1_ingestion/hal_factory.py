@@ -14,8 +14,6 @@ from typing import Any
 from dslv_zpdi.config_models import NodeProfile
 from dslv_zpdi.core.exceptions import (
     ConfigurationError,
-    HardwareInitializationError,
-    QualificationError,
 )
 from dslv_zpdi.core.key_provider import (
     DevelopmentKeyProvider,
@@ -85,9 +83,7 @@ def _build_frequency_translation(profile: NodeProfile) -> FrequencyTranslationSt
     return FrequencyMapper.build_direct_rf_stage(profile.rf.center_frequency_hz)
 
 
-def _build_key_provider(
-    profile: NodeProfile, simulator: bool
-) -> KeyProvider:
+def _build_key_provider(profile: NodeProfile, simulator: bool) -> KeyProvider:
     """SPEC-005A.4 — Build key provider from profile or simulator flag."""
     if simulator:
         return DevelopmentKeyProvider(acknowledged_simulator_use=True)

@@ -59,9 +59,7 @@ class NmeaStream:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(
-            target=self._run, name="nmea-stream", daemon=True
-        )
+        self._thread = threading.Thread(target=self._run, name="nmea-stream", daemon=True)
         self._thread.start()
         logger.info("NmeaStream: started on %s @ %d baud", self._port, self._baud)
 
@@ -98,15 +96,17 @@ class NmeaStream:
                 with serial.Serial(
                     self._port,
                     self._baud,
-                    timeout=1.0,    # readline() returns after 1 s with no data
-                    exclusive=True, # prevent other processes from opening same port
+                    timeout=1.0,  # readline() returns after 1 s with no data
+                    exclusive=True,  # prevent other processes from opening same port
                 ) as ser:
                     logger.info("NmeaStream: port open")
                     self._reader_loop(ser)
             except serial.SerialException as exc:
                 logger.warning(
                     "NmeaStream: serial error on %s: %s — retry in %.0f s",
-                    self._port, exc, self._retry_delay,
+                    self._port,
+                    exc,
+                    self._retry_delay,
                 )
                 self._stop.wait(self._retry_delay)
             except Exception as exc:  # pylint: disable=broad-except
@@ -115,6 +115,7 @@ class NmeaStream:
 
     def _reader_loop(self, ser) -> None:  # type: ignore[no-untyped-def]
         import serial  # pylint: disable=import-outside-toplevel
+
         while not self._stop.is_set():
             try:
                 raw = ser.readline()
@@ -139,6 +140,7 @@ class NmeaStream:
 # ------------------------------------------------------------------ #
 # Module-level helpers (also importable for testing)                 #
 # ------------------------------------------------------------------ #
+
 
 def _empty_fix() -> dict:
     """SPEC-005A.TIMING-NMEA — Build the default untrusted GPS fix state."""

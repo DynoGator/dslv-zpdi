@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.sdr.capabilities import (
     AppliedConfiguration,
     CaptureProfile,
     SdrCapabilities,
 )
+from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.timing.attestation import ClockAttestation
 
 

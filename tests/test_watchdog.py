@@ -13,20 +13,14 @@ def test_watchdog_unhealthy():
     wd = MVIP6Watchdog()
 
     # GPS Unlocked
-    assert (
-        wd.evaluate_node_health({"gps_locked": False, "pps_jitter_ns": 120.0}) is False
-    )
+    assert wd.evaluate_node_health({"gps_locked": False, "pps_jitter_ns": 120.0}) is False
 
     # High Jitter
-    assert (
-        wd.evaluate_node_health({"gps_locked": True, "pps_jitter_ns": 50000.0}) is False
-    )
+    assert wd.evaluate_node_health({"gps_locked": True, "pps_jitter_ns": 50000.0}) is False
 
     # High Drift
     assert (
-        wd.evaluate_node_health(
-            {"gps_locked": True, "pps_jitter_ns": 120.0, "drift_percent": 25.0}
-        )
+        wd.evaluate_node_health({"gps_locked": True, "pps_jitter_ns": 120.0, "drift_percent": 25.0})
         is False
     )
 

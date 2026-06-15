@@ -112,10 +112,14 @@ class Tier1QualificationPolicy:
         # GPS fix
         if self.gps_fix_required:
             state = QualificationState.PASS if timing.gps_fix_valid else QualificationState.FAIL
-            dims.append(DimensionResult(
-                "gps_fix", state, True,
-                "GPS fix valid" if timing.gps_fix_valid else "GPS fix invalid or stale"
-            ))
+            dims.append(
+                DimensionResult(
+                    "gps_fix",
+                    state,
+                    True,
+                    "GPS fix valid" if timing.gps_fix_valid else "GPS fix invalid or stale",
+                )
+            )
         else:
             dims.append(DimensionResult("gps_fix", QualificationState.NOT_APPLICABLE, False))
 
@@ -136,59 +140,93 @@ class Tier1QualificationPolicy:
 
         # External reference evidence
         if self.external_reference_evidence_required:
-            detected = timing.external_reference_detected is True and health.backend_name != "simulated"
+            detected = (
+                timing.external_reference_detected is True and health.backend_name != "simulated"
+            )
             state = QualificationState.PASS if detected else QualificationState.UNVERIFIED
             msg = (
                 "External reference detected by SDR"
-                if detected else
-                "External reference configured but not software-detectable (UNVERIFIED_PHYSICAL_PROPERTY)"
+                if detected
+                else "External reference configured but not software-detectable (UNVERIFIED_PHYSICAL_PROPERTY)"
             )
             dims.append(DimensionResult("external_reference_evidence", state, True, msg))
         else:
-            dims.append(DimensionResult(
-                "external_reference_evidence", QualificationState.NOT_APPLICABLE, False
-            ))
+            dims.append(
+                DimensionResult(
+                    "external_reference_evidence", QualificationState.NOT_APPLICABLE, False
+                )
+            )
 
         # Calibration manifest
         if self.calibration_manifest_required:
             state = QualificationState.PASS if calibration_valid else QualificationState.FAIL
-            dims.append(DimensionResult(
-                "calibration_manifest", state, True,
-                "Calibration manifest valid" if calibration_valid else "Calibration manifest missing or invalid"
-            ))
+            dims.append(
+                DimensionResult(
+                    "calibration_manifest",
+                    state,
+                    True,
+                    "Calibration manifest valid"
+                    if calibration_valid
+                    else "Calibration manifest missing or invalid",
+                )
+            )
         else:
-            dims.append(DimensionResult("calibration_manifest", QualificationState.NOT_APPLICABLE, False))
+            dims.append(
+                DimensionResult("calibration_manifest", QualificationState.NOT_APPLICABLE, False)
+            )
 
         # HMAC key
         if self.production_hmac_key_required:
             state = QualificationState.PASS if hmac_key_loaded else QualificationState.FAIL
-            dims.append(DimensionResult(
-                "production_hmac_key", state, True,
-                "Production HMAC key loaded" if hmac_key_loaded else "Production HMAC key not loaded"
-            ))
+            dims.append(
+                DimensionResult(
+                    "production_hmac_key",
+                    state,
+                    True,
+                    "Production HMAC key loaded"
+                    if hmac_key_loaded
+                    else "Production HMAC key not loaded",
+                )
+            )
         else:
-            dims.append(DimensionResult("production_hmac_key", QualificationState.NOT_APPLICABLE, False))
+            dims.append(
+                DimensionResult("production_hmac_key", QualificationState.NOT_APPLICABLE, False)
+            )
 
         # Sample loss
         if self.no_unaccounted_sample_loss:
-            state = QualificationState.PASS if not capture.has_unaccounted_loss else QualificationState.FAIL
-            dims.append(DimensionResult(
-                "sample_accounting", state, True,
-                f"Requested {capture.samples_requested}, received {capture.samples_received}"
-            ))
+            state = (
+                QualificationState.PASS
+                if not capture.has_unaccounted_loss
+                else QualificationState.FAIL
+            )
+            dims.append(
+                DimensionResult(
+                    "sample_accounting",
+                    state,
+                    True,
+                    f"Requested {capture.samples_requested}, received {capture.samples_received}",
+                )
+            )
         else:
-            dims.append(DimensionResult("sample_accounting", QualificationState.NOT_APPLICABLE, False))
+            dims.append(
+                DimensionResult("sample_accounting", QualificationState.NOT_APPLICABLE, False)
+            )
 
         # Simulator rejection
         if not self.allow_simulator and backend_name == "simulated":
-            dims.append(DimensionResult(
-                "simulator_rejection", QualificationState.FAIL, True,
-                "Simulated backend rejected in field mode"
-            ))
+            dims.append(
+                DimensionResult(
+                    "simulator_rejection",
+                    QualificationState.FAIL,
+                    True,
+                    "Simulated backend rejected in field mode",
+                )
+            )
         else:
-            dims.append(DimensionResult(
-                "simulator_rejection", QualificationState.NOT_APPLICABLE, False
-            ))
+            dims.append(
+                DimensionResult("simulator_rejection", QualificationState.NOT_APPLICABLE, False)
+            )
 
         # Overall verdict: any mandatory UNVERIFIED or FAIL -> not PASS
         if any(d.mandatory and d.state == QualificationState.FAIL for d in dims):

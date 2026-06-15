@@ -93,11 +93,14 @@ class ChronyMonitor:
                 data[key.strip().lower().replace(" ", "_")] = value.strip()
 
         def _ns(field: str) -> float | None:
+            """SPEC-005A.TIMING-CHRONY — Parse a chronyc nanosecond field."""
             raw = data.get(field)
             if not raw:
                 return None
             # chronyc prints values like "-0.000000123 seconds" or "123 nanoseconds"
-            match = re.search(r"([-+]?[\d.]+)\s*(seconds|nanoseconds|microseconds|milliseconds)?", raw)
+            match = re.search(
+                r"([-+]?[\d.]+)\s*(seconds|nanoseconds|microseconds|milliseconds)?", raw
+            )
             if not match:
                 return None
             value = float(match.group(1))
@@ -111,6 +114,7 @@ class ChronyMonitor:
             return value * multipliers.get(unit, 1e9)
 
         def _int(field: str) -> int | None:
+            """SPEC-005A.TIMING-CHRONY — Parse a chronyc integer field."""
             raw = data.get(field)
             if not raw:
                 return None

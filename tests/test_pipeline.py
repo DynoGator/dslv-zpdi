@@ -101,9 +101,7 @@ def test_global_r():
 
 
 def test_killed_packet():
-    p = IngestionPayload(
-        node_id="", sensor_id="", modality="", payload_uuid="u", timestamp_utc=0.0
-    )
+    p = IngestionPayload(node_id="", sensor_id="", modality="", payload_uuid="u", timestamp_utc=0.0)
     state, reason = p.validate()
     assert state == TrustState.KILLED.value
     print("  TEST 7 PASS: KILLED Packet ✅")

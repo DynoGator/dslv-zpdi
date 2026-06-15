@@ -46,11 +46,11 @@ class TestRadonBleParsing:
         transport = RadonEyeBleTransport()
         # Build a valid 20-byte response
         data = bytes([0x50, 0x10])
-        data += struct.pack("<f", 148.0)   # 10-min
-        data += struct.pack("<f", 152.0)   # day
-        data += struct.pack("<f", 145.0)   # month
-        data += struct.pack("<H", 42)      # pulse
-        data += struct.pack("<H", 7)       # pulse 10min
+        data += struct.pack("<f", 148.0)  # 10-min
+        data += struct.pack("<f", 152.0)  # day
+        data += struct.pack("<f", 145.0)  # month
+        data += struct.pack("<H", 42)  # pulse
+        data += struct.pack("<H", 7)  # pulse 10min
         data += bytes(2)  # padding to 20
 
         sample = transport._parse_data(data)
@@ -128,7 +128,7 @@ class TestRadonEyeIngestorFailover:
     async def test_ingestor_falls_back_to_sim(self):
         ingestor = RadonEyeIngestor(
             device_address="FF:FF:FF:FF:FF:FF",  # impossible address → BLE fails fast
-            http_url="http://localhost:59999",    # nothing listening → HTTP fails
+            http_url="http://localhost:59999",  # nothing listening → HTTP fails
             prefer_ble=True,
         )
         sample = await ingestor.read()

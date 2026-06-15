@@ -69,7 +69,9 @@ class LBE1421TimingAuthority(TimingAuthority):
         if not pps_present:
             warnings.append("PPS history has fewer than 2 samples")
         if pps_present and pps_jitter > self.pps_degraded_ns:
-            warnings.append(f"PPS RMS jitter {pps_jitter:.0f} ns exceeds {self.pps_degraded_ns:.0f} ns target")
+            warnings.append(
+                f"PPS RMS jitter {pps_jitter:.0f} ns exceeds {self.pps_degraded_ns:.0f} ns target"
+            )
         if not nmea.get("gps_fix"):
             warnings.append("No GPS fix")
         elif fix_age > self.max_fix_age_s:
@@ -83,16 +85,9 @@ class LBE1421TimingAuthority(TimingAuthority):
         # the SDR consumed either without SDR-specific evidence.
         chrony_sync = self._chrony.synchronized()
         frequency_disciplined = (
-            pps_present
-            and pps_jitter <= self.pps_kill_ns
-            and gps_fix_valid
-            and chrony_sync
+            pps_present and pps_jitter <= self.pps_kill_ns and gps_fix_valid and chrony_sync
         )
-        utc_epoch_disciplined = (
-            pps_present
-            and gps_fix_valid
-            and chrony_sync
-        )
+        utc_epoch_disciplined = pps_present and gps_fix_valid and chrony_sync
 
         evidence: dict[str, Any] = {
             "pps_snapshot": pps_snap,

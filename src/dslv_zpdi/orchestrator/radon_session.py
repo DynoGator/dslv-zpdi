@@ -271,9 +271,7 @@ class RadonSessionOrchestrator:
         self.state.samples_atmosphere += 1
 
         # Simulated space weather
-        writer.write_space_weather(
-            SpaceWeatherRecord(timestamp_utc=now, kp_index=2.0)
-        )
+        writer.write_space_weather(SpaceWeatherRecord(timestamp_utc=now, kp_index=2.0))
         self.state.samples_space_weather += 1
 
         # BCI computation

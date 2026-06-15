@@ -19,8 +19,6 @@ from typing import Any
 import numpy as np
 
 from dslv_zpdi.core.exceptions import (
-    ClockVerificationError,
-    HardwareInitializationError,
     QualificationError,
 )
 from dslv_zpdi.core.key_provider import KeyProvider
@@ -206,7 +204,9 @@ class HardwareHAL(BaseHAL):
 
         phases = np.angle(result.samples).tolist()[:64]
         clock_att = result.clock_attestation
-        clock_source = "external" if clock_att and clock_att.external_reference_configured else "internal"
+        clock_source = (
+            "external" if clock_att and clock_att.external_reference_configured else "internal"
+        )
 
         raw_value: dict[str, Any] = {
             "iq_samples": [[float(x.real), float(x.imag)] for x in result.samples[:64]],
@@ -305,6 +305,7 @@ class HardwareHAL(BaseHAL):
 
 
 def _sha256_samples(samples: np.ndarray) -> str:
-    """Return SHA-256 hex digest of a complex64 sample array."""
+    """SPEC-005A.HAL — Return SHA-256 hex digest of a complex64 sample array."""
     import hashlib
+
     return hashlib.sha256(samples.tobytes()).hexdigest()

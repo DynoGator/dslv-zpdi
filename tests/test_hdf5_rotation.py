@@ -48,20 +48,14 @@ def test_real_file_rotation():
             return f"20260101_120000_{counter[0]:03d}"
 
         try:
-            with mock.patch.object(
-                writer.router, "route", return_value=_primary_decision()
-            ):
-                with mock.patch.object(
-                    writer, "verify_packet_integrity", return_value=True
-                ):
+            with mock.patch.object(writer.router, "route", return_value=_primary_decision()):
+                with mock.patch.object(writer, "verify_packet_integrity", return_value=True):
                     with mock.patch(
                         "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                         _fake_strftime,
                     ):
                         # First write — should open file_1
-                        decision = writer.ingest(
-                            json.dumps({"timestamp_utc": time.time()})
-                        )
+                        decision = writer.ingest(json.dumps({"timestamp_utc": time.time()}))
                 file_1 = writer.current_filepath
                 event_count_1 = writer.event_count
 
@@ -73,16 +67,12 @@ def test_real_file_rotation():
                 assert decision.stream == RouteStream.PRIMARY.value
 
                 # Second write — should rotate: file_1 finalized to .h5, then file_2 opened as .partial
-                with mock.patch.object(
-                    writer, "verify_packet_integrity", return_value=True
-                ):
+                with mock.patch.object(writer, "verify_packet_integrity", return_value=True):
                     with mock.patch(
                         "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                         _fake_strftime,
                     ):
-                        decision = writer.ingest(
-                            json.dumps({"timestamp_utc": time.time()})
-                        )
+                        decision = writer.ingest(json.dumps({"timestamp_utc": time.time()}))
                 file_2 = writer.current_filepath
                 event_count_2 = writer.event_count
 
@@ -114,13 +104,9 @@ def test_event_count_resets_on_rotation():
             return f"20260101_120000_{counter[0]:03d}"
 
         try:
-            with mock.patch.object(
-                writer.router, "route", return_value=_primary_decision()
-            ):
+            with mock.patch.object(writer.router, "route", return_value=_primary_decision()):
                 for i in range(3):
-                    with mock.patch.object(
-                        writer, "verify_packet_integrity", return_value=True
-                    ):
+                    with mock.patch.object(writer, "verify_packet_integrity", return_value=True):
                         with mock.patch(
                             "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                             _fake_strftime,

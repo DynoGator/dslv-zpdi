@@ -36,15 +36,13 @@ def run_gps_fault_injection():
     print(f"Target Stream: {decision.stream}")
     print(f"Final Trust State: {decision.trust_state}")
 
-    if (
-        decision.stream == "SECONDARY"
-        and decision.trust_state == "SECONDARY_QUARANTINED"
-    ):
+    if decision.stream == "SECONDARY" and decision.trust_state == "SECONDARY_QUARANTINED":
         print("\n[SUCCESS] SPEC-003 Enforced. Untrusted data correctly quarantined.")
         return True
     else:
         print("\n[FAILURE] Routing logic breached.")
         return False
+
 
 def run_holdover_test():
     print("\n--- INITIATING FAULT INJECTION: LBE-1421 HOLDOVER DRIFT ---")
@@ -61,7 +59,7 @@ def run_holdover_test():
         modality=SensorModality.RF_SDR.value,
         timestamp_utc=time.time(),
         gps_locked=False,
-        pps_jitter_ns=100.0, # Jitter still low thanks to high-Q TCXO
+        pps_jitter_ns=100.0,  # Jitter still low thanks to high-Q TCXO
         calibration_valid=True,
         extracted_phases=[0.1, 0.2, 0.3, 0.4] * 10,
     )
@@ -74,6 +72,7 @@ def run_holdover_test():
         print("[SUCCESS] Holdover correctly routed to SECONDARY despite low jitter.")
         return True
     return False
+
 
 if __name__ == "__main__":
     if run_gps_fault_injection() and run_holdover_test():

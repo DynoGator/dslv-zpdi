@@ -24,12 +24,12 @@ from dslv_zpdi.core.exceptions import (
     HardwareInitializationError,
 )
 from dslv_zpdi.layer1_ingestion.sdr.base import SdrBackend
-from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.sdr.capabilities import (
     AppliedConfiguration,
     CaptureProfile,
     SdrCapabilities,
 )
+from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.timing.attestation import ClockAttestation
 
 logger = logging.getLogger("dslv-zpdi.sdr.pluto")
@@ -39,6 +39,7 @@ def _get_iio() -> Any:
     """SPEC-004A.PLUTO — Lazy import of libiio."""
     try:
         import iio  # pylint: disable=import-outside-toplevel
+
         return iio
     except ImportError as exc:
         raise DriverUnavailableError(
@@ -97,9 +98,7 @@ class PlutoIioBackend(SdrBackend):
         for chan_name in ("voltage0", "voltage1"):
             chan = self._rx_dev.find_channel(chan_name, False)
             if chan is None:
-                raise HardwareInitializationError(
-                    f"Pluto RX device missing {chan_name} channel."
-                )
+                raise HardwareInitializationError(f"Pluto RX device missing {chan_name} channel.")
             chan.enabled = True
 
         self._caps = self._build_capabilities()

@@ -18,6 +18,7 @@ _log = logging.getLogger(__name__)
 
 class ClockDiscipline(BaseModel):
     """SPEC-012.2 - Clock discipline parameters."""
+
     pps_required: bool = True
     pps_device: str = "/dev/pps0"
     chrony_tracking_required: bool = True
@@ -27,6 +28,7 @@ class ClockDiscipline(BaseModel):
 
 class HealthThresholds(BaseModel):
     """SPEC-012.3 - System health thresholds."""
+
     max_calibration_drift_percent: float = 20.0
     min_confirming_nodes: int = 4
     confirmation_window_ms: int = 300
@@ -35,6 +37,7 @@ class HealthThresholds(BaseModel):
 
 class Spec009Config(BaseModel):
     """SPEC-009.1 - State machine and baseline parameters."""
+
     baseline_duration_hours: int = 72
     min_baseline_samples: int = 240
     persist_state: bool = True
@@ -45,6 +48,7 @@ class Spec009Config(BaseModel):
 
 class NodeProfile(BaseModel):
     """SPEC-012.4 - Node role and hardware profile."""
+
     hardware_tier: int = 1
     role: str = "institutional_anchor"
     timing_source: str = "gpsdo_clk_in"
@@ -54,6 +58,7 @@ class NodeProfile(BaseModel):
 
 class PipelineConfig(BaseModel):
     """SPEC-012.5 - SDR and FFT pipeline parameters."""
+
     center_freq_hz: float = Field(default=100e6)
     sample_rate_hz: float = Field(default=20e6)
     num_samples: int = 262144
@@ -64,6 +69,7 @@ class PipelineConfig(BaseModel):
 
 class Config(BaseModel):
     """SPEC-012 - Root configuration model."""
+
     version: str = "1"
     project: str = "DSLV-ZPDI"
     environment: str = "field"
@@ -99,7 +105,6 @@ def _env_override(config: Config) -> Config:
             continue
         env_map[key[5:].lower()] = val
 
-
     if "primary_output_dir" in env_map:
         config.paths["primary_output"] = env_map["primary_output_dir"]
     if "secondary_output_dir" in env_map:
@@ -110,12 +115,18 @@ def _env_override(config: Config) -> Config:
         try:
             config.spec009.baseline_duration_hours = max(1, int(env_map["baseline_hours"]))
         except ValueError:
-            _log.warning("DSLV_BASELINE_HOURS=%r is not a valid integer — using default", env_map["baseline_hours"])
+            _log.warning(
+                "DSLV_BASELINE_HOURS=%r is not a valid integer — using default",
+                env_map["baseline_hours"],
+            )
     if "min_baseline_samples" in env_map:
         try:
             config.spec009.min_baseline_samples = max(1, int(env_map["min_baseline_samples"]))
         except ValueError:
-            _log.warning("DSLV_MIN_BASELINE_SAMPLES=%r is not a valid integer — using default", env_map["min_baseline_samples"])
+            _log.warning(
+                "DSLV_MIN_BASELINE_SAMPLES=%r is not a valid integer — using default",
+                env_map["min_baseline_samples"],
+            )
     if "center_freq_hz" in env_map:
         try:
             v = float(env_map["center_freq_hz"])
@@ -123,7 +134,9 @@ def _env_override(config: Config) -> Config:
                 raise ValueError("must be positive")
             config.pipeline.center_freq_hz = v
         except ValueError:
-            _log.warning("DSLV_CENTER_FREQ_HZ=%r is invalid — using default", env_map["center_freq_hz"])
+            _log.warning(
+                "DSLV_CENTER_FREQ_HZ=%r is invalid — using default", env_map["center_freq_hz"]
+            )
     if "sample_rate_hz" in env_map:
         try:
             v = float(env_map["sample_rate_hz"])
@@ -131,7 +144,9 @@ def _env_override(config: Config) -> Config:
                 raise ValueError("must be positive")
             config.pipeline.sample_rate_hz = v
         except ValueError:
-            _log.warning("DSLV_SAMPLE_RATE_HZ=%r is invalid — using default", env_map["sample_rate_hz"])
+            _log.warning(
+                "DSLV_SAMPLE_RATE_HZ=%r is invalid — using default", env_map["sample_rate_hz"]
+            )
     if "ingest_interval_sec" in env_map:
         try:
             v = float(env_map["ingest_interval_sec"])
@@ -139,7 +154,10 @@ def _env_override(config: Config) -> Config:
                 raise ValueError("must be positive")
             config.pipeline.ingest_interval_sec = v
         except ValueError:
-            _log.warning("DSLV_INGEST_INTERVAL_SEC=%r is invalid — using default", env_map["ingest_interval_sec"])
+            _log.warning(
+                "DSLV_INGEST_INTERVAL_SEC=%r is invalid — using default",
+                env_map["ingest_interval_sec"],
+            )
 
     return config
 

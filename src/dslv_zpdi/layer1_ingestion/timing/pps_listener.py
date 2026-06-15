@@ -28,9 +28,9 @@ import numpy as np
 
 logger = logging.getLogger("dslv-zpdi.pps")
 
-_PPS_FETCH        = 0xC02070A4  # _IOWR('p', 0xa4, struct pps_fdata) on aarch64
-_PPS_FDATA_FMT    = "qiIqiI"   # pps_fdata: info{sec,nsec,flags} + timeout{sec,nsec,flags}
-_PPS_TIME_INVALID = 0x1         # timeout.flags: return last timestamp, do not wait
+_PPS_FETCH = 0xC02070A4  # _IOWR('p', 0xa4, struct pps_fdata) on aarch64
+_PPS_FDATA_FMT = "qiIqiI"  # pps_fdata: info{sec,nsec,flags} + timeout{sec,nsec,flags}
+_PPS_TIME_INVALID = 0x1  # timeout.flags: return last timestamp, do not wait
 
 
 class PpsListener:
@@ -76,9 +76,7 @@ class PpsListener:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(
-            target=self._run, name="pps-listener", daemon=True
-        )
+        self._thread = threading.Thread(target=self._run, name="pps-listener", daemon=True)
         self._thread.start()
         logger.info("PpsListener: started on %s", self._device)
 
@@ -173,8 +171,12 @@ class PpsListener:
         try:
             request = struct.pack(
                 _PPS_FDATA_FMT,
-                0, 0, 0,                      # info: sec=0, nsec=0, flags=0 (filled by kernel)
-                0, 0, _PPS_TIME_INVALID,      # timeout: sec=0, nsec=0, flags=PPS_TIME_INVALID
+                0,
+                0,
+                0,  # info: sec=0, nsec=0, flags=0 (filled by kernel)
+                0,
+                0,
+                _PPS_TIME_INVALID,  # timeout: sec=0, nsec=0, flags=PPS_TIME_INVALID
             )
             response = fcntl.ioctl(fd, _PPS_FETCH, request)
             sec, nsec, _ = struct.unpack_from("qiI", response, 0)
@@ -203,4 +205,4 @@ class PpsListener:
             return
         arr = np.array(valid, dtype=np.float64)
         deviations = np.abs(arr - 1_000_000_000.0)
-        self.rms_jitter_ns = float(np.sqrt(np.mean(deviations ** 2)))
+        self.rms_jitter_ns = float(np.sqrt(np.mean(deviations**2)))

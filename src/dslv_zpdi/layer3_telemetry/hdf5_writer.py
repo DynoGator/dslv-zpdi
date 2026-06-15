@@ -104,9 +104,7 @@ class HDF5Writer:
     @staticmethod
     def _genesis_hash() -> str:
         """SPEC-007.1 — Documented genesis value for event hash chain."""
-        return hashlib.sha256(
-            b"DSLV-ZPDI event-chain genesis v5.0.0"
-        ).hexdigest()
+        return hashlib.sha256(b"DSLV-ZPDI event-chain genesis v5.0.0").hexdigest()
 
     def ingest(self, json_payload: str) -> RoutingDecision:
         """SPEC-007 — Process single packet through router and persist."""
@@ -159,9 +157,10 @@ class HDF5Writer:
         grp.create_dataset("r_global", data=packet.r_global)
         grp.create_dataset("payload_uuid", data=packet.payload_uuid)
         from dslv_zpdi.layer2_core.wiring import coherence_engine
+
         bl = coherence_engine.get_baseline_status()
-        grp.attrs['dynamic_threshold'] = bl.get('threshold', 0.40)
-        grp.attrs['baseline_state'] = bl.get('baseline_state', 'UNKNOWN')
+        grp.attrs["dynamic_threshold"] = bl.get("threshold", 0.40)
+        grp.attrs["baseline_state"] = bl.get("baseline_state", "UNKNOWN")
 
         try:
             payload_dict = json.loads(original_json)
@@ -171,12 +170,20 @@ class HDF5Writer:
         grp.create_dataset("timestamp_utc", data=event_timestamp)
 
         # Event hash chain
-        payload_checksum = payload_dict.get("payload_checksum", "") if isinstance(payload_dict, dict) else ""
+        payload_checksum = (
+            payload_dict.get("payload_checksum", "") if isinstance(payload_dict, dict) else ""
+        )
         content_bytes = json.dumps(
             {
-                "r_local": packet.r_local.tolist() if hasattr(packet.r_local, "tolist") else packet.r_local,
-                "r_smooth": packet.r_smooth.tolist() if hasattr(packet.r_smooth, "tolist") else packet.r_smooth,
-                "r_global": packet.r_global.tolist() if hasattr(packet.r_global, "tolist") else packet.r_global,
+                "r_local": packet.r_local.tolist()
+                if hasattr(packet.r_local, "tolist")
+                else packet.r_local,
+                "r_smooth": packet.r_smooth.tolist()
+                if hasattr(packet.r_smooth, "tolist")
+                else packet.r_smooth,
+                "r_global": packet.r_global.tolist()
+                if hasattr(packet.r_global, "tolist")
+                else packet.r_global,
                 "payload_uuid": packet.payload_uuid,
                 "timestamp_utc": event_timestamp,
             },
@@ -189,7 +196,9 @@ class HDF5Writer:
         chain_input = (
             previous_hash.encode()
             + event_payload_sha256.encode()
-            + json.dumps({"group": group_name, "timestamp_utc": event_timestamp}, sort_keys=True).encode()
+            + json.dumps(
+                {"group": group_name, "timestamp_utc": event_timestamp}, sort_keys=True
+            ).encode()
         )
         event_chain_sha256 = hashlib.sha256(chain_input).hexdigest()
         self._event_chain_hashes.append(event_chain_sha256)
@@ -276,7 +285,9 @@ class HDF5Writer:
             with h5py.File(self._partial_filepath, "r") as ro:
                 self._verify_event_chain(ro)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.error("HDF5 event-chain verification failed for %s: %s", self._partial_filepath, exc)
+            logger.error(
+                "HDF5 event-chain verification failed for %s: %s", self._partial_filepath, exc
+            )
             # Leave .partial; do not advertise valid .h5
             self.current_file = None
             return
@@ -361,28 +372,18 @@ class HDF5Writer:
             pass
         return "unavailable"
 
-    def close(self):
-        """SPEC-007 — Safely close current HDF5 file."""
-        if self.current_file is not None:
-            self.current_file.close()
-            self.current_file = None
-
     def get_stats(self) -> dict[str, int]:
         """SPEC-007 — Return pipeline statistics."""
         return {**self.stats, **self.router.stats}
 
-    def verify_packet_integrity(
-        self, packet: CoherencePacket, original_json: str
-    ) -> bool:
+    def verify_packet_integrity(self, packet: CoherencePacket, original_json: str) -> bool:
         """SPEC-010 — Verify payload checksum before persistence."""
         try:
             payload_dict = json.loads(original_json)
             stored_checksum = payload_dict.get("payload_checksum", "")
 
             if not stored_checksum:
-                logger.error(
-                    "SPEC-010 VIOLATION: Missing checksum for %s", packet.payload_uuid
-                )
+                logger.error("SPEC-010 VIOLATION: Missing checksum for %s", packet.payload_uuid)
                 self.stats["checksum_missing"] += 1
                 return False
 
@@ -393,9 +394,7 @@ class HDF5Writer:
             computed_checksum = hashlib.sha256(clean_json.encode()).hexdigest()
 
             if stored_checksum != computed_checksum:
-                logger.error(
-                    "SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid
-                )
+                logger.error("SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid)
                 self.stats["checksum_invalid"] += 1
                 return False
             return True

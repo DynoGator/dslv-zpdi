@@ -12,11 +12,11 @@ import re
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class EnvExpansionError(ValueError):
-    """Raised when environment-variable expansion fails."""
+    """SPEC-004A.CONFIG — Raised when environment-variable expansion fails."""
 
 
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
@@ -31,12 +31,15 @@ def expand_env_vars(value: Any) -> Any:
     if isinstance(value, str):
 
         def _repl(match: re.Match) -> str:
+            """SPEC-004A.CONFIG — Substitute a single ${VAR:-default} placeholder."""
             var_name = match.group(1)
             default = match.group(2)
             env_value = os.getenv(var_name)
             if env_value is None:
                 if default is None:
-                    raise EnvExpansionError(f"Environment variable {var_name} not set and no default provided")
+                    raise EnvExpansionError(
+                        f"Environment variable {var_name} not set and no default provided"
+                    )
                 return default
             return env_value
 
@@ -51,14 +54,13 @@ def expand_env_vars(value: Any) -> Any:
 class HardwareProfile(BaseModel):
     """SPEC-004A.CONFIG — Device-specific hardware profile section."""
 
+    model_config = ConfigDict(extra="forbid")
+
     profile_id: str
     enclosure_brand_observed: str = ""
     enclosure_model_marking_observed: str = ""
     exact_pcb_revision: str | None = None
     qualification_status: str = "unverified"
-
-    class Config:
-        extra = "forbid"
 
 
 class ReferenceClockConfig(BaseModel):
@@ -158,14 +160,13 @@ class NodeProfile(BaseModel):
     trust: TrustConfig = Field(default_factory=TrustConfig)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "NodeProfile":
+    def from_yaml(cls, path: str | Path) -> NodeProfile:
         """Load and validate a node profile from YAML with env expansion."""
         import yaml  # pylint: disable=import-outside-toplevel
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f)
         if not isinstance(raw, dict):
             raise ValueError(f"Profile {path} is not a YAML mapping")
         expanded = expand_env_vars(raw)
         return cls(**expanded)
-

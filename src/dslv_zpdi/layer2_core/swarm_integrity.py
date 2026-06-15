@@ -52,9 +52,7 @@ class SwarmIntegrityMonitor:
                 mean = baseline.get("mean_signal", 0)
                 std = baseline.get("std_signal", 1)
                 deviation = (
-                    abs(packet.get("signal_strength", mean) - mean) / std
-                    if std > 0
-                    else 0.0
+                    abs(packet.get("signal_strength", mean) - mean) / std if std > 0 else 0.0
                 )
                 if deviation > self.sigma_threshold:
                     return False, f"POISONED: stylistic deviation {deviation:.1f}σ"
