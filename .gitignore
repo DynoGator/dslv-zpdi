@@ -42,3 +42,6 @@ config/email.yaml
 # dashboard stdout capture files (runtime artifacts)
 tools/dash_out.txt
 tools/dash_out_headless.txt
+
+# agent baseline / hardware evidence artifacts
+artifacts/

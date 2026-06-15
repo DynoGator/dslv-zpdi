@@ -18,3 +18,7 @@ class BaseHAL(ABC):
     @abstractmethod
     def ingest_sdr(self, **kwargs) -> IngestionPayload:
         """SPEC-005A.4b — Abstract SDR IQ Ingestion."""
+
+    @abstractmethod
+    def close(self) -> None:
+        """SPEC-005A.HAL — Release hardware and timing resources."""

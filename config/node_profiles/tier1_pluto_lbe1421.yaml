@@ -1,0 +1,71 @@
+schema_version: "1"
+
+identity:
+  profile_id: tier1-pluto-lbe1421
+  enclosure_brand_observed: HamGeek
+  enclosure_model_marking_observed: AD9363
+  exact_pcb_revision: null
+  qualification_status: unverified
+
+hardware:
+  reference_clock:
+    required: true
+    source: lbe1421
+    requested_hz: 10000000
+    connector_label_observed: 10M
+    connector_type: null
+    direction_verified: false
+    input_impedance_ohms: null
+    maximum_input_dbm: null
+    electrical_level_verified: false
+  pps:
+    required: true
+    canonical_host_path: /dev/pps0
+    sdr_pps_support: unverified
+
+sdr:
+  backend: pluto_iio
+  uri: "${DSLV_SDR_URI:-auto}"
+  expected_iio_phy: ad9361-phy
+  receive_channels:
+    - 0
+  transmit_enabled: false
+  sample_rate_hz: 10000000
+  rf_bandwidth_hz: 10000000
+  buffer_samples: 262144
+  gain_mode: manual
+  gain_db: 64.0
+
+timing:
+  authority: lbe1421
+  pps_device: /dev/pps0
+  nmea_port: /dev/ttyACM0
+  reference_frequency_hz: 10000000
+  pps_degraded_ns: 1000.0
+  pps_kill_ns: 10000.0
+  max_fix_age_s: 10.0
+
+rf:
+  center_frequency_hz: 100000000
+  sample_rate_hz: 10000000
+  rf_bandwidth_hz: 10000000
+  gain_db: 64.0
+  gain_mode: manual
+
+converter:
+  model: direct_rf
+  serial: N/A
+  native_if_center_hz: 0
+  lo_frequency_hz: 0
+  lo_source: direct_rf
+  sideband_sign: 1
+  gain_db: 0.0
+  loss_db: 0.0
+  calibration_manifest_sha256: ""
+
+trust:
+  fail_closed: true
+  allow_simulator_fallback: false
+  require_firmware_fingerprint: true
+  require_calibration_manifest: true
+  require_production_hmac_key: true
