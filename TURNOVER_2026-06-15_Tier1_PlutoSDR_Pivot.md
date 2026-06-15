@@ -4,7 +4,7 @@
 **Repository:** `/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi`  
 **Branch:** `feat/tier1-plutosdr-plus-metrology`  
 **Base commit:** `1329e76e4ee4faf02cc7fea43bb68443974759e4`  
-**Current HEAD:** `9fdaedd` (pending final commit)  
+**Current HEAD:** `e6fef50`  
 **Version:** `5.0.0`  
 **Python:** 3.13.5 (Debian 13 Trixie)  
 **Virtualenv:** `.venv/`
@@ -73,20 +73,19 @@ All commands were run in a clean shell on 2026-06-15 from the repository root.
 
 | Gate | Command | Result |
 |------|---------|--------|
-| Unit tests | `.venv/bin/python -m pytest -q` | **143 passed**, 2 warnings |
+| Unit tests | `.venv/bin/python -m pytest -q` | **143 passed** |
 | Lint | `.venv/bin/python -m ruff check .` | **All checks passed** |
 | Format | `.venv/bin/python -m ruff format --check src tests` | **92 files already formatted** |
 | SPEC orphan check | `.venv/bin/python tools/orphan_checker.py` | **OK** |
 | Version sync | `.venv/bin/python tools/check_version_sync.py` | **OK — 5.0.0** |
 | Repo guard | `.venv/bin/python tools/repo_guard.py` | **OK** |
+| Dependency check | `.venv/bin/python -m pip check` | **No broken requirements found** |
 | CLI availability | `dslv-zpdi-{probe,preflight,verify} --version` | **5.0.0** |
 
-### Known non-blocking environment issue
+### Dependency environment
 
-- `pip check` reports dependency conflicts for system-wide forensic/SDR
-  packages (plaso, dfvfs, pylibad9361, etc.). These are pulled in via
-  Debian/system `.pth` files and are **not** declared in this project's
-  dependency tree. They do not affect the tests above.
+- The project virtualenv was rebuilt from scratch with only the declared
+  dependencies (plus dev extras). `pip check` now reports no conflicts.
 
 ---
 
@@ -130,7 +129,7 @@ See `docs/qualification/PLUTO_ACCEPTANCE_MATRIX.md` and
 - **Software implementation:** complete
 - **Automated validation:** passing
 - **Physical hardware qualification:** pending owner action
-- **Branch push status:** pending final commit/push
+- **Branch push status:** pushed to `origin/feat/tier1-plutosdr-plus-metrology`
 
 No source secrets, no `sys.path` mutation, and no orphaned SPEC claims are
 present in the current tree.
