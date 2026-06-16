@@ -6,6 +6,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libhackrf-dev \
     soapysdr-module-hackrf \
+    libiio-dev \
+    libad9361-dev \
     libusb-1.0-0-dev \
     pkg-config \
     git \

@@ -52,7 +52,7 @@ class PlutoIioBackend(SdrBackend):
     SPEC-004A.PLUTO — Native libiio backend for AD936x Pluto-family SDRs.
 
     Args:
-        uri: libiio URI (e.g. 'ip:192.168.2.1', 'usb:', 'local:').
+        uri: libiio URI (e.g. 'ip:192.168.3.80', 'usb:', 'local:').
         expected_iio_phy: Name of the transceiver PHY device to verify identity.
     """
 
@@ -205,7 +205,7 @@ class PlutoIioBackend(SdrBackend):
             raise HardwareInitializationError("Pluto missing voltage0 RX channel")
 
         rx_chan.attrs["gain_control_mode"].value = profile.gain_mode
-        rx_chan.attrs["hardwaregain"].value = str(int(profile.gain_db))
+        rx_chan.attrs["hardwaregain"].value = str(round(profile.gain_db))
         rx_chan.attrs["rf_bandwidth"].value = str(int(profile.bandwidth_hz))
         rx_chan.attrs["sampling_frequency"].value = str(int(profile.sample_rate_sps))
 

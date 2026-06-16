@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "numpy>=1.21.0",
@@ -49,7 +50,8 @@ hackrf = [
     "pyhackrf>=0.2.0",
 ]
 hardware = [
-    "pyhackrf>=0.2.0",
+    # System libiio / python3-libiio must be installed via apt.
+    # This group reserves the namespace for any future PyPI-hosted bindings.
 ]
 dev = [
     "pytest>=7.0.0",

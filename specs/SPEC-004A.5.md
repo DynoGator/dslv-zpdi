@@ -13,16 +13,16 @@ The PlutoSDR+ may operate as:
 
 * **Primary driver:** `libiio` (Python binding `iio`) — direct access to the AD9363 PHY and RX LO / data buffer.
 * **Fallback driver:** `SoapyPlutoSDR` via SoapySDR (available but not used in the primary HAL because attribute control is less direct).
-* **Default URI:** `ip:192.168.2.1` (USB RNDIS interface).
+* **Default URI:** `ip:192.168.3.80` (Gigabit Ethernet / Tezuka-Libre firmware).
 * **Alternative URIs:** `ip:pluto.local`, `usb:<bus>.<device>`.
-* **RX manual gain range:** 0–73 dB for the on-board AD9363A.
+* **RX manual gain range:** -10 to +62 dB for the on-board AD9361 class transceiver (AD9363 variants report a similar effective range).
 
 ### 2.1 Required host setup
 
 * `dfu-util`, `openocd`, and `libiio`/`libiio-dev` must be installed.
 * `SoapyPlutoSDR` must be built/installed from source if the packaged version is unavailable.
 * udev rules granting `plugdev`/`dialout` access to the Pluto USB IDs (`0456:b673`, `0456:b674`).
-* A NetworkManager profile or manual network setup for the RNDIS interface so the host has `192.168.2.10/24` and the Pluto is reachable at `192.168.2.1`.
+* A NetworkManager profile, netplan stanza, or manual network setup so the host has an address on `192.168.3.0/24` and the Pluto is reachable at `192.168.3.80`.
 
 ## 3. HAL Implementation
 
@@ -32,16 +32,16 @@ The PlutoSDR+ may operate as:
 
 ```python
 PlutoHAL(
-    uri: str = "ip:192.168.2.1",
+    uri: str = "ip:192.168.3.80",
     pps_device: str = "/dev/pps0",
     nmea_port: str = "/dev/ttyACM0",
     external_clock: bool = False,
-    gain: int = 64,
+    gain: int = 62,
 )
 ```
 
-* `external_clock` must only be set to `True` when the GPSDO 10 MHz reference is physically wired to `CLKIN` and 1 PPS is wired.
-* `gain` maps to the AD9363 `hardwaregain` attribute in manual mode.
+* `external_clock` must only be set to `True` when the GPSDO 10 MHz reference is physically wired to `EXT_REF_CLK` and 1 PPS is wired.
+* `gain` maps to the AD9361 `hardwaregain` attribute in manual mode. The safe verified upper bound is +62 dB.
 
 ### 3.2 Ingestion methods
 
@@ -85,9 +85,9 @@ def get_hal(
 ```yaml
 pipeline:
   sdr_type: "auto"          # auto | hackrf | pluto | sim
-  pluto_uri: "ip:192.168.2.1"
+  pluto_uri: "ip:192.168.3.80"
   pluto_external_clock: false
-  pluto_gain: 64
+  pluto_gain: 62
 ```
 
 Environment overrides:

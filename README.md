@@ -20,7 +20,7 @@ DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  LAYER 1 — INGESTION                                             │
-│  HardwareHAL (HackRF + LBE-1421) or SimulatedHAL               │
+│  HardwareHAL (PlutoSDR+ + LBE-1421) or SimulatedHAL            │
 │  PPS edge detection · NMEA GPS fix · SDR IQ samples             │
 └────────────────────────┬─────────────────────────────────────────┘
                          │ Payload (JSON)
@@ -58,7 +58,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 ### Physical Wiring Protocol
 
-1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Output` → PlutoSDR+ `EXT_REF_CLK`
+1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Out2` (10 MHz) → PlutoSDR+ `EXT_REF_CLK`
    Hardware ADC is now phase-locked to GPS constellation. USB jitter is irrelevant.
 2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
    Bridge ground between GPSDO and Pi. No level-shifter needed — LBE-1421 outputs 3.3 V CMOS natively.
@@ -213,7 +213,7 @@ logs          = true
 notifications = true
 
 [dashboard.waterfall]
-mode      = "SWEEP"       # SWEEP (20 MHz) | NARROW (5 MHz) | SCOPE (2 MHz)
+mode      = "SWEEP"       # SWEEP (10–20 MHz) | NARROW (5 MHz) | SCOPE (2 MHz)
 center_hz = 100_000_000   # Starting center frequency (Hz, min 1 MHz)
 span_hz   = 20_000_000    # Starting span (Hz, 100 kHz – 500 MHz)
 history   = 24            # Waterfall row buffer depth (min 10)
@@ -401,15 +401,17 @@ Adjust with `[`/`]` (floor) and `{`/`}` (ceil) in 5 dBm steps. The floor is clam
 - Urban/noisy RF: floor `-80`, ceil `-20`
 - Very strong nearby transmitter: floor `-60`, ceil `0`
 
-### Gain Controls (HACKRF mode only)
+### Gain Controls (SDR backend)
+
+The active SDR backend (PlutoSDR+ / HackRF legacy) applies its own gain model.
 
 | Control | Range        | Steps                        | Effect                             |
 |---------|-------------|------------------------------|------------------------------------|
-| LNA     | 0–40 dB     | 0, 8, 16, 24, 32, 40        | RF front-end amplification         |
-| VGA     | 0–62 dB     | 0, 8, 16, 24, 32, 40, 48, 56, 62 | Baseband (IF) gain           |
+| LNA     | 0–40 dB     | 0, 8, 16, 24, 32, 40        | RF front-end amplification (HackRF legacy) |
+| VGA     | 0–62 dB     | 0, 8, 16, 24, 32, 40, 48, 56, 62 | Baseband (IF) gain (HackRF legacy) |
 | AMP     | on/off      | —                            | HackRF internal +14 dB pre-amp (use with care — can saturate) |
 
-Changing any gain value immediately restarts the `hackrf_sweep` subprocess with the new parameters. There is a brief `HACKRF-WAIT` transition (~1–2 rows) while the new sweep starts.
+Changing any gain value immediately restarts the underlying sweep subprocess. There is a brief `SDR-WAIT` transition (~1–2 rows) while the new sweep starts.
 
 ### Peak Hold
 
@@ -453,11 +455,11 @@ All keys are case-insensitive unless noted.
 | `{`    | Ceiling down −5 dBm                             |
 | `}`    | Ceiling up +5 dBm                               |
 
-### Waterfall — SDR / Gain (HACKRF mode)
+### Waterfall — SDR / Gain
 
 | Key    | Action                                                    |
 |--------|-----------------------------------------------------------|
-| `r`    | Toggle SIM ↔ HACKRF live SDR mode                        |
+| `r`    | Toggle SIM ↔ SDR live mode                                |
 | `g`    | Cycle LNA gain (0 → 8 → 16 → 24 → 32 → 40 → 0 dB)       |
 | `v`    | Cycle VGA (baseband) gain (0–62 dB steps)                 |
 | `+`    | LNA gain up one step                                      |
@@ -521,9 +523,7 @@ Services start in dependency order (managed by systemd):
 ```
 dslv-zpdi-tuning.service         (Nice=-5, I/O realtime scheduling)
     ↓ After=
-dslv-zpdi-hackrf-init.service    [NEW] (wakes HackRF via hackrf_info; non-fatal if absent)
-    ↓ Before=
-dslv-zpdi-preflight.service      (hardware checks: HackRF, PPS, chrony)
+dslv-zpdi-preflight.service      (hardware checks: PlutoSDR+, PPS, chrony)
     ↓ After=
 dslv-zpdi.service                (main_pipeline.py — runs indefinitely)
     ↓ After=
@@ -533,16 +533,16 @@ dslv-zpdi-webdash.service        [NEW] (HTML dashboard on port 8080)
 
 **Enable new services (run once after install):**
 ```bash
-for svc in dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash; do
+for svc in dslv-zpdi-node-receiver dslv-zpdi-webdash; do
     sudo cp config/${svc}.service /etc/systemd/system/
 done
 sudo systemctl daemon-reload
-sudo systemctl enable --now dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash
+sudo systemctl enable --now dslv-zpdi-node-receiver dslv-zpdi-webdash
 ```
 
 ```bash
 # Check full chain status:
-systemctl status dslv-zpdi-tuning dslv-zpdi-hackrf-init dslv-zpdi-preflight dslv-zpdi \
+systemctl status dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi \
                  dslv-zpdi-node-receiver dslv-zpdi-webdash
 
 # Follow live pipeline logs:
@@ -614,7 +614,7 @@ python tools/orphan_checker.py
 # Timing health snapshot
 python tools/check_timing.py
 
-# Hardware pre-flight (non-fatal, checks HackRF / PPS / chrony)
+# Hardware pre-flight (non-fatal, checks PlutoSDR+ / PPS / chrony)
 bash tools/preflight.sh
 ```
 
@@ -646,9 +646,9 @@ python -m dashboard
 
 ### Waterfall is stuck on `SIM` even after pressing `r`
 
-- HackRF is not detected. Run `hackrf_info` — if it fails, check USB connection.
-- `hackrf_sweep` binary not in PATH. Install: `sudo apt install hackrf`.
-- If HackRF is detected but sweep fails, check the error label in the waterfall title bar.
+- PlutoSDR+ is not reachable at `ip:192.168.3.80`. Verify the network link and run `iio_info -u ip:192.168.3.80`.
+- Legacy HackRF only: run `hackrf_info` — if it fails, check USB connection.
+- If the SDR is detected but sweep fails, check the error label in the waterfall title bar.
 
 ### Pipeline running in SIMULATOR when I expect HARDWARE
 
@@ -659,7 +659,7 @@ journalctl -u dslv-zpdi | grep -i "HardwareHAL\|simulator\|fallback"
 ```
 
 Common causes:
-- HackRF not plugged in when service started
+- PlutoSDR+ not reachable at `ip:192.168.3.80` when service started
 - `/dev/pps0` does not exist (dtoverlay not loaded — add to `/boot/firmware/config.txt` and reboot)
 - LBE-1421 not powered or USB-C not seated
 
@@ -733,7 +733,7 @@ Run `python -m dashboard --print-config` to see the resolved (post-clamp) config
 
 ## Hardware Agnosticism Standard (SPEC-004A.2)
 
-The Pi 5 + HackRF + LBE-1421 stack is the Phase 2A reference. Alternative hardware is permitted if it meets:
+The Pi 5 + PlutoSDR+ + LBE-1421 stack is the Phase 2A/2B reference. Alternative hardware is permitted if it meets:
 
 1. **External 10 MHz reference input** to hardware-lock the SDR's ADC sampling clock
 2. **1 PPS hardware interrupt** (GPIO, SDP, or dedicated timing input)
@@ -795,9 +795,9 @@ This mathematically invalidated true phase coherence across distributed nodes.
 
 ### The RF Metrology Solution (Current Architecture)
 
-By locking the HackRF's ADC directly to the GPS constellation via 10 MHz CLKIN:
+By locking the PlutoSDR+ ADC directly to the GPS constellation via 10 MHz `EXT_REF_CLK`:
 - Phase relationships are preserved at the analog level
-- USB jitter affects only data-transfer latency, not sample timing
+- Ethernet/USB jitter affects only data-transfer latency, not sample timing
 - Every IQ sample carries GPS-disciplined phase information
 - Phase alignment across distributed nodes is provable and verifiable
 

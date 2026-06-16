@@ -42,9 +42,10 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # OPT-IN hardware profile. Requires a real HackRF / GPSDO / radon device on the
-  # host and is never started by a plain `docker compose up`. Device passthrough
-  # and any elevated capabilities must be reviewed before use on a Tier 1 node.
+  # OPT-IN hardware profile. Requires a real PlutoSDR+ / LBE-1421 GPSDO / radon
+  # device on the host and is never started by a plain `docker compose up`.
+  # Device passthrough and any elevated capabilities must be reviewed before use
+  # on a Tier 1 node.
   node:
     profiles: ["hardware"]
     image: dslv-zpdi:sim
@@ -54,8 +55,9 @@ services:
     environment:
       DEV_SIMULATOR: "0"
     command: ["python", "-m", "dslv_zpdi.main_pipeline"]
+    network_mode: host                # PlutoSDR+ reachable at ip:192.168.3.80
     devices:
-      - "/dev/bus/usb:/dev/bus/usb"   # HackRF / USB SDR passthrough
+      - "/dev/bus/usb:/dev/bus/usb"   # USB serial / GPSDO / BLE passthrough
     # Add PPS/serial device mappings here for the specific Tier 1 host.
     security_opt:
       - no-new-privileges:true

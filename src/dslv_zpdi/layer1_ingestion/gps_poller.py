@@ -14,7 +14,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 log = logging.getLogger("zpdi.gps")
 
@@ -33,8 +33,8 @@ class LocationFix:
     """SPEC-003A"""
     latitude: float
     longitude: float
-    altitude: Optional[float] = None
-    accuracy: Optional[float] = None
+    altitude: float | None = None
+    accuracy: float | None = None
     provider: str = "unknown"
     ts: float = 0.0
 
@@ -71,22 +71,22 @@ class GPSPoller:
         self._interval = interval_s
         self._timeout = timeout_s
         self._accuracy = accuracy_m
-        self.latest: Optional[LocationFix] = None
+        self.latest: LocationFix | None = None
         self._lock = asyncio.Lock()
         self._stop = asyncio.Event()
         self._backoff = 1.0
 
-    async def get_latest(self) -> Optional[LocationFix]:
+    async def get_latest(self) -> LocationFix | None:
         async with self._lock:
             return self.latest
 
     # SPEC-003A
-    async def _set_latest(self, fix: Optional[LocationFix]) -> None:
+    async def _set_latest(self, fix: LocationFix | None) -> None:
         async with self._lock:
             self.latest = fix
 
     # SPEC-003A
-    async def _poll_once(self) -> Optional[LocationFix]:
+    async def _poll_once(self) -> LocationFix | None:
         """Run termux-location once and parse the JSON output."""
         # Try GPS first, then network, then passive
         for provider in ("gps", "network", "passive"):

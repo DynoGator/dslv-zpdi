@@ -163,6 +163,7 @@ def get_tier1_hal(
         qualification_policy=policy,
         fail_closed=profile.trust.fail_closed,
         key_provider=key_provider,
+        profile=profile,
     )
 
     return hal

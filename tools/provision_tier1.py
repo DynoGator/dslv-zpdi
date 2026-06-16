@@ -1,9 +1,9 @@
 """
-SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 4.4.0)
-Automates hardware-readiness checks for Anchor Nodes (GPSDO/HackRF focus).
+SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 5.0.0)
+Automates hardware-readiness checks for Anchor Nodes (PlutoSDR+/LBE-1421 focus).
 
-Rev 4.1-FORGE: Added SoapySDR checks and Pi 5 RP1 3.3V logic warning.
-Implemented "Silent Traitor" clock failure detection per ARCH-PHASE-2A-PIVOT.
+Rev 5.0.0: Pivot to HamGeek PlutoSDR+ + Leo Bodnar LBE-1421 GPSDO.
+HackRF support is retained as a legacy/optional check only.
 """
 
 import argparse
@@ -309,18 +309,22 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
 
 def check_hal_factory_lock() -> bool:
     """
-    SPEC-005A.4 — Verify canonical HAL factory returns a live, clock-locked HAL.
+    SPEC-005A.4 — Verify the composed Tier-1 HAL returns live clock evidence.
     """
     try:
-        from dslv_zpdi.layer1_ingestion.hal_factory import get_hal
-        hal = get_hal()
+        from dslv_zpdi.config_models import NodeProfile
+        from dslv_zpdi.layer1_ingestion.hal_factory import get_tier1_hal
+
+        profile = NodeProfile.from_yaml("config/node_profiles/tier1_pluto_lbe1421.yaml")
+        hal = get_tier1_hal(profile)
         lock_info = hal.verify_gpsdo_lock()
-        if lock_info.get("phase_lock_verified"):
-            print("[*] HAL factory live — phase-lock verified ✅")
+        timing = lock_info.get("timing_attestation", {})
+        if timing.get("frequency_disciplined") and timing.get("utc_epoch_disciplined"):
+            print("[*] Tier-1 HAL live — frequency/UTC discipline verified ✅")
             return True
-        print("[!] HAL factory returned but phase-lock NOT verified ❌")
-        print(f"    Driver: {lock_info.get('driver_used', 'unknown')}")
-        print(f"    Clock source: {lock_info.get('clock_source', 'unknown')}")
+        print("[!] Tier-1 HAL returned but GPSDO discipline NOT verified ❌")
+        print(f"    Backend: {lock_info.get('backend_name', 'unknown')}")
+        print(f"    Warnings: {lock_info.get('timing_attestation', {}).get('warnings', [])}")
         return False
     except Exception as e:
         print(f"[!] HAL factory verification failed: {e}")
@@ -339,13 +343,14 @@ def main():
     print_rp1_warning()
 
     print("=" * 60)
-    print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 4.4.0)")
+    print("DSLV-ZPDI Tier 1 Provisioning Audit (RF Metrology, Rev 5.0.0)")
     print("=" * 60)
     print()
-    print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO")
+    print("Hardware Stack: Pi 5 + HamGeek PlutoSDR+ + Leo Bodnar LBE-1421 GPSDO")
     print("Required Wiring:")
-    print("  - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)")
-    print("  - GPSDO 1 PPS → Pi 5 GPIO 18 (UTC timestamp)")
+    print("  - GPSDO Out2 (10 MHz) → PlutoSDR+ EXT_REF_CLK (hardware ADC lock)")
+    print("  - GPSDO Out1 (1 PPS) → Pi 5 GPIO 18 (UTC timestamp)")
+    print("  - PlutoSDR+ data → Pi 5 USB 3.0 / Ethernet (192.168.3.80)")
     print("  - ⚠️  VERIFY 3.3V LOGIC LEVEL BEFORE CONNECTING PPS!")
     print()
 
@@ -355,17 +360,14 @@ def main():
 
     checks = [
         ("RP1 3.3V Guard", check_rp1_voltage_guard()),
-        ("HAL Factory Lock", check_hal_factory_lock()),
-        ("SoapySDR Library", check_soapy_sdr()),
         ("PlutoSDR+ Presence", check_pluto_presence()),
-        ("HackRF Presence", check_hackrf_presence()),
-        ("HackRF Clock Source", check_hackrf_clock_source()),
+        ("Tier-1 HAL Lock", check_hal_factory_lock()),
         ("PPS Device", check_pps_device()),
         ("LBE-1421 NMEA", check_nmea_telemetry()),
-        ("udev Rules", check_udev_rules()),
-        ("Python Dependencies", check_python_dependencies()),
         ("Chrony PPS Config", check_chrony_pps_config()),
         ("PPS GPIO Overlay", check_pps_gpio_overlay()),
+        ("Python Dependencies", check_python_dependencies()),
+        ("HackRF Presence (legacy)", check_hackrf_presence()),
     ]
 
     # Run the check_timing utility
@@ -405,9 +407,10 @@ def main():
         print("         Refer to PHASE_2A_TIER_1_BUILD_SHEET.md for wiring guide.")
         print()
         print("Critical checks:")
-        print("  1. Is GPSDO 10 MHz connected to HackRF CLKIN?")
-        print("  2. Is GPSDO 1 PPS connected to Pi 5 GPIO 18 (with 3.3V logic)?")
-        print("  3. Has the system been rebooted after config.txt changes?")
+        print("  1. Is GPSDO Out2 (10 MHz) connected to PlutoSDR+ EXT_REF_CLK?")
+        print("  2. Is GPSDO Out1 (1 PPS) connected to Pi 5 GPIO 18 (with 3.3V logic)?")
+        print("  3. Is the PlutoSDR+ reachable at ip:192.168.3.80 from the Pi 5?")
+        print("  4. Has the system been rebooted after config.txt changes?")
         sys.exit(1)
 
 

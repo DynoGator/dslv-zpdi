@@ -6,8 +6,8 @@ After=network.target chrony.service
 Type=simple
 User=dynogator
 Group=dynogator
-WorkingDirectory=/home/dynogator/Gem-home/dslv-zpdi
-ExecStart=/home/dynogator/Gem-home/dslv-zpdi/venv/bin/python /home/dynogator/Gem-home/dslv-zpdi/tools/capture_baseline.py
+WorkingDirectory=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi
+ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/python /home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/tools/capture_baseline.py
 Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
 RestartSec=20

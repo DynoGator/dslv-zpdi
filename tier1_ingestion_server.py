@@ -42,7 +42,7 @@ from websockets.asyncio.server import ServerConnection, serve
 from websockets.datastructures import Headers
 from websockets.http11 import Request, Response
 
-from src.dslv_zpdi.layer3_telemetry.mobile_router import route_packet, SecondaryLog
+from dslv_zpdi.layer3_telemetry.mobile_router import SecondaryLog, route_packet
 
 logging.basicConfig(
     level=os.environ.get("ZPDI_LOG_LEVEL", "INFO"),

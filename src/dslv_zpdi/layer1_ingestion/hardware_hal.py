@@ -18,6 +18,7 @@ from typing import Any
 
 import numpy as np
 
+from dslv_zpdi.config_models import NodeProfile
 from dslv_zpdi.core.exceptions import (
     QualificationError,
 )
@@ -56,6 +57,7 @@ class HardwareHAL(BaseHAL):
         qualification_policy: Tier1QualificationPolicy | None = None,
         fail_closed: bool = True,
         key_provider: KeyProvider | None = None,
+        profile: NodeProfile | None = None,
     ) -> None:
         self.timing_authority = timing_authority
         self.sdr_backend = sdr_backend
@@ -65,6 +67,7 @@ class HardwareHAL(BaseHAL):
         self.qualification_policy = qualification_policy or Tier1QualificationPolicy()
         self.fail_closed = fail_closed
         self.key_provider = key_provider
+        self._profile = profile
         self._key_loaded = self._check_key_loaded()
 
     def _check_key_loaded(self) -> bool:
@@ -171,9 +174,9 @@ class HardwareHAL(BaseHAL):
 
     def ingest_sdr(
         self,
-        center_freq: float = 100e6,
-        sample_rate: float = 2e6,
-        num_samples: int = 16384,
+        center_freq: float | None = None,
+        sample_rate: float | None = None,
+        num_samples: int | None = None,
         node_id: str = "PI5-ALPHA",
         sensor_id: str = "PLUTO-01",
         gps_locked: bool = True,
@@ -183,12 +186,24 @@ class HardwareHAL(BaseHAL):
         """SPEC-005A.4b — SDR IQ live ingestion with sample accounting."""
         timing = self.timing_authority.attest()
 
+        profile_cfg = self._profile
+        center_freq = center_freq if center_freq is not None else (
+            profile_cfg.rf.center_frequency_hz if profile_cfg else 100e6
+        )
+        sample_rate = sample_rate if sample_rate is not None else (
+            profile_cfg.rf.sample_rate_hz if profile_cfg else 10e6
+        )
+        num_samples = num_samples if num_samples is not None else (
+            profile_cfg.sdr.buffer_samples if profile_cfg else 16384
+        )
+        gain_db = profile_cfg.rf.gain_db if profile_cfg else 62.0
+
         profile = CaptureProfile(
             center_frequency_hz=int(center_freq),
             sample_rate_sps=int(sample_rate),
             bandwidth_hz=int(sample_rate),
-            gain_db=64.0,
-            gain_mode="manual",
+            gain_db=gain_db,
+            gain_mode=profile_cfg.rf.gain_mode if profile_cfg else "manual",
             receive_channels=(0,),
             transmit_enabled=False,
             buffer_samples=num_samples,

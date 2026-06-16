@@ -34,15 +34,15 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
 
-from src.dslv_zpdi.layer1_ingestion.gps_poller import GPSPoller
-from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import (
-    build_mobile_payload,
-    IngestionPayload,
+from dslv_zpdi.layer1_ingestion.gps_poller import GPSPoller
+from dslv_zpdi.layer1_ingestion.mobile_ingestion import (
     SENSORS,
     TERMUX_SENSOR_BIN,
+    IngestionPayload,
+    build_mobile_payload,
     score_mobile_payload,
 )
-from src.dslv_zpdi.layer3_telemetry.mobile_router import route_packet, SecondaryLog
+from dslv_zpdi.layer3_telemetry.mobile_router import SecondaryLog, route_packet
 
 # ---------------------------------------------------------------------------
 # Environment-configurable constants

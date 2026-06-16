@@ -15,9 +15,6 @@ Primary events are clustered to keep render time sane on large captures.
 """
 
 from __future__ import annotations
-from mapping.aggregate import Anchor, MapEvent, collect_all
-from folium.plugins import HeatMap, MarkerCluster
-import folium
 
 import argparse
 import datetime as dt
@@ -25,6 +22,11 @@ import html
 import sys
 import webbrowser
 from pathlib import Path
+
+import folium
+from folium.plugins import HeatMap, MarkerCluster
+
+from mapping.aggregate import Anchor, MapEvent, collect_all
 
 # Allow running as a module or as a script from anywhere.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from typing import Tuple
 
 
 # SPEC-003A
@@ -43,7 +42,7 @@ class OrientationTracker:
 
     def __init__(self, window: int = 8) -> None:
         """SPEC-003A"""
-        self._buf: deque[Tuple[float, float, float, float]] = deque(maxlen=window)
+        self._buf: deque[tuple[float, float, float, float]] = deque(maxlen=window)
 
     def push(self, reading: dict) -> None:
         """Ingest a single rotation-vector sensor reading.
@@ -86,7 +85,7 @@ def apply_orientation_weight(
     r_local: float,
     r_smooth: float,
     tracker: OrientationTracker,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """Return (r_local_fused, r_smooth_fused, w_orient).
 
     Scales both coherence scores by the current orientation-stability weight.

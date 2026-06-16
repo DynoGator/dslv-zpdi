@@ -1,7 +1,6 @@
 """Tests for the Tier-1 WSS ingestion server — SPEC-008 crypto pipeline."""
 
 from __future__ import annotations
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 import base64
 import hashlib
@@ -9,12 +8,10 @@ import hmac as hmac_lib
 import json
 import math
 import os
-import sys
 import time
 import uuid
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # ---------------------------------------------------------------------------
 # Helpers — mirror the mobile node's signing/encryption logic
@@ -219,18 +216,18 @@ class TestAESDecryption:
 class TestOrientationFusion:
 
     def test_stability_one_before_warmup(self):
-        from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+        from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
         t = OrientationTracker()
         assert t.stability() == 1.0  # No samples yet
 
     def test_stability_one_after_single_push(self):
-        from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+        from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
         t = OrientationTracker()
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
         assert t.stability() == 1.0  # Only one sample — no delta
 
     def test_stability_identity_quaternion(self):
-        from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+        from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
         t = OrientationTracker()
         identity = {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0}
         t.push(identity)
@@ -239,7 +236,7 @@ class TestOrientationFusion:
 
     def test_stability_90_degree_rotation(self):
         """90° rotation between samples → stability ≈ cos(45°) ≈ 0.707."""
-        from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+        from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
         t = OrientationTracker()
         # q1 = identity
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
@@ -250,7 +247,7 @@ class TestOrientationFusion:
         assert abs(stab - s45) < 0.01
 
     def test_apply_weight_scales_scores(self):
-        from src.dslv_zpdi.layer2_core.fusion_engine import (
+        from dslv_zpdi.layer2_core.fusion_engine import (
             OrientationTracker,
             apply_orientation_weight,
         )
@@ -265,7 +262,7 @@ class TestOrientationFusion:
     def test_fusion_lowers_score_on_motion(self):
         import math
 
-        from src.dslv_zpdi.layer2_core.fusion_engine import (
+        from dslv_zpdi.layer2_core.fusion_engine import (
             OrientationTracker,
             apply_orientation_weight,
         )

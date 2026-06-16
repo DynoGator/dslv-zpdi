@@ -34,7 +34,7 @@ sdr:
   rf_bandwidth_hz: 10000000
   buffer_samples: 262144
   gain_mode: manual
-  gain_db: 64.0
+  gain_db: 62.0
 
 timing:
   authority: lbe1421
@@ -49,7 +49,7 @@ rf:
   center_frequency_hz: 100000000
   sample_rate_hz: 10000000
   rf_bandwidth_hz: 10000000
-  gain_db: 64.0
+  gain_db: 62.0
   gain_mode: manual
 
 converter:

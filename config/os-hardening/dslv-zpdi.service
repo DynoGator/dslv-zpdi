@@ -8,10 +8,10 @@ Requires=dslv-zpdi-preflight.service
 Type=simple
 User=dynogator
 Group=dynogator
-WorkingDirectory=/home/dynogator/Gem-home/dslv-zpdi
-ExecStart=/home/dynogator/Gem-home/dslv-zpdi/venv/bin/python -m dslv_zpdi.main_pipeline
+WorkingDirectory=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi
+ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/python -m dslv_zpdi.main_pipeline
 Environment=PYTHONUNBUFFERED=1
-Environment=DSLV_CONFIG_PATH=/home/dynogator/Gem-home/dslv-zpdi/config/deployment.yaml
+Environment=DSLV_CONFIG_PATH=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/config/deployment.yaml
 Restart=on-failure
 RestartSec=30
 StartLimitInterval=120
@@ -41,7 +41,7 @@ RestrictRealtime=false
 RestrictNamespaces=false
 
 # Read-write paths needed for pipeline operation
-ReadWritePaths=/home/dynogator/Gem-home/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
+ReadWritePaths=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
 
 StandardOutput=journal
 StandardError=journal

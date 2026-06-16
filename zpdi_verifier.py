@@ -26,7 +26,6 @@ from pathlib import Path
 
 import h5py
 
-
 DEFAULT_HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "./data/zpdi_stream.h5"))
 DATASET_NAME = "payloads"
 

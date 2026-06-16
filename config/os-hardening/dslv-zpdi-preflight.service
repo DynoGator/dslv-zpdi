@@ -7,7 +7,7 @@ Before=dslv-zpdi.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/home/dynogator/Gem-home/dslv-zpdi/tools/preflight.sh
+ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/tools/preflight.sh
 StandardOutput=journal
 StandardError=journal
 
