@@ -163,14 +163,11 @@ class TestNMEAFailurePaths:
             assert result["nmea_available"] is False
             assert result["gps_fix"] is False
 
-    def test_serial_timeout(self):
-        patches = {
-            "serial": mock.MagicMock(side_effect=OSError("Port not found")),
-        }
-        with mock.patch.dict(hal_hw_module.__dict__, patches):
-            result = HardwareHAL.verify_nmea_telemetry()
-            assert result["nmea_available"] is False
-            assert any("Serial port error" in w for w in result["warnings"])
+    @mock.patch("serial.Serial", side_effect=OSError("Port not found"))
+    def test_serial_timeout(self, mock_serial):
+        result = HardwareHAL.verify_nmea_telemetry()
+        assert result["nmea_available"] is False
+        assert any("serial port error" in w.lower() for w in result["warnings"])
 
 
 class TestHDF5Unavailable:

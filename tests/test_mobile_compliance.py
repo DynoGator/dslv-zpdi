@@ -160,6 +160,8 @@ def test_primary_hdf5_is_empty_after_mobile_run():
     Skipped automatically if a production daemon is already running,
     because termux-sensor allows only one streaming instance at a time.
     """
+    if not Path("/data/data/com.termux/files/usr/bin/termux-sensor").exists():
+        pytest.skip("termux-sensor not found, skipping mobile live integration test")
     # Detect running production daemon
     try:
         result = subprocess.run(
