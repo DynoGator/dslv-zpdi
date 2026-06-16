@@ -1,0 +1,5 @@
+?? TURNOVER_2026-06-14_PlutoSDR_Dashboard.md
+?? artifacts/
+?? specs/SPEC-004A.5.md
+?? src/dslv_zpdi/layer1_ingestion/hal_pluto.py
+?? tests/test_pluto_hal.py

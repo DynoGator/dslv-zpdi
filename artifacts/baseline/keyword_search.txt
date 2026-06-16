@@ -1,0 +1,1184 @@
+./CONTRIBUTING.md:4:**Status:** Rev 4.2.0 Canonical (Phase 2A Hardware Transition — LBE-1421)
+./CONTRIBUTING.md:19:- **Simulation:** Implement a `SimulatedHAL` for CI/CD and virtual validation before physical deployment.
+./RELEASE_NOTES_v4.3.0.md:9:Version 4.3.0 introduces a hardened, multi-OS compatible deployment architecture. It formally validates and supports **Raspberry Pi OS Trixie (Debian 13)** alongside **Bookworm (Debian 12)**. This release also addresses the "SoapySDR Venv Isolation" problem by introducing an automated linkage layer for hardware-agnostic SDR drivers.
+./RELEASE_NOTES_v4.3.0.md:15:- **SoapySDR Linkage:** Automatically symlinks system `python3-soapysdr` into the project's virtual environment. This enables the high-performance C++ bindings to be used within the isolated Python environment without requiring complex source builds.
+./RELEASE_NOTES_v4.3.0.md:32:- SoapySDR venv linkage: VERIFIED
+./TURNOVER_2026-06-01_Codex_Local_Update.md:17:  - Added missing SPEC-ID docstrings for NMEA, PPS, node receiver, and pyhackrf wrapper paths.
+./RELEASE_NOTES_v4.5.0.md:6:LBE-1421 hardened operations stack with fully instrumented dashboard, automated email telemetry pipeline, interactive geospatial mapping, hardened project launcher, and field baseline coherence integration.
+./RELEASE_NOTES_v4.5.0.md:39:- `README.md` — bumped to Rev 4.5.0 with LBE-1421 hardened operations stack documentation.
+./CHANGELOG.md:6:- **Task A (critical)**: `hal_hardware.py` SoapySDR and pyhackrf top-level guards changed from bare `except ImportError:` to `except (ImportError, OSError):`. The `hackrf` package (and Soapy) execute `CDLL('libhackrf.so.0')` (and equiv) at *import time*, raising `OSError` (not `ImportError`) when the native shared object is absent (this proot Pixel / GrapheneOS simulator-only host has no libhackrf). This previously caused 0 tests collected (test_hardware_failure_paths + test_timing_monitor via lock_monitor). Now 113 tests collected + passing on no-hw host. Added Rev 4.8.x explanatory comments referencing governing `SPEC-005A.HAL-HW`.
+./CHANGELOG.md:82:- **LBE-1420→LBE-1421 typos** in `V3_DSLV-ZPDI_LIVING_MASTER.md` — two instances where dual-output GPSDO was misidentified as single-output.
+./CHANGELOG.md:83:- **Dual-output architecture clarity** in `PHASE_2A_TIER_1_BUILD_SHEET.md` — new section documenting LBE-1421 Out1 (1 PPS → GPIO 18) and Out2 (10 MHz → HackRF CLKIN) independence.
+./CHANGELOG.md:93:- Total suite: 94 passing (excluding 2 pre-existing flaky hardware tests tied to real HackRF state).
+./CHANGELOG.md:141:- **pyhackrf LNA/VGA Gain Log Spam** — removed redundant print statements in `pyhackrf` site-package that caused severe stdout spam during rapid SDR capture cycles.
+./CHANGELOG.md:142:- **ComplexWarning in hal_hardware.py** — corrected the pyhackrf ingestion flow which was redundantly converting complex data from `read_samples` into interleaved structures, discarding the imaginary parts and raising a `ComplexWarning`.
+./CHANGELOG.md:156:- **HackRF boot initialisation service** (`config/dslv-zpdi-hackrf-init.service`) — runs
+./CHANGELOG.md:157:  `hackrf_info` once after udev settles USB, waking the device out of cold-start before
+./CHANGELOG.md:158:  the pipeline preflight. Failure is non-fatal (pipeline falls back to SimulatedHAL).
+./CHANGELOG.md:175:- **HardwareHAL SoapySDR/pyhackrf fallback** — when SoapySDR raises `DriverUnavailableError`
+./CHANGELOG.md:185:- **HackRF / real-SDR ON by default** — dashboard now sets
+./CHANGELOG.md:187:  simulated mode. Waterfall panel and footer SDR indicator reflect live HackRF data
+./CHANGELOG.md:237:- **HackRF device contention (pipeline vs. dashboard)** — `launch.sh` was exporting
+./CHANGELOG.md:238:  `DSLV_DASHBOARD_REAL_SDR=1`, causing `hackrf_sweep` to start immediately and hold the
+./CHANGELOG.md:239:  HackRF exclusively, forcing the pipeline into SimulatedHAL on every service restart.
+./CHANGELOG.md:241:- **HackRF probe retry** — `_verify_pyhackrf_clock()` now retries 3× with 2 s delay
+./CHANGELOG.md:242:  before falling back to SimulatedHAL, surviving brief contention windows at startup.
+./CHANGELOG.md:245:- **HackRF amplifier hard lockout** — `WaterfallPanel.toggle_amp()` is now a permanent
+./CHANGELOG.md:246:  no-op; `_ingest_pyhackrf()` explicitly calls `set_amp_enable(0)` before every SDR
+./CHANGELOG.md:248:  HackRF 1 front-end amp is blown — parts on order.
+./CHANGELOG.md:260:- SoapySDR find command precedence in Tier-1 provisioning
+./CHANGELOG.md:318:- `hal_hardware.py` — PPS jitter now uses interval-stdev ring buffer; IQ phase via `np.angle(complex_baseband)`; SoapySDR error handling; guarded NMEA parsing.
+./CHANGELOG.md:330:- Silent SoapySDR stream errors (return code ignored).
+./CHANGELOG.md:351:- README bumped to Rev 4.5.0 — LBE-1421 Hardened Operations Stack.
+./CHANGELOG.md:363:- Hilbert phase extraction in `HardwareHAL` and `SimulatedHAL` (Layer 1, 64-item preview).
+./CHANGELOG.md:365:- udev rules (`99-pps.rules`, `52-hackrf.rules`) and `systemctl enable chrony` in installer.
+./CHANGELOG.md:381:- Hardware failure-path mock tests covering SoapySDR, pyhackrf, serial/NMEA, and HDF5 unavailability.
+./CHANGELOG.md:398:- False-positive clock verification in pyhackrf fallback path.
+./CHANGELOG.md:405:- **SoapySDR Venv Linkage:** Automated symlinking of system `python3-soapysdr` to venv.
+./CHANGELOG.md:415:- **Dependencies:** Corrected `pyhackrf` version requirement from `>=1.0.0` (non-existent) to `>=0.2.0`.
+./CHANGELOG.md:416:- **Installer:** Resolved installation failure in `install_dslv_zpdi.sh` due to invalid `pyhackrf` version.
+./CHANGELOG.md:421:- **LBE-1421 GPSDO Migration:** Migrated Clock Authority from Leo Bodnar Mini GPSDO to Leo Bodnar LBE-1421 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native output).
+./CHANGELOG.md:424:- **Hardware Change Justification:** Created `docs/HARDWARE_CHANGE_JUSTIFICATION.md` (SPEC-UPDATE-PHASE-2A-LBE-1421).
+./CHANGELOG.md:428:- **Dependencies:** Replaced `pyrtlsdr` with `pyhackrf` in core dependencies. RTL-SDR is Tier 2 only.
+./CHANGELOG.md:430:- **RP1 Voltage Warning:** Updated to reflect LBE-1421 native 3.3V compatibility (no level-shifter needed).
+./CHANGELOG.md:431:- **Physical Routing Protocol:** Updated wiring instructions for LBE-1421-specific connections (USB-C power/telemetry, 3.3V PPS).
+./CHANGELOG.md:435:- **Leo Bodnar Mini GPSDO:** Formally superseded by LBE-1421. Mini-USB connection unreliable for field ops.
+./CHANGELOG.md:484:- **HAL Architecture:** Implemented `BaseHAL`, `HardwareHAL`, and `SimulatedHAL` to decouple software from hardware.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:12:For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** timing using the **Leo Bodnar LBE-1421 GPSDO**. This unit provides simultaneous 10 MHz reference and 1 PPS physical interrupts, achieving true hardware phase-lock to the GPS constellation.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:14:**LBE-1421 Key Specs:**
+./PHASE_2A_TIER_1_BUILD_SHEET.md:28:| SDR (RF Eye) | HackRF One | Great Scott Gadgets | 1 | RF Ingestion (External CLKIN) |
+./PHASE_2A_TIER_1_BUILD_SHEET.md:29:| Clock Authority | GPSDO | Leo Bodnar LBE-1421 | 1 | 10 MHz + 1 PPS (Out2/Out1) |
+./PHASE_2A_TIER_1_BUILD_SHEET.md:31:| GNSS Antenna | Active GPS Antenna | 3-5V Active Patch | 1 | Required for LBE-1421 Lock |
+./PHASE_2A_TIER_1_BUILD_SHEET.md:32:| RF Cabling | SMA to SMA | M-to-M 50 Ohm (<= 1FT) | 1 | LBE-1421 Out2 -> HackRF CLKIN |
+./PHASE_2A_TIER_1_BUILD_SHEET.md:33:| PPS Wiring | Jumper Wires | Premium F-to-F | 2 | LBE-1421 Out1 -> Pi 5 GPIO 18 |
+./PHASE_2A_TIER_1_BUILD_SHEET.md:54:**Step 2.** **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1421 `Out2` port (configured to 10,000,000 Hz) to the HackRF One `CLKIN` port. Use a 50 Ohm terminator if cable length exceeds 1 foot.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:55:**Step 3.** **OS Timestamping (Heartbeat):** Connect jumper from LBE-1421 `Out1` (configured to 1 PPS mode) to Pi 5 **GPIO 18** (Physical Pin 12). Bridge ground between LBE-1421 and Pi 5.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:56:**Step 4.** **Power & Telemetry:** Connect LBE-1421 via USB-C to Pi 5. This provides power (250mA draw) and enables NMEA telemetry on `/dev/ttyACM0`.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:57:**Step 5.** Connect HackRF One to Pi 5 via USB 3.0. Connect antennas to respective ports.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:59:### Dual-Output Architecture (LBE-1421)
+./PHASE_2A_TIER_1_BUILD_SHEET.md:61:The LBE-1421 has **two independent outputs**, unlike the deprecated LBE-1420 single-output unit:
+./PHASE_2A_TIER_1_BUILD_SHEET.md:64:- **Out2** → 10 MHz to HackRF CLKIN (hardware ADC phase-lock)
+./PHASE_2A_TIER_1_BUILD_SHEET.md:66:Because the outputs are independent, **Out2 can be reconfigured** (e.g., to a verification frequency or to discipline a second device) without affecting the 1 PPS timing on Out1. For Phase 2B, Out2 is the primary 10 MHz reference; the second output role is reserved for future expansion (e.g., a second SDR or a standalone frequency counter for timing-health cross-check).
+./PHASE_2A_TIER_1_BUILD_SHEET.md:73:2. **Tools:** `sudo apt install pps-tools chrony hackrf`
+./PHASE_2A_TIER_1_BUILD_SHEET.md:74:3. **Verify ADC Lock:** `hackrf_debug --clock_source` must report `external`.
+./PHASE_2A_TIER_1_BUILD_SHEET.md:83:- **Do NOT** connect Out1/Out2 to Pi 5 if voltage exceeds 3.3V. (LBE-1421 is 3.3V native).
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:24:| **SoapySDR errors silent** | `sr` from `readStream` discarded | Check `sr.ret < 0` for errors; trim buffer to actual samples | `hal_hardware.py` |
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:52:| **Hot-plug** | `hackrf_present()` once at init | Re-check every 10 s in `_sync_stream()` | `waterfall.py` |
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:110:- `hal_hardware.py` — PPS jitter now interval-stdev; IQ phase via `np.angle`; SoapySDR error handling; guarded NMEA parsing
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:122:- Silent SoapySDR stream errors
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:133:- HackRF One r9 detected, fw 2.1.0, serial ending `61dc2a7c5f4f`
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:135:- GPSDO LBE-1421 **not yet connected** via USB-C (NMEA serial absent) — expected hardware gap
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:143:# 1. Wire LBE-1421: 10 MHz SMA → HackRF CLKIN, 1 PPS → Pi 5 GPIO 18 (verify 3.3V)
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:144:# 2. Connect LBE-1421 USB-C for NMEA telemetry
+./SESSION_REPORT_2026-04-24_Tier1_Optimization.md:152:1. SoapySDR Python bindings not installed (`pyhackrf` fallback is active and functional).
+./compose.yaml:45:  # OPT-IN hardware profile. Requires a real HackRF / GPSDO / radon device on the
+./compose.yaml:58:      - "/dev/bus/usb:/dev/bus/usb"   # HackRF / USB SDR passthrough
+./TURNOVER_2026-05-30_Node_Tuning.md:12:1. **HackRF Gain Logging Spam (`pyhackrf` site-package)**
+./TURNOVER_2026-05-30_Node_Tuning.md:14:   - **Cause:** Unsuppressed print statements within the `__init__.py` file of the `pyhackrf` dependency.
+./TURNOVER_2026-05-30_Node_Tuning.md:15:   - **Resolution:** Surgically commented out the print statements within the virtual environment's `pyhackrf` module. This entirely eliminated the journal spam, reducing CPU and I/O overhead.
+./TURNOVER_2026-05-30_Node_Tuning.md:19:   - **Cause:** When falling back to `pyhackrf`, the data buffer returned by `hackrf_device.read_samples()` was already typed as complex float. The codebase incorrectly attempted to cast it to `np.float32` and then re-interleave it, destroying phase information.
+./TURNOVER_2026-05-30_Node_Tuning.md:20:   - **Resolution:** Re-factored the `pyhackrf` fallback ingestion logic in `HardwareHAL` to pass the complex samples directly to `np.angle()` without arbitrary transformations.
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:15:| HackRF One | 1d50:6089 | ✓ Online | Rev r9, fw v2.1.0, s/n …61dc2a7c5f4f |
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:16:| Leo Bodnar LBE-1421 GPSDO | 1dd2:2444 | ✓ Locked | Stratum 1 · PPS0 · NMEA via /dev/ttyACM0 |
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:19:**HackRF amp status:** BLOWN — parts on order. Amp locked out in software (see fixes below).
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:64:### 3. HackRF Amplifier — Hardware Fault, Parts on Order (LOCKED)
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:66:**Situation:** HackRF 1 front-end RF amplifier is physically blown. User confirmed parts
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:72:2. **`app.py`** — Pressing `a` shows `WARN: AMP LOCKED OUT — HackRF 1 amp blown, parts on order`
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:74:3. **`hal_hardware.py`** — `_ingest_pyhackrf()` now calls `hackrf_device.set_amp_enable(0)`
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:80:### 4. HackRF Device Contention — Pipeline vs. Dashboard hackrf_sweep (FIXED)
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:83:caused the waterfall panel's `_sync_stream()` to immediately start a `hackrf_sweep`
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:84:subprocess whenever the dashboard launched. `hackrf_sweep` holds the HackRF device
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:86:`_probe_pyhackrf_subprocess()` call found the device locked → fell back to SimulatedHAL.
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:93:`_verify_pyhackrf_clock()` to survive brief contention windows during pipeline startup.
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:150:| SoapySDR module missing | Low | `soapysdr-module-hackrf` not installed; pipeline falls through to pyhackrf (expected) |
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:151:| HackRF amp replacement | Blocking for amp use | Parts on order; software lockout active until parts arrive |
+./SESSION_REPORT_2026-05-08_Tier1_Operational.md:183:hackrf_sweep: 1 instance (user-enabled REAL SDR in main dashboard via 'r')
+./requirements.txt:5:pyhackrf>=0.2.0
+./RELEASE_NOTES_v4.6.0.md:3:## DSLV-ZPDI v4.6.0 — LBE-1421 Hardened Operations Stack
+./RELEASE_NOTES_v4.6.0.md:6:Production-hardened release integrating Leo Bodnar LBE-1421 GPSDO timing
+./RELEASE_NOTES_v4.6.0.md:12:- SoapySDR linkage fix for virtual environment provisioning
+./AGENTS.md:10:* **Hardware:** Raspberry Pi (ecosystem, pinouts, compute modules), HackRF One (SDR architecture), and Leo Bodnar LBE-1421 Locked Clock Source / GPSDO.
+./CLOSEOUT_PHASE2B_2026-06-05.md:89:**Test:** `tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths`
+./CLOSEOUT_PHASE2B_2026-06-05.md:90:- `test_pyhackrf_internal_clock_raises_clock_verification`
+./CLOSEOUT_PHASE2B_2026-06-05.md:91:- `test_pyhackrf_unknown_clock_raises_clock_verification`
+./CLOSEOUT_PHASE2B_2026-06-05.md:94:1. Both tests patch `hal_hw_module.__dict__` with a mock `pyhackrf`, expecting `HardwareHAL()` to raise `ClockVerificationError` based on `mock_device.clock_source`.
+./CLOSEOUT_PHASE2B_2026-06-05.md:95:2. However, `_verify_pyhackrf_clock()` spawns a subprocess that imports the **real** `hackrf` module. If a real HackRF is accessible, the probe succeeds, the mock is bypassed, and the expected exception is not raised → test fails.
+./CLOSEOUT_PHASE2B_2026-06-05.md:100:**Resolution:** Added a runtime hardware-gated `@pytest.mark.skipif(_HACKRF_HARDWARE_ACCESSIBLE, ...)` condition at module load time. The helper probes the real `hackrf` module via subprocess; if a real device is accessible, the two tests are skipped so CI/node-with-hardware runs stay honest. The test bodies and assertions were **not** weakened.
+./CLOSEOUT_PHASE2B_2026-06-05.md:103:- On this node (real HackRF accessible intermittently): tests pass when probe fails, skip when probe succeeds — suite stays green either way.
+./CLOSEOUT_PHASE2B_2026-06-05.md:144:- LBE-1421 documentation is corrected.
+./CLOSEOUT_PHASE2B_2026-06-05.md:164:- [x] Test suite green (`103 passed`, or `101 passed + 2 hardware-gated skipped` when real HackRF is accessible).
+./SESSION_REPORT_2026-04-15_Surgical.md:28:- `hal_hardware.py` (`_ingest_soapy` and `_ingest_pyhackrf`) now emits `[[float(i), float(q)], …]` pairs.
+./SESSION_REPORT_2026-04-15_Surgical.md:48:**Problem:** The `pyhackrf` fallback path could set `_clock_verified = True` even when the clock source was only warned about (not explicitly external).
+./SESSION_REPORT_2026-04-15_Surgical.md:51:- `_verify_pyhackrf_clock()` now **raises `ClockVerificationError`** if `clock_source != "external"`.
+./SESSION_REPORT_2026-04-15_Surgical.md:117:  - SoapySDR enumeration failure → `DriverUnavailableError`
+./SESSION_REPORT_2026-04-15_Surgical.md:118:  - HackRF not found → `HardwareInitializationError`
+./SESSION_REPORT_2026-04-15_Surgical.md:120:  - `pyhackrf` internal clock → `ClockVerificationError`
+./SESSION_REPORT_2026-04-15_Surgical.md:121:  - `pyhackrf` unknown clock → `ClockVerificationError`
+./SESSION_REPORT_2026-04-15_Surgical.md:207:- Hardware failure-path mock tests covering SoapySDR, pyhackrf, serial/NMEA, and HDF5 unavailability.
+./SESSION_REPORT_2026-04-15_Surgical.md:224:- False-positive clock verification in pyhackrf fallback path.
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:11:### Phase 1 — Networking & HackRF Boot
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:16:| `config/dslv-zpdi-hackrf-init.service` | Runs `hackrf_info` once after udev settle; wakes HackRF before preflight |
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:26:**To enable HackRF boot service:**
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:28:sudo cp config/dslv-zpdi-hackrf-init.service /etc/systemd/system/
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:30:sudo systemctl enable --now dslv-zpdi-hackrf-init
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:81:**HackRF ON by default:**  
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:101:- Fixed `HardwareHAL` fallback: SoapySDR error + no pyhackrf now re-raises the original exception.
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:120:    └─ dslv-zpdi-hackrf-init   [NEW]
+./TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md:133:config/dslv-zpdi-hackrf-init.service                    [NEW]
+./SESSION_REPORT_2026-04-16_v4.4.0_Grok-Recs.md:20:- Added `check_hal_factory_lock()`: instantiates the canonical HAL via `get_hal()` and asserts `phase_lock_verified == True`.
+./TURNOVER_2026-06-14_PlutoSDR_Dashboard.md:11:   * `src/dslv_zpdi/layer1_ingestion/hal_factory.py` — `sdr_type` routing (`auto`/`hackrf`/`pluto`/`sim`) + auto-detection helpers.
+./TURNOVER_2026-06-14_PlutoSDR_Dashboard.md:20:   * `tools/dashboard/panels/hardware.py` — shows both HackRF and PlutoSDR detection.
+./TURNOVER_2026-06-14_PlutoSDR_Dashboard.md:27:   * `AGENTS.md` — documented system `.pth` workaround for `iio`/`SoapySDR` in venv.
+./TURNOVER_2026-06-14_PlutoSDR_Dashboard.md:46:* **External-clock trust remains wiring-dependent.** Tier 1 primary output requires physically wiring GPSDO 10 MHz → Pluto `CLKIN` and 1 PPS, then setting `pluto_external_clock: true`.
+./SESSION_REPORT_2026-04-09.md:3:> **ARCHITECTURE UPDATE:** This session report captures the state immediately prior to the Phase 2A RF Metrology Pivot. The current Tier 1 hardware baseline has shifted from the CM5 + Intel i210-T1 / PTP / RTL-SDR stack described below to **Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO**. See `docs/ARCH-PHASE-2A-PIVOT.md` and `RF_METROLOGY_PIVOT_REPORT.md` for the canonical current architecture.
+./.github/workflows/dslv_zpdi_ci.yml:38:      - name: Install system libraries (HackRF / USB)
+./.github/workflows/dslv_zpdi_ci.yml:41:          sudo apt-get install -y --no-install-recommends libhackrf-dev libusb-1.0-0-dev
+./.github/ISSUE_TEMPLATE/hardware_incident.yml:35:      placeholder: "HackRF One (firmware version)"
+./.github/ISSUE_TEMPLATE/hardware_incident.yml:41:        - "LBE-1421 locked (PPS + 10 MHz)"
+./.github/ISSUE_TEMPLATE/hardware_incident.yml:42:        - "LBE-1421 unlocked / holdover"
+./SESSION_REPORT_2026-05-01_DSI_Optimization.md:31:- **LBE-1421 Support:** The hardware panel now explicitly surfaces GPS fix status and satellite counts from the Leo Bodnar LBE-1421 GPSDO.
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:35:**Status:** Red, expected. No antenna connected to LBE-1421 indoors.
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:77:| `V3_DSLV-ZPDI_LIVING_MASTER.md` | Fixed LBE-1420→LBE-1421 typos | Doc accuracy |
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:111:94 passed, 1 failed (test_pyhackrf_unknown_clock_raises_clock_verification)
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:114:The single failure is hardware-state-dependent (flaky when real HackRF is connected). It was present on arrival and is not a regression.
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:163:- **Expected:** Leo Bodnar LBE-1421 (dual-output)
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:164:- **Documentation corrected:** README and build sheet already reflected LBE-1421 correctly. Living master had two typos (`LBE-1421 replaces deprecated LBE-1421` and `single-output GPSDO e.g., LBE-1421`) — both corrected to `LBE-1420`.
+./SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md:189:- [x] GPSDO corrected to LBE-1421 dual-output across docs; second output role documented
+./SESSION_REPORT_2026-04-24_Reboot_Prep.md:5:**Platform:** Raspberry Pi 5 + HackRF + LBE-1421 GPSDO (pending) + 5" DSI
+./SESSION_REPORT_2026-04-24_Reboot_Prep.md:20:- Regression rollback: numpy 2.x → 1.26.4 to keep `pyhackrf` happy
+./SESSION_REPORT_2026-04-24_Reboot_Prep.md:36:  numpy 1.26 + hackrf still importable, map renders, email bundles
+./SESSION_REPORT_2026-04-24_Reboot_Prep.md:115:| numpy version (venv) | 1.26.4 (pyhackrf-compatible) |
+./SESSION_REPORT_2026-04-24_Reboot_Prep.md:124:- Runtime processes (dashboard windows, `main_pipeline`, `hackrf_sweep`)
+./SESSION_REPORT_2026-04-24_Reboot_Prep.md:169:- **ViTables disabled.** Upstream `pyhackrf 0.2.0` pins `numpy<2`,
+./src/dslv_zpdi/main_pipeline.py:17:from dslv_zpdi.layer1_ingestion.hal_simulated import SimulatedHAL
+./src/dslv_zpdi/main_pipeline.py:109:    _hw_fallback = not args.simulator and isinstance(hal, SimulatedHAL)
+./src/dslv_zpdi/main_pipeline.py:113:            "Connect HackRF + GPSDO and restart the service to enable hardware ingestion."
+./src/dslv_zpdi/orchestrator/radon_session.py:6:  1. Bind the three physical devices (RadonEye Pro, Pixel 9 Pro XL, LBE-1421 GPSDO).
+./src/dslv_zpdi/layer3_telemetry/hdf5_writer.py:29:    # pattern for native libs (cf. libhackrf in hal_hardware). SPEC-007.
+./src/dslv_zpdi/layer3_telemetry/hdf5_writer.py:60:            self.key = b"dev_key_replace_before_field_deploy"
+./src/dslv_zpdi/layer3_telemetry/radon_session_writer.py:49:    # pattern for native libs (cf. libhackrf in hal_hardware). SPEC-018.
+./src/dslv_zpdi/layer3_telemetry/radon_session_writer.py:133:        self.key = enclave_key or b"dev_key_replace_before_field_deploy"
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:13:from .hal_simulated import SimulatedHAL
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:23:    "SimulatedHAL",
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:31:def get_hal(tier: int = 1, simulator: bool = False) -> HardwareHAL | SimulatedHAL:
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:40:        SimulatedHAL if simulator=True or DEV_SIMULATOR=1, otherwise HardwareHAL.
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:41:        Falls back to SimulatedHAL automatically if hardware init fails.
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:44:        return SimulatedHAL()
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:46:        return HardwareHAL()  # SoapySDR primary → pyhackrf fallback, external clock enforced
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:50:            "Falling back to SimulatedHAL. Connect HackRF + GPSDO and restart "
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:53:        return SimulatedHAL()
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:61:    - Hardware: Leo Bodnar LBE-1421 GPSDO 1 PPS via GPIO
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:69:    SPEC-005A.4b — SDR IQ ingestion via HackRF One.
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:72:    - Hardware: HackRF One with GPSDO 10 MHz CLKIN (hardware phase-lock)
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:76:    - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:84:    SPEC-004A.3 — Verify GPSDO/HackRF hardware lock status.
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:87:    - HackRF detection
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:88:    - External clock source (GPSDO 10 MHz)
+./src/dslv_zpdi/layer1_ingestion/hal_factory.py:92:        device_index: HackRF device index (default 0)
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:19:    SPEC-004A.3 | Monitors LBE-1421 lock status using triple-validation:
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:22:    3. hackrf_info (Silent Traitor check)
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:48:            "hackrf_lock": False,
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:58:        # 3. HackRF Silent Traitor check
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:59:        metrics["hackrf_lock"] = self._verify_hackrf_clock()
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:66:        if gps_fix and metrics["hackrf_lock"] and healthy_jitter:
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:102:    def _verify_hackrf_clock(self) -> bool:
+./src/dslv_zpdi/layer1_ingestion/lock_monitor.py:106:                ["hackrf_debug", "--clock_source"],
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:4:Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:7:1. 10 MHz reference from GPSDO → HackRF CLKIN (hardware ADC lock)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:10:Rev 4.1-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:12:Rev 4.4.0: Migrated to LBE-1421 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:14:Rev 4.8.x: Broadened native import guards (ImportError, OSError) for simulator hosts (libhackrf etc).
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:37:# SoapySDR support - hardware-agnostic SDR driver layer
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:38:# Install: sudo apt install soapysdr-module-hackrf python3-soapysdr
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:39:# Rev 4.8.x: SoapySDR (and downstream native libs) can raise OSError at import
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:41:# libhackrf). Broaden guard so missing native degrades to simulator path.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:44:    import SoapySDR
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:50:# Fallback to pyhackrf if SoapySDR not available
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:51:# Rev 4.8.x: pyhackrf package does CDLL('libhackrf.so.0') at *import time* (not
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:59:    import hackrf as pyhackrf
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:61:    # pyhackrf 0.2.0 bug: hackrf_device_list_open uses 'arg_types' (ignored by
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:64:    # SoapySDR or other libraries. Fix it at import time.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:65:    pyhackrf.libhackrf.hackrf_device_list_open.argtypes = [
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:66:        POINTER(pyhackrf.hackrf_device_list_t),
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:68:        POINTER(pyhackrf.p_hackrf_device),
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:70:    # Also wrap hackrf_device_list() to call hackrf_init() first — pyhackrf
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:71:    # skips this, which can leave libhackrf's libusb context uninitialised.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:72:    _pyhackrf_orig_device_list = pyhackrf.hackrf_device_list
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:73:    # SPEC-005A.4b — Safe pyhackrf device list wrapper (handles missing init)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:74:    def _pyhackrf_device_list_safe():
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:75:        """SPEC-005A.HAL-HW — Initialize libhackrf before enumerating devices."""
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:76:        pyhackrf.libhackrf.hackrf_init()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:77:        return _pyhackrf_orig_device_list()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:78:    pyhackrf.hackrf_device_list = _pyhackrf_device_list_safe
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:80:    # Silence pyhackrf's debug print in __del__ (emitted on every GC cycle)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:81:    pyhackrf.HackRF.__del__ = lambda self: self.close()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:94:    - HackRF One with CLKIN port for 10 MHz GPSDO reference
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:95:    - Leo Bodnar LBE-1421 GPSDO (Out2=10 MHz reference, Out1=1 PPS)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:96:    - GPSDO Out2 (10 MHz) → HackRF CLKIN (hardware ADC phase-lock, 50 Ω)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:102:    The Pi 5's RP1 southbridge uses strictly 3.3V logic. LBE-1421 provides native
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:116:        The HackRF will silently fail back to internal oscillator if GPSDO
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:123:            nmea_port:  Serial port for LBE-1421 NMEA telemetry (default /dev/ttyACM0).
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:129:        # while the potentially slow HackRF probe runs.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:143:                print(f"[!] SoapySDR initialization failed: {e}. Falling back to pyhackrf...")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:146:                print(f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyhackrf...")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:150:                self._verify_pyhackrf_clock()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:152:                # SoapySDR was available but found no usable device, and there
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:153:                # is no pyhackrf fallback — surface the original error so the
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:162:        SPEC-005A.HAL-HW.SOAPY — Initialize SoapySDR with mandatory phase-lock.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:169:            results = SoapySDR.Device.enumerate()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:171:                raise DriverUnavailableError("No SoapySDR devices found.")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:173:            # Find HackRF device
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:174:            hackrf_found = False
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:176:                if "hackrf" in str(result).lower():
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:177:                    hackrf_found = True
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:180:            if not hackrf_found:
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:182:                    "HackRF not found in SoapySDR enumeration. "
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:183:                    "Verify HackRF is connected and driver installed."
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:187:            self.sdr_device = SoapySDR.Device({"driver": "hackrf"})
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:193:            print("[+] HardwareHAL initialized with SoapySDR.")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:194:            print("[+] Phase-lock verified. SDR slaved to GPSDO 10MHz reference.")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:204:                f"SoapySDR initialization failed: {e}"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:211:        The "Silent Traitor" mitigation: HackRF silently fails to internal
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:216:            # Set clock source to external (GPSDO CLKIN)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:233:                "Verify GPSDO 10 MHz SMA → HackRF CLKIN connection."
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:237:    def _probe_pyhackrf_subprocess() -> bool:
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:239:        Run pyhackrf init in a subprocess to detect SEGV risk without killing the main process.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:240:        Returns True only if HackRF opens, sets up, and closes cleanly.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:247:                 "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); assert d.device_opened; d.close(); print('ok')"],
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:257:    def _verify_pyhackrf_clock(self):
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:259:        Fallback clock verification for pyhackrf (non-SoapySDR) installations.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:261:        pyhackrf does not expose a clock_source attribute — HackRF has no
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:263:        External clock lock is established by hardware wiring (GPSDO 10 MHz
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:264:        SMA → HackRF CLKIN); GPS lock is verified at ingest time via NMEA.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:268:        Retries up to 3 times with 2 s delay to handle brief hackrf_sweep
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:273:            if self._probe_pyhackrf_subprocess():
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:276:                print(f"[!] HackRF probe attempt {attempt + 1}/{_max_retries} failed (device busy?) — retrying in 2 s")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:280:                "HackRF not accessible via pyhackrf after 3 attempts (device unavailable, in use, or permissions). "
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:281:                "Verify HackRF is connected and udev rules are applied. "
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:285:            device = pyhackrf.HackRF()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:289:            raise ClockVerificationError(f"Could not initialize HackRF via pyhackrf: {e}") from e
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:295:        Replaces the removed pyhackrf clock_source attribute check (that
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:296:        attribute does not exist in the pyhackrf API and always returned
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:302:          2. NMEA GPS fix — GGA sentence from the LBE-1421 USB-C serial port
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:305:        The 10 MHz CLKIN → HackRF connection cannot be verified in software
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:306:        (HackRF has no readable register for external-vs-internal clock state);
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:308:        With SoapySDR, setClockSource("external") is called as a best-effort
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:315:            "phase_lock_verified": False,
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:353:        # ── 3. SoapySDR clock assertion (best-effort if driver is available) #
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:358:                result["driver"] = "SoapySDR"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:360:                result["warnings"].append(f"SoapySDR clock assertion failed: {exc}")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:362:            result["driver"] = "pyhackrf"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:363:            # pyhackrf exposes no clock_source attribute. External clock is
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:364:            # the GPSDO 10 MHz SMA → HackRF CLKIN wiring; verified indirectly
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:375:        result["phase_lock_verified"] = jitter_ok and result["gps_fix"]
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:488:        sample_rate: float = 20e6,  # HackRF supports up to 20 MHz
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:495:        clock_source: str = "external",  # 'external' = GPSDO CLKIN
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:500:        Captures IQ samples using SoapySDR (hardware-agnostic) or pyhackrf fallback.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:501:        The SDR MUST be hardware-locked to the GPSDO via 10 MHz CLKIN input.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:509:        1. ADC sampling clock is GPS-locked at analog level (10 MHz CLKIN)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:514:            center_freq: Center frequency in Hz (1 MHz - 6 GHz for HackRF)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:515:            sample_rate: Sample rate in Hz (max 20 MHz for HackRF)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:518:            sensor_id: Sensor identifier for the HackRF unit
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:534:                "error": "No SDR driver available. Install: sudo apt install soapysdr-module-hackrf",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:544:                if not lock_status["phase_lock_verified"]:
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:547:                        "Check GPSDO 10 MHz → CLKIN connection."
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:551:                # SoapySDR hardware-agnostic implementation
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:555:                # Fallback pyhackrf implementation
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:556:                raw_val = self._ingest_pyhackrf(center_freq, sample_rate, num_samples)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:561:                    "error": "No SDR driver available. Install: sudo apt install soapysdr-module-hackrf",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:583:                "/dev/hackrf0"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:606:        SoapySDR-based ingestion (hardware-agnostic).
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:612:            sdr.setSampleRate(SoapySDR.SOAPY_SDR_RX, 0, sample_rate)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:613:            sdr.setFrequency(SoapySDR.SOAPY_SDR_RX, 0, center_freq)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:616:            rx_stream = sdr.setupStream(SoapySDR.SOAPY_SDR_RX, SoapySDR.SOAPY_SDR_CF32)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:624:                    f"SoapySDR readStream error: {SoapySDR.errToStr(sr.ret)}"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:645:                "driver": "SoapySDR",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:650:                "error": f"SoapySDR acquisition failed: {str(e)}",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:652:                "driver": "SoapySDR",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:655:    def _ingest_pyhackrf(
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:659:        pyhackrf fallback ingestion.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:662:            hackrf_device = pyhackrf.HackRF()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:664:            # AMP LOCKOUT — HackRF 1 front-end amp is blown; parts on order.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:666:                hackrf_device.set_amp_enable(0)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:671:            hackrf_device.set_freq(int(center_freq))
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:672:            hackrf_device.set_sample_rate(int(sample_rate))
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:675:            hackrf_device.set_lna_gain(32)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:676:            hackrf_device.set_vga_gain(20)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:679:            iq_complex = hackrf_device.read_samples(num_samples)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:680:            hackrf_device.close()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:695:                "driver": "pyhackrf",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:700:                "error": f"pyhackrf acquisition failed: {str(e)}",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:702:                "driver": "pyhackrf",
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:746:        SPEC-004A.3 — Verify GPSDO/HackRF hardware lock status.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:752:            device_index: HackRF device index (default 0)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:759:            "pyhackrf_available": PYHACKRF_AVAILABLE,
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:761:            "phase_lock_verified": False,
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:768:                results = SoapySDR.Device.enumerate()
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:770:                info["driver_used"] = "SoapySDR"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:775:                    info["phase_lock_verified"] = info["clock_source"] == "external"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:782:                device = pyhackrf.HackRF(device_index=device_index)
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:785:                info["hackrf_detected"] = True
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:789:                info["phase_lock_verified"] = info["clock_source"] == "external"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:790:                info["driver_used"] = "pyhackrf"
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:797:                info["hackrf_detected"] = False
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:800:            info["error"] = "No SDR driver available. Install SoapySDR or pyhackrf."
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:811:        SPEC-004A.3-NMEA — Verify LBE-1421 NMEA telemetry via USB-C virtual serial.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:813:        The LBE-1421 provides observable NMEA sentences over a virtual serial port
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:899:        SPEC-004A.4-CONFIG — Configure LBE-1421 dual outputs.
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:902:        Out2: set to frequency in Hz (default 10 MHz).
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:907:        print(f"[+] Configuring LBE-1421: Out1={out1_mode}, Out2={out2_freq}Hz")
+./src/dslv_zpdi/layer1_ingestion/hal_hardware.py:915:        Leo Bodnar LBE-1421 TCXO high-Q oscillator ensures stability
+./src/dslv_zpdi/layer1_ingestion/cm5_ingestion.py:13:    SimulatedHAL,
+./src/dslv_zpdi/layer1_ingestion/cm5_ingestion.py:29:    "SimulatedHAL",
+./src/dslv_zpdi/layer1_ingestion/pixel_node_bridge.py:23:- GPS (lat, lon, alt, accuracy)     → vectoring / cross-check against LBE-1421 NMEA
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:5:Simulates: Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:6:Rev 4.1: Updated to match HackRF + GPSDO RF Metrology architecture.
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:21:class SimulatedHAL(BaseHAL):
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:26:    - GPSDO providing 10 MHz reference and 1 PPS
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:27:    - HackRF One with external clock lock
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:33:        SPEC-005A.4a — Mock GPS/PPS Ingestion (LBE-1421 simulation).
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:39:        sensor_id = kwargs.get("sensor_id", "SIM-LBE-1421")
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:84:        SPEC-005A.4b — Mock SDR IQ Ingestion with LBE-1421 phase-noise curve.
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:94:        # Emulate phase noise based on LBE-1421 datasheet p.2
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:119:                "phase_noise_model": "LBE-1421-V1",
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:131:        """Mock NMEA for SimulatedHAL."""
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:141:        SPEC-004A.3 — Simulated GPSDO/HackRF verification.
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:146:            "hackrf_detected": True,
+./src/dslv_zpdi/layer1_ingestion/hal_simulated.py:148:            "board_id": "HackRF One",
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:7:GPS-disciplined 10 MHz reference and its PPS input (or the host PPS via GPIO)
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:42:    import SoapySDR
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:56:    - For Tier 1 trust: GPSDO 10 MHz → Pluto CLKIN, GPSDO 1 PPS → host GPIO
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:138:                devices = SoapySDR.Device.enumerate("driver=plutosdr")
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:141:                        "No PlutoSDR found via SoapySDR."
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:145:                    f"SoapySDR Pluto enumeration failed: {exc}"
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:151:            if not lock_status["phase_lock_verified"]:
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:154:                    "Verify GPSDO 10 MHz → Pluto CLKIN and 1 PPS → host GPIO."
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:191:            "phase_lock_verified": False,
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:193:            "driver": "libiio" if IIO_AVAILABLE else ("SoapySDR" if SOAPYSDR_AVAILABLE else "none"),
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:224:        result["phase_lock_verified"] = jitter_ok and result["gps_fix"]
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:327:            if not lock_status["phase_lock_verified"]:
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:417:        """SoapySDR fallback ingestion for Pluto."""
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:419:            sdr = SoapySDR.Device(
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:422:            sdr.setSampleRate(SoapySDR.SOAPY_SDR_RX, 0, sample_rate)
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:423:            sdr.setFrequency(SoapySDR.SOAPY_SDR_RX, 0, center_freq)
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:424:            sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, self.gain)
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:426:            rx_stream = sdr.setupStream(SoapySDR.SOAPY_SDR_RX, SoapySDR.SOAPY_SDR_CF32)
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:433:                    f"SoapySDR readStream error: {SoapySDR.errToStr(sr.ret)}"
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:451:                "driver": "SoapySDR",
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:456:                "error": f"SoapySDR acquisition failed: {str(e)}",
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:458:                "driver": "SoapySDR",
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:475:            "driver_used": "libiio" if IIO_AVAILABLE else ("SoapySDR" if SOAPYSDR_AVAILABLE else "none"),
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:476:            "phase_lock_verified": False,
+./src/dslv_zpdi/layer1_ingestion/hal_pluto.py:492:                devices = SoapySDR.Device.enumerate("driver=plutosdr")
+./src/dslv_zpdi/layer1_ingestion/nmea_stream.py:5:LBE-1421's USB-C virtual serial port (/dev/ttyACMx). The latest parsed GGA
+./src/dslv_zpdi.egg-info/PKG-INFO:23:Requires-Dist: pyhackrf>=0.2.0
+./src/dslv_zpdi.egg-info/PKG-INFO:57:**Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/HackRF). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
+./src/dslv_zpdi.egg-info/PKG-INFO:66:│  HardwareHAL (HackRF + LBE-1421) or SimulatedHAL               │
+./src/dslv_zpdi.egg-info/PKG-INFO:95:| SDR                 | HackRF One                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, parts on order) |
+./src/dslv_zpdi.egg-info/PKG-INFO:96:| Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
+./src/dslv_zpdi.egg-info/PKG-INFO:98:| RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → HackRF CLKIN (≤ 1 ft)                           |
+./src/dslv_zpdi.egg-info/PKG-INFO:103:1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Output` → HackRF `CLKIN`
+./src/dslv_zpdi.egg-info/PKG-INFO:105:2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
+./src/dslv_zpdi.egg-info/PKG-INFO:106:   Bridge ground between GPSDO and Pi. No level-shifter needed — LBE-1421 outputs 3.3 V CMOS natively.
+./src/dslv_zpdi.egg-info/PKG-INFO:107:3. **Power & Telemetry:** USB-C · LBE-1421 → Pi 5 (powers GPSDO; exposes virtual serial `/dev/ttyACM0` for NMEA)
+./src/dslv_zpdi.egg-info/PKG-INFO:108:4. **SDR Data:** USB · HackRF → Pi 5 USB 3.0 (IQ data transfer — timing separate from USB jitter)
+./src/dslv_zpdi.egg-info/PKG-INFO:118:- HackRF One with 10 MHz CLKIN connected to GPSDO
+./src/dslv_zpdi.egg-info/PKG-INFO:119:- Leo Bodnar LBE-1421 GPSDO (USB-C, NMEA, 3.3 V CMOS)
+./src/dslv_zpdi.egg-info/PKG-INFO:158:# Enable PPS GPIO overlay (LBE-1421 is 3.3 V CMOS — no level-shifter needed)
+./src/dslv_zpdi.egg-info/PKG-INFO:176:# HackRF detected
+./src/dslv_zpdi.egg-info/PKG-INFO:177:hackrf_info
+./src/dslv_zpdi.egg-info/PKG-INFO:275:- `DSLV_DASHBOARD_REAL_SDR=1` — start with live HackRF input (same as `--real-sdr` flag)
+./src/dslv_zpdi.egg-info/PKG-INFO:300:python -m dashboard --no-real-sdr      # Start with SDR in SIM mode (default is REAL/HackRF ON)
+./src/dslv_zpdi.egg-info/PKG-INFO:307:> **Note (v4.7.0):** HackRF real-SDR mode is **ON by default**. The dashboard sets
+./src/dslv_zpdi.egg-info/PKG-INFO:309:> The amp (`a` key) is locked out — HackRF One amp is blown, parts on order.
+./src/dslv_zpdi.egg-info/PKG-INFO:352:HackRF firmware version and USB status, PPS tick age and jitter (from `/dev/pps0`), GPSDO GPS fix status (from NMEA over `/dev/ttyACM0`), chrony stratum and RMS offset.
+./src/dslv_zpdi.egg-info/PKG-INFO:407:| `HACKRF`       | Live `hackrf_sweep` subprocess. Streams CSV lines, accumulates a full sweep, publishes via background thread. |
+./src/dslv_zpdi.egg-info/PKG-INFO:408:| `HACKRF-WAIT`  | Transitional state — HackRF subprocess started but no sweep received yet. Shows SIM data while waiting. |
+./src/dslv_zpdi.egg-info/PKG-INFO:410:Toggle between SIM and HACKRF with `r`. The dashboard auto-detects HackRF at startup via `hackrf_info`; if not present, `r` has no effect.
+./src/dslv_zpdi.egg-info/PKG-INFO:452:| AMP     | on/off      | —                            | HackRF internal +14 dB pre-amp (use with care — can saturate) |
+./src/dslv_zpdi.egg-info/PKG-INFO:454:Changing any gain value immediately restarts the `hackrf_sweep` subprocess with the new parameters. There is a brief `HACKRF-WAIT` transition (~1–2 rows) while the new sweep starts.
+./src/dslv_zpdi.egg-info/PKG-INFO:507:| `a`    | Toggle HackRF internal amp (±14 dB, use carefully)        |
+./src/dslv_zpdi.egg-info/PKG-INFO:566:dslv-zpdi-hackrf-init.service    [NEW] (wakes HackRF via hackrf_info; non-fatal if absent)
+./src/dslv_zpdi.egg-info/PKG-INFO:568:dslv-zpdi-preflight.service      (hardware checks: HackRF, PPS, chrony)
+./src/dslv_zpdi.egg-info/PKG-INFO:578:for svc in dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash; do
+./src/dslv_zpdi.egg-info/PKG-INFO:582:sudo systemctl enable --now dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash
+./src/dslv_zpdi.egg-info/PKG-INFO:587:systemctl status dslv-zpdi-tuning dslv-zpdi-hackrf-init dslv-zpdi-preflight dslv-zpdi \
+./src/dslv_zpdi.egg-info/PKG-INFO:613:- `SimulatedHAL` generates deterministic synthetic payloads (Gaussian noise + drifting carriers)
+./src/dslv_zpdi.egg-info/PKG-INFO:618:If hardware initialization fails (HackRF not detected, PPS device missing), the pipeline **automatically falls back to simulator** and logs a warning. Check `journalctl -u dslv-zpdi` if you suspect an unintended fallback.
+./src/dslv_zpdi.egg-info/PKG-INFO:659:# Hardware pre-flight (non-fatal, checks HackRF / PPS / chrony)
+./src/dslv_zpdi.egg-info/PKG-INFO:691:- HackRF is not detected. Run `hackrf_info` — if it fails, check USB connection.
+./src/dslv_zpdi.egg-info/PKG-INFO:692:- `hackrf_sweep` binary not in PATH. Install: `sudo apt install hackrf`.
+./src/dslv_zpdi.egg-info/PKG-INFO:693:- If HackRF is detected but sweep fails, check the error label in the waterfall title bar.
+./src/dslv_zpdi.egg-info/PKG-INFO:704:- HackRF not plugged in when service started
+./src/dslv_zpdi.egg-info/PKG-INFO:706:- LBE-1421 not powered or USB-C not seated
+./src/dslv_zpdi.egg-info/PKG-INFO:778:The Pi 5 + HackRF + LBE-1421 stack is the Phase 2A reference. Alternative hardware is permitted if it meets:
+./src/dslv_zpdi.egg-info/PKG-INFO:780:1. **External 10 MHz reference input** to hardware-lock the SDR's ADC sampling clock
+./src/dslv_zpdi.egg-info/PKG-INFO:788:- Any Linux SBC + CLKIN-capable SDR + GPS-disciplined 10 MHz source
+./src/dslv_zpdi.egg-info/PKG-INFO:796:## LBE-1421 GPSDO Advantages (Rev 4.2)
+./src/dslv_zpdi.egg-info/PKG-INFO:798:The Leo Bodnar LBE-1421 supersedes the previously specified Mini GPSDO:
+./src/dslv_zpdi.egg-info/PKG-INFO:800:| Feature         | LBE-1421                        | Mini GPSDO (Deprecated)              |
+./src/dslv_zpdi.egg-info/PKG-INFO:818:| `docs/LBE-1421_WIRING.md`             | Detailed wiring harness documentation                 |
+./src/dslv_zpdi.egg-info/PKG-INFO:819:| `docs/HARDWARE_CHANGE_JUSTIFICATION.md`| Phase 2A hardware pivot rationale (SPEC-UPDATE-PHASE-2A-LBE-1421) |
+./src/dslv_zpdi.egg-info/PKG-INFO:839:By locking the HackRF's ADC directly to the GPS constellation via 10 MHz CLKIN:
+./src/dslv_zpdi.egg-info/requires.txt:5:pyhackrf>=0.2.0
+./README.md:14:**Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/HackRF). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
+./README.md:23:│  HardwareHAL (HackRF + LBE-1421) or SimulatedHAL               │
+./README.md:52:| SDR                 | HackRF One                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, parts on order) |
+./README.md:53:| Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
+./README.md:55:| RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → HackRF CLKIN (≤ 1 ft)                           |
+./README.md:60:1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Output` → HackRF `CLKIN`
+./README.md:62:2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
+./README.md:63:   Bridge ground between GPSDO and Pi. No level-shifter needed — LBE-1421 outputs 3.3 V CMOS natively.
+./README.md:64:3. **Power & Telemetry:** USB-C · LBE-1421 → Pi 5 (powers GPSDO; exposes virtual serial `/dev/ttyACM0` for NMEA)
+./README.md:65:4. **SDR Data:** USB · HackRF → Pi 5 USB 3.0 (IQ data transfer — timing separate from USB jitter)
+./README.md:75:- HackRF One with 10 MHz CLKIN connected to GPSDO
+./README.md:76:- Leo Bodnar LBE-1421 GPSDO (USB-C, NMEA, 3.3 V CMOS)
+./README.md:115:# Enable PPS GPIO overlay (LBE-1421 is 3.3 V CMOS — no level-shifter needed)
+./README.md:133:# HackRF detected
+./README.md:134:hackrf_info
+./README.md:232:- `DSLV_DASHBOARD_REAL_SDR=1` — start with live HackRF input (same as `--real-sdr` flag)
+./README.md:257:python -m dashboard --no-real-sdr      # Start with SDR in SIM mode (default is REAL/HackRF ON)
+./README.md:264:> **Note (v4.7.0):** HackRF real-SDR mode is **ON by default**. The dashboard sets
+./README.md:266:> The amp (`a` key) is locked out — HackRF One amp is blown, parts on order.
+./README.md:309:HackRF firmware version and USB status, PPS tick age and jitter (from `/dev/pps0`), GPSDO GPS fix status (from NMEA over `/dev/ttyACM0`), chrony stratum and RMS offset.
+./README.md:364:| `HACKRF`       | Live `hackrf_sweep` subprocess. Streams CSV lines, accumulates a full sweep, publishes via background thread. |
+./README.md:365:| `HACKRF-WAIT`  | Transitional state — HackRF subprocess started but no sweep received yet. Shows SIM data while waiting. |
+./README.md:367:Toggle between SIM and HACKRF with `r`. The dashboard auto-detects HackRF at startup via `hackrf_info`; if not present, `r` has no effect.
+./README.md:409:| AMP     | on/off      | —                            | HackRF internal +14 dB pre-amp (use with care — can saturate) |
+./README.md:411:Changing any gain value immediately restarts the `hackrf_sweep` subprocess with the new parameters. There is a brief `HACKRF-WAIT` transition (~1–2 rows) while the new sweep starts.
+./README.md:464:| `a`    | Toggle HackRF internal amp (±14 dB, use carefully)        |
+./README.md:523:dslv-zpdi-hackrf-init.service    [NEW] (wakes HackRF via hackrf_info; non-fatal if absent)
+./README.md:525:dslv-zpdi-preflight.service      (hardware checks: HackRF, PPS, chrony)
+./README.md:535:for svc in dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash; do
+./README.md:539:sudo systemctl enable --now dslv-zpdi-hackrf-init dslv-zpdi-node-receiver dslv-zpdi-webdash
+./README.md:544:systemctl status dslv-zpdi-tuning dslv-zpdi-hackrf-init dslv-zpdi-preflight dslv-zpdi \
+./README.md:570:- `SimulatedHAL` generates deterministic synthetic payloads (Gaussian noise + drifting carriers)
+./README.md:575:If hardware initialization fails (HackRF not detected, PPS device missing), the pipeline **automatically falls back to simulator** and logs a warning. Check `journalctl -u dslv-zpdi` if you suspect an unintended fallback.
+./README.md:616:# Hardware pre-flight (non-fatal, checks HackRF / PPS / chrony)
+./README.md:648:- HackRF is not detected. Run `hackrf_info` — if it fails, check USB connection.
+./README.md:649:- `hackrf_sweep` binary not in PATH. Install: `sudo apt install hackrf`.
+./README.md:650:- If HackRF is detected but sweep fails, check the error label in the waterfall title bar.
+./README.md:661:- HackRF not plugged in when service started
+./README.md:663:- LBE-1421 not powered or USB-C not seated
+./README.md:735:The Pi 5 + HackRF + LBE-1421 stack is the Phase 2A reference. Alternative hardware is permitted if it meets:
+./README.md:737:1. **External 10 MHz reference input** to hardware-lock the SDR's ADC sampling clock
+./README.md:745:- Any Linux SBC + CLKIN-capable SDR + GPS-disciplined 10 MHz source
+./README.md:753:## LBE-1421 GPSDO Advantages (Rev 4.2)
+./README.md:755:The Leo Bodnar LBE-1421 supersedes the previously specified Mini GPSDO:
+./README.md:757:| Feature         | LBE-1421                        | Mini GPSDO (Deprecated)              |
+./README.md:775:| `docs/LBE-1421_WIRING.md`             | Detailed wiring harness documentation                 |
+./README.md:776:| `docs/HARDWARE_CHANGE_JUSTIFICATION.md`| Phase 2A hardware pivot rationale (SPEC-UPDATE-PHASE-2A-LBE-1421) |
+./README.md:796:By locking the HackRF's ADC directly to the GPS constellation via 10 MHz CLKIN:
+./pyproject.toml:31:    "pyhackrf>=0.2.0",
+./config/dashboard.toml.example:55:amp       = "a"             # toggle HackRF internal amp
+./config/dslv-zpdi.service:45:# NOTE: /dev/hackrf0 is intentionally omitted; it is a device node that may
+./config/dslv-zpdi.service:46:# be absent when the HackRF is unplugged, and systemd mount-namespace setup
+./config/dslv-zpdi.service:48:# via /dev/bus/usb is sufficient for libusb/pyhackrf.
+./config/dslv-zpdi-hackrf-init.service:2:Description=DSLV-ZPDI HackRF USB Initialisation
+./config/dslv-zpdi-hackrf-init.service:3:# Runs once after udev has settled USB devices so the HackRF is visible to
+./config/dslv-zpdi-hackrf-init.service:4:# libusb before the main pipeline starts. Uses hackrf_info (part of
+./config/dslv-zpdi-hackrf-init.service:5:# hackrf-tools) to wake the device out of USB cold-start and log firmware.
+./config/dslv-zpdi-hackrf-init.service:12:ExecStart=/usr/bin/hackrf_info
+./config/dslv-zpdi-hackrf-init.service:13:# A missing device is not fatal — pipeline falls back to SimulatedHAL.
+./config/dslv-zpdi-hackrf-init.service:14:ExecStart=-/bin/sh -c 'echo "[dslv-zpdi-hackrf-init] HackRF ready" | systemd-cat -t dslv-zpdi-hackrf-init'
+./config/dslv-zpdi-hackrf-init.service:18:SyslogIdentifier=dslv-zpdi-hackrf-init
+./config/sensor_location.example.yaml:14:# Heading the HackRF antenna is pointed in (degrees from true north).
+./config/dslv-zpdi-node-receiver.service:6:After=network.target dslv-zpdi-hackrf-init.service dslv-zpdi-preflight.service
+./config/os-hardening/99-dslv-zpdi.conf:3:# Phase: 2A RF Metrology (HackRF + LBE-1421 GPSDO)
+./config/os-hardening/99-hackrf.rules:1:# DSLV-ZPDI udev rules for HackRF One
+./config/os-hardening/99-hackrf.rules:6:KERNEL=="hackrf*", MODE="0666", GROUP="plugdev"
+./config/os-hardening/dslv-zpdi-rtl-blacklist.conf:1:# DSLV-ZPDI: blacklist DVB driver auto-load so RTL-SDR dongles are free for SoapySDR
+./RELEASE_NOTES_v4.8.0.md:46:- Corrected LBE-1420 → LBE-1421 dual-output references in the living master and
+./RELEASE_NOTES_v4.8.0.md:56:Hardware-only paths (BLE radon transport, PPS/NMEA, HackRF) are validated in
+./tools/health_check.sh:51:# 3. Hardware (HackRF)
+./tools/health_check.sh:53:if command -v hackrf_info >/dev/null 2>&1; then
+./tools/health_check.sh:54:  if hackrf_info 2>&1 | grep -q "Found HackRF"; then
+./tools/health_check.sh:55:    SERIAL=$(hackrf_info 2>&1 | awk -F': *' '/Serial number/{print $2; exit}')
+./tools/health_check.sh:56:    log_ok "HackRF detected (s/n ${SERIAL: -12})"
+./tools/health_check.sh:58:    log_warn "hackrf_info installed but no device found"
+./tools/health_check.sh:61:  log_warn "hackrf_info not installed"
+./tools/preflight.sh:14:# 1. Kill any known conflicting SDR tools that grab the HackRF
+./tools/preflight.sh:15:for proc in gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx airspy_rx hackrf_transfer hackrf_sweep hackrf_spectrum; do
+./tools/preflight.sh:24:# 2. Verify HackRF presence (non-fatal)
+./tools/preflight.sh:25:if command -v hackrf_info >/dev/null 2>&1; then
+./tools/preflight.sh:26:    if hackrf_info 2>&1 | grep -q "Found HackRF"; then
+./tools/preflight.sh:27:        LOG "HackRF detected"
+./tools/preflight.sh:29:        WARN "HackRF not detected (check USB cable / power)"
+./tools/preflight.sh:32:    WARN "hackrf_info not installed"
+./tools/dashboard/app.py:629:                    "WARN", "AMP LOCKED OUT — HackRF 1 amp blown, parts on order"
+./tools/dashboard/app.py:709:    # HackRF is ON by default; --no-real-sdr flag allows explicit opt-out.
+./tools/dashboard/web_server.py:108:  <div class="card" id="c-sdr"><h2>SDR / HackRF</h2><p class="val cyan">Loading…</p></div>
+./tools/dashboard/web_server.py:188:      '<h2>SDR / HackRF</h2>'+
+./tools/dashboard/launch.sh:15:# Waterfall defaults to SIM mode so the pipeline (pyhackrf) can hold the
+./tools/dashboard/launch.sh:16:# HackRF exclusively. Press 'r' in the dashboard to toggle real-SDR on;
+./tools/dashboard/READ_ME.md:5:the systemd pipeline, HackRF/PPS/GPSDO hardware, a live journald tail,
+./tools/dashboard/READ_ME.md:7:waterfall that can be driven from a live `hackrf_sweep` stream.
+./tools/dashboard/READ_ME.md:48:| `a` | toggle RF front-end amp (`hackrf_sweep -a 1`) |
+./tools/dashboard/READ_ME.md:50:Tune/zoom/gain/amp each restart the underlying `hackrf_sweep` so they
+./tools/dashboard/READ_ME.md:56:  pulse injection. Useful for demos and when no HackRF is plugged in.
+./tools/dashboard/READ_ME.md:57:* **HACKRF mode** — spawns `hackrf_sweep` in a background thread,
+./tools/dashboard/READ_ME.md:67:  `hackrf_sweep` prints anything to stderr before exiting, the last line
+./tools/dashboard/READ_ME.md:131:| `DSLV_DASHBOARD_REAL_SDR` | `1` = use real `hackrf_sweep`, `0` (or unset) = simulator. The `r` key toggles this. |
+./tools/dashboard/READ_ME.md:138:* `hackrf-tools` (`apt install hackrf`) for real-SDR mode
+./tools/dashboard/READ_ME.md:139:* User in the `plugdev` group for HackRF without sudo
+./tools/dashboard/READ_ME.md:140:* `/lib/udev/rules.d/60-libhackrf0.rules` installed by `libhackrf0`
+./tools/dashboard/READ_ME.md:151:  hackrf_transfer before starting; re-run it. Or look at the error
+./tools/dashboard/READ_ME.md:174:    ├── hardware.py        HackRF, PPS, GPSDO, chrony
+./tools/dashboard/READ_ME.md:179:    └── waterfall.py       SIM + HackRF streaming waterfall
+./tools/dashboard/humor.py:26:    "APOLOGIZING TO THE 10 MHz REFERENCE",
+./tools/dashboard/humor.py:45:    "LET HIM COOK (THE HackRF)",
+./tools/dashboard/panels/hardware.py:1:"""Hardware status panel: HackRF, PPS, GPSDO, chrony.
+./tools/dashboard/panels/hardware.py:3:Expensive probes (hackrf_info, chronyc) are cached for a few seconds so
+./tools/dashboard/panels/hardware.py:36:def _hackrf_info() -> dict:
+./tools/dashboard/panels/hardware.py:39:            ["hackrf_info"], text=True, timeout=3, stderr=subprocess.STDOUT
+./tools/dashboard/panels/hardware.py:46:            "detected": "Found HackRF" in out,
+./tools/dashboard/panels/hardware.py:50:            "board": board.group(1) if board else "HackRF",
+./tools/dashboard/panels/hardware.py:136:        self._hackrf = _Cache(_HACKRF_TTL)
+./tools/dashboard/panels/hardware.py:141:        hrf = self._hackrf.get(_hackrf_info)
+./tools/dashboard/panels/hardware.py:169:            # Row 1: HackRF + PPS + Clock
+./tools/dashboard/panels/hardware.py:181:                "HackRF",
+./tools/dashboard/panels/hardware.py:195:            gpsdo_text = gpsdo if gpsdo else "AWAITING LBE-1421"
+./tools/dashboard/panels/waterfall.py:5:    * HACKRF   — live hackrf_sweep subprocess streamed in a thread
+./tools/dashboard/panels/waterfall.py:84:    Background thread wrapping `hackrf_sweep` stdout.
+./tools/dashboard/panels/waterfall.py:131:            "hackrf_sweep",
+./tools/dashboard/panels/waterfall.py:239:def hackrf_present() -> bool:
+./tools/dashboard/panels/waterfall.py:242:            ["hackrf_info"], stderr=subprocess.STDOUT, timeout=2, text=True
+./tools/dashboard/panels/waterfall.py:291:        self._have_hackrf = hackrf_present()
+./tools/dashboard/panels/waterfall.py:375:        # AMP LOCKOUT — HackRF 1 front-end amp is blown; parts on order.
+./tools/dashboard/panels/waterfall.py:392:            self._have_hackrf
+./tools/provision_tier1.py:3:Automates hardware-readiness checks for Anchor Nodes (GPSDO/HackRF focus).
+./tools/provision_tier1.py:5:Rev 4.1-FORGE: Added SoapySDR checks and Pi 5 RP1 3.3V logic warning.
+./tools/provision_tier1.py:21:    print("NOTE: Leo Bodnar LBE-1421 — Native 3.3V CMOS Compatibility")
+./tools/provision_tier1.py:26:The LBE-1421 GPSDO outputs a 3.3V CMOS square wave natively,
+./tools/provision_tier1.py:44:    SPEC-004A.1 — Hard enforcement: LBE-1421 native 3.3V only.
+./tools/provision_tier1.py:50:            if "LBE-1421" in content:
+./tools/provision_tier1.py:51:                print("[HARD] LBE-1421 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
+./tools/provision_tier1.py:57:    ARCH-PHASE-2A-PIVOT §5 — Verify SoapySDR installation (hardware-agnostic driver).
+./tools/provision_tier1.py:60:        import SoapySDR
+./tools/provision_tier1.py:61:        results = SoapySDR.Device.enumerate()
+./tools/provision_tier1.py:63:        hackrf_found = False
+./tools/provision_tier1.py:65:            if 'hackrf' in str(result).lower():
+./tools/provision_tier1.py:66:                hackrf_found = True
+./tools/provision_tier1.py:69:        if hackrf_found:
+./tools/provision_tier1.py:70:            print("[*] SoapySDR installed with HackRF support.")
+./tools/provision_tier1.py:73:            print("[!] SoapySDR installed but HackRF not enumerated.")
+./tools/provision_tier1.py:74:            print("    Ensure HackRF is connected: hackrf_info")
+./tools/provision_tier1.py:77:        print("[!] SoapySDR not installed.")
+./tools/provision_tier1.py:78:        print("    Install: sudo apt install soapysdr-module-hackrf python3-soapysdr")
+./tools/provision_tier1.py:82:def check_hackrf_presence():
+./tools/provision_tier1.py:84:    SPEC-004A.1 — Ensure HackRF One is connected.
+./tools/provision_tier1.py:87:        res = subprocess.run(["hackrf_info"], capture_output=True, text=True, check=False)
+./tools/provision_tier1.py:89:            print("[*] HackRF One detected via hackrf_info.")
+./tools/provision_tier1.py:95:            print("[!] HackRF One NOT found.")
+./tools/provision_tier1.py:96:            print("    Ensure HackRF is connected via USB 3.0 and powered.")
+./tools/provision_tier1.py:99:        print("[!] hackrf_info not found. Install: sudo apt install hackrf")
+./tools/provision_tier1.py:103:def check_hackrf_clock_source():
+./tools/provision_tier1.py:105:    ARCH-PHASE-2A-PIVOT §5.1 — Verify HackRF is receiving external 10 MHz reference.
+./tools/provision_tier1.py:108:    Implements "Silent Traitor" detection - HackRF silently falls back to internal osc.
+./tools/provision_tier1.py:111:        # Try SoapySDR first (preferred)
+./tools/provision_tier1.py:113:            import SoapySDR
+./tools/provision_tier1.py:114:            device = SoapySDR.Device(dict(driver="hackrf"))
+./tools/provision_tier1.py:118:                print("[*] HackRF clock source: EXTERNAL (GPSDO locked) ✅")
+./tools/provision_tier1.py:119:                print("    Phase-lock verified. SDR slaved to GPSDO 10MHz reference.")
+./tools/provision_tier1.py:122:                print(f"[!] HackRF clock source: {clock_source.upper()} (NOT GPSDO locked) ❌")
+./tools/provision_tier1.py:123:                print("    Connect GPSDO 10 MHz SMA → HackRF CLKIN port.")
+./tools/provision_tier1.py:128:        # Fallback to hackrf_debug
+./tools/provision_tier1.py:130:            ["hackrf_debug", "--clock_source"],
+./tools/provision_tier1.py:136:                print("[*] HackRF clock source: EXTERNAL (GPSDO locked) ✅")
+./tools/provision_tier1.py:139:                print("[!] HackRF clock source: INTERNAL (not GPSDO locked) ❌")
+./tools/provision_tier1.py:140:                print("    [SILENT TRAITOR DETECTED] Verify GPSDO 10 MHz → CLKIN")
+./tools/provision_tier1.py:143:        print("[WARN] Cannot verify HackRF clock source automatically.")
+./tools/provision_tier1.py:144:        print("       Manually verify: GPSDO 10 MHz → HackRF CLKIN")
+./tools/provision_tier1.py:147:        print("[WARN] hackrf_debug not available for clock verification.")
+./tools/provision_tier1.py:166:    Check for PPS and HackRF udev rules.
+./tools/provision_tier1.py:171:    if os.path.exists("/etc/udev/rules.d/52-hackrf.rules"):
+./tools/provision_tier1.py:172:        rules_found.append("HackRF")
+./tools/provision_tier1.py:188:    # Check SoapySDR (preferred)
+./tools/provision_tier1.py:189:    if importlib.util.find_spec("SoapySDR") is not None:
+./tools/provision_tier1.py:190:        print("[*] SoapySDR Python library installed.")
+./tools/provision_tier1.py:192:        print("[!] SoapySDR Python bindings not installed.")
+./tools/provision_tier1.py:196:    # Check pyhackrf (fallback)
+./tools/provision_tier1.py:197:    if importlib.util.find_spec("pyhackrf") is not None:
+./tools/provision_tier1.py:198:        print("[*] pyhackrf Python library installed (fallback).")
+./tools/provision_tier1.py:200:        print("[WARN] pyhackrf not installed. SoapySDR will be used.")
+./tools/provision_tier1.py:249:    SPEC-004A.3-NMEA — Verify LBE-1421 NMEA telemetry stream via USB-C virtual serial.
+./tools/provision_tier1.py:257:            print(f"[*] LBE-1421 NMEA telemetry active on {serial_port} ✅")
+./tools/provision_tier1.py:260:        print(f"[!] LBE-1421 NMEA: unexpected data on {serial_port}")
+./tools/provision_tier1.py:268:        print("       Ensure LBE-1421 is connected via USB-C.")
+./tools/provision_tier1.py:280:        if lock_info.get("phase_lock_verified"):
+./tools/provision_tier1.py:307:    print("Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO")
+./tools/provision_tier1.py:309:    print("  - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)")
+./tools/provision_tier1.py:321:        ("SoapySDR Library", check_soapy_sdr()),
+./tools/provision_tier1.py:322:        ("HackRF Presence", check_hackrf_presence()),
+./tools/provision_tier1.py:323:        ("HackRF Clock Source", check_hackrf_clock_source()),
+./tools/provision_tier1.py:325:        ("LBE-1421 NMEA", check_nmea_telemetry()),
+./tools/provision_tier1.py:369:        print("  1. Is GPSDO 10 MHz connected to HackRF CLKIN?")
+./tools/launch_project.sh:5:# stops the systemd unit chain, validates the venv + HackRF, restarts
+./tools/launch_project.sh:57:SDR_PROCS=(gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx
+./tools/launch_project.sh:58:           airspy_rx hackrf_transfer hackrf_sweep hackrf_spectrum)
+./tools/launch_project.sh:103:# --- 4. HackRF + driver sanity check -----------------------------------
+./tools/launch_project.sh:104:SAY "step 4/7 :: HackRF and driver sanity"
+./tools/launch_project.sh:105:if ! command -v hackrf_info >/dev/null 2>&1; then
+./tools/launch_project.sh:106:    WARN "hackrf-tools not installed (apt install hackrf)"
+./tools/launch_project.sh:108:    if HRF_OUT="$(hackrf_info 2>&1)"; then
+./tools/launch_project.sh:109:        if echo "$HRF_OUT" | grep -q 'Found HackRF'; then
+./tools/launch_project.sh:113:            OK "HackRF detected: $REV  fw=$FW  s/n=${SERIAL: -12}"
+./tools/launch_project.sh:115:            WARN "hackrf_info succeeded but no device found — check USB cable / power"
+./tools/launch_project.sh:118:        WARN "hackrf_info failed:"
+./tools/launch_project.sh:124:    WARN "user $USER not in 'plugdev' group — HackRF may require sudo"
+./tools/launch_project.sh:126:    OK "user in 'plugdev' — HackRF usable without sudo"
+./tools/launch_project.sh:131:if [ -e /lib/udev/rules.d/60-libhackrf0.rules ] \
+./tools/launch_project.sh:132:   || [ -e /etc/udev/rules.d/53-hackrf.rules ]; then
+./tools/launch_project.sh:133:    OK "HackRF udev rules present"
+./tools/launch_project.sh:135:    WARN "no HackRF udev rules found (device may need sudo to open)"
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:33:  headers, firmware (brcm/atheros/mediatek), bluez, hackrf stack, chrony,
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:49:| HackRF One r9 | Live | `hackrf_info` enumerates, FW v2.1.0, S/N …a7c5f4f |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:51:| GPSDO LBE-1421 | **AWAITING DELIVERY** | no `/dev/ttyACM*`; pipeline in `DEV_SIMULATOR=1` |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:66:- HackRF detected, PPS present, chrony running
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:120:- **SDR stack**: `hackrf`, `libhackrf0`, `libhackrf-dev`
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:130:  USB device (keeps HackRF from randomly suspending)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:142:  SoapySDR without fighting the kernel DVB driver.
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:174:    ├── hardware.py              # HackRF, PPS, GPSDO, chrony
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:192:- `r` — toggle real SDR data (hackrf_sweep wiring — simulator default)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:205:COSMIC RAYS · APOLOGIZING TO THE 10 MHz REFERENCE · BAYESIAN-FLAVORED
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:216:COOK (THE HackRF) · DOWNSAMPLING YOUR EXPECTATIONS · CHECKING THE
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:226:  that will shell out to `hackrf_sweep` — leave it stubbed until GPSDO
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:242:   `gqrx`, `SoapySDRUtil`, `sdrangel`, `rtl_tcp`, `rtl_fm`,
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:243:   `openwebrx`, `airspy_rx`, `hackrf_transfer`, `hackrf_sweep`,
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:244:   `hackrf_spectrum`.  If any are running they are logged as WARN,
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:246:2. `hackrf_info` enumerated
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:340:- 20 × `apt-mark hold`                              — kernel/firmware/hackrf freeze
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:374:### When the LBE-1421 GPSDO arrives
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:377:   - SMA: LBE-1421 `Output` → HackRF `CLKIN` (hardware 10 MHz phase lock)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:378:   - Jumper: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:380:   - USB-C: LBE-1421 → Pi 5 (power + NMEA serial for GPS fix verification)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_HARDENING.md:449:  during pytest — benign, originate from SoapySDR's generated SWIG
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:18:| SDR | HackRF One r9, S/N 010961dc2a7c5f4f, FW v2.1.0 | USB 3.0 connected, fully enumerated |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:19:| GPSDO | Leo Bodnar LBE-1421 | **PENDING DELIVERY** — simulator mode active |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:27:**Tier 1 Compliance Status:** PARTIAL — HackRF hardware phase-lock requires GPSDO CLKIN. System operating in `DEV_SIMULATOR=1` mode pending LBE-1421 delivery.
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:78:| `pytest tests/` | **43 passed** (2 deprecation warnings from SoapySDR SWIG bindings — benign) |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:123:1. **GPSDO Hardware Arrival (LBE-1421):** When the Leo Bodnar LBE-1421 arrives:
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:124:   - Connect SMA cable: LBE-1421 `Output` → HackRF `CLKIN` (10 MHz phase lock)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:125:   - Connect jumper: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (verify 3.3V — see RP1 warning in provision_tier1.py)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:126:   - Connect USB-C: LBE-1421 → Pi 5 (power + NMEA serial)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:149:- **SoapySDR DeprecationWarnings**: The two warnings from SWIG bindings (`SwigPyPacked`, `SwigPyObject`) are benign but indicate Python 3.13 + older SoapySDR SWIG wrappers. Monitor for future incompatibility.
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:156:- ✅ HackRF One r9 — hardware detected, USB 3.0, FW v2.1.0
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_DEPLOYMENT.md:160:- ⏳ LBE-1421 GPSDO — **PENDING DELIVERY** (critical path for Tier 1 final validation)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:7:**Revision:** v4.5.0-LBE-1421-HARDENED (from Session 3)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:19:| Kernel freeze | **20 holds** | `linux-image/-headers-6.12.75+rpt-rpi-v8/-2712`, `linux-kbuild-*`, `firmware-brcm/atheros/mediatek`, `hackrf`, `libhackrf0/-dev`, `chrony`, `pps-tools`, `bluez`, `bluez-firmware` |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:28:| HackRF | **detected** | One r9, FW v2.1.0, API 1.08, serial `010961dc2a7c5f4f` |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:93:5. `dslv-zpdi-preflight.service` oneshot — kills SDR conflicts, verifies HackRF/PPS, re-pins governor, snapshots thermal
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:113:  hackrf_info | head -3 && \
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:117:Expected output: three `active` lines, three `enabled` lines, chrony tracking info, hackrf_info header, and `POST-REBOOT STATE: GREEN`.
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:125:### When LBE-1421 GPSDO Arrives
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:126:1. Wire SMA: LBE-1421 `Output` → HackRF `CLKIN`
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_REBOOT_PREP.md:127:2. Wire 1PPS: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12); bridge grounds
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:6:**Host:** Pi 5 (Trixie, 16GB) — HackRF One r9 — PPS /dev/pps0 — chrony NTP stratum 3 (awaiting LBE-1421)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:7:**Revision Bumped:** v4.4.0 → **v4.5.0-LBE-1421-HARDENED**
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:19:| `--harden` | `apt-mark hold` kernel/firmware/HackRF/timing-stack; install `dslv-zpdi-tuning.service`, `dslv-zpdi-preflight.service`, `dslv-zpdi.service` (Nice=-5, IOSchedulingClass=realtime); write `/etc/sysctl.d/99-dslv-zpdi.conf`; write `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf`; create `/var/lib/dslv_zpdi/`; daemon-reload + enable + start chain |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:43:- **`hardware.log`** — HackRF One r9, FW v2.1.0 (API 1.08), `pps_gpio` kernel module loaded, `/dev/pps0` present, chrony stratum 3 (ntp.maxhost.io, offset 4.9ms), vcgencmd temp=48.8°C throttled=0x50000 (boot-time undervoltage flag, expected on fresh cold-boot), CPU governor=performance on all 4 cores, device-tree model = Raspberry Pi 5 Model B Rev 1.1, OS = Trixie
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:65:| Installer revision | 4.4.0 | 4.5.0-LBE-1421-HARDENED |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:71:| Modprobe | default | `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf` (DVB off for SoapySDR) |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:74:| Preflight | — | **NEW** `tools/preflight.sh` (SDR conflict killer, HackRF/PPS/chrony verify, governor pin) |
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:101:HackRF One r9, FW v2.1.0 (API 1.08), serial 010961dc2a7c5f4f
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:120:                hackrf, libhackrf0, chrony, pps-tools, bluez, ...)
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:138:**Leo Bodnar LBE-1421 GPSDO** — blocks Tier-1 baseline capture. When it lands:
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:139:1. Wire SMA: LBE-1421 `Output` → HackRF `CLKIN`
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:140:2. Wire PPS: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12), bridge grounds
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:154:- Capture LBE-1421 arrival milestone in `project_state.md` when it happens
+./CLAUDE-HOME/SESSION_REPORT_2026-04-19_GITHUB.md:194:**New commit (this session):** `feat(installer+bootstrap+docs): v4.5.0 LBE-1421-hardened drop-in installer, curl-pipe bootstrap, validation evidence, README overhaul`
+./SESSION_REPORT_2026-04-15_v4.4.0.md:17:   - Returns `SimulatedHAL` when `simulator=True` or `DEV_SIMULATOR=1`; otherwise returns `HardwareHAL` with external-clock enforcement.
+./SESSION_REPORT_2026-04-15_v4.4.0.md:22:   - Implemented **Hilbert phase extraction** via `scipy.signal.hilbert(np.real(...))` in both `_ingest_soapy()` and `_ingest_pyhackrf()`; phases truncated to 64 items.
+./SESSION_REPORT_2026-04-15_v4.4.0.md:32:   - Added `check_rp1_voltage_guard()` to `tools/provision_tier1.py` (reads `/etc/dslv_zpdi_cal.json` for LBE-1421 marker).
+./SESSION_REPORT_2026-04-15_v4.4.0.md:48:   - Deploys `99-pps.rules` and `52-hackrf.rules` on Tier 1 installs.
+./SESSION_REPORT_2026-04-15_v4.4.0.md:97:   - Execute `python tools/provision_tier1.py --tier1` on the Pi 5 target to verify RP1 guard, SoapySDR linkage, and NMEA telemetry.
+./specs/SPEC-020.md:9:Coordinates a named 48-hour measurement session binding the RadonEye Pro (certified CRM), Pixel 9 Pro XL (Tier 2 mobile node), and LBE-1421 GPSDO (clock authority). Ingests telemetry on native cadences, computes BCI in real-time, writes to the extended HDF5 envelope, and emits a compound `.h5` audit package + human-readable summary at completion.
+./specs/SPEC-004A.5.md:9:* **Tier 1 source** only when a GPSDO 10 MHz reference is wired to the `CLKIN` pin and a 1 PPS signal is wired to the relevant GPIO/PPS input and the configuration explicitly sets `pluto_external_clock: true`.
+./specs/SPEC-004A.5.md:15:* **Fallback driver:** `SoapyPlutoSDR` via SoapySDR (available but not used in the primary HAL because attribute control is less direct).
+./specs/SPEC-004A.5.md:43:* `external_clock` must only be set to `True` when the GPSDO 10 MHz reference is physically wired to `CLKIN` and 1 PPS is wired.
+./specs/SPEC-004A.5.md:73:) -> HardwareHAL | PlutoHAL | SimulatedHAL
+./specs/SPEC-004A.5.md:76:* `sdr_type="auto"` detection order: HackRF → Pluto → simulator fallback.
+./specs/SPEC-004A.5.md:78:* `sdr_type="hackrf"` forces `HardwareHAL`.
+./specs/SPEC-004A.5.md:79:* `sdr_type="sim"` forces `SimulatedHAL`.
+./specs/SPEC-004A.5.md:87:  sdr_type: "auto"          # auto | hackrf | pluto | sim
+./specs/SPEC-004A.5.md:102:`src/dslv_zpdi/main_pipeline.py` adds `--sdr-type {hackrf,pluto,sim}` and passes the resolved selection to `get_hal()`.
+./specs/SPEC-004A.5.md:109:* `HACKRF` — `hackrf_sweep` subprocess
+./specs/SPEC-004A.5.md:114:* Config key: `waterfall.sdr_source` (`hackrf`, `pluto`, `sim`).
+./specs/SPEC-004A.5.md:116:* CLI flag: `--sdr-source {hackrf,pluto,sim}`.
+./specs/SPEC-004A.5.md:117:* Runtime key: `r` cycles through detected sources: HackRF → PlutoSDR → SIM.
+./specs/SPEC-004A.5.md:119:The waterfall title and the RF anomaly panel indicate the active source (`HACKRF`, `PLUTO`, `SIM`, or `…-WAIT` while the stream starts). The hardware panel displays both HackRF and PlutoSDR detection status.
+./specs/SPEC-004A.5.md:123:`libiio` and `SoapySDR` are system/apt packages, not available from PyPI. Because the project venv is isolated, add a `.pth` file so the interpreter can find the system bindings:
+./specs/SPEC-004A.5.md:130:This makes `iio` and `SoapySDR` importable from inside the venv without recreating it with `--system-site-packages`.
+./specs/SPEC-004A.5.md:142:Tests use the same module-dict patching pattern used for `SoapySDR`, `pyhackrf`, and `serial` mocks elsewhere in the suite.
+./specs/SPEC-004A.5.md:146:* Do **not** set `pluto_external_clock: true` unless the GPSDO 10 MHz and 1 PPS wiring is physically verified.
+./specs/SPEC-004A.5.md:148:* Do **not** enable the HackRF front-end amp (`a` key in the dashboard) until the blown amplifier is replaced.
+./specs/SPEC-004A.1.md:4:Description: GPSDO METROLOGY CLOCK REQUIREMENT (Rev 4.2-LBE-1421)
+./specs/SPEC-004A.1.md:5:Implementation: RF Metrology hardware stack - Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO
+./specs/SPEC-004A.1.md:10:- **SDR:** HackRF One with CLKIN port for 10 MHz reference
+./specs/SPEC-004A.1.md:11:- **Clock Authority:** Leo Bodnar LBE-1421 GPSDO (10 MHz + 1 PPS)
+./specs/SPEC-004A.1.md:14:1. GPSDO 10 MHz SMA Output → HackRF CLKIN (hardware ADC phase-lock)
+./specs/SPEC-004A.1.md:18:- HAL: `hal_hardware.py` - HackRF One support with pyhackrf
+./specs/SPEC-004A.1.md:25:- HackRF clock source != "external" (GPSDO not connected)
+./RELEASE_NOTES_v4.2.0.md:3:**Revision:** Rev 4.2.0 (LBE-1421 Hardware Pivot)
+./RELEASE_NOTES_v4.2.0.md:5:**Codename:** LBE-1421
+./RELEASE_NOTES_v4.2.0.md:9:Version 4.2.0 implements the mandatory hardware migration from the Leo Bodnar Mini GPSDO to the **Leo Bodnar LBE-1421 GPSDO** across the entire project. This update eliminates the fragile Mini-USB connection, adds software-observable NMEA telemetry, and leverages the LBE-1421's native 3.3V CMOS output for direct Pi 5 GPIO compatibility without level-shifting.
+./RELEASE_NOTES_v4.2.0.md:15:- **GPSDO Model:** Leo Bodnar Mini GPSDO is formally **deprecated**. All Tier 1 deployments must use the LBE-1421.
+./RELEASE_NOTES_v4.2.0.md:16:- **Dependencies:** `pyrtlsdr` removed from core dependencies (Tier 2 only). Replaced with `pyhackrf` as core SDR dependency.
+./RELEASE_NOTES_v4.2.0.md:22:- Migrated Clock Authority from Leo Bodnar Mini GPSDO to **LBE-1421 GPSDO** (USB-C, NMEA, 3.3V CMOS)
+./RELEASE_NOTES_v4.2.0.md:26:- Updated physical routing protocol with LBE-1421-specific wiring instructions
+./RELEASE_NOTES_v4.2.0.md:27:- Removed level-shifter requirement for PPS line (LBE-1421 outputs 3.3V natively)
+./RELEASE_NOTES_v4.2.0.md:30:- Added `verify_nmea_telemetry()` method to `HardwareHAL` for LBE-1421 NMEA stream verification
+./RELEASE_NOTES_v4.2.0.md:34:- Added `pyhackrf>=1.0.0` to core dependencies
+./RELEASE_NOTES_v4.2.0.md:39:- Created `docs/HARDWARE_CHANGE_JUSTIFICATION.md` (SPEC-UPDATE-PHASE-2A-LBE-1421)
+./RELEASE_NOTES_v4.2.0.md:41:- Updated all hardware references across 20+ files from Mini GPSDO to LBE-1421
+./RELEASE_NOTES_v4.2.0.md:43:- Updated RP1 voltage warnings to reflect LBE-1421 native 3.3V compatibility
+./RELEASE_NOTES_v4.2.0.md:51:- All HAL modules: Rev 4.1-FORGE/4.1-PIVOT → Rev 4.2-LBE-1421
+./SESSION_REPORT_2026-04-24_UX_Integration.md:5:**Platform:** Raspberry Pi 5 + HackRF + LBE-1421 GPSDO (pending) + 5" DSI
+./SESSION_REPORT_2026-04-24_UX_Integration.md:17:   upgrade that breaks `pyhackrf`; the downgrade back to numpy 1.26.4
+./SESSION_REPORT_2026-04-24_UX_Integration.md:69:  which breaks the `pyhackrf 0.2.0` (`numpy<2`) pin. Reverted to
+./SESSION_REPORT_2026-04-24_UX_Integration.md:71:  `hackrf`, `h5py`, `folium`, `pandas`, `dslv_zpdi` all import
+./SESSION_REPORT_2026-04-24_UX_Integration.md:73:  `pyhackrf` to a numpy-2-compatible release.
+./SESSION_REPORT_2026-04-24_UX_Integration.md:179:| `numpy` / `pyhackrf` compatibility | PASS — numpy 1.26.4, `import hackrf` OK |
+./SESSION_REPORT_2026-04-24_UX_Integration.md:217:  `h5dump` instead. Once `pyhackrf` upgrades past numpy 2, reinstall
+./MASTER_SPEC.md:10:**Current Revision:** Rev 4.3.0 (LBE-1421 Hardware Pivot — RF Metrology Finalized, Phase 2A Active)
+./MASTER_SPEC.md:161:**IMPLEMENTATION TARGET:** Raspberry Pi 5 (16GB) with HackRF One SDR, Leo Bodnar LBE-1421 GPSDO (10 MHz + 1 PPS), and multi-modal sensors.
+./MASTER_SPEC.md:168:**OPERATIONAL INTENT:** Tier 1 nodes MUST use a GPS-Disciplined Oscillator (GPSDO) providing a 10 MHz reference signal injected into the SDR's external clock input (`CLKIN`), phase-locking the ADC at the analog level. A separate 1 PPS output from the GPSDO provides UTC epoch anchoring to the host compute board via GPIO hardware interrupt. This is "RF Metrology" timing — the measurement instrument itself is GPS-locked, not merely the computer's system clock.
+./MASTER_SPEC.md:169:**PHASE 2A PRIMARY TARGET:** Leo Bodnar LBE-1421 GPSDO → 10 MHz SMA out to HackRF One `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module and `chronyd`.
+./MASTER_SPEC.md:171:**MANDATORY:** External 10 MHz reference locked to GPS constellation feeding SDR CLKIN; 1 PPS hardware interrupt on host GPIO; `chronyd` configured with PPS refclock for < 1µs UTC accuracy; verification of ADC lock via `hackrf_debug` or equivalent tool.
+./MASTER_SPEC.md:178:1. **External 10 MHz Phase-Locking:** The SDR/digitizer MUST accept an external 10 MHz reference that hardware-locks the ADC sampling clock. Software frequency correction is NOT sufficient.
+./MASTER_SPEC.md:182:- Raspberry Pi 5 (16GB) + HackRF One + Leo Bodnar LBE-1421 GPSDO ← **Phase 2A Primary**
+./MASTER_SPEC.md:183:- Raspberry Pi CM5 + HackRF One + Leo Bodnar LBE-1421 GPSDO (carrier board with GPIO access)
+./MASTER_SPEC.md:186:- Any Linux SBC with GPIO + any SDR with CLKIN + any GPS-disciplined 10 MHz source
+./MASTER_SPEC.md:190:### SPEC-004A.4 — Leo Bodnar LBE-1421 GPSDO (Clock Authority)
+./MASTER_SPEC.md:192:**SYSTEM FUNCTION:** Provide the primary 10 MHz reference and 1 PPS epoch anchor for the SIGINT network.
+./MASTER_SPEC.md:193:**OPERATIONAL INTENT:** The LBE-1421 replaces the deprecated LBE-1421 to provide simultaneous high-frequency reference and physical PPS.
+./MASTER_SPEC.md:207:**KILL CONDITION:** Any Tier 1 node utilizing a single-output GPSDO (e.g., LBE-1421) that cannot provide simultaneous 10 MHz + 1 PPS.
+./MASTER_SPEC.md:225:**OPERATIONAL INTENT:** The RTL-SDR (v3/v4) is explicitly authorized as a Tier 2 or Testbed device. It is acceptable for pipeline development, algorithm validation, and swarm heuristic detection. However, the HackRF One (or any SDR with a native `CLKIN` port) is heavily preferred for actual field deployments due to hardware clock-locking capability and wider bandwidth (20 MHz vs 2.4 MHz). RTL-SDR data MUST NOT enter the Tier 1 primary stream unless the RTL-SDR node independently satisfies all SPEC-004A.2 criteria (which the RTL-SDR v3/v4 cannot, as it lacks an external clock input).
+./MASTER_SPEC.md:277:**Last Revised:** 2026-04-11 (Rev 4.1 — HackRF/GPSDO metrology pivot, Hardware Agnosticism Standard)
+./MASTER_SPEC.md:286:- **SDR (The Eye):** HackRF One (PortaPack optional/irrelevant for headless operation). 20 MHz bandwidth, 1 MHz – 6 GHz range.
+./MASTER_SPEC.md:287:- **Clock Authority:** Leo Bodnar LBE-1421 GPSDO (or equivalent GPS-disciplined 10 MHz oscillator).
+./MASTER_SPEC.md:288:- **Timing Wiring (Rev 4.1):** 10 MHz reference signal from LBE-1421 `Out2` port (set to 10,000,000 Hz) → HackRF One `CLKIN` port (hardware ADC lock, 50 Ω termination recommended). 1 PPS signal from LBE-1421 `Out1` port (set to 1 PPS mode) → Raspberry Pi 5 GPIO 18 (Physical Pin 12) via `pps-gpio` kernel module. LBE-1421 provides a native 100 ms 3.3 V CMOS pulse (1.65 V into 50 Ω) which is perfectly matched to Pi 5 logic levels without level-shifters. This configuration eliminates all USB bus jitter from the phase measurement chain; the ADC sampling clock is derived directly from the GPS constellation with no software intermediaries.
+./MASTER_SPEC.md:290:- **Hardware Agnosticism:** Any hardware meeting the SPEC-004A.2 criteria is equally valid for Tier 1. The Pi 5 + HackRF + Leo Bodnar is the Phase 2A reference implementation, not a mandate. See Section 3.2, SPEC-004A.2 for the full permissible hardware list.
+./MASTER_SPEC.md:306:- **Multi-Modal Ingestion:** RF (HackRF One or equivalent CLKIN-capable SDR), Thermal, Acoustic, and GPS/PPS sensors.
+./MASTER_SPEC.md:307:- **Hardware-Level Phase Coherence (Rev 4.1):** GPSDO 10 MHz reference → SDR CLKIN port. The ADC sampling clock is hardware-locked to the GPS constellation at the analog level. USB bus jitter is irrelevant — it affects data transfer latency, not the phase relationship between IQ samples. This is RF Metrology timing, not IT Network timing.
+./MASTER_SPEC.md:678:**Primary Hardware Baseline:** Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO.  
+./MASTER_SPEC.md:681:Rev 4.2 changes: Migrated from RTL-SDR/u-blox PTP stack to GPSDO RF Metrology. `ingest_gps_pps()` reads real PPS via kernel ioctl on /dev/pps0 from the LBE-1421 GPSDO. `ingest_sdr()` performs Hilbert transform and phase extraction in Layer 1 via HackRF and stores results in `extracted_phases` field. Both functions store modality as string (not enum object) for JSON compatibility.
+./MASTER_SPEC.md:685:SPEC-005A.4 — Tier 1 Hardware Ingestion (Rev 4.2-LBE-1421)
+./MASTER_SPEC.md:695:# SoapySDR/pyhackrf would be imported here in production
+./MASTER_SPEC.md:696:# import SoapySDR
+./MASTER_SPEC.md:697:# import pyhackrf
+./MASTER_SPEC.md:704:# ─── GPS/PPS Ingestion (Rev 4.2-LBE-1421 — RF Metrology) ──────
+./MASTER_SPEC.md:711:    """SPEC-005A.4a — GPS/PPS Live Ingestion (Rev 4.2-LBE-1421 — RF Metrology)"""
+./MASTER_SPEC.md:715:    # The LBE-1421 provides 1 PPS to GPIO 18 (RP1 3.3V compatible)
+./MASTER_SPEC.md:757:# ─── SDR Ingestion (Rev 4.2-LBE-1421 — RF Metrology) ────
+./MASTER_SPEC.md:760:    sample_rate: float = 20e6,  # HackRF capability
+./MASTER_SPEC.md:768:    """SPEC-005A.4b — SDR IQ Live Ingestion (Rev 4.2-LBE-1421 — RF Metrology)"""
+./MASTER_SPEC.md:772:    # In production, this uses SoapySDR or pyhackrf
+./MASTER_SPEC.md:773:    # sdr = SoapySDR.Device(dict(driver="hackrf"))
+./MASTER_SPEC.md:802:        source_path="/dev/hackrf0",
+./MASTER_SPEC.md:1047:- HackRF + GPSDO RF Metrology timing implemented ✅ (Rev 4.1-PIVOT)
+./MASTER_SPEC.md:1057:- **Phase 2A Active:** RF Metrology hardware deployed: Pi 5 + HackRF + GPSDO
+./MASTER_SPEC.md:1100:8. **Deploy HackRF + GPSDO on Pi 5 hardware** ← PHASE 2A CURRENT
+./MASTER_SPEC.md:1108:**Phase 2A (Current — Hardware Transition):** Deploy HackRF One + Leo Bodnar LBE-1421 GPSDO on Pi 5 units. Verify <1µs jitter and hardware phase-lock. Execute 72-hour adaptive baseline per SPEC-009. Deploy first Tier 2 swarm cluster with SPEC-008 anti-poisoning. Any Tier 1 node showing >10µs jitter or missing phase-lock flagged HARDWARE_KILL.
+./TURNOVER_PHASE2B.md:18:Tier 1 (unchanged):  HackRF SDR → HardwareHAL → DualStreamRouter → HDF5Writer (event_* groups)
+./TURNOVER_PHASE2B.md:109:| 2 | 2 flaky hardware tests when real HackRF connected | Low | Pre-existing, not a regression; tests pass in CI/sim | N/A |
+./TURNOVER_PHASE2B.md:113:| 6 | LBE-1421 second output (10 MHz) unused | None | Documented for future expansion | Future phase |
+./TURNOVER_PHASE2B.md:190:pytest tests/ -k "not test_pyhackrf"
+./TURNOVER_PHASE2B.md:268:- [x] LBE-1421 documentation corrected
+./TURNOVER_LBE1421.md:1:# Turnover Report: LBE-1421 Production Hardening (v4.6.0)
+./TURNOVER_LBE1421.md:8:This update finalizes the transition from the deprecated single-output LBE-1420 to the dual-output **Leo Bodnar LBE-1421 GPSDO**. The platform now supports simultaneous 10 MHz hardware ADC locking (via HackRF CLKIN) and 1 PPS epoch anchoring (via Pi 5 GPIO 18). All SPEC-IDs for timing integrity and multi-node coherence are implemented and verified against the LBE-1421 Datasheet V1.0.
+./TURNOVER_LBE1421.md:19:| **SPEC-004A.4** | `hal_hardware.py` | Added LBE-1421 dual-output config and holdover tracking. |
+./TURNOVER_LBE1421.md:22:| **SPEC-005A.HAL-SIM**| `hal_simulated.py`| Upgraded with LBE-1421 phase-noise and NMEA emulation. |
+./TURNOVER_LBE1421.md:26:1. **LBE-1421 Config:** Connect LBE-1421 to PC and use Leo Bodnar tool to set `Out1 = 1 PPS` and `Out2 = 10,000,000 Hz`.
+./TURNOVER_LBE1421.md:28:   - `Out2` -> HackRF `CLKIN` (SMA)
+./TURNOVER_LBE1421.md:30:   - Bridge Ground between LBE-1421 and Pi 5.
+./SESSION_REPORT_2026-04-11_LBE1420.md:1:# DSLV-ZPDI Session Report — 2026-04-11 (LBE-1421 Hardware Pivot)
+./SESSION_REPORT_2026-04-11_LBE1420.md:15:Executed mandatory hardware migration from the **Leo Bodnar Mini GPSDO** to the **Leo Bodnar LBE-1421 GPSDO** across the entire DSLV-ZPDI project. Updated 23 files in the dslv-zpdi repo and 1 file in the DynoGator profile repo. Fixed pre-existing version mismatches, removed deprecated dependencies from the critical build path, and created new documentation for RF/Magnetic shielding design. All 31 tests passing, all validation tools clean.
+./SESSION_REPORT_2026-04-11_LBE1420.md:21:### 2.1 Hardware Migration (Leo Bodnar Mini → LBE-1421)
+./SESSION_REPORT_2026-04-11_LBE1420.md:27:| Clock Authority model | Leo Bodnar Mini GPSDO → **Leo Bodnar LBE-1421 GPSDO** |
+./SESSION_REPORT_2026-04-11_LBE1420.md:28:| Part number | LB-MINI-GPSDO → **LBE-1421** |
+./SESSION_REPORT_2026-04-11_LBE1420.md:32:| Level-shifter | Required for safety → **Not required** (LBE-1421 is 3.3V native) |
+./SESSION_REPORT_2026-04-11_LBE1420.md:38:- **SMA Male-to-Male** coaxial cable (50 Ohm, ≤ 1FT) for GPSDO → CLKIN
+./SESSION_REPORT_2026-04-11_LBE1420.md:49:| `provision_tier1.py` | Added `check_nmea_telemetry()` function, updated RP1 warning for LBE-1421 |
+./SESSION_REPORT_2026-04-11_LBE1420.md:57:| **Added** `pyhackrf>=1.0.0` | To core dependencies |
+./SESSION_REPORT_2026-04-11_LBE1420.md:74:| HAL modules | Rev 4.1-FORGE/4.1-PIVOT | **Rev 4.2-LBE-1421** |
+./SESSION_REPORT_2026-04-11_LBE1420.md:75:| `SPEC-004A.1.md` | Rev 4.1-PIVOT | **Rev 4.2-LBE-1421** |
+./SESSION_REPORT_2026-04-11_LBE1420.md:82:| `docs/HARDWARE_CHANGE_JUSTIFICATION.md` | SPEC-UPDATE-PHASE-2A-LBE-1421 — formal rationale, updated BOM, physical routing protocol, software integration requirements |
+./SESSION_REPORT_2026-04-11_LBE1420.md:101:- LBE-1421 GPSDO Migration (USB-C, NMEA telemetry, 3.3V CMOS native)
+./SESSION_REPORT_2026-04-11_LBE1420.md:104:- Hardware Change Justification (SPEC-UPDATE-PHASE-2A-LBE-1421)
+./SESSION_REPORT_2026-04-11_LBE1420.md:108:- Dependencies: pyrtlsdr → pyhackrf in core deps
+./SESSION_REPORT_2026-04-11_LBE1420.md:110:- RP1 voltage warning updated for LBE-1421 native 3.3V
+./SESSION_REPORT_2026-04-11_LBE1420.md:111:- Physical routing protocol for LBE-1421 connections
+./SESSION_REPORT_2026-04-11_LBE1420.md:115:- Leo Bodnar Mini GPSDO (superseded by LBE-1421)
+./SESSION_REPORT_2026-04-11_LBE1420.md:169:   - Order: Leo Bodnar LBE-1421 GPSDO, Great Scott Gadgets ANT500, SMA cable, jumper wires
+./SESSION_REPORT_2026-04-11_LBE1420.md:173:   - LBE-1421 SMA Output → HackRF CLKIN (RF phase lock)
+./SESSION_REPORT_2026-04-11_LBE1420.md:174:   - LBE-1421 1 PPS → Pi 5 GPIO 18 (no level-shifter needed)
+./SESSION_REPORT_2026-04-11_LBE1420.md:175:   - LBE-1421 USB-C → Pi 5 (power + NMEA telemetry)
+./SESSION_REPORT_2026-04-11_LBE1420.md:205:All changes maintain SPEC-ID compliance. The orphan checker validates 100% coverage. Version sync is clean at 4.2.0. The LBE-1421 migration eliminates the fragile Mini-USB connector, adds software-observable NMEA telemetry for GPS fix verification, and provides native 3.3V CMOS compatibility with the Pi 5 RP1 southbridge.
+./RELEASE_NOTES_v4.4.0.md:12:- Hilbert phase extraction in `HardwareHAL` and `SimulatedHAL` (Layer 1 per SPEC-005).
+./RELEASE_NOTES_v4.4.0.md:14:- udev rules deployment (`99-pps.rules`, `52-hackrf.rules`) and `systemctl enable chrony` in installer.
+./RF_METROLOGY_PIVOT_REPORT.md:13:The Phase 2A Hardware Timing Refactor has been **successfully completed**. The project has pivoted from the deprecated IT Network Timing architecture (Intel i210-T1 + RTL-SDR) to the RF Metrology Timing architecture (Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO).
+./RF_METROLOGY_PIVOT_REPORT.md:29:| SDR Hardware | RTL-SDR (rtlsdr library) | HackRF One (pyhackrf library) |
+./RF_METROLOGY_PIVOT_REPORT.md:30:| Timing Method | i210-T1 NIC PTP (IEEE 1588) | GPSDO 10 MHz → CLKIN |
+./RF_METROLOGY_PIVOT_REPORT.md:36:- GPSDO 10 MHz reference → HackRF CLKIN port (hardware ADC lock)
+./RF_METROLOGY_PIVOT_REPORT.md:40:- Graceful degradation if pyhackrf not installed
+./RF_METROLOGY_PIVOT_REPORT.md:46:- Updated to simulate HackRF + GPSDO stack
+./RF_METROLOGY_PIVOT_REPORT.md:49:- Default sample rate: 20 MHz (HackRF capability)
+./RF_METROLOGY_PIVOT_REPORT.md:69:1. HackRF presence detection (`hackrf_info`)
+./RF_METROLOGY_PIVOT_REPORT.md:70:2. HackRF clock source verification (`hackrf_debug --clock_source`)
+./RF_METROLOGY_PIVOT_REPORT.md:72:4. udev rules for PPS and HackRF
+./RF_METROLOGY_PIVOT_REPORT.md:73:5. Python dependencies (`pyhackrf`)
+./RF_METROLOGY_PIVOT_REPORT.md:112:- Replaced "Intel i210-T1 timing spec" → "HackRF + GPSDO RF Metrology timing"
+./RF_METROLOGY_PIVOT_REPORT.md:145:┌─────────────┐     GPIO      ┌──────────────┐    10 MHz     ┌──────────┐
+./RF_METROLOGY_PIVOT_REPORT.md:146:│ Raspberry   │ ←───────────→ │ Leo Bodnar   │ ←──────────→ │ HackRF   │
+./RF_METROLOGY_PIVOT_REPORT.md:147:│ Pi 5        │   1 PPS       │ LBE-1421   │   Reference  │ One      │
+./RF_METROLOGY_PIVOT_REPORT.md:154:(< 1µs via PPS)                  (10 MHz atomic)              (PHASE-LOCKED!)
+./RF_METROLOGY_PIVOT_REPORT.md:216:| `hal_hardware.py` | Rewrite | SPEC-005A.HAL-HW | Complete replacement of RTL-SDR with HackRF + GPSDO |
+./RF_METROLOGY_PIVOT_REPORT.md:217:| `hal_simulated.py` | Update | SPEC-005A.HAL-SIM | GPSDO/HackRF simulation for CI/CD |
+./RF_METROLOGY_PIVOT_REPORT.md:219:| `provision_tier1.py` | Enhance | SPEC-004A.1-PROVISION | GPSDO/HackRF validation checks |
+./RF_METROLOGY_PIVOT_REPORT.md:239:   - Deployed: Leo Bodnar LBE-1421 GPSDO + HackRF One + Pi 5
+./RF_METROLOGY_PIVOT_REPORT.md:243:   - Complete rewrite of HardwareHAL for HackRF support
+./RF_METROLOGY_PIVOT_REPORT.md:244:   - pyhackrf integration with graceful fallback
+./RF_METROLOGY_PIVOT_REPORT.md:261:   - Order: Raspberry Pi 5 (16GB), HackRF One, Leo Bodnar LBE-1421 GPSDO
+./RF_METROLOGY_PIVOT_REPORT.md:265:   - GPSDO 10 MHz SMA → HackRF CLKIN
+./RF_METROLOGY_PIVOT_REPORT.md:301:Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO RF Metrology stack.
+./RF_METROLOGY_PIVOT_REPORT.md:321:- HackRF ADC locked to GPS constellation via 10 MHz CLKIN
+./RF_METROLOGY_PIVOT_REPORT.md:343:| Intel i210-T1 NIC | DEPRECATED | GPSDO 10 MHz reference |
+./RF_METROLOGY_PIVOT_REPORT.md:344:| RTL-SDR (v3/v4) | TIER 2 ONLY | HackRF One with CLKIN |
+./RF_METROLOGY_PIVOT_REPORT.md:352:sudo apt install pps-tools chrony hackrf libhackrf-dev
+./RF_METROLOGY_PIVOT_REPORT.md:355:pip install pyhackrf
+./RF_METROLOGY_PIVOT_REPORT.md:364:# Check HackRF
+./RF_METROLOGY_PIVOT_REPORT.md:365:hackrf_info
+./RF_METROLOGY_PIVOT_REPORT.md:368:hackrf_debug --clock_source
+./GEM-HOME/add_nmea_sim.py:12:        new_lines.append('        """Mock NMEA for SimulatedHAL."""\n')
+./GEM-HOME/add_nmea_sim.py:23:print('Added verify_nmea_telemetry to SimulatedHAL')
+./GEM-HOME/apply_fixes.py:21:    '- **Timing Wiring (Rev 4.1):** 10 MHz SMA out from GPSDO \u2192 HackRF One `CLKIN` port (hardware ADC lock). 1 PPS out from GPSDO \u2192 Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module + `chronyd`. This eliminates all USB bus jitter from the phase measurement chain. The ADC sampling clock is derived directly from the GPS constellation \u2014 no software intermediaries.',
+./GEM-HOME/apply_fixes.py:22:    '- **Timing Wiring (Rev 4.1):** 10 MHz reference signal from LBE-1421 `Out2` port (set to 10,000,000 Hz) \u2192 HackRF One `CLKIN` port (hardware ADC lock, 50 \u03a9 termination recommended). 1 PPS signal from LBE-1421 `Out1` port (set to 1 PPS mode) \u2192 Raspberry Pi 5 GPIO 18 (Physical Pin 12) via `pps-gpio` kernel module. LBE-1421 provides a native 100 ms 3.3 V CMOS pulse (1.65 V into 50 \u03a9) which is perfectly matched to Pi 5 logic levels without level-shifters. This configuration eliminates all USB bus jitter from the phase measurement chain; the ADC sampling clock is derived directly from the GPS constellation with no software intermediaries.'
+./GEM-HOME/apply_fixes.py:27:    '- **Timing Wiring (Rev 4.1):** 10 MHz SMA out from GPSDO \u2192 HackRF One `CLKIN` port (hardware ADC lock). 1 PPS out from GPSDO \u2192 Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module + `chronyd`. This eliminates all USB bus jitter from the phase measurement chain. The ADC sampling clock is derived directly from the GPS constellation \u2014 no software intermediaries.',
+./GEM-HOME/apply_fixes.py:28:    '- **Timing Wiring (Rev 4.1):** 10 MHz reference signal from LBE-1421 `Out2` port (set to 10,000,000 Hz) \u2192 HackRF One `CLKIN` port (hardware ADC lock, 50 \u03a9 termination recommended). 1 PPS signal from LBE-1421 `Out1` port (set to 1 PPS mode) \u2192 Raspberry Pi 5 GPIO 18 (Physical Pin 12) via `pps-gpio` kernel module. LBE-1421 provides a native 100 ms 3.3 V CMOS pulse (1.65 V into 50 \u03a9) which is perfectly matched to Pi 5 logic levels without level-shifters. This configuration eliminates all USB bus jitter from the phase measurement chain; the ADC sampling clock is derived directly from the GPS constellation with no software intermediaries.'
+./GEM-HOME/apply_fixes.py:33:    '1. **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1421 `Output` port directly to HackRF One `CLKIN` port. This phase-locks the SDR\'s ADC to the GPS constellation.',
+./GEM-HOME/apply_fixes.py:34:    '1. **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1421 `Out2` port (set to 10 MHz) directly to HackRF One `CLKIN` port (50 \u03a9). This phase-locks the SDR\'s ADC to the GPS constellation.'
+./GEM-HOME/apply_fixes.py:37:    '2. **OS Timestamping (Heartbeat):** Run jumper wire from LBE-1421 `1 PPS` output to Pi 5 GPIO Pin 18 (Physical Pin 12). Bridge ground between GPSDO and Pi. *Note: LBE-1421 outputs 3.3V CMOS natively \u2014 no level-shifter required.*',
+./GEM-HOME/apply_fixes.py:38:    '2. **OS Timestamping (Heartbeat):** Run jumper wire from LBE-1421 `Out1` port (set to 1 PPS mode) to Pi 5 GPIO Pin 18 (Physical Pin 12). Bridge ground between GPSDO and Pi. *Note: LBE-1421 outputs 100 ms 3.3V CMOS natively \u2014 no level-shifter required.*'
+./GEM-HOME/apply_fixes.py:43:    '**Step 4.** **RF Phase Lock (ADC Slave):** Connect SMA Male-to-Male cable (50 Ohm, \u2264 1FT) from the LBE-1421 `Output` port to the HackRF One `CLKIN` port.',
+./GEM-HOME/apply_fixes.py:44:    '**Step 4.** **RF Phase Lock (ADC Slave):** Connect SMA Male-to-Male cable (50 Ohm, \u2264 1FT) from the LBE-1421 `Out2` port (set to 10 MHz) to the HackRF One `CLKIN` port (50 \u03a9).'
+./GEM-HOME/apply_fixes.py:47:    '**Step 5.** **OS Timestamping (Heartbeat):** Run jumper wire from the LBE-1421 `1 PPS` output to Pi 5 **GPIO Pin 18** (Physical Pin 12). Run a second jumper to bridge the ground paths between the GPSDO and the Pi. *Note: LBE-1421 outputs 3.3V CMOS natively \u2014 no level-shifter required for Pi 5 RP1 chip.*',
+./GEM-HOME/apply_fixes.py:48:    '**Step 5.** **OS Timestamping (Heartbeat):** Run jumper wire from the LBE-1421 `Out1` port (set to 1 PPS mode) to Pi 5 **GPIO Pin 18** (Physical Pin 12). Run a second jumper to bridge the ground paths between the GPSDO and the Pi. *Note: LBE-1421 outputs 100 ms 3.3V CMOS natively \u2014 no level-shifter required for Pi 5 RP1 chip.*'
+./GEM-HOME/update_living_master.py:8:### SPEC-004A.4 — Leo Bodnar LBE-1421 GPSDO (Clock Authority)
+./GEM-HOME/update_living_master.py:10:**SYSTEM FUNCTION:** Provide the primary 10 MHz reference and 1 PPS epoch anchor for the SIGINT network.
+./GEM-HOME/update_living_master.py:11:**OPERATIONAL INTENT:** The LBE-1421 replaces the deprecated LBE-1420 to provide simultaneous high-frequency reference and physical PPS.
+./GEM-HOME/update_living_master.py:25:**KILL CONDITION:** Any Tier 1 node utilizing a single-output GPSDO (e.g., LBE-1420) that cannot provide simultaneous 10 MHz + 1 PPS.
+./GEM-HOME/upgrade_simulator.py:10:        SPEC-005A.4a — Mock GPS/PPS Ingestion (LBE-1421 simulation).
+./GEM-HOME/upgrade_simulator.py:16:        sensor_id = kwargs.get(\"sensor_id\", \"SIM-LBE-1421\")
+./GEM-HOME/upgrade_simulator.py:61:        SPEC-005A.4b — Mock SDR IQ Ingestion with LBE-1421 phase-noise curve.
+./GEM-HOME/upgrade_simulator.py:71:        # Emulate phase noise based on LBE-1421 datasheet p.2
+./GEM-HOME/upgrade_simulator.py:96:                \"phase_noise_model\": \"LBE-1421-V1\",
+./GEM-HOME/upgrade_simulator.py:119:print('Upgraded SimulatedHAL with LBE-1421 specs')
+./GEM-HOME/harden_installer.py:20:    # Generate a policy that allows the HackRF and LBE-1421
+./GEM-HOME/harden_installer.py:21:    # HackRF: 1d50:6089
+./GEM-HOME/harden_installer.py:22:    # LBE-1421: 1d50:604b (common Leo Bodnar) or check detected
+./GEM-HOME/harden_installer.py:24:    # Ensure HackRF is always allowed
+./GEM-HOME/harden_installer.py:26:        echo "allow id 1d50:6089 serial \\"*\\" name \\"HackRF One\\" with-interface all" >> /etc/usbguard/rules.conf
+./GEM-HOME/update_hal_docs.py:10:    - HackRF One with CLKIN port for 10 MHz GPSDO reference
+./GEM-HOME/update_hal_docs.py:11:    - Leo Bodnar LBE-1421 GPSDO (10 MHz + 1 PPS output)
+./GEM-HOME/update_hal_docs.py:12:    - GPSDO 10 MHz SMA \u2192 HackRF CLKIN (hardware ADC phase-lock)
+./GEM-HOME/update_hal_docs.py:22:    - HackRF One with CLKIN port for 10 MHz GPSDO reference
+./GEM-HOME/update_hal_docs.py:23:    - Leo Bodnar LBE-1421 GPSDO (Out2=10 MHz reference, Out1=1 PPS)
+./GEM-HOME/update_hal_docs.py:24:    - GPSDO Out2 (10 MHz) \u2192 HackRF CLKIN (hardware ADC phase-lock, 50 \u03a9)
+./GEM-HOME/update_hal_docs.py:30:    The Pi 5's RP1 southbridge uses strictly 3.3V logic. LBE-1421 provides native
+./GEM-HOME/update_hal.py:15:        SPEC-004A.3-NMEA \u2014 Verify LBE-1421 NMEA telemetry via USB-C virtual serial.
+./GEM-HOME/update_hal.py:17:        The LBE-1421 provides observable NMEA sentences over a virtual serial port
+./GEM-HOME/update_hal.py:103:        SPEC-004A.4-CONFIG \u2014 Configure LBE-1421 dual outputs.
+./GEM-HOME/update_hal.py:106:        Out2: set to frequency in Hz (default 10 MHz).
+./GEM-HOME/update_hal.py:111:        print(f\"[+] Configuring LBE-1421: Out1={out1_mode}, Out2={out2_freq}Hz\")
+./GEM-HOME/update_hal.py:119:        Leo Bodnar LBE-1421 TCXO high-Q oscillator ensures stability 
+./GEM-HOME/fix_1421_remainders.py:23:    content = content.replace('LBE-1420', 'LBE-1421')
+./.pytest_cache/v/cache/nodeids:23:  "tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification",
+./.pytest_cache/v/cache/nodeids:24:  "tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification",
+./.pytest_cache/v/cache/nodeids:25:  "tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_clock_mismatch_raises_clock_verification",
+./.pytest_cache/v/cache/nodeids:26:  "tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_hackrf_not_found_raises_hardware_initialization",
+./.pytest_cache/v/cache/nodeids:27:  "tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_no_devices_found_raises_driver_unavailable",
+./install_dslv_zpdi.sh:9:# CPU/USB tuning, sysctl, modprobe blacklist, HackRF udev rules), operations
+./install_dslv_zpdi.sh:17:#   - Installs HackRF udev rules from config/os-hardening/99-hackrf.rules
+./install_dslv_zpdi.sh:18:#   - Adds the invoking user to plugdev so HackRF doesn't need sudo
+./install_dslv_zpdi.sh:82:                      freeze kernel/firmware/hackrf packages, apply
+./install_dslv_zpdi.sh:239:    hackrf
+./install_dslv_zpdi.sh:240:    libhackrf-dev
+./install_dslv_zpdi.sh:241:    soapysdr-module-hackrf
+./install_dslv_zpdi.sh:377:# 2. SoapySDR Venv Linkage Logic (Rev 4.3 feature)
+./install_dslv_zpdi.sh:380:    log_info "Linking system SoapySDR to virtual environment"
+./install_dslv_zpdi.sh:385:        # Use find to locate SoapySDR related files in system dist-packages
+./install_dslv_zpdi.sh:386:        mapfile -t SOAPY_FILES < <(find "$SYS_DIST_PACKAGES" -maxdepth 1 \( -name "SoapySDR*" -o -name "_SoapySDR*" \))
+./install_dslv_zpdi.sh:473:            log_warn "Tier 1 hardware audit failed in simulator mode (expected without GPSDO/HackRF) -- continuing"
+./install_dslv_zpdi.sh:475:            log_fail "Tier 1 hardware audit failed. Connect GPSDO + HackRF, or re-run with --simulator."
+./install_dslv_zpdi.sh:523:    #    never break PPS/HackRF/chrony timing.
+./install_dslv_zpdi.sh:529:        hackrf libhackrf0 libhackrf-dev
+./install_dslv_zpdi.sh:638:    #    don't get grabbed by the kernel — leaves them free for SoapySDR.
+./install_dslv_zpdi.sh:641:# DSLV-ZPDI: blacklist DVB driver auto-load so RTL-SDR dongles are free for SoapySDR
+./install_dslv_zpdi.sh:664:                echo "allow id 1d50:6089 serial \"*\" name \"HackRF One\" with-interface all" \
+./install_dslv_zpdi.sh:687:    # 10b. HackRF udev rules -- ship the project's rules from
+./install_dslv_zpdi.sh:688:    #      config/os-hardening/99-hackrf.rules so the device is usable
+./install_dslv_zpdi.sh:690:    if [[ -f "${INSTALL_DIR}/config/os-hardening/99-hackrf.rules" ]]; then
+./install_dslv_zpdi.sh:691:        install -m 0644 "${INSTALL_DIR}/config/os-hardening/99-hackrf.rules" \
+./install_dslv_zpdi.sh:692:            /etc/udev/rules.d/99-dslv-hackrf.rules
+./install_dslv_zpdi.sh:695:        log_ok "HackRF udev rules installed (/etc/udev/rules.d/99-dslv-hackrf.rules)"
+./install_dslv_zpdi.sh:698:    # 10c. Ensure invoking user is in plugdev so HackRF / serial dongles
+./TURNOVER_2026-06-11_Grok_NodeBridgeHardening.md:13:- **Task A (critical blocker fix):** Broadened all native-library import guards (`except (ImportError, OSError)`) in hal_hardware.py (Soapy + pyhackrf with full Rev 4.8.x + SPEC-005A.HAL-HW commentary), hdf5_writer.py, radon_session_writer.py, radoneye_ingestor.py (bleak including bare from sites). Pure-Python guards (flask, inner pyserial) left as-is with justification. Root cause: hackrf CDLL at import time raises OSError on no-.so hosts → collection of 2 test modules failed (0 tests collected). After: 113 passed.
+./TURNOVER_2026-06-11_Grok_NodeBridgeHardening.md:57:- This host has no HackRF/libhackrf — all work validated under DEV_SIMULATOR=1 only. Do not treat simulator numbers as hardware-truth evidence.
+./TURNOVER_2026-06-11_Grok_NodeBridgeHardening.md:64:- **Highest priority:** P1 Hardware Truth Path on the Pi 5 (LBE-1421 + HackRF One + PPS + real NMEA). Capture evidence only into docs/validation-logs/ after confirming clean.
+./Dockerfile:7:    libhackrf-dev \
+./Dockerfile:8:    soapysdr-module-hackrf \
+./RELEASE_NOTES_v4.8.1.md:6:**Authority:** Joseph R. Fross (DynoGator Labs) — autonomous Grok execution on Pixel 9 Pro XL / GrapheneOS / Debian Trixie proot (aarch64, no HackRF attached)
+./RELEASE_NOTES_v4.8.1.md:10:This patch release is the direct result of the autonomous work order executed on a **simulator-only** dev host (no libhackrf.so.0, no PPS/GPSDO hardware). The primary defect was that bare `except ImportError:` guards around native SDR libs allowed `OSError` (from `ctypes.CDLL` at import time inside third-party packages) to escape, making test collection impossible (0 tests collected) on any host without the native shared objects.
+./RELEASE_NOTES_v4.8.1.md:19:  - `src/dslv_zpdi/layer1_ingestion/hal_hardware.py` (SoapySDR ~line 42, pyhackrf ~line 74): `except ImportError:` → `except (ImportError, OSError):`. Added Rev 4.8.x comments with exact root-cause narrative and SPEC reference.
+./RELEASE_NOTES_v4.8.1.md:60:- Next priority (per TURNOVER): P1 "Hardware Truth Path" on the Pi 5 (HackRF + LBE-1421 + PPS validation).
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:5:**Platform:** Raspberry Pi 5 + HackRF One + LBE-1421 GPSDO (pending arrival) + 5" DSI  
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:21:- **Symptom:** `dslv-zpdi.service` failed with `exit-code: 226/NAMESPACE` when HackRF was unplugged, *even in simulator mode*.
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:22:- **Root cause:** The installed systemd unit at `/etc/systemd/system/dslv-zpdi.service` listed `/dev/hackrf0` in `ReadWritePaths`. `ProtectSystem=strict` creates a mount namespace at startup; if any `ReadWritePaths` entry is missing, namespace setup fails before `ExecStart` ever runs.
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:23:- **Fix:** Removed `/dev/hackrf0` from `ReadWritePaths` in `config/dslv-zpdi.service` (USB access via `/dev/bus/usb` is sufficient for libusb/pyhackrf). Also added the full sandboxing directives to the repo file so it becomes the source of truth.
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:49:- **Symptom:** `hackrf_sweep` could be left running after dashboard quit because `wf_p.shutdown()` was never called.
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:118:The repo's `config/dslv-zpdi.service` was fixed, but the installed copy in `/etc/systemd/system/` still has the old `ReadWritePaths` including `/dev/hackrf0`.
+./docs/archive/SESSION_REPORT_2026-04-25_Pipeline_Dashboard_Repair.md:175:- **LBE-1421 GPSDO arrival day:** When hardware arrives, run `tools/provision_tier1.py`, verify auto-probe HAL selects `HardwareHAL`, run 72-hour baseline capture.
+./docs/archive/SESSION_REPORT_2026-04-26_PipelineHardening.md:244:### LBE-1421 readiness
+./docs/KIMI_CLOSEOUT_PRE_STATE.txt:51:* b554a36 docs: correct LBE-1420→LBE-1421 dual-output references in living master and build sheet; document second output independence
+./docs/RF_MAGNETIC_SHIELDING.md:5:**Target Baseline:** Rev 4.2-LBE-1421
+./docs/RF_MAGNETIC_SHIELDING.md:26:- Do the same for the HackRF's main processors.
+./docs/RF_MAGNETIC_SHIELDING.md:35:The noisy digital brain (Pi 5) must be separated from the sensitive metrology gear (HackRF + LBE-1421 GPSDO), and all of it shielded from the outside.
+./docs/RF_MAGNETIC_SHIELDING.md:42:| **Chamber B** | HackRF One + LBE-1421 GPSDO | RF metrology — sensitive |
+./docs/RF_MAGNETIC_SHIELDING.md:105:   └─→ Clean 10MHz/RF passes through SMA bulkhead → Chamber B
+./docs/RF_MAGNETIC_SHIELDING.md:135:- [ ] Finalize internal chamber dimensions based on Pi 5 + HackRF + LBE-1421 footprints
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:7:**Baseline at start of session:** HEAD 9462a2b (merge: Rev 4.8.0 real CI validation matrix), pyproject 4.8.0,  simulator suite collected 90 / 2 collection errors on this host (no libhackrf)
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:11:Executed the full work order §1–§10 on a simulator-only proot host (explicitly no HackRF/PPS/NMEA/GPSDO hardware attached; `DEV_SIMULATOR=1` only; no writes to `docs/validation-logs/`).
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:13:**Critical path unblocked:** Task A root cause was bare `except ImportError:` around imports that trigger `CDLL('libhackrf.so.0')` (and Soapy/h5py/bleak native loads) at *import time* inside the third-party packages. On hosts without the .so this raises `OSError`, which escaped the guard, blew up `import hal_hardware`, and prevented collection of `tests/test_hardware_failure_paths.py` and `tests/test_timing_monitor.py` (the latter via `lock_monitor`). Baseline: 90 collected, 2 errors, suite hard-failed to even start.
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:23:- No `libhackrf.so.0` (confirmed by the exact OSError during baseline collection)
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:40:**Defect location:** `src/dslv_zpdi/layer1_ingestion/hal_hardware.py:38-43` (Soapy) and `:46-75` (pyhackrf block containing `import hackrf as pyhackrf`).
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:42:The third-party `hackrf` package (0.2.0) does at module import:
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:45:libhackrf = CDLL('libhackrf.so.0')
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:47:This is executed at `import time` (top level of `hackrf/__init__.py`), *before* any user code. When the .so is absent the `CDLL` constructor raises `OSError: libhackrf.so.0: cannot open shared object file: No such file or directory` (from dlopen).
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:52:    import hackrf as pyhackrf
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:122:- Next recommended: P1 Hardware Truth Path on the Pi 5 (LBE-1421 + HackRF + PPS + real NMEA). See TURNOVER for exact reproduction commands.
+./docs/audits/GROK_WORK_REPORT_2026-06-11.md:127:- Baseline contract: 90 collected, 2 errors (exact OSError stack from hackrf CDLL).
+./docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md:116:for the owner). System libs `libhackrf-dev`/`libusb-1.0-0-dev` installed for
+./docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md:117:`pyhackrf`, mirroring the Dockerfile.
+./docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md:212:- Performed on hardware: none (no Tier 1 Pi 5 / HackRF / GPSDO attached here).
+./docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md:215:- Not possible this session: real PPS/NMEA/HackRF/BLE confirmation — remains
+./docs/KIMI_QUESTIONS.md:23:## Q2: LBE-1421 dual-output wiring — second output role
+./docs/KIMI_QUESTIONS.md:25:**Context:** The tasking order says "Output 1 → HackRF CLKIN; the second output is available as an independent reference." The README says "LBE-1421 `Output` → HackRF `CLKIN`" (vague on which output). The living master says "10 MHz reference signal from LBE-1421 `Out2` port → HackRF One `CLKIN`" and "1 PPS signal from LBE-1421 `Out1` port → Raspberry Pi 5 GPIO 18".
+./docs/KIMI_QUESTIONS.md:27:**Observation:** If Out2 is the 10 MHz reference and Out1 is 1 PPS, then the "second output" (Out2) is already used for HackRF. But the tasking says Output 1 → HackRF CLKIN and the second output is spare. There's a naming mismatch.
+./docs/KIMI_QUESTIONS.md:29:**My read:** The living master is the more detailed doc. Out1 = 1 PPS to Pi GPIO. Out2 = 10 MHz to HackRF CLKIN. The tasking order's "dual-output" point is that the LBE-1421 has TWO independent outputs (unlike the old LBE-1420 single-output). The second output (Out2) is the 10 MHz, and it's independent from Out1. This means you could repurpose Out2 to a different frequency or use it as a verification tap.
+./docs/KIMI_QUESTIONS.md:31:**Decision made:** I will document that Out2 is the 10 MHz reference to HackRF CLKIN, and that because the LBE-1421 has two independent outputs, Out2 can be reconfigured (e.g., to a second frequency for verification) without affecting the 1 PPS on Out1. I will also add a runtime timing-health cross-check that compares PPS timestamps against the NMEA-reported UTC to detect GPSDO health degradation.
+./docs/KIMI_CLOSEOUT_BRANCH_AUDIT.txt:25:5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+./docs/KIMI_CLOSEOUT_BRANCH_AUDIT.txt:53:5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+./docs/KIMI_CLOSEOUT_BRANCH_AUDIT.txt:61:5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+./docs/KIMI_CLOSEOUT_BRANCH_AUDIT.txt:74:5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+./docs/KIMI_CLOSEOUT_BRANCH_AUDIT.txt:79:b554a36 docs: correct LBE-1420→LBE-1421 dual-output references in living master and build sheet; document second output independence
+./docs/KIMI_CLOSEOUT_BRANCH_AUDIT.txt:93:5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+./docs/README.md:35:| [LBE-1421_WIRING.md](LBE-1421_WIRING.md) | GPSDO dual-output wiring (PPS + 10 MHz). |
+./docs/KIMI_CLOSEOUT_TESTS.txt:26:tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_no_devices_found_raises_driver_unavailable PASSED [ 16%]
+./docs/KIMI_CLOSEOUT_TESTS.txt:27:tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_hackrf_not_found_raises_hardware_initialization PASSED [ 17%]
+./docs/KIMI_CLOSEOUT_TESTS.txt:28:tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_clock_mismatch_raises_clock_verification PASSED [ 18%]
+./docs/KIMI_CLOSEOUT_TESTS.txt:29:tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification PASSED [ 19%]
+./docs/KIMI_CLOSEOUT_TESTS.txt:30:tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification FAILED [ 20%]
+./docs/KIMI_CLOSEOUT_TESTS.txt:115:_ TestPyhackrfFailurePaths.test_pyhackrf_unknown_clock_raises_clock_verification _
+./docs/KIMI_CLOSEOUT_TESTS.txt:117:self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fffa15ffc50>
+./docs/KIMI_CLOSEOUT_TESTS.txt:119:    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+./docs/KIMI_CLOSEOUT_TESTS.txt:122:        mock_pyhackrf = mock.MagicMock()
+./docs/KIMI_CLOSEOUT_TESTS.txt:123:        mock_pyhackrf.HackRF.return_value = mock_device
+./docs/KIMI_CLOSEOUT_TESTS.txt:125:            "pyhackrf": mock_pyhackrf,
+./docs/KIMI_CLOSEOUT_TESTS.txt:142:FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification
+./docs/LBE-1421_WIRING.md:1:# LBE-1421 GPSDO Wiring Diagram (RF Metrology)
+./docs/LBE-1421_WIRING.md:4:**Hardware:** Leo Bodnar LBE-1421 + HackRF One + Raspberry Pi 5
+./docs/LBE-1421_WIRING.md:10:    GPS[GPS Antenna] -- SMA --> LBE[LBE-1421 GPSDO]
+./docs/LBE-1421_WIRING.md:12:    subgraph "LBE-1421 Dual Outputs"
+./docs/LBE-1421_WIRING.md:14:        Out2[Out2: 10 MHz Ref]
+./docs/LBE-1421_WIRING.md:17:    subgraph "SDR: HackRF One"
+./docs/LBE-1421_WIRING.md:18:        CLKIN[CLKIN Port]
+./docs/LBE-1421_WIRING.md:29:    Out2 -- "SMA (50 Ω)" --> CLKIN
+./docs/LBE-1421_WIRING.md:33:    HackRF -- "USB 3.0" --> USB3
+./docs/LBE-1421_WIRING.md:39:LBE-1421 GPSDO                      Raspberry Pi 5 (GPIO Header)
+./docs/LBE-1421_WIRING.md:51:HackRF One SDR
+./docs/LBE-1421_WIRING.md:54:| [CLKIN] <-------------|-----------| [Out 2]  (10 MHz Ref) |
+./docs/LBE-1421_WIRING.md:56:                                    LBE-1421 (Reference Port)
+./docs/LBE-1421_WIRING.md:61:1.  **LBE-1421 Configuration:**
+./docs/LBE-1421_WIRING.md:72:    *   The HackRF CLKIN port is high-impedance. For cable runs >30cm, a 50 Ω SMA pass-through terminator at the HackRF end is recommended to ensure clean edges and 1.65V peak voltage.
+./docs/LBE-1421_WIRING.md:75:    *   The LBE-1421 outputs a **100 ms** pulse for 1 PPS.
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:10:tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification FAILED [ 50%]
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:11:tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification FAILED [100%]
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:14:_ TestPyhackrfFailurePaths.test_pyhackrf_internal_clock_raises_clock_verification _
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:16:self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fff83dcac10>
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:18:    def test_pyhackrf_internal_clock_raises_clock_verification(self):
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:21:        mock_pyhackrf = mock.MagicMock()
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:22:        mock_pyhackrf.HackRF.return_value = mock_device
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:24:            "pyhackrf": mock_pyhackrf,
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:35:[!] HackRF probe attempt 1/3 failed (device busy?) — retrying in 2 s
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:38:_ TestPyhackrfFailurePaths.test_pyhackrf_unknown_clock_raises_clock_verification _
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:40:self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fff831374d0>
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:42:    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:45:        mock_pyhackrf = mock.MagicMock()
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:46:        mock_pyhackrf.HackRF.return_value = mock_device
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:48:            "pyhackrf": mock_pyhackrf,
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:59:[!] HackRF probe attempt 1/3 failed (device busy?) — retrying in 2 s
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:60:[!] HackRF probe attempt 2/3 failed (device busy?) — retrying in 2 s
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:65:FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification
+./docs/KIMI_CLOSEOUT_FLAKY_ON_MAIN.txt:66:FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification
+./docs/ARCH-PHASE-2A-PIVOT.md:5:**Target Baseline:** Revision 4.2-LBE-1421  
+./docs/ARCH-PHASE-2A-PIVOT.md:29:| **SDR Array (The Eye)** | HackRF One | 20MHz bandwidth, native `CLKIN` capability |
+./docs/ARCH-PHASE-2A-PIVOT.md:30:| **Clock Authority** | Leo Bodnar LBE-1421 GPSDO | 10 MHz + 1 PPS from GPS constellation |
+./docs/ARCH-PHASE-2A-PIVOT.md:36:1. **External 10 MHz Phase-Lock:** The SDR must accept an external 10 MHz reference that hardware-locks the ADC sampling clock.
+./docs/ARCH-PHASE-2A-PIVOT.md:47:The Leo Bodnar GPSDO provides a **10 MHz reference signal** connected via SMA coax directly into the HackRF `CLKIN` port, locking the ADC directly to the GPS constellation.
+./docs/ARCH-PHASE-2A-PIVOT.md:54:#### LBE-1421 Native 3.3V Compatibility (RP1 Southbridge)
+./docs/ARCH-PHASE-2A-PIVOT.md:56:The Pi 5's **RP1 southbridge** utilizes strictly **3.3V logic**. The **LBE-1421 outputs a 3.3V CMOS square wave natively**, making it directly compatible with Pi 5 GPIO without level-shifting.
+./docs/ARCH-PHASE-2A-PIVOT.md:58:**No voltage divider or level-shifter is required** for the LBE-1421 → GPIO 18 PPS connection.
+./docs/ARCH-PHASE-2A-PIVOT.md:74:sudo apt install -y pps-tools chrony hackrf libhackrf-dev soapysdr-module-hackrf python3-soapysdr
+./docs/ARCH-PHASE-2A-PIVOT.md:113:All interactions with the HackRF **must** be routed through **SoapySDR** to maintain the hardware-agnostic rule of the architecture.
+./docs/ARCH-PHASE-2A-PIVOT.md:117:**CRITICAL:** The HackRF One will **silently fail back to its internal oscillator** if the 10 MHz `CLKIN` signal drops below the required amplitude or loses physical connection. The software stack must not blindly assume phase-lock.
+./docs/ARCH-PHASE-2A-PIVOT.md:124:import SoapySDR
+./docs/ARCH-PHASE-2A-PIVOT.md:148:    print("[+] Phase-lock verified. SDR slaved to GPSDO 10MHz reference.")
+./docs/ARCH-PHASE-2A-PIVOT.md:155:- **Initialization:** Forces external clock source via SoapySDR
+./docs/ARCH-PHASE-2A-PIVOT.md:168:print(f"Phase lock verified: {status['phase_lock_verified']}")
+./docs/ARCH-PHASE-2A-PIVOT.md:179:   - SoapySDR (preferred)
+./docs/ARCH-PHASE-2A-PIVOT.md:180:   - pyhackrf (fallback)
+./docs/ARCH-PHASE-2A-PIVOT.md:186:   - HackRF One
+./docs/ARCH-PHASE-2A-PIVOT.md:187:   - Leo Bodnar LBE-1421 GPSDO
+./docs/ARCH-PHASE-2A-PIVOT.md:189:   - SMA cables (10 MHz reference)
+./docs/ARCH-PHASE-2A-PIVOT.md:193:   - [ ] Verify GPSDO 10 MHz output level (~1Vpp into 50Ω)
+./docs/ARCH-PHASE-2A-PIVOT.md:195:   - [ ] Connect 10 MHz SMA → HackRF CLKIN
+./docs/ARCH-PHASE-2A-PIVOT.md:198:   - [ ] Connect HackRF to Pi 5 USB 3.0
+./docs/ARCH-PHASE-2A-PIVOT.md:214:# 2. Check HackRF detection
+./docs/ARCH-PHASE-2A-PIVOT.md:215:hackrf_info
+./docs/ARCH-PHASE-2A-PIVOT.md:217:# 3. Check clock source (via SoapySDR)
+./docs/ARCH-PHASE-2A-PIVOT.md:219:import SoapySDR
+./docs/ARCH-PHASE-2A-PIVOT.md:220:dev = SoapySDR.Device(dict(driver='hackrf'))
+./docs/ARCH-PHASE-2A-PIVOT.md:249:| Intel i210-T1 NIC | GPSDO 10 MHz reference | **REMOVED** |
+./docs/ARCH-PHASE-2A-PIVOT.md:250:| RTL-SDR (v3/v4) | HackRF One with CLKIN | **TIER 2 ONLY** |
+./docs/ARCH-PHASE-2A-PIVOT.md:271:| 4.1-FORGE | 2026-04-11 | Kimi (Forge Member) | Implementation of SoapySDR and Silent Traitor mitigation |
+./docs/collaboration/NEXT_STEPS.md:18:- Task A (critical): broadened native (ImportError, OSError) guards for libhackrf/Soapy (hal_hardware), h5py (writers), bleak (radoneye). Audit + justification for pure-Python guards left alone. Collection blast radius fixed; 113 passed on this host.
+./docs/collaboration/NEXT_STEPS.md:36:- Run a Tier 1 hardware validation session on the Pi 5 with LBE-1421, PPS, NMEA, and HackRF attached.
+./docs/collaboration/NEXT_STEPS.md:52:- Confirm HackRF amplifier lockout remains enforced in both pipeline and dashboard paths.
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:3:**Document ID:** `SPEC-UPDATE-PHASE-2A-LBE-1421`
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:14:The previously specified Leo Bodnar Mini GPSDO has been officially superseded by the **Leo Bodnar LBE-1421**. The LBE-1421 provides critical advantages for day-to-day field operations:
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:16:| Feature | LBE-1421 (Current) | Mini GPSDO (Deprecated) |
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:32:| SDR (The Eye) | HackRF One | RF ingestion with 20 MHz bandwidth, CLKIN for GPSDO |
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:33:| Clock Authority | Leo Bodnar LBE-1421 GPSDO | 10 MHz + 1 PPS, USB-C, NMEA telemetry |
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:45:Connect the SMA cable from the LBE-1421 `Output` port directly to the HackRF One `CLKIN` port. This physically locks the HackRF's sampling rate to the GPS constellation.
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:48:- Run a jumper wire from the LBE-1421 `1 PPS` output to the Pi 5's **GPIO Pin 18** (Physical Pin 12).
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:50:- **Note:** The LBE-1421 outputs 3.3V logic natively, so no level-shifter is required for the Pi 5 RP1 chip.
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:53:Connect the LBE-1421 via USB-C to the Pi 5. This provides power and establishes the NMEA virtual serial connection for software observation.
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:73:- **Hardware Agnosticism:** SDR interaction must remain wrapped in `SoapySDR` (SPEC-004A.2).
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:74:- **Forced Clock Assertion:** Before initiating the Kuramoto Coherence Engine, software MUST send `setClockSource("external")` to the HackRF.
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:75:- **Telemetry Verification:** Software should query the LBE-1421's NMEA stream via virtual serial port to verify an active GPS fix before allowing data ingestion.
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:83:| Leo Bodnar Mini GPSDO | Leo Bodnar LBE-1421 GPSDO | **SUPERSEDED** |
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:84:| Intel i210-T1 NIC | GPSDO 10 MHz reference | **REMOVED** |
+./docs/HARDWARE_CHANGE_JUSTIFICATION.md:85:| RTL-SDR (v3/v4) | HackRF One with CLKIN | **TIER 2 ONLY** |
+./docs/KIMI_CLOSEOUT_POST_STATE.txt:16:| * b554a36 docs: correct LBE-1420→LBE-1421 dual-output references in living master and build sheet; document second output independence
+./docs/KIMI_CLOSEOUT_POST_STATE.txt:29:* 5694d7f fix(tier1/2): optimize node pipeline and fix chronyc, pyhackrf and pyserial bugs
+./docs/KIMI_BRANCH_AUDIT.md:27:- **Behind main:** 4 commits (v4.7.1 dashboard finalization, node bridging, Pixel integration, pyhackrf/chronyc fixes)
+./docs/KIMI_PHASE2B_INTAKE.md:14:| `V3_DSLV-ZPDI_LIVING_MASTER.md` | Full system spec. LBE-1421 dual-output is the clock authority. Tier 1 = GPS-disciplined phase-locked RF only. Tier 2 = context/tamper-evidence, never primary stream. Packet state machine: RAW_CAPTURED → ASSEMBLED → TIME_TRUSTED → CAL_TRUSTED → CORE_PROCESSED → PRIMARY_CANDIDATE/ACCEPTED or SECONDARY_QUARANTINED. |
+./docs/KIMI_PHASE2B_INTAKE.md:15:| `README.md` | v4.7.0 architecture: Layer 1 Ingestion → Layer 2 Core (Kuramoto) → Layer 3 Telemetry (HDF5 dual-stream). HackRF + LBE-1421 GPSDO. Pixel 9 Pro XL already bridged as Tier 2 node via PiRepo hotspot (10.42.0.x). Dashboard is Rich TUI with glitch/plasma aesthetic. |
+./docs/KIMI_PHASE2B_INTAKE.md:18:| `pyproject.toml` | v4.7.1. Dependencies: numpy, scipy, h5py, pyserial, pyhackrf, pydantic, pyyaml, rich, pyfiglet, flask, psutil. Dev: pytest, black, pylint, mypy, ruff. |
+./docs/KIMI_PHASE2B_INTAKE.md:41:  -> hal_hardware.py: 1 function (_pyhackrf_device_list_safe)
+./docs/KIMI_PHASE2B_INTAKE.md:59:2. **GPS `fix=?` (unlocked)** — LBE-1421 not reporting a fix. I will add degraded-mode indicators and ensure the radon session orchestrator stamps timing-health into the manifest.
+./docs/KIMI_PHASE2B_INTAKE.md:61:4. **LBE-1420 vs LBE-1421 doc mismatch** — The `V3_DSLV-ZPDI_LIVING_MASTER.md` still references LBE-1420 in some places. The README correctly says LBE-1421. I will correct the living master.
+./docs/validation-logs/system.log:55:Apr 19 02:07:24 dslv-zpdi dslv-zpdi-preflight[9664]: HackRF detected
+./docs/validation-logs/system.log:56:Apr 19 02:07:24 dslv-zpdi preflight.sh[9648]: [preflight] HackRF detected
+./docs/validation-logs/system.log:89:hackrf
+./docs/validation-logs/system.log:90:libhackrf-dev
+./docs/validation-logs/system.log:91:libhackrf0
+./docs/validation-logs/system.log:124:# DSLV-ZPDI: blacklist DVB driver auto-load to keep RTL-SDR dongles (future) free for SoapySDR
+./docs/validation-logs/validators.log:19:NOTE: Leo Bodnar LBE-1421 — Native 3.3V CMOS Compatibility
+./docs/validation-logs/validators.log:24:The LBE-1421 GPSDO outputs a 3.3V CMOS square wave natively,
+./docs/validation-logs/validators.log:41:Hardware Stack: Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO
+./docs/validation-logs/validators.log:43:  - GPSDO 10 MHz SMA → HackRF CLKIN (hardware ADC lock)
+./docs/validation-logs/hardware.log:1:===== hackrf_info =====
+./docs/validation-logs/hardware.log:2:hackrf_info version: 2024.02.1
+./docs/validation-logs/hardware.log:3:libhackrf version: 2024.02.1 (0.9)
+./docs/validation-logs/hardware.log:4:Found HackRF
+./docs/validation-logs/hardware.log:7:Board ID Number: 4 (HackRF One)
+./docs/validation-logs/hardware.log:13:    HackRF One
+./docs/validation-logs/pytest.log:17:tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_no_devices_found_raises_driver_unavailable PASSED [ 20%]
+./docs/validation-logs/pytest.log:18:tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_hackrf_not_found_raises_hardware_initialization PASSED [ 23%]
+./docs/validation-logs/pytest.log:19:tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_clock_mismatch_raises_clock_verification PASSED [ 25%]
+./docs/validation-logs/pytest.log:20:tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification PASSED [ 27%]
+./docs/validation-logs/pytest.log:21:tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification PASSED [ 30%]
+./tests/test_hardware_failure_paths.py:18:def _hackrf_hardware_accessible() -> bool:
+./tests/test_hardware_failure_paths.py:19:    """Probe whether a real HackRF is accessible via pyhackrf.
+./tests/test_hardware_failure_paths.py:21:    The pyhackrf clock-source tests patch hal_hardware's module dict with
+./tests/test_hardware_failure_paths.py:22:    mocks, but HardwareHAL._verify_pyhackrf_clock spawns a subprocess that
+./tests/test_hardware_failure_paths.py:23:    imports the real `hackrf` module. If real hardware is present, the probe
+./tests/test_hardware_failure_paths.py:26:    nodes with a HackRF attached.
+./tests/test_hardware_failure_paths.py:33:                "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); d.close()",
+./tests/test_hardware_failure_paths.py:44:_HACKRF_HARDWARE_ACCESSIBLE = _hackrf_hardware_accessible()
+./tests/test_hardware_failure_paths.py:47:class TestSoapySDRFailurePaths:
+./tests/test_hardware_failure_paths.py:52:            "SoapySDR": mock_soapy,
+./tests/test_hardware_failure_paths.py:60:    def test_hackrf_not_found_raises_hardware_initialization(self):
+./tests/test_hardware_failure_paths.py:64:            "SoapySDR": mock_soapy,
+./tests/test_hardware_failure_paths.py:76:        mock_soapy.Device.enumerate.return_value = [{"driver": "hackrf"}]
+./tests/test_hardware_failure_paths.py:79:            "SoapySDR": mock_soapy,
+./tests/test_hardware_failure_paths.py:88:class TestPyhackrfFailurePaths:
+./tests/test_hardware_failure_paths.py:91:        reason="Subprocess probe uses real hackrf module; real hardware bypasses mocks",
+./tests/test_hardware_failure_paths.py:93:    def test_pyhackrf_internal_clock_raises_clock_verification(self):
+./tests/test_hardware_failure_paths.py:96:        mock_pyhackrf = mock.MagicMock()
+./tests/test_hardware_failure_paths.py:97:        mock_pyhackrf.HackRF.return_value = mock_device
+./tests/test_hardware_failure_paths.py:99:            "pyhackrf": mock_pyhackrf,
+./tests/test_hardware_failure_paths.py:109:        reason="Subprocess probe uses real hackrf module; real hardware bypasses mocks",
+./tests/test_hardware_failure_paths.py:111:    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+./tests/test_hardware_failure_paths.py:114:        mock_pyhackrf = mock.MagicMock()
+./tests/test_hardware_failure_paths.py:115:        mock_pyhackrf.HackRF.return_value = mock_device
+./tests/test_hardware_failure_paths.py:117:            "pyhackrf": mock_pyhackrf,
+./tests/test_hardware_failure_paths.py:150:                return_value={"phase_lock_verified": False},
+./tests/test_timing_monitor.py:3:from dslv_zpdi.layer1_ingestion.hal_simulated import SimulatedHAL
+./tests/test_timing_monitor.py:10:    hal = SimulatedHAL()
+./tests/test_timing_monitor.py:12:    # Simulate 1ns jitter (perfect LBE-1421)
+./tests/test_timing_monitor.py:14:    monitor._verify_hackrf_clock = lambda: True
+./tests/test_timing_monitor.py:22:    hal = SimulatedHAL()
+./tests/test_timing_monitor.py:45:    hal = SimulatedHAL()
+./tests/test_timing_monitor.py:54:        def _verify_hackrf_clock(self): return True
+./tests/run_fault_injection.py:50:    print("\n--- INITIATING FAULT INJECTION: LBE-1421 HOLDOVER DRIFT ---")
+./tests/run_fault_injection.py:54:    # LBE-1421 has "no frequency/phase jumps", but drift accumulates.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:8:**Current Revision:** Rev 4.3.0 (LBE-1421 Hardware Pivot — RF Metrology Finalized, Phase 2A Active)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:159:**IMPLEMENTATION TARGET:** Raspberry Pi 5 (16GB) with HackRF One SDR, Leo Bodnar LBE-1421 GPSDO (10 MHz + 1 PPS), and multi-modal sensors.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:166:**OPERATIONAL INTENT:** Tier 1 nodes MUST use a GPS-Disciplined Oscillator (GPSDO) providing a 10 MHz reference signal injected into the SDR's external clock input (`CLKIN`), phase-locking the ADC at the analog level. A separate 1 PPS output from the GPSDO provides UTC epoch anchoring to the host compute board via GPIO hardware interrupt. This is "RF Metrology" timing — the measurement instrument itself is GPS-locked, not merely the computer's system clock.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:167:**PHASE 2A PRIMARY TARGET:** Leo Bodnar LBE-1421 GPSDO → 10 MHz SMA out to HackRF One `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module and `chronyd`.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:169:**MANDATORY:** External 10 MHz reference locked to GPS constellation feeding SDR CLKIN; 1 PPS hardware interrupt on host GPIO; `chronyd` configured with PPS refclock for < 1µs UTC accuracy; verification of ADC lock via `hackrf_debug` or equivalent tool.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:176:1. **External 10 MHz Phase-Locking:** The SDR/digitizer MUST accept an external 10 MHz reference that hardware-locks the ADC sampling clock. Software frequency correction is NOT sufficient.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:180:- Raspberry Pi 5 (16GB) + HackRF One + Leo Bodnar LBE-1421 GPSDO ← **Phase 2A Primary**
+./V3_DSLV-ZPDI_LIVING_MASTER.md:181:- Raspberry Pi CM5 + HackRF One + Leo Bodnar LBE-1421 GPSDO (carrier board with GPIO access)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:184:- Any Linux SBC with GPIO + any SDR with CLKIN + any GPS-disciplined 10 MHz source
+./V3_DSLV-ZPDI_LIVING_MASTER.md:188:### SPEC-004A.4 — Leo Bodnar LBE-1421 GPSDO (Clock Authority)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:190:**SYSTEM FUNCTION:** Provide the primary 10 MHz reference and 1 PPS epoch anchor for the SIGINT network.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:191:**OPERATIONAL INTENT:** The LBE-1421 replaces the deprecated LBE-1420 to provide simultaneous high-frequency reference and physical PPS.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:205:**KILL CONDITION:** Any Tier 1 node utilizing a single-output GPSDO (e.g., LBE-1420) that cannot provide simultaneous 10 MHz + 1 PPS.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:223:**OPERATIONAL INTENT:** The RTL-SDR (v3/v4) is explicitly authorized as a Tier 2 or Testbed device. It is acceptable for pipeline development, algorithm validation, and swarm heuristic detection. However, the HackRF One (or any SDR with a native `CLKIN` port) is heavily preferred for actual field deployments due to hardware clock-locking capability and wider bandwidth (20 MHz vs 2.4 MHz). RTL-SDR data MUST NOT enter the Tier 1 primary stream unless the RTL-SDR node independently satisfies all SPEC-004A.2 criteria (which the RTL-SDR v3/v4 cannot, as it lacks an external clock input).
+./V3_DSLV-ZPDI_LIVING_MASTER.md:275:**Last Revised:** 2026-04-11 (Rev 4.1 — HackRF/GPSDO metrology pivot, Hardware Agnosticism Standard)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:284:- **SDR (The Eye):** HackRF One (PortaPack optional/irrelevant for headless operation). 20 MHz bandwidth, 1 MHz – 6 GHz range.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:285:- **Clock Authority:** Leo Bodnar LBE-1421 GPSDO (or equivalent GPS-disciplined 10 MHz oscillator).
+./V3_DSLV-ZPDI_LIVING_MASTER.md:286:- **Timing Wiring (Rev 4.1):** 10 MHz reference signal from LBE-1421 `Out2` port (set to 10,000,000 Hz) → HackRF One `CLKIN` port (hardware ADC lock, 50 Ω termination recommended). 1 PPS signal from LBE-1421 `Out1` port (set to 1 PPS mode) → Raspberry Pi 5 GPIO 18 (Physical Pin 12) via `pps-gpio` kernel module. LBE-1421 provides a native 100 ms 3.3 V CMOS pulse (1.65 V into 50 Ω) which is perfectly matched to Pi 5 logic levels without level-shifters. This configuration eliminates all USB bus jitter from the phase measurement chain; the ADC sampling clock is derived directly from the GPS constellation with no software intermediaries.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:288:- **Hardware Agnosticism:** Any hardware meeting the SPEC-004A.2 criteria is equally valid for Tier 1. The Pi 5 + HackRF + Leo Bodnar is the Phase 2A reference implementation, not a mandate. See Section 3.2, SPEC-004A.2 for the full permissible hardware list.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:304:- **Multi-Modal Ingestion:** RF (HackRF One or equivalent CLKIN-capable SDR), Thermal, Acoustic, and GPS/PPS sensors.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:305:- **Hardware-Level Phase Coherence (Rev 4.1):** GPSDO 10 MHz reference → SDR CLKIN port. The ADC sampling clock is hardware-locked to the GPS constellation at the analog level. USB bus jitter is irrelevant — it affects data transfer latency, not the phase relationship between IQ samples. This is RF Metrology timing, not IT Network timing.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:676:**Primary Hardware Baseline:** Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO.  
+./V3_DSLV-ZPDI_LIVING_MASTER.md:679:Rev 4.2 changes: Migrated from RTL-SDR/u-blox PTP stack to GPSDO RF Metrology. `ingest_gps_pps()` reads real PPS via kernel ioctl on /dev/pps0 from the LBE-1421 GPSDO. `ingest_sdr()` performs Hilbert transform and phase extraction in Layer 1 via HackRF and stores results in `extracted_phases` field. Both functions store modality as string (not enum object) for JSON compatibility.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:683:SPEC-005A.4 — Tier 1 Hardware Ingestion (Rev 4.2-LBE-1421)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:693:# SoapySDR/pyhackrf would be imported here in production
+./V3_DSLV-ZPDI_LIVING_MASTER.md:694:# import SoapySDR
+./V3_DSLV-ZPDI_LIVING_MASTER.md:695:# import pyhackrf
+./V3_DSLV-ZPDI_LIVING_MASTER.md:702:# ─── GPS/PPS Ingestion (Rev 4.2-LBE-1421 — RF Metrology) ──────
+./V3_DSLV-ZPDI_LIVING_MASTER.md:709:    """SPEC-005A.4a — GPS/PPS Live Ingestion (Rev 4.2-LBE-1421 — RF Metrology)"""
+./V3_DSLV-ZPDI_LIVING_MASTER.md:713:    # The LBE-1421 provides 1 PPS to GPIO 18 (RP1 3.3V compatible)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:755:# ─── SDR Ingestion (Rev 4.2-LBE-1421 — RF Metrology) ────
+./V3_DSLV-ZPDI_LIVING_MASTER.md:758:    sample_rate: float = 20e6,  # HackRF capability
+./V3_DSLV-ZPDI_LIVING_MASTER.md:766:    """SPEC-005A.4b — SDR IQ Live Ingestion (Rev 4.2-LBE-1421 — RF Metrology)"""
+./V3_DSLV-ZPDI_LIVING_MASTER.md:770:    # In production, this uses SoapySDR or pyhackrf
+./V3_DSLV-ZPDI_LIVING_MASTER.md:771:    # sdr = SoapySDR.Device(dict(driver="hackrf"))
+./V3_DSLV-ZPDI_LIVING_MASTER.md:801:        source_path="/dev/hackrf0",
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1046:- HackRF + GPSDO RF Metrology timing implemented ✅ (Rev 4.1-PIVOT)
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1056:- **Phase 2A Active:** RF Metrology hardware deployed: Pi 5 + HackRF + GPSDO
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1099:8. **Deploy HackRF + GPSDO on Pi 5 hardware** ← PHASE 2A CURRENT
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1107:**Phase 2A (Current — Hardware Transition):** Procure and install Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO. Verify <1µs jitter and hardware phase-lock. Execute 72-hour adaptive baseline per SPEC-009. Deploy first Tier 2 swarm cluster with SPEC-008 anti-poisoning. Any Tier 1 node showing >10µs jitter or missing phase-lock flagged HARDWARE_KILL.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1355:**Action:** Executed a fundamental architectural pivot for Phase 2A hardware. Replaced the CM5/i210-T1 PTP-based timing approach with a superior "RF Metrology" timing standard. Canonical Tier 1 baseline is now Raspberry Pi 5 (16GB), HackRF One (via external 10MHz CLKIN), and Leo Bodnar LBE-1421 GPSDO (10MHz reference + 1 PPS GPIO). Refactored all governing documents (`V3_DSLV-ZPDI_LIVING_MASTER.md`, `MASTER_SPEC.md`, `PHASE_2A_HARDWARE_BUILD_LIST.md`, and `PHASE_2A_TIER_1_BUILD_SHEET.md`) to reflect this pivot. Updated the software stack: renamed and refactored `PTPMonitor` to `TimingMonitor` (SPEC-004A.3), renamed `check_ptp.py` to `check_timing.py`, and updated `provision_tier1.py` and `install_dslv_zpdi.sh` for GPSDO/PPS/HackRF compliance. Verified 100% pass rate across 31 tests and a clean orphan check.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1357:**Next Action at Handoff:** Execute physical commissioning on Raspberry Pi 5 + HackRF + Leo Bodnar hardware using the updated `install_dslv_zpdi.sh --tier1`.
+./V3_DSLV-ZPDI_LIVING_MASTER.md:1363:**Action:** Evaluated and hardened repository for multi-OS compliance. Formally validated support for Raspberry Pi OS Trixie (Debian 13) alongside Bookworm (Debian 12). Upgraded the installer architecture (Rev 4.3.0) to include OS detection and automated "SoapySDR Venv Linkage" for hardware-agnostic SDR support within isolated environments. Corrected `pyhackrf` dependency bottleneck from previous revision. Verified 100% test pass rate (31/31) on Python 3.13 baseline.
+./RELEASE_NOTES_v4.2.1.md:5:**Codename:** LBE-1421-HOTFIX
+./RELEASE_NOTES_v4.2.1.md:9:Version 4.2.1 is a maintenance release that corrects an invalid dependency requirement in the core software stack. Version 4.2.0 incorrectly specified `pyhackrf>=1.0.0`, which is not currently available on PyPI (latest stable is 0.2.0). This prevented clean installation via `pip` and the automated installer.
+./RELEASE_NOTES_v4.2.1.md:14:- Updated `pyproject.toml` and `requirements.txt` to require `pyhackrf>=0.2.0`.
+./REFINEMENT_REPORT.md:3:> **ARCHITECTURE UPDATE (2026-04-11 onwards):** This report documents the pre-pivot refinement session. The project has since executed the **Phase 2A RF Metrology Pivot**. The current Tier 1 baseline is **Raspberry Pi 5 / HackRF One / Leo Bodnar LBE-1421 GPSDO**. The Intel i210-T1 / PTP / RTL-SDR path discussed herein has been formally deprecated. See `docs/ARCH-PHASE-2A-PIVOT.md` for the canonical current architecture.
