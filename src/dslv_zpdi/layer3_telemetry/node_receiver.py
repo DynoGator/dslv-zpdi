@@ -186,11 +186,9 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
             )
 
         # Route to secondary stream only — SPEC-015 not yet ratified.
-        quarantine_path = (
-            os.path.join(
-                os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary"),
-                "radoneye_staging.jsonl",
-            )
+        quarantine_path = os.path.join(
+            os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary"),
+            "radoneye_staging.jsonl",
         )
         entry = {
             "received_utc": time.time(),

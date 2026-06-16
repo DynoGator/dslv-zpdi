@@ -1,0 +1,58 @@
+schema_version: "1"
+
+identity:
+  profile_id: simulator-only
+  enclosure_brand_observed: ""
+  enclosure_model_marking_observed: ""
+  exact_pcb_revision: null
+  qualification_status: simulator
+
+hardware:
+  reference_clock:
+    required: false
+    source: simulated
+    requested_hz: 10000000
+    connector_label_observed: ""
+    connector_type: null
+    direction_verified: false
+    electrical_level_verified: false
+  pps:
+    required: false
+    canonical_host_path: /dev/pps0
+    sdr_pps_support: unverified
+
+sdr:
+  backend: simulated
+  uri: "sim:"
+  expected_iio_phy: ad9361-phy
+  receive_channels:
+    - 0
+  transmit_enabled: false
+  sample_rate_hz: 10000000
+  rf_bandwidth_hz: 10000000
+  buffer_samples: 262144
+  gain_mode: manual
+  gain_db: 64.0
+
+timing:
+  authority: lbe1421
+  pps_device: /dev/pps0
+  nmea_port: /dev/ttyACM0
+  reference_frequency_hz: 10000000
+  pps_degraded_ns: 1000.0
+  pps_kill_ns: 10000.0
+  max_fix_age_s: 10.0
+
+rf:
+  center_frequency_hz: 100000000
+  sample_rate_hz: 10000000
+  rf_bandwidth_hz: 10000000
+  gain_db: 64.0
+  gain_mode: manual
+
+trust:
+  fail_closed: false
+  allow_simulator_fallback: true
+  require_firmware_fingerprint: false
+  require_calibration_manifest: false
+  require_production_hmac_key: false

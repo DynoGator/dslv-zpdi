@@ -15,3 +15,19 @@ class ClockVerificationError(DSLVZPDIError):
 
 class DriverUnavailableError(DSLVZPDIError):
     """SPEC-005A — Raised when required SDR driver is not available."""
+
+
+class SecurityError(DSLVZPDIError):
+    """SPEC-018 — Raised when cryptographic provenance or key handling fails."""
+
+
+class ConfigurationError(DSLVZPDIError):
+    """SPEC-004A — Raised when a hardware or node profile is invalid."""
+
+
+class QualificationError(DSLVZPDIError):
+    """SPEC-004A — Raised when a candidate SDR fails Tier-1 qualification."""
+
+
+class TimingError(DSLVZPDIError):
+    """SPEC-005A — Raised when timing attestation cannot be satisfied."""

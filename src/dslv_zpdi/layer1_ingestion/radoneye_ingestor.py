@@ -99,6 +99,7 @@ class RadonSample:
 
 # ── Simulator ─────────────────────────────────────────────────────────────
 
+
 class RadonEyeSimulator:
     """SPEC-015.3 — Deterministic simulator for CI and offline development."""
 
@@ -137,6 +138,7 @@ class RadonEyeSimulator:
 
 
 # ── BLE Transport ─────────────────────────────────────────────────────────
+
 
 class RadonEyeBleTransport:
     """SPEC-015.4 — BLE GATT transport via bleak."""
@@ -289,6 +291,7 @@ class RadonEyeBleTransport:
 
 # ── HTTP Fallback Transport ───────────────────────────────────────────────
 
+
 class RadonEyeHttpTransport:
     """SPEC-015.6 — HTTP polling fallback for local dashboard endpoint."""
 
@@ -344,6 +347,7 @@ class RadonEyeHttpTransport:
 
 
 # ── Unified Ingestor ──────────────────────────────────────────────────────
+
 
 class RadonEyeIngestor:
     """SPEC-015.7 — Unified ingestor with auto-failover BLE → HTTP → SIM."""

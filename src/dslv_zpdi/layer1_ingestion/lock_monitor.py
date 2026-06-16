@@ -14,6 +14,7 @@ from .hal_hardware import HardwareHAL
 
 logger = logging.getLogger("dslv-zpdi.layer1.lock")
 
+
 class GPSDOLockMonitor:
     """
     SPEC-004A.3 | Monitors LBE-1421 lock status using triple-validation:
@@ -25,8 +26,8 @@ class GPSDOLockMonitor:
     def __init__(
         self,
         jitter_threshold_ns: float = 10000.0,  # 10 µs limit
-        unlock_threshold_s: float = 30.0,      # 30s unlock limit
-        jitter_grace_period_s: float = 60.0    # 60s jitter grace
+        unlock_threshold_s: float = 30.0,  # 30s unlock limit
+        jitter_grace_period_s: float = 60.0,  # 60s jitter grace
     ):
         """SPEC-004A.3.INIT | Initialize lock monitor."""
         self.jitter_threshold = jitter_threshold_ns
@@ -46,7 +47,7 @@ class GPSDOLockMonitor:
             "nmea": hardware_hal.verify_nmea_telemetry(),
             "pps_jitter_ns": 0.0,
             "hackrf_lock": False,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
         # 1. NMEA Validation
@@ -82,29 +83,31 @@ class GPSDOLockMonitor:
         return {
             "healthy": not self.is_quarantined and gps_fix,
             "quarantine": self.is_quarantined,
-            "metrics": metrics
+            "metrics": metrics,
         }
 
     def _get_chronyc_jitter(self) -> float:
         """SPEC-004A.3.CHRONY | Read RMS offset from chrony."""
         try:
             result = subprocess.run(
-                ["chronyc", "tracking"],
-                capture_output=True, text=True, timeout=1, check=False
+                ["chronyc", "tracking"], capture_output=True, text=True, timeout=1, check=False
             )
             for line in result.stdout.splitlines():
                 if "RMS offset" in line:
                     return float(line.split(":")[1].strip().split()[0]) * 1e9
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError, ValueError, IndexError):
             pass
-        return float('inf')
+        return float("inf")
 
     def _verify_hackrf_clock(self) -> bool:
         """SPEC-004A.3.HACKRF | Verify external clock source."""
         try:
             result = subprocess.run(
                 ["hackrf_debug", "--clock_source"],
-                capture_output=True, text=True, timeout=1, check=False
+                capture_output=True,
+                text=True,
+                timeout=1,
+                check=False,
             )
             return "external" in result.stdout.lower()
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError):

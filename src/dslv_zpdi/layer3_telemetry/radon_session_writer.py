@@ -298,9 +298,7 @@ class RadonSessionWriter:
             }
 
         # Analysis hash = SHA-256 of ordered branch checksums
-        analysis_input = "|".join(
-            f"{k}:{branches[k]['checksum']}" for k in sorted(branches.keys())
-        )
+        analysis_input = "|".join(f"{k}:{branches[k]['checksum']}" for k in sorted(branches.keys()))
         analysis_hash = hashlib.sha256(analysis_input.encode()).hexdigest()
 
         manifest = {
@@ -355,7 +353,9 @@ class RadonSessionWriter:
             if expected != actual:
                 logger.error(
                     "Branch checksum mismatch: %s expected=%s actual=%s",
-                    branch_name, expected, actual,
+                    branch_name,
+                    expected,
+                    actual,
                 )
                 return False
 

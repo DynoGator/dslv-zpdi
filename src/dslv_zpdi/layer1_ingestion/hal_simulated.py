@@ -48,8 +48,10 @@ class SimulatedHAL(BaseHAL):
             "satellites_used": 12 if gps_locked else 0,
             "hdop": 0.8 if gps_locked else 99.9,
             "sentences": [
-                "$GNGGA,123456.00,5130.0000,N,00000.0000,E,1,12,0.8,50.0,M,,,,*47" if gps_locked else "$GNGGA,,,,,,0,00,99.9,,,,,,*56"
-            ]
+                "$GNGGA,123456.00,5130.0000,N,00000.0000,E,1,12,0.8,50.0,M,,,,*47"
+                if gps_locked
+                else "$GNGGA,,,,,,0,00,99.9,,,,,,*56"
+            ],
         }
 
         gpsdo_data = {
@@ -129,12 +131,7 @@ class SimulatedHAL(BaseHAL):
 
     def verify_nmea_telemetry(self) -> dict:
         """Mock NMEA for SimulatedHAL."""
-        return {
-            'nmea_available': True,
-            'gps_fix': True,
-            'satellites_used': 12,
-            'hdop': 0.8
-        }
+        return {"nmea_available": True, "gps_fix": True, "satellites_used": 12, "hdop": 0.8}
 
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict:
         """
@@ -152,3 +149,7 @@ class SimulatedHAL(BaseHAL):
             "frequency_range": "1 MHz - 6 GHz",
             "simulated": True,
         }
+
+    def close(self) -> None:
+        """SPEC-005A.HAL-SIM — No-op close for simulated HAL."""
+        pass

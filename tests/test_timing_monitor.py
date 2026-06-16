@@ -16,6 +16,7 @@ def test_lbe1421_stability_mock():
     assert status["healthy"] is True
     assert status["metrics"]["pps_jitter_ns"] < 10.0
 
+
 def test_lbe1421_jitter_quarantine():
     """Verify quarantine after jitter grace period (60s)."""
     monitor = GPSDOLockMonitor(jitter_threshold_ns=10.0, jitter_grace_period_s=0.1)
@@ -26,7 +27,9 @@ def test_lbe1421_jitter_quarantine():
     assert status["quarantine"] is False
 
     # 2. Inject jitter
-    def mock_jitter(): return 50000.0
+    def mock_jitter():
+        return 50000.0
+
     monitor._get_chronyc_jitter = mock_jitter
 
     # First violation (should be in grace period)
@@ -39,6 +42,7 @@ def test_lbe1421_jitter_quarantine():
     status = monitor.check_lock_state(hal)
     assert status["quarantine"] is True
 
+
 def test_lbe1421_holdover_seamless():
     """Verify holdover within 2s threshold."""
     monitor = GPSDOLockMonitor(unlock_threshold_s=0.5)
@@ -49,9 +53,14 @@ def test_lbe1421_holdover_seamless():
 
     # 2. GPS Loss (Mock NMEA to show no fix)
     class LostGPSHAL:
-        def verify_nmea_telemetry(self): return {"gps_fix": False}
-        def _get_chronyc_jitter(self): return 1.0
-        def _verify_hackrf_clock(self): return True
+        def verify_nmea_telemetry(self):
+            return {"gps_fix": False}
+
+        def _get_chronyc_jitter(self):
+            return 1.0
+
+        def _verify_hackrf_clock(self):
+            return True
 
     lost_hal = LostGPSHAL()
 

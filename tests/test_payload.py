@@ -65,9 +65,7 @@ def test_payload_validation():
 def test_payload_to_json_harden():
     # Large IQ array
     iq = [0.1] * 1000
-    p = IngestionPayload(
-        "uuid", "node", "sensor", "modality", 123.4, raw_value={"iq_samples": iq}
-    )
+    p = IngestionPayload("uuid", "node", "sensor", "modality", 123.4, raw_value={"iq_samples": iq})
     json_str = p.to_json()
     data = json.loads(json_str)
 

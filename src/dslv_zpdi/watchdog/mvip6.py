@@ -12,9 +12,7 @@ import time
 class MVIP6Watchdog:
     """SPEC-011 — System health monitor and automated quarantine enforcer."""
 
-    def __init__(
-        self, jitter_threshold_ns: float = 10000.0, drift_threshold: float = 20.0
-    ):
+    def __init__(self, jitter_threshold_ns: float = 10000.0, drift_threshold: float = 20.0):
         self.jitter_threshold = jitter_threshold_ns
         self.drift_threshold = drift_threshold
         self.health_metrics: dict[str, any] = {}

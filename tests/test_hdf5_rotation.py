@@ -48,46 +48,41 @@ def test_real_file_rotation():
             return f"20260101_120000_{counter[0]:03d}"
 
         try:
-            with mock.patch.object(
-                writer.router, "route", return_value=_primary_decision()
-            ):
-                with mock.patch.object(
-                    writer, "verify_packet_integrity", return_value=True
-                ):
+            with mock.patch.object(writer.router, "route", return_value=_primary_decision()):
+                with mock.patch.object(writer, "verify_packet_integrity", return_value=True):
                     with mock.patch(
                         "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                         _fake_strftime,
                     ):
                         # First write — should open file_1
-                        decision = writer.ingest(
-                            json.dumps({"timestamp_utc": time.time()})
-                        )
+                        decision = writer.ingest(json.dumps({"timestamp_utc": time.time()}))
                 file_1 = writer.current_filepath
                 event_count_1 = writer.event_count
 
                 assert file_1 is not None
-                assert file_1.exists()
+                # Atomic finalization: the open file is .partial until closed/rotated.
+                partial_1 = file_1.with_suffix(".h5.partial")
+                assert partial_1.exists()
                 assert event_count_1 == 1
                 assert decision.stream == RouteStream.PRIMARY.value
 
-                # Second write — should rotate to file_2
-                with mock.patch.object(
-                    writer, "verify_packet_integrity", return_value=True
-                ):
+                # Second write — should rotate: file_1 finalized to .h5, then file_2 opened as .partial
+                with mock.patch.object(writer, "verify_packet_integrity", return_value=True):
                     with mock.patch(
                         "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                         _fake_strftime,
                     ):
-                        decision = writer.ingest(
-                            json.dumps({"timestamp_utc": time.time()})
-                        )
+                        decision = writer.ingest(json.dumps({"timestamp_utc": time.time()}))
                 file_2 = writer.current_filepath
                 event_count_2 = writer.event_count
 
                 assert file_2 is not None
-                assert file_2.exists()
+                partial_2 = file_2.with_suffix(".h5.partial")
+                assert partial_2.exists()
                 assert file_2 != file_1
                 assert event_count_2 == 1  # Reset after rotation
+                # Previous file should now be finalized
+                assert file_1.exists()
         finally:
             HDF5Writer._file_size_exceeded = original_method
             writer.close()
@@ -109,13 +104,9 @@ def test_event_count_resets_on_rotation():
             return f"20260101_120000_{counter[0]:03d}"
 
         try:
-            with mock.patch.object(
-                writer.router, "route", return_value=_primary_decision()
-            ):
+            with mock.patch.object(writer.router, "route", return_value=_primary_decision()):
                 for i in range(3):
-                    with mock.patch.object(
-                        writer, "verify_packet_integrity", return_value=True
-                    ):
+                    with mock.patch.object(writer, "verify_packet_integrity", return_value=True):
                         with mock.patch(
                             "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                             _fake_strftime,

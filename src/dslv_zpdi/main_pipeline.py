@@ -23,14 +23,17 @@ from dslv_zpdi.watchdog.timing_monitor import TimingMonitor
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pipeline")
 
+
 class PipelineState:
     """SPEC-011.2 | Thread-safe state container."""
+
     def __init__(self):
         """SPEC-011.2 | Initialize state."""
         self.running = True
         self.tick = 0
         self.primary_events = 0
         self.quarantine_reasons = {}
+
 
 def _ingest_loop(hal, args, state, ingest_q):
     """SPEC-011.2 | Ingestion producer thread."""
@@ -55,6 +58,7 @@ def _ingest_loop(hal, args, state, ingest_q):
             logger.error("Ingest error: %s", e)
             time.sleep(0.1)
 
+
 def _process_loop(monitor, writer, ingest_q, state, health_reporter):
     """SPEC-011.2 | Processing consumer thread."""
     while state.running:
@@ -75,7 +79,9 @@ def _process_loop(monitor, writer, ingest_q, state, health_reporter):
             bl = scorer.get_baseline_status()
             update_data = {
                 "node_id": payload.node_id,
-                "hal_mode": payload.raw_value.get("clock_source", "internal") if payload.modality == "rf_sdr" else "pps",
+                "hal_mode": payload.raw_value.get("clock_source", "internal")
+                if payload.modality == "rf_sdr"
+                else "pps",
                 "timing_healthy": monitor.healthy,
                 "timing_jitter_ns": monitor.last_jitter_ns,
                 "ticks": state.tick,
@@ -93,6 +99,7 @@ def _process_loop(monitor, writer, ingest_q, state, health_reporter):
             continue
         except Exception as e:  # pylint: disable=broad-except
             logger.error("Process error: %s", e)
+
 
 def main():
     """SPEC-011.1 | Main entry point."""
@@ -133,7 +140,9 @@ def main():
     ingest_q = queue.Queue(maxsize=1024)
 
     t_ingest = threading.Thread(target=_ingest_loop, args=(hal, args, state, ingest_q), daemon=True)
-    t_process = threading.Thread(target=_process_loop, args=(monitor, writer, ingest_q, state, health_reporter), daemon=True)
+    t_process = threading.Thread(
+        target=_process_loop, args=(monitor, writer, ingest_q, state, health_reporter), daemon=True
+    )
 
     def _sig_handler(signum, _frame):
         """SPEC-011.1 | Cooperative shutdown handler (SIGINT/SIGTERM).
@@ -166,6 +175,7 @@ def main():
     monitor.stop()
     writer.close()
     logger.info("Shutdown complete.")
+
 
 if __name__ == "__main__":
     main()

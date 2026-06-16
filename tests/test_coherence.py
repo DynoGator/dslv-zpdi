@@ -36,9 +36,7 @@ def test_outlier_detection():
     phases_high = [1.0] * 100
     ts = 1000.0
     for i in range(10):
-        pkt_high = scorer.update(
-            {"node_id": "test", "timestamp_utc": ts + i * 0.01}, phases_high
-        )
+        pkt_high = scorer.update({"node_id": "test", "timestamp_utc": ts + i * 0.01}, phases_high)
     assert pkt_high.r_local > 0.99
     assert pkt_high.r_smooth > 0.5  # EWMA has converged
     assert pkt_high.event_window_id is not None

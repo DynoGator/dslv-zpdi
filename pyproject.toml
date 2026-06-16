@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dslv-zpdi"
-version = "4.8.1"
+version = "5.0.0"
 description = "Distributed Sensor Locational Vectoring — Zero-Point Data Integration"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -28,7 +28,6 @@ dependencies = [
     "scipy>=1.7.0",
     "h5py>=3.6.0",
     "pyserial>=3.5",
-    "pyhackrf>=0.2.0",
     "pydantic>=2.0.0",
     "pyyaml>=6.0",
     "python-json-logger>=2.0.0",
@@ -42,6 +41,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+pluto = [
+    # libiio Python binding is normally a system package (python3-libiio).
+    # This group reserves the namespace for any future PyPI-hosted bindings.
+]
+hackrf = [
+    "pyhackrf>=0.2.0",
+]
+hardware = [
+    "pyhackrf>=0.2.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=3.0.0",
@@ -55,7 +64,9 @@ dev = [
 [project.scripts]
 dslv-zpdi-pipeline = "dslv_zpdi.main_pipeline:main"
 dslv-zpdi-dashboard = "dashboard.__main__:main"
-dslv-zpdi-preflight = "dslv_zpdi.layer1_ingestion.hal_hardware:HardwareHAL.verify_tier1_phase_lock"
+dslv-zpdi-probe = "dslv_zpdi.cli.probe:probe_main"
+dslv-zpdi-preflight = "dslv_zpdi.cli.preflight:preflight_main"
+dslv-zpdi-verify = "dslv_zpdi.cli.verify:verify_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -66,6 +77,11 @@ python_files = ["test_*.py"]
 asyncio_mode = "auto"
 markers = [
     "asyncio: mark a coroutine test to run under the asyncio event loop",
+    "hardware: requires physical hardware",
+    "soak: long-duration test",
+    "slow: slow test",
+    "pluto: PlutoSDR-specific",
+    "hackrf: HackRF-specific",
 ]
 
 [tool.mypy]
@@ -78,6 +94,10 @@ ignore_missing_imports = true
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+exclude = [
+    "GEM-HOME",
+    "patch_docs.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]

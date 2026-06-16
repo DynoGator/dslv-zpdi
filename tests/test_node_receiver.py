@@ -206,9 +206,7 @@ class TestNodeReceiverWriterFailure:
                 raise RuntimeError("simulated writer failure for test")
 
         # inject the failing writer at factory time
-        app = create_app(writer=BoomWriter(
-            output_path=str(primary), secondary_path=str(secondary)
-        ))
+        app = create_app(writer=BoomWriter(output_path=str(primary), secondary_path=str(secondary)))
         with app.test_client() as client:
             payload = {
                 "node_id": "FAIL-TEST",
@@ -229,6 +227,7 @@ class TestNodeReceiverWriterFailure:
         # process (e.g. concurrent test) do not inherit the intentionally broken
         # writer. SPEC-014.8 hygiene for test isolation.
         import dslv_zpdi.layer3_telemetry.node_receiver as _nr
+
         _nr._writer = None
 
 
@@ -275,4 +274,3 @@ class TestNodeReceiverConcurrent:
         assert all(code == 200 for code in results)
         # registry should have been updated for the nodes (best effort, lock exercised)
         # (existence is timing-dependent; the contract under test is no-crash + all 200s)
-

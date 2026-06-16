@@ -1,5 +1,32 @@
 # Changelog
 
+## [5.0.0] — PlutoSDR+ Tier-1 hardware pivot (2026-06-15)
+
+### Added
+- Capability-based Tier-1 hardware qualification engine (`src/dslv_zpdi/layer1_ingestion/sdr/qualification.py`, SPEC-004A.QUAL).
+- Composed `HardwareHAL` separating timing authority, SDR backend, frequency translation, and qualification policy (`src/dslv_zpdi/layer1_ingestion/hardware_hal.py`, SPEC-005A.HAL).
+- Native libiio PlutoSDR+ backend (`src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py`, SPEC-004A.PLUTO).
+- Structured timing attestation with explicit evidence dimensions (`src/dslv_zpdi/layer1_ingestion/timing/attestation.py`, SPEC-005A.TIMING).
+- `LBE1421TimingAuthority` composing PPS, NMEA, and chrony evidence.
+- Key-provider abstraction with file, env, systemd credential, and development providers (`src/dslv_zpdi/core/key_provider.py`, SPEC-018).
+- HDF5 event hash chain and atomic `.partial` → `.h5` finalization (`src/dslv_zpdi/layer3_telemetry/hdf5_writer.py`, SPEC-007).
+- YAML node profiles under `config/node_profiles/` with safe env-variable expansion (`src/dslv_zpdi/config_models.py`, SPEC-004A.CONFIG).
+- New CLIs: `dslv-zpdi-probe`, `dslv-zpdi-preflight`, `dslv-zpdi-verify` (`src/dslv_zpdi/cli/`, SPEC-011.CLI).
+- Optional dependency groups `[pluto]`, `[hackrf]`, `[hardware]` in `pyproject.toml`.
+
+### Changed
+- Tier-1 canonical RF instrument is now a capability-qualified PlutoSDR+ class device; HackRF One is the legacy minimum reference floor.
+- Timing claims are no longer collapsed into a single `phase_lock_verified` Boolean; each evidence dimension is represented separately.
+- `pyhackrf` moved from mandatory to optional `[hackrf]` dependency group.
+
+### Security
+- Production HMAC key absence now blocks primary output when `allow_development_key=False`.
+- Event hash chain detects deleted, reordered, altered, or injected events.
+
+### Documentation
+- Baseline audit in `docs/audits/PLUTOSDR_PIVOT_BASELINE_AUDIT.md`.
+- Implementation plan in `docs/superpowers/plans/2026-06-15-plutosdr-tier1-pivot.md`.
+
 ## [4.8.1] — Grok autonomous Pixel simulator session (2026-06-11)
 
 ### Fixed
