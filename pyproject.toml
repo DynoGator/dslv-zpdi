@@ -91,6 +91,14 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "dslv_zpdi.layer2_core.*"
+disallow_untyped_defs = true
+
+[tool.pyright]
+include = ["src/dslv_zpdi/layer2_core"]
+typeCheckingMode = "strict"
+
 [tool.ruff]
 line-length = 100
 target-version = "py39"
@@ -119,10 +127,13 @@ show_missing = true
 skip_covered = false
 # Conservative floor set just below the 4.8.0 simulator baseline (~53%). Raise
 # deliberately as legacy modules (main_pipeline, watchdog) gain coverage.
-fail_under = 50
+fail_under = 52
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
+    "def __repr__",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]

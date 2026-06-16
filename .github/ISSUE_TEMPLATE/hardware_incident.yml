@@ -1,104 +1,31 @@
 name: Hardware Incident
-description: Report a Tier 1/Tier 2 hardware, timing, or RF anomaly observed in the field.
-title: "hw(scope): brief description"
-labels: ["hardware"]
-assignees: ["DynoGator"]
+description: Report a field node signal or telemetry anomaly
+title: "[HARDWARE] "
+labels: ["hardware", "anomaly"]
 body:
   - type: markdown
     attributes:
       value: |
-        For physical-hardware anomalies (SDR, GPSDO, PPS, NMEA, radon, power,
-        thermal). **Redact precise capture coordinates and device serials.**
-        If there is any chance of a hardware-safety hazard (RF amplifier,
-        power), say so explicitly.
-  - type: input
-    id: revision
-    attributes:
-      label: Revision / commit
-      placeholder: "4.8.0 @ 985d8ca"
-    validations:
-      required: true
-  - type: dropdown
-    id: node
-    attributes:
-      label: Node role
-      options:
-        - Tier 1 anchor (Raspberry Pi 5)
-        - Tier 2 mobile (Pixel 9 Pro XL)
-        - Other / bench
-    validations:
-      required: true
-  - type: input
-    id: sdr
-    attributes:
-      label: SDR model
-      placeholder: "HackRF One (firmware version)"
-  - type: dropdown
-    id: gpsdo
-    attributes:
-      label: GPSDO / clock state
-      options:
-        - "LBE-1421 locked (PPS + 10 MHz)"
-        - "LBE-1421 unlocked / holdover"
-        - "No GPSDO attached"
-        - "Unknown"
-  - type: dropdown
-    id: pps
-    attributes:
-      label: PPS state
-      options:
-        - "Disciplined (chrony locked)"
-        - "Present but undisciplined"
-        - "Absent"
-        - "Unknown"
-  - type: dropdown
-    id: nmea
-    attributes:
-      label: NMEA state
-      options:
-        - "Valid fix (GGA/RMC)"
-        - "No fix"
-        - "No NMEA"
-        - "Unknown"
-  - type: input
-    id: power
-    attributes:
-      label: Power source
-      placeholder: "Bench PSU 5V/5A, battery, PoE..."
-  - type: input
-    id: environment
-    attributes:
-      label: Environmental conditions
-      placeholder: "Indoor lab 22°C, field -5°C/wind, etc."
+        Please use this form to report anomalies specifically related to SDR hardware, GPSDO timing, or telemetry coherence issues.
   - type: textarea
-    id: observed
+    id: description
     attributes:
-      label: What happened
-      description: Symptom, when it started, and any correlation with timing/RF/thermal events.
+      label: Incident Description
+      description: Describe the anomaly observed in the field node.
+    validations:
+      required: true
+  - type: input
+    id: hardware_config
+    attributes:
+      label: Hardware Configuration
+      description: E.g., Raspberry Pi 5 + PlutoSDR+ + LBE-1421 GPSDO
     validations:
       required: true
   - type: textarea
-    id: logs
+    id: telemetry_data
     attributes:
-      label: Logs / dmesg / chronyc (redacted)
-      render: shell
-  - type: dropdown
-    id: safety
-    attributes:
-      label: Hardware safety impact
-      options:
-        - "No safety concern"
-        - "Possible — needs review"
-        - "Yes — potential hardware damage / RF hazard"
-    validations:
-      required: true
-  - type: dropdown
-    id: integrity
-    attributes:
-      label: Data-integrity impact
-      options:
-        - "No — telemetry unaffected"
-        - "Maybe"
-        - "Yes — recorded evidence affected"
+      label: Telemetry / Coherence Logs
+      description: Paste relevant telemetry data or coherence anomalies.
+      render: json
     validations:
       required: true

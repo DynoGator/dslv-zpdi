@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import time
+from typing import Any
 
 
 class MVIP6Watchdog:
@@ -15,7 +16,7 @@ class MVIP6Watchdog:
     def __init__(self, jitter_threshold_ns: float = 10000.0, drift_threshold: float = 20.0):
         self.jitter_threshold = jitter_threshold_ns
         self.drift_threshold = drift_threshold
-        self.health_metrics: dict[str, any] = {}
+        self.health_metrics: dict[str, Any] = {}
 
     def evaluate_node_health(self, payload_dict: dict) -> bool:
         """SPEC-011.1 — Return True if node meets PRIMARY health criteria."""
