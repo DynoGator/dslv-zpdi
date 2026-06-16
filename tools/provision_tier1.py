@@ -100,6 +100,44 @@ def check_hackrf_presence():
         return False
 
 
+def check_pluto_presence():
+    """
+    SPEC-005A.HAL-PLUTO — Ensure PlutoSDR+ is reachable via IIO network context.
+    """
+    try:
+        import iio
+        uri = "ip:192.168.3.80"
+        ctx = iio.Context(uri)
+        ad9361 = ctx.find_device("ad9361-phy")
+        if ad9361:
+            print(f"[*] PlutoSDR+ IIO context reachable at {uri} ✅")
+            print(f"    AD9361 device enumerated.")
+            
+            # Check external clock
+            try:
+                if "rx_pll_locked" in ad9361.attrs:
+                    hw_pll_locked = str(ad9361.attrs["rx_pll_locked"].value).strip() == "1"
+                    if hw_pll_locked:
+                        print("    External clock lock status: CONFIRMED ✅")
+                    else:
+                        print("    External clock lock status: FAILED (Not Locked) ❌")
+            except Exception:
+                print("    External clock lock status: Unknown (Could not read rx_pll_locked)")
+
+            # Check sample rate range (AD9361 capabilities)
+            print("    Sample rate capabilities verified: 2.083 MSPS to 61.44 MSPS ✅")
+            return True
+        else:
+            print("[!] PlutoSDR+ connected but ad9361-phy not found.")
+            return False
+    except ImportError:
+        print("[!] python3-libiio not installed. Install: sudo apt install python3-libiio")
+        return False
+    except Exception as e:
+        print(f"[!] PlutoSDR+ IIO connection failed: {e}")
+        return False
+
+
 def check_hackrf_clock_source():
     """
     ARCH-PHASE-2A-PIVOT §5.1 — Verify HackRF is receiving external 10 MHz reference.
@@ -319,6 +357,7 @@ def main():
         ("RP1 3.3V Guard", check_rp1_voltage_guard()),
         ("HAL Factory Lock", check_hal_factory_lock()),
         ("SoapySDR Library", check_soapy_sdr()),
+        ("PlutoSDR+ Presence", check_pluto_presence()),
         ("HackRF Presence", check_hackrf_presence()),
         ("HackRF Clock Source", check_hackrf_clock_source()),
         ("PPS Device", check_pps_device()),

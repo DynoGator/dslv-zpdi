@@ -58,7 +58,7 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 
 ### Dual-Output Architecture (LBE-1421)
 
-The LBE-1421 has **two independent outputs**, unlike the deprecated LBE-1420 single-output unit:
+The LBE-1421 has **two independent outputs**, unlike the deprecated LBE-1421 single-output unit:
 
 - **Out1** → 1 PPS to Pi 5 GPIO 18 (UTC epoch anchoring via `pps-gpio` + `chronyd`)
 - **Out2** → 10 MHz to HackRF CLKIN (hardware ADC phase-lock)
@@ -81,6 +81,6 @@ Because the outputs are independent, **Out2 can be reconfigured** (e.g., to a ve
 ## 6. Do-Not-Do List
 
 - **Do NOT** connect Out1/Out2 to Pi 5 if voltage exceeds 3.3V. (LBE-1421 is 3.3V native).
-- **Do NOT** use a single-output LBE-1420 for Tier 1 builds.
+- **Do NOT** use a single-output LBE-1421 for Tier 1 builds.
 - **Do NOT** skip ground bridging between GPSDO and Pi; it causes floating ground triggers.
 - **Do NOT** use software-only timing for primary HDF5 stream.
