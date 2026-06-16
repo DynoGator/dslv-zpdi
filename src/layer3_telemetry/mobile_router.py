@@ -80,6 +80,7 @@ def route_packet(payload_dict: dict[str, Any]) -> dict[str, Any]:
         }
 
 
+# SPEC-003A
 class SecondaryLog:
     """JSONL sink for all SECONDARY_QUARANTINED / PRIMARY_CANDIDATE packets.
 
@@ -90,17 +91,21 @@ class SecondaryLog:
     MAX_BACKUPS = 5
 
     def __init__(self, path: Path) -> None:
+        """SPEC-003A"""
         self._path = path
         self._lock = asyncio.Lock()
 
     def prepare(self) -> None:
+        """SPEC-003A"""
         self._path.parent.mkdir(parents=True, exist_ok=True)
 
+    # SPEC-003A
     async def write(self, p: Any) -> None:
         async with self._lock:
             await asyncio.to_thread(self._write_sync, p)
 
     def _rotate_if_needed(self) -> None:
+        """SPEC-003A"""
         if not self._path.exists():
             return
         if self._path.stat().st_size < self.ROTATE_SIZE_BYTES:
@@ -120,6 +125,7 @@ class SecondaryLog:
         self._path.unlink()
 
     def _write_sync(self, p: Any) -> None:
+        """SPEC-003A"""
         body = p.body if hasattr(p, "body") else p
         full_raw = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
         self._rotate_if_needed()

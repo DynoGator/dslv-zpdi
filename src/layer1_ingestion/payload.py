@@ -2,6 +2,7 @@
 from enum import Enum
 
 
+# SPEC-003A
 class SensorModality(Enum):
     """Canonical modality registry."""
     RF_SDR = "rf_sdr"

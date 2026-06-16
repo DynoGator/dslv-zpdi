@@ -30,6 +30,7 @@ DEFAULT_GPS_ACCURACY_M = float(os.environ.get("ZPDI_GPS_ACCURACY_M", "50.0"))
 
 @dataclass
 class LocationFix:
+    """SPEC-003A"""
     latitude: float
     longitude: float
     altitude: Optional[float] = None
@@ -37,7 +38,9 @@ class LocationFix:
     provider: str = "unknown"
     ts: float = 0.0
 
+    # SPEC-003A
     def to_dict(self) -> dict[str, Any]:
+        """SPEC-003A"""
         return {
             "latitude": self.latitude,
             "longitude": self.longitude,
@@ -48,6 +51,7 @@ class LocationFix:
         }
 
 
+# SPEC-003A
 class GPSPoller:
     """Maintains the latest location fix via termux-location.
 
@@ -57,6 +61,7 @@ class GPSPoller:
     at debug level and continues retrying with capped exponential backoff.
     """
 
+    # SPEC-003A
     def __init__(
         self,
         interval_s: float = DEFAULT_GPS_INTERVAL_S,
@@ -75,10 +80,12 @@ class GPSPoller:
         async with self._lock:
             return self.latest
 
+    # SPEC-003A
     async def _set_latest(self, fix: Optional[LocationFix]) -> None:
         async with self._lock:
             self.latest = fix
 
+    # SPEC-003A
     async def _poll_once(self) -> Optional[LocationFix]:
         """Run termux-location once and parse the JSON output."""
         # Try GPS first, then network, then passive
@@ -148,6 +155,7 @@ class GPSPoller:
                 continue
         return None
 
+    # SPEC-003A
     async def run(self) -> None:
         """Main loop — poll until stop event is set."""
         log.info("GPS poller starting interval=%.1fs timeout=%.1fs", self._interval, self._timeout)
@@ -168,4 +176,5 @@ class GPSPoller:
             self._backoff = min(self._backoff * 2, self._interval)
 
     def stop(self) -> None:
+        """SPEC-003A"""
         self._stop.set()

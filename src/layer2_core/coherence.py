@@ -17,6 +17,7 @@ from collections import deque
 
 
 @dataclass
+# SPEC-003A
 class CoherencePacket:
     """Internal Layer 2 wrapper that augments IngestionPayload with coherence state."""
     payload_uuid: str
@@ -42,6 +43,7 @@ class CoherenceScorer:
     }
 
     def __init__(self, alpha: float = 0.2, window_ms: int = 300, min_nodes: int = 4):
+        """SPEC-003A"""
         self.alpha = alpha
         self.window_ms = window_ms
         self.min_nodes = min_nodes

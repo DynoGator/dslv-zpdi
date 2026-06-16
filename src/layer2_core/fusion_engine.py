@@ -35,12 +35,14 @@ from collections import deque
 from typing import Tuple
 
 
+# SPEC-003A
 class OrientationTracker:
     """Maintains a rolling window of rotation-vector quaternions and computes
     an orientation-stability weight for coherence fusion.
     """
 
     def __init__(self, window: int = 8) -> None:
+        """SPEC-003A"""
         self._buf: deque[Tuple[float, float, float, float]] = deque(maxlen=window)
 
     def push(self, reading: dict) -> None:
@@ -60,6 +62,7 @@ class OrientationTracker:
             qx, qy, qz, qw = qx / mag, qy / mag, qz / mag, qw / mag
         self._buf.append((qx, qy, qz, qw))
 
+    # SPEC-003A
     def stability(self) -> float:
         """Return orientation-stability weight in [0, 1].
 
@@ -74,9 +77,11 @@ class OrientationTracker:
         return min(1.0, abs(dot))
 
     def reset(self) -> None:
+        """SPEC-003A"""
         self._buf.clear()
 
 
+# SPEC-003A
 def apply_orientation_weight(
     r_local: float,
     r_smooth: float,

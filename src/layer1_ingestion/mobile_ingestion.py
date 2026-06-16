@@ -65,6 +65,7 @@ _ORIENTATION = OrientationTracker(window=8)
 # ---------------------------------------------------------------------------
 # Lightweight Hilbert transform (numpy-only, no scipy dependency)
 # ---------------------------------------------------------------------------
+# SPEC-003A
 def _hilbert_phases(signal: np.ndarray) -> List[float]:
     """Return instantaneous phases of the analytic signal via FFT."""
     if len(signal) < 4:
@@ -89,12 +90,16 @@ def _hilbert_phases(signal: np.ndarray) -> List[float]:
 # ---------------------------------------------------------------------------
 # Rolling phase-extraction buffers (one per sensor)
 # ---------------------------------------------------------------------------
+# SPEC-003A
 class _PhaseBuffers:
+    """SPEC-003A"""
     def __init__(self, window: int = PHASE_WINDOW):
+        """SPEC-003A"""
         self._bufs: dict[str, List[float]] = {}
         self._window = window
 
     def push(self, sensor: str, value: float) -> List[float]:
+        """SPEC-003A"""
         buf = self._bufs.setdefault(sensor, [])
         buf.append(value)
         if len(buf) > self._window:
@@ -108,6 +113,7 @@ _PHASE_BUFFERS = _PhaseBuffers()
 # ---------------------------------------------------------------------------
 # Payload construction helpers
 # ---------------------------------------------------------------------------
+# SPEC-003A
 def _extract_magnitude(reading: dict[str, Any]) -> float:
     """Compute vector magnitude for accelerometer / magnetometer / gyroscope / gravity samples."""
     x = reading.get("x", 0.0)
@@ -210,6 +216,7 @@ class IngestionPayload:
         return json.dumps(d, default=str)
 
 
+# SPEC-003A
 def build_mobile_payload(sensor_name: str, reading: dict[str, Any], location: dict[str, Any] | None = None) -> IngestionPayload:
     """Translate a single termux-sensor reading into a canonical IngestionPayload.
 
