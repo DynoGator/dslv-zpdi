@@ -187,7 +187,8 @@ class SpaceWeatherPanel:
             speed_str = f"{speed:4.0f}k" if not math.isnan(speed) else "--"
             t.add_row("Wnd", f"{speed_str} [dim]•[/] Bt{bt_str} Bz{bz_str}")
             # Row 3: Mag + Ion + Flare
-            t.add_row("Env", f"[{magneto_sty}]{magneto_text[:6]}[/] [dim]•[/] [{iono_sty}]{iono_text[:6]}[/] [{_flare_style(flare)}]{flare[:2]}[/]")
+            t.add_row(
+                "Env", f"[{magneto_sty}]{magneto_text[:6]}[/] [dim]•[/] [{iono_sty}]{iono_text[:6]}[/] [{_flare_style(flare)}]{flare[:2]}[/]")
         else:
             t.add_row("Magneto", Text(f"{mag_glyph} {magneto_text}", style="bold " + magneto_sty))
             t.add_row("Ionosph", Text(f"{iono_glyph} {iono_text}", style="bold " + iono_sty))
@@ -214,4 +215,3 @@ class SpaceWeatherPanel:
             border_style=self.border_style,
             padding=(0, 1),
         )
-

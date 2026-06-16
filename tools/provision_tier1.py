@@ -38,7 +38,6 @@ damage to the RP1 chip and render the Pi 5 inoperable.
     print()
 
 
-
 def check_rp1_voltage_guard() -> bool:
     """
     SPEC-004A.1 — Hard enforcement: LBE-1421 native 3.3V only.
@@ -51,6 +50,7 @@ def check_rp1_voltage_guard() -> bool:
                 print("[HARD] LBE-1421 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
                 return True
     return True  # Soft pass if calibration file absent
+
 
 def check_soapy_sdr():
     """
@@ -111,8 +111,8 @@ def check_pluto_presence():
         ad9361 = ctx.find_device("ad9361-phy")
         if ad9361:
             print(f"[*] PlutoSDR+ IIO context reachable at {uri} ✅")
-            print(f"    AD9361 device enumerated.")
-            
+            print("    AD9361 device enumerated.")
+
             # Check external clock
             try:
                 if "rx_pll_locked" in ad9361.attrs:

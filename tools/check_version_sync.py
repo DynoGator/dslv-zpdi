@@ -7,14 +7,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
 def fail(msg: str) -> None:
     print(f"[FAIL] {msg}", file=sys.stderr)
     raise SystemExit(1)
+
 
 def read_text(path: Path) -> str:
     if not path.is_file():
         fail(f"Missing file: {path}")
     return path.read_text(encoding="utf-8", errors="ignore")
+
 
 pyproject = ROOT / "pyproject.toml"
 readme = ROOT / "README.md"

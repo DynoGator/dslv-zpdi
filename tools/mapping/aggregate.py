@@ -131,7 +131,7 @@ def _offset(lat: float, lon: float, bearing_deg: float, distance_m: float) -> tu
 
 
 def _stable_rand(seed: str) -> random.Random:
-    h = hashlib.md5(seed.encode()).digest()
+    h = hashlib.sha256(seed.encode()).digest()
     return random.Random(int.from_bytes(h[:8], "big"))
 
 
@@ -151,8 +151,10 @@ def _read_event(group: h5py.Group) -> dict:
                 if isinstance(val, bytes):
                     val = val.decode(errors="replace")
                 out[k] = val
-            except Exception:
-                pass
+            except Exception as e:
+                # Avoid silent pass for security
+                import logging
+                logging.debug(f"Failed to copy metric {k}: {e}")
     return out
 
 
@@ -305,7 +307,7 @@ if __name__ == "__main__":
     anchor, events = collect_all()
     print(f"anchor: {anchor}")
     print(f"events: {len(events)}  "
-          f"(primary={sum(1 for e in events if e.kind=='primary')}, "
-          f"secondary={sum(1 for e in events if e.kind=='secondary')})")
+          f"(primary={sum(1 for e in events if e.kind == 'primary')}, "
+          f"secondary={sum(1 for e in events if e.kind == 'secondary')})")
     if events:
         print("first:", events[0])

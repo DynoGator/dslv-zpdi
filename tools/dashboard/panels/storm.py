@@ -106,4 +106,3 @@ class StormPanel:
             border_style=self.border_style,
             padding=(0, 1),
         )
-

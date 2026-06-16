@@ -2,6 +2,16 @@
 """Mobile node compliance test suite — SPEC-005/006/007 validation."""
 
 from __future__ import annotations
+from src.dslv_zpdi.layer3_telemetry.mobile_router import route_packet
+from src.dslv_zpdi.layer2_core.wiring import wire_mobile_to_coherence
+from src.dslv_zpdi.layer2_core.coherence import CoherenceScorer
+from src.dslv_zpdi.layer1_ingestion.payload import SensorModality
+from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import (
+    SENSORS,
+    IngestionPayload,
+    build_mobile_payload,
+    score_mobile_payload,
+)
 
 import json
 import os
@@ -16,21 +26,11 @@ import pytest
 # Ensure src/ is on the path when running from tests/
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import (
-    IngestionPayload,
-    build_mobile_payload,
-    score_mobile_payload,
-    SENSORS,
-)
-from src.dslv_zpdi.layer1_ingestion.payload import SensorModality
-from src.dslv_zpdi.layer2_core.coherence import CoherenceScorer
-from src.dslv_zpdi.layer2_core.wiring import wire_mobile_to_coherence
-from src.dslv_zpdi.layer3_telemetry.mobile_router import route_packet
-
 
 # ---------------------------------------------------------------------------
 # Core payload tests (ported from Rev 3.4 regression suite)
 # ---------------------------------------------------------------------------
+
 
 def test_quarantine_vs_kill():
     """SPEC-003: GPS-untrusted → SECONDARY_QUARANTINED; missing identity → KILLED."""
@@ -274,6 +274,7 @@ def test_hmac_signing_when_secret_set():
     try:
         # Re-import to pick up the new secret
         import importlib
+
         import zpdi_mobile_node
         importlib.reload(zpdi_mobile_node)
         raw = b'{"test":1}'
@@ -312,6 +313,7 @@ def test_gps_enrichment_in_payload():
 def test_aes_encryption_envelope():
     """SPEC-008: AES-256-GCM envelope must contain nonce, ct, and enc label."""
     import base64
+
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     key = AESGCM.generate_key(bit_length=256)
     aesgcm = AESGCM(key)
@@ -362,8 +364,9 @@ def test_rotation_vector_updates_orientation_tracker():
 
 def test_fusion_weight_applied_to_scores():
     """apply_orientation_weight must scale r_local and r_smooth by stability."""
-    from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
     import math
+
+    from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
     s45 = math.sqrt(2) / 2
     t = OrientationTracker()
     # identity → 90° rotation: dot = cos(45°) = s45

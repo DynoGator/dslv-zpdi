@@ -233,8 +233,8 @@ def compute_trend(history: list[float], threshold: float = 0.05) -> str:
 
     # If it's stable but high, call it PEAK/PLATEAU
     # (Using arbitrary 'high' thresholds for these specific metrics)
-    if avg_recent > 0: # placeholder logic, will refine per-metric if needed
-         pass
+    if avg_recent > 0:  # placeholder logic, will refine per-metric if needed
+        pass
 
     return "STABLE"
 
@@ -352,7 +352,7 @@ class SpaceWeatherFeed:
                     hist.append(x["flux"])
                 self._snapshot["flux_history"] = hist[-12:]
                 merged["flux_trend"] = compute_trend(self._snapshot["flux_history"], threshold=0.10)
-                if merged["flux_trend"] == "STABLE" and x["flux"] > 1e-5: # M-class or higher
+                if merged["flux_trend"] == "STABLE" and x["flux"] > 1e-5:  # M-class or higher
                     merged["flux_trend"] = "PEAK"
 
         if results.get("f107") is not None:
@@ -366,7 +366,6 @@ class SpaceWeatherFeed:
 
         with self._lock:
             self._snapshot.update(merged)
-
 
 
 _FEED: SpaceWeatherFeed | None = None

@@ -64,6 +64,7 @@ _PALETTES = [
 
 _PALETTE_IDX = 0
 
+
 def _heat(v: float) -> str:
     """Map v in [0,1] to a truecolor hex string using the current palette."""
     v = max(0.0, min(1.0, v))
@@ -256,7 +257,7 @@ class WaterfallPanel:
     def __init__(
         self,
         width: int = 80,
-        history: int = 24, # Increased default from 12
+        history: int = 24,  # Increased default from 12
         mode: str = "SWEEP",
         center_hz: int = 100_000_000,
         span_hz: int = 20_000_000,
@@ -267,7 +268,7 @@ class WaterfallPanel:
         compact: bool = False,
     ):
         self.width = max(20, width)
-        self.history = max(10, history) # Ensured minimum for usability
+        self.history = max(10, history)  # Ensured minimum for usability
         self.rows: list[list[float]] = []  # Store normalized [0,1] rows
         self.peak_hold: list[float] = [0.0] * self.width
         self.center_hz = center_hz
@@ -633,4 +634,3 @@ class WaterfallPanel:
                 f"{span_mhz:.1f}MHz BW{gain_info}{gain_suffix}{sweep_suffix}{err_suffix})[/]"
             )
         return Panel(lines, title=title, border_style=self.border_style, padding=(0, 1))
-

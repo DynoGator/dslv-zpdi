@@ -1,6 +1,7 @@
 """Tests for the Tier-1 WSS ingestion server — SPEC-008 crypto pipeline."""
 
 from __future__ import annotations
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 import base64
 import hashlib
@@ -12,15 +13,13 @@ import sys
 import time
 import uuid
 
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 # ---------------------------------------------------------------------------
 # Helpers — mirror the mobile node's signing/encryption logic
 # ---------------------------------------------------------------------------
+
 
 def _make_key() -> bytes:
     return AESGCM.generate_key(bit_length=256)
@@ -88,6 +87,7 @@ def _get_process_fn():
 
     # Force re-import so env vars are picked up at module level
     import importlib
+
     import tier1_ingestion_server as m
     importlib.reload(m)
     return m._process_message
@@ -250,7 +250,10 @@ class TestOrientationFusion:
         assert abs(stab - s45) < 0.01
 
     def test_apply_weight_scales_scores(self):
-        from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+        from src.dslv_zpdi.layer2_core.fusion_engine import (
+            OrientationTracker,
+            apply_orientation_weight,
+        )
         t = OrientationTracker()
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
@@ -260,8 +263,12 @@ class TestOrientationFusion:
         assert abs(rs_fused - 0.6) < 1e-6
 
     def test_fusion_lowers_score_on_motion(self):
-        from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
         import math
+
+        from src.dslv_zpdi.layer2_core.fusion_engine import (
+            OrientationTracker,
+            apply_orientation_weight,
+        )
         t = OrientationTracker()
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
         s45 = math.sqrt(2) / 2

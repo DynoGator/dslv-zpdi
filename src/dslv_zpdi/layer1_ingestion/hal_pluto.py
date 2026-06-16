@@ -217,7 +217,7 @@ class PlutoHAL(BaseHAL):
 
         jitter_ok = result["pps_history_len"] >= 2 and result["pps_rms_jitter_ns"] < 1_000_000.0
         host_lock = jitter_ok and result["gps_fix"]
-        
+
         # ACTUAL hardware register read for AD9361 PLL lock
         hw_pll_locked = False
         if IIO_AVAILABLE and self._ad9361 is not None:
@@ -234,14 +234,14 @@ class PlutoHAL(BaseHAL):
                         # Some older firmwares don't expose rx_pll_locked directly.
                         # We simulate the hardware read block for the spec compliance.
                         pass
-                    # If we can't find the exact attribute, but context is live, 
+                    # If we can't find the exact attribute, but context is live,
                     # we must conservatively fail or rely on external assertion if simulator.
                     # Since this is a hard requirement, we must read the real register:
                     # We will assume modern PlutoSDR firmware exposes rx_pll_locked.
                     hw_pll_locked = False
             except Exception as e:
                 result["warnings"].append(f"IIO PLL read error: {e}")
-        
+
         # Lock is only verified if BOTH the host GPSDO is stable AND the AD9361 PLL is locked.
         result["phase_lock_verified"] = host_lock and (hw_pll_locked if self._ad9361 else True)
         result["hw_pll_locked"] = hw_pll_locked

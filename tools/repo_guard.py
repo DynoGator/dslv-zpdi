@@ -7,20 +7,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
 def fail(msg: str) -> None:
     print(f"[FAIL] {msg}", file=sys.stderr)
     raise SystemExit(1)
 
+
 def warn(msg: str) -> None:
     print(f"[WARN] {msg}")
 
+
 def ok(msg: str) -> None:
     print(f"[OK] {msg}")
+
 
 def read_text(path: Path) -> str:
     if not path.is_file():
         fail(f"Missing file: {path}")
     return path.read_text(encoding="utf-8", errors="ignore")
+
 
 required = [
     ROOT / "repo_manifest.yaml",
@@ -73,7 +78,7 @@ for path in src_files:
     text = read_text(path)
     # Basic check for layer/watchdog imports without dslv_zpdi prefix
     if re.search(r"from (layer[1-3]_ingestion|layer[1-3]_core|layer[1-3]_telemetry|watchdog)", text):
-         fail(f"Bare layer/watchdog import found in {path.relative_to(ROOT)}. Use dslv_zpdi namespace.")
+        fail(f"Bare layer/watchdog import found in {path.relative_to(ROOT)}. Use dslv_zpdi namespace.")
 ok("All internal imports use the dslv_zpdi namespace")
 
 print("[OK] Repo guard passed")

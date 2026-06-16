@@ -179,7 +179,7 @@ def parse_gga(sentence: str) -> dict | None:
     if "*" in sentence:
         star = sentence.rfind("*")
         body = sentence[1:star]
-        chk_str = sentence[star + 1 : star + 3]
+        chk_str = sentence[star + 1: star + 3]
         computed = 0
         for ch in body:
             computed ^= ord(ch)

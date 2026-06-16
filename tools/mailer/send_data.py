@@ -208,7 +208,7 @@ def build_message(cfg: dict, tarball: bytes, manifest: dict) -> EmailMessage:
         if entry["included"]:
             lines.append(f"  [x] {entry['arcname']:40s} {mb:7.2f} MB   ({entry['category']})")
         else:
-            lines.append(f"  [ ] {entry['arcname']:40s} {mb:7.2f} MB   SKIPPED: {entry.get('reason','')}")
+            lines.append(f"  [ ] {entry['arcname']:40s} {mb:7.2f} MB   SKIPPED: {entry.get('reason', '')}")
     lines += [
         "",
         "Tier 1 (primary): institutional HDF5 - coherence scores, timestamps.",

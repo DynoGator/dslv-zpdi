@@ -28,7 +28,7 @@ def _node_has_spec(node: ast.AST, lines: list[str]) -> bool:
     first_body_line = (
         node.body[0].lineno if getattr(node, "body", None) else node.lineno
     )
-    header_block = "\n".join(lines[header_start - 1 : first_body_line - 1])
+    header_block = "\n".join(lines[header_start - 1: first_body_line - 1])
     if SPEC_PATTERN.search(header_block):
         return True
 

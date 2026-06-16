@@ -86,7 +86,8 @@ class RFAnomalyPanel:
         t.add_column(no_wrap=True)
 
         if not m["have_data"]:
-            t.add_row("Status", Text("wait data…", style="dim italic") if compact else Text("waiting for spectrum data…", style="dim italic"))
+            t.add_row("Status", Text("wait data…", style="dim italic")
+                      if compact else Text("waiting for spectrum data…", style="dim italic"))
             title = f"[bold {self.border_style}]▓ ANOM ▓[/]" if compact else f"[bold {self.border_style}]▓ RF ANOMALY ▓[/]"
             return Panel(
                 t,

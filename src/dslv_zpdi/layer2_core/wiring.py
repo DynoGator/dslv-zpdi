@@ -10,8 +10,9 @@ Rev 3.1 FIXES:
 import json
 from typing import Optional
 
-from .coherence import CoherenceScorer, CoherencePacket
 from dslv_zpdi.layer1_ingestion.payload import SensorModality
+
+from .coherence import CoherencePacket, CoherenceScorer
 
 coherence_engine = CoherenceScorer()
 
@@ -36,9 +37,9 @@ def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
     except ValueError:
         # Unknown modality — if it's a mobile modality, allow it through
         if modality_str not in {
-                "accel", "magnetometer", "barometer",
-                "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
-            }:
+            "accel", "magnetometer", "barometer",
+            "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
+        }:
             return None  # Unknown modality = silent kill
 
     # State machine enforcement (Section 5.2B)
@@ -71,9 +72,9 @@ def wire_mobile_to_coherence(payload_dict: dict) -> Optional[CoherencePacket]:
         SensorModality(modality_str)
     except ValueError:
         if modality_str not in {
-                "accel", "magnetometer", "barometer",
-                "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
-            }:
+            "accel", "magnetometer", "barometer",
+            "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
+        }:
             return None
 
     trust_state = payload_dict.get('trust_state', '')

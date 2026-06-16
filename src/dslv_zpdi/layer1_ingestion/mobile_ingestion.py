@@ -22,7 +22,7 @@ from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
-from src.dslv_zpdi.layer2_core.coherence import CoherenceScorer, CoherencePacket
+from src.dslv_zpdi.layer2_core.coherence import CoherencePacket, CoherenceScorer
 from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
 
 log = logging.getLogger("zpdi.layer1")
@@ -78,10 +78,10 @@ def _hilbert_phases(signal: np.ndarray) -> List[float]:
     h = np.zeros_like(spec)
     h[0] = spec[0]
     if fft_size % 2 == 0:
-        h[1 : fft_size // 2] = 2.0 * spec[1 : fft_size // 2]
+        h[1: fft_size // 2] = 2.0 * spec[1: fft_size // 2]
         h[fft_size // 2] = spec[fft_size // 2]
     else:
-        h[1 : (fft_size + 1) // 2] = 2.0 * spec[1 : (fft_size + 1) // 2]
+        h[1: (fft_size + 1) // 2] = 2.0 * spec[1: (fft_size + 1) // 2]
     analytic = np.fft.ifft(h)
     phases = np.angle(analytic[:n])
     return phases.tolist()
@@ -93,6 +93,7 @@ def _hilbert_phases(signal: np.ndarray) -> List[float]:
 # SPEC-003A
 class _PhaseBuffers:
     """SPEC-003A"""
+
     def __init__(self, window: int = PHASE_WINDOW):
         """SPEC-003A"""
         self._bufs: dict[str, List[float]] = {}

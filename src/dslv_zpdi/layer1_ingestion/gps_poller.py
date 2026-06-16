@@ -163,7 +163,8 @@ class GPSPoller:
             fix = await self._poll_once()
             if fix is not None:
                 await self._set_latest(fix)
-                log.debug("GPS fix updated: %.6f, %.6f (±%.1fm %s)", fix.latitude, fix.longitude, fix.accuracy or -1, fix.provider)
+                log.debug("GPS fix updated: %.6f, %.6f (±%.1fm %s)", fix.latitude,
+                          fix.longitude, fix.accuracy or -1, fix.provider)
                 self._backoff = 1.0
             else:
                 log.debug("GPS fix unavailable — retry in %.1fs", self._backoff)

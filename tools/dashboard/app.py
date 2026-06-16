@@ -60,14 +60,14 @@ from dashboard.panels.weather import SpaceWeatherPanel
 
 def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     s = state or {}
-    paused      = s.get("paused", False)
-    wf_mode     = s.get("wf_mode", "SWEEP")
-    real_sdr    = s.get("real_sdr", False)
+    paused = s.get("paused", False)
+    wf_mode = s.get("wf_mode", "SWEEP")
+    real_sdr = s.get("real_sdr", False)
     spectrum_on = s.get("spectrum_on", True)
-    lna_gain    = s.get("lna_gain", 24)
-    center_hz   = s.get("center_hz", 100_000_000)
-    modulation  = s.get("modulation", "RAW-SWEEP")
-    palette_nm  = s.get("palette_name", "HEAT")
+    lna_gain = s.get("lna_gain", 24)
+    center_hz = s.get("center_hz", 100_000_000)
+    modulation = s.get("modulation", "RAW-SWEEP")
+    palette_nm = s.get("palette_name", "HEAT")
 
     pulse = "●" if int(time.time() * 2) % 2 == 0 else "○"
     ts = time.strftime("%H:%M:%S", time.gmtime())
@@ -85,7 +85,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
         status.append(val, style=style)
         status.append("] ", style="dim")
 
-    _ind("SDR",  "REAL" if real_sdr    else "SIM",
+    _ind("SDR",  "REAL" if real_sdr else "SIM",
          "bold bright_green" if real_sdr else "bold bright_yellow")
     _ind("WF",   wf_mode, "bold bright_cyan")
     _ind("FREQ", f"{center_hz / 1e6:.1f}MHz", "bright_magenta")
@@ -116,7 +116,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     else:
         legend = [
             ("q",    "quit"),
-            ("space","pause"),
+            ("space", "pause"),
             ("m",    "wf-mode"),
             ("d",    "mod"),
             ("r",    "real-sdr"),
@@ -551,17 +551,20 @@ class Dashboard:
             if "waterfall" in self._panels:
                 self._panels["waterfall"].show_spectrum = not self._panels["waterfall"].show_spectrum
                 if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"spectrum: {'ON' if self._panels['waterfall'].show_spectrum else 'OFF'}")
+                    self._panels["notifications"].push(
+                        "INFO", f"spectrum: {'ON' if self._panels['waterfall'].show_spectrum else 'OFF'}")
         elif k == "UP":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].zoom(0.5)
                 if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"zoom in: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
+                    self._panels["notifications"].push(
+                        "INFO", f"zoom in: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
         elif k == "DOWN":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].zoom(2.0)
                 if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"zoom out: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
+                    self._panels["notifications"].push(
+                        "INFO", f"zoom out: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
         elif k == "LEFT":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
@@ -622,7 +625,8 @@ class Dashboard:
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_modulation()
                 if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
+                    self._panels["notifications"].push(
+                        "INFO", f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
         elif k in ("a", "A"):
             if "notifications" in self._panels:
                 self._panels["notifications"].push(
@@ -649,7 +653,8 @@ class Dashboard:
             self._panels["notifications"].push("INFO", "dashboard online")
         self._enter_raw()
         try:
-            self._live = Live(self.layout, console=self.console, refresh_per_second=max(1, int(1 / self.refresh)), screen=True)
+            self._live = Live(self.layout, console=self.console,
+                              refresh_per_second=max(1, int(1 / self.refresh)), screen=True)
             with self._live:
                 while True:
                     k = self._read_key()
