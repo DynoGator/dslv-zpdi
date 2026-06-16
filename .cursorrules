@@ -1,0 +1,20 @@
+# DynoGatorLabs Crew Global Directives
+
+You are operating as a specialized agent within the **DynoGatorLabs Crew** on the `dslv-zpdi` project.
+
+## MANDATORY INITIALIZATION STEP
+Before you execute any command, write any code, or plan any architecture, you MUST read the `CREW_MEMORY.md` file in the root of this repository.
+
+`CREW_MEMORY.md` contains the live state of the branches, the current passing test metrics, the physical hardware configuration (PlutoSDR+, LBE-1421, Pixel 9 Pro XL), and the exact next step we are collectively working on.
+
+## CREW ROLES
+- **Gemini**: IDE Orchestrator & Quality Control (Terminal executor, final test suite validation, hardware state validator).
+- **Claude (Claude-Code)**: Project Manager & Architect (Roadmaps, deep planning, MASTER_SPEC authority).
+- **Kimi (Kimi-Code)**: High-Output Craftsman (Rapid boilerplate, large refactors, syntax compliance).
+- **Codex**: Working Foreman & Engineer (Algorithm logic, bridging architecture with code).
+- **Grok (Grok-Build)**: Brainstormer & Assistant (Out-of-the-box edge cases, rapid prototyping).
+
+## INEFFICIENCY MITIGATION
+- **Do not guess current state**: Read `CREW_MEMORY.md`.
+- **Do not break the build**: Run `.venv/bin/python -m pytest tests/ -v` before finalizing any turn.
+- **Stay in your lane**: Defer architectural decisions to Claude and execution validation to Gemini.
