@@ -236,9 +236,9 @@ TIER1_PACKAGES=(
     pps-tools
     ethtool
     pciutils
-    hackrf
-    libhackrf-dev
-    soapysdr-module-hackrf
+    libiio-utils
+    libiio-dev
+    python3-libiio
     python3-soapysdr
     libiio-dev
     libad9361-dev
@@ -472,10 +472,10 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
         field_flag="--field"
     fi
     if ! run_as_root "cd '$INSTALL_DIR' && DEV_SIMULATOR='${DEV_SIMULATOR:-0}' '$VENV_DIR/bin/python' tools/provision_tier1.py $field_flag"; then
-        if [[ "$SIMULATOR_MODE" -eq 1 ]]; then
-            log_warn "Tier 1 hardware audit failed in simulator mode (expected without GPSDO/HackRF) -- continuing"
+        if [[ "$SIMULATOR_MODE" == 1 ]]; then
+            log_warn "Tier 1 hardware audit failed in simulator mode (expected without GPSDO/PlutoSDR+) -- continuing"
         else
-            log_fail "Tier 1 hardware audit failed. Connect GPSDO + HackRF, or re-run with --simulator."
+            log_fail "Tier 1 hardware audit failed. Connect GPSDO + PlutoSDR+, or re-run with --simulator."
         fi
     else
         log_ok "Tier 1 hardware audit passed"
@@ -529,7 +529,7 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
         linux-headers-rpi-2712 linux-headers-rpi-v8
         firmware-brcm80211 firmware-atheros firmware-mediatek
         bluez bluez-firmware
-        hackrf libhackrf0 libhackrf-dev
+        libiio0 libiio-dev python3-libiio
         libiio-dev libad9361-dev python3-libiio
         pps-tools chrony
     )
@@ -665,7 +665,7 @@ BLK
         mkdir -p /etc/usbguard
         if usbguard generate-policy > /etc/usbguard/rules.conf 2>/dev/null; then
             grep -q "1d50:6089" /etc/usbguard/rules.conf || \
-                echo "allow id 1d50:6089 serial \"*\" name \"HackRF One\" with-interface all" \
+                echo "allow id 0456:b673 serial \"*\" name \"PlutoSDR\" with-interface all" \
                     >> /etc/usbguard/rules.conf
             soft "USBGuard service enabled" systemctl enable --now usbguard
         else

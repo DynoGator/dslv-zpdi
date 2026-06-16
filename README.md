@@ -774,6 +774,7 @@ The 3.3 V CMOS output is natively matched to the Pi 5 RP1 southbridge — no vol
 | `PHASE_2A_TIER_1_BUILD_SHEET.md`       | Step-by-step assembly and wiring guide                |
 | `docs/PHASE_2A_HARDWARE_BUILD_LIST.md` | Procurement list with verified links                  |
 | `docs/LBE-1421_WIRING.md`             | Detailed wiring harness documentation                 |
+| `docs/PLUTO_SDR_FIRMWARE_GUIDE.md`     | PlutoSDR+ firmware & setup troubleshooting guide      |
 | `docs/HARDWARE_CHANGE_JUSTIFICATION.md`| Phase 2A hardware pivot rationale (SPEC-UPDATE-PHASE-2A-LBE-1421) |
 | `docs/RF_MAGNETIC_SHIELDING.md`        | Cyberdeck chassis shielding design                    |
 | `docs/validation-logs/`               | Live evidence artifacts (pytest, hardware, system)    |

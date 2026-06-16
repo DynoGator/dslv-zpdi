@@ -46,7 +46,7 @@ apt-get install -y python3 python3-venv python3-dev git build-essential libhdf5-
 if [ ! -d "/root/dslv-zpdi" ]; then
     echo "[*] [Debian] Cloning repository..."
     # Replace with the actual repository URL once deployed
-    git clone https://github.com/placeholder/dslv-zpdi.git /root/dslv-zpdi
+    git clone https://github.com/DynoGator/dslv-zpdi.git /root/dslv-zpdi
 else
     echo "[*] [Debian] Repository exists. Pulling latest..."
     cd /root/dslv-zpdi
