@@ -22,8 +22,8 @@ from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
-from src.layer2_core.coherence import CoherenceScorer, CoherencePacket
-from src.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+from src.dslv_zpdi.layer2_core.coherence import CoherenceScorer, CoherencePacket
+from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
 
 log = logging.getLogger("zpdi.layer1")
 
