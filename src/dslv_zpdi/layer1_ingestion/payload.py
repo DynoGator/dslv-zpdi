@@ -24,6 +24,12 @@ class SensorModality(Enum):
     MAGNETOMETER = "magnetometer"
     INERTIAL = "inertial"
     RADON = "radon"
+    ACCEL = "accel"
+    BAROMETER = "barometer"
+    GYROSCOPE = "gyroscope"
+    ROTATION_VECTOR = "rotation_vector"
+    GEOMAGNETIC_ROTATION = "geomagnetic_rotation"
+    GRAVITY = "gravity"
 
 
 # pylint: disable=too-many-instance-attributes

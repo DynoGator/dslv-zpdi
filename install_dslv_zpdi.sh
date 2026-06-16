@@ -240,6 +240,9 @@ TIER1_PACKAGES=(
     libhackrf-dev
     soapysdr-module-hackrf
     python3-soapysdr
+    libiio-dev
+    libad9361-dev
+    python3-libiio
 )
 
 log_info "Starting DSLV-ZPDI install (${SCRIPT_REV})"
@@ -527,6 +530,7 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
         firmware-brcm80211 firmware-atheros firmware-mediatek
         bluez bluez-firmware
         hackrf libhackrf0 libhackrf-dev
+        libiio-dev libad9361-dev python3-libiio
         pps-tools chrony
     )
     # Discover any versioned kernel/header packages installed and hold those too

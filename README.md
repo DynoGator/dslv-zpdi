@@ -49,20 +49,21 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 | Tier 1 Compute      | Raspberry Pi 5 (16 GB)        | FFT processing, HDF5 storage, hotspot AP, pipeline anchor        |
 | Mobile Node         | Pixel 9 Pro XL (GrapheneOS)   | Remote swarm telemetry over PiRepo Wi-Fi (10.42.0.x)            |
 | Display             | 7" DSI (800×480)              | On-device Rich TUI dashboard                                     |
-| SDR                 | HackRF One                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, parts on order) |
+| SDR                 | HamGeek PlutoSDR+ (AD9361)    | RF ingestion, 70 MHz – 6 GHz, dual TRX, external CLKIN     |
+| Legacy SDR          | HackRF One                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, optional) |
 | Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
 | Antenna             | Great Scott Gadgets ANT500    | 75 MHz – 1 GHz coverage                                         |
-| RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → HackRF CLKIN (≤ 1 ft)                           |
+| RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → PlutoSDR+ EXT_REF_CLK (≤ 1 ft)                  |
 | Future: Radon Sensor| EcoSense RadonEye Pro         | Radon ingestion via SPEC-015 (staging endpoint live, promotion pending) |
 
 ### Physical Wiring Protocol
 
-1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Output` → HackRF `CLKIN`
+1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Output` → PlutoSDR+ `EXT_REF_CLK`
    Hardware ADC is now phase-locked to GPS constellation. USB jitter is irrelevant.
 2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
    Bridge ground between GPSDO and Pi. No level-shifter needed — LBE-1421 outputs 3.3 V CMOS natively.
 3. **Power & Telemetry:** USB-C · LBE-1421 → Pi 5 (powers GPSDO; exposes virtual serial `/dev/ttyACM0` for NMEA)
-4. **SDR Data:** USB · HackRF → Pi 5 USB 3.0 (IQ data transfer — timing separate from USB jitter)
+4. **SDR Data:** USB/Ethernet · PlutoSDR+ → Pi 5 USB 3.0 (IQ data transfer — timing separate from USB jitter)
 
 ---
 
@@ -72,7 +73,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 **Core hardware (Tier 1 Anchor)**
 - Raspberry Pi 5 (16 GB) or compatible (see Hardware Agnosticism section)
-- HackRF One with 10 MHz CLKIN connected to GPSDO
+- HamGeek PlutoSDR+ with 10 MHz EXT_REF_CLK connected to GPSDO
 - Leo Bodnar LBE-1421 GPSDO (USB-C, NMEA, 3.3 V CMOS)
 - Great Scott Gadgets ANT500 antenna
 - SMA Male-to-Male 50 Ω coax, ≤ 1 ft
@@ -130,8 +131,8 @@ sudo ./install_dslv_zpdi.sh --tier1 --simulator
 lsmod | grep pps
 ppstest /dev/pps0
 
-# HackRF detected
-hackrf_info
+# PlutoSDR+ detected via IIO
+python -c "import iio; print(iio.Context('ip:192.168.3.80').name)"
 
 # GPSDO NMEA telemetry on USB-C virtual serial
 python -c "import serial; s=serial.Serial('/dev/ttyACM0', 9600, timeout=2); print(s.readline())"
@@ -361,8 +362,8 @@ The waterfall is a rolling 2D frequency-power display and the primary real-time 
 | Source         | How it works                                                      |
 |----------------|-------------------------------------------------------------------|
 | `SIM`          | Synthesized spectrum with 3 drifting Gaussian carriers + noise. Runs always when HACKRF is off. |
-| `HACKRF`       | Live `hackrf_sweep` subprocess. Streams CSV lines, accumulates a full sweep, publishes via background thread. |
-| `HACKRF-WAIT`  | Transitional state — HackRF subprocess started but no sweep received yet. Shows SIM data while waiting. |
+| `HACKRF` / `PLUTO` | Live SDR subprocess or IIO context. Streams data, accumulates a full sweep, publishes via background thread. |
+| `SDR-WAIT`         | Transitional state — SDR initialized but no sweep received yet. Shows SIM data while waiting. |
 
 Toggle between SIM and HACKRF with `r`. The dashboard auto-detects HackRF at startup via `hackrf_info`; if not present, `r` has no effect.
 
@@ -742,7 +743,7 @@ The Pi 5 + HackRF + LBE-1421 stack is the Phase 2A reference. Alternative hardwa
 
 - Nvidia Jetson AGX Orin + USRP B200 + GPSDO
 - Intel NUC + LimeSDR + M.2 timing card
-- Any Linux SBC + CLKIN-capable SDR + GPS-disciplined 10 MHz source
+- Any Linux SBC + CLKIN-capable SDR (like PlutoSDR+) + GPS-disciplined 10 MHz source
 
 ### Tier 2 / Testbed (RTL-SDR)
 

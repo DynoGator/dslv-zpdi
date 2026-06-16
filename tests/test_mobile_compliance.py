@@ -16,16 +16,16 @@ import pytest
 # Ensure src/ is on the path when running from tests/
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.layer1_ingestion.mobile_ingestion import (
+from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import (
     IngestionPayload,
     build_mobile_payload,
     score_mobile_payload,
     SENSORS,
 )
-from src.layer1_ingestion.payload import SensorModality
-from src.layer2_core.coherence import CoherenceScorer
-from src.layer2_core.wiring import wire_mobile_to_coherence
-from src.layer3_telemetry.mobile_router import route_packet
+from src.dslv_zpdi.layer1_ingestion.payload import SensorModality
+from src.dslv_zpdi.layer2_core.coherence import CoherenceScorer
+from src.dslv_zpdi.layer2_core.wiring import wire_mobile_to_coherence
+from src.dslv_zpdi.layer3_telemetry.mobile_router import route_packet
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ def test_state_machine_enforcement():
     )
     json_payload = p.to_json()
     # wire_to_coherence (canonical) blocks SECONDARY_QUARANTINED
-    from src.layer2_core.wiring import wire_to_coherence
+    from src.dslv_zpdi.layer2_core.wiring import wire_to_coherence
     assert wire_to_coherence(json_payload) is None
     # mobile wiring allows it
     assert wire_mobile_to_coherence(json.loads(json_payload)) is not None
@@ -123,7 +123,7 @@ def test_global_r_weighting():
         "modality": "rf_sdr",
         "ts": time.time(),
     }
-    assert abs(scorer.compute_global_R() - 0.8) < 0.001
+    assert abs(scorer.compute_global_r() - 0.8) < 0.001
 
 
 def test_killed_packet_no_json():
@@ -289,7 +289,7 @@ def test_hmac_signing_when_secret_set():
 
 def test_gps_enrichment_in_payload():
     """GPS poller metadata must appear in the serialized payload."""
-    from src.layer1_ingestion.mobile_ingestion import build_mobile_payload
+    from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import build_mobile_payload
     loc = {
         "latitude": 33.4484,
         "longitude": -112.0740,
@@ -330,7 +330,7 @@ def test_aes_encryption_envelope():
 
 def test_expanded_sensor_modalities():
     """Rev 3.5 expanded sensor list must map to canonical modalities."""
-    from src.layer1_ingestion.mobile_ingestion import SENSOR_MODALITY_MAP
+    from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import SENSOR_MODALITY_MAP
     for s in SENSORS:
         assert s in SENSOR_MODALITY_MAP, f"{s} missing from modality map"
         assert SENSOR_MODALITY_MAP[s] != "unknown"
@@ -338,7 +338,7 @@ def test_expanded_sensor_modalities():
 
 def test_gyroscope_phase_extraction():
     """Gyroscope magnitude must produce non-empty phases after window fill."""
-    from src.layer1_ingestion.mobile_ingestion import build_mobile_payload
+    from src.dslv_zpdi.layer1_ingestion.mobile_ingestion import build_mobile_payload
     for i in range(8):
         reading = {"x": float(i), "y": 0.0, "z": 0.5}
         p = build_mobile_payload("ICM45631 Gyroscope", reading)
@@ -351,7 +351,7 @@ def test_gyroscope_phase_extraction():
 
 def test_rotation_vector_updates_orientation_tracker():
     """Rotation-vector readings must feed the module-level OrientationTracker."""
-    from src.layer1_ingestion import mobile_ingestion as mi
+    from src.dslv_zpdi.layer1_ingestion import mobile_ingestion as mi
     mi._ORIENTATION.reset()
     # Feed two rotation-vector readings
     mi._build_extracted_phases("Rotation Vector Sensor", {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
@@ -362,7 +362,7 @@ def test_rotation_vector_updates_orientation_tracker():
 
 def test_fusion_weight_applied_to_scores():
     """apply_orientation_weight must scale r_local and r_smooth by stability."""
-    from src.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+    from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
     import math
     s45 = math.sqrt(2) / 2
     t = OrientationTracker()
@@ -379,7 +379,7 @@ def test_fusion_weight_applied_to_scores():
 
 def test_new_sensor_modalities_in_enum():
     """All 7 Pixel 9 Pro XL sensor modalities must be in SensorModality enum."""
-    from src.layer1_ingestion.payload import SensorModality
+    from src.dslv_zpdi.layer1_ingestion.payload import SensorModality
     required = {"gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity"}
     enum_values = {m.value for m in SensorModality}
     for mod in required:
@@ -388,7 +388,7 @@ def test_new_sensor_modalities_in_enum():
 
 def test_wiring_accepts_all_mobile_modalities():
     """wire_mobile_to_coherence must not silently kill gyro/rotation/gravity."""
-    from src.layer2_core.wiring import wire_mobile_to_coherence
+    from src.dslv_zpdi.layer2_core.wiring import wire_mobile_to_coherence
     mobile_modalities = ("gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity")
     for mod in mobile_modalities:
         payload_dict = {
