@@ -1,0 +1,24 @@
+#!/bin/bash
+# Verify GITHUB_PAT is present and the remote URL is clean before push.
+# Governed by .githooks/README.md — see that file for policy rationale.
+
+# Load .env if present (PAT is read from environment, not from the file directly)
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+if [ -z "${GITHUB_PAT:-}" ]; then
+    echo "pre-push: GITHUB_PAT not set — run ./configure_git_auth.sh first"
+    exit 1
+fi
+
+# Reject any remote URL that embeds credentials in plaintext
+remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+if echo "$remote_url" | grep -qE "://[^@]+:[^@]+@"; then
+    echo "pre-push: remote URL contains credentials in plaintext — unsafe"
+    echo "  URL: $remote_url"
+    echo "  Run ./configure_git_auth.sh to configure the credential helper."
+    exit 1
+fi
