@@ -15,6 +15,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 source .venv/bin/activate
+
+# Load node environment (WSS URI, tokens, paths, etc.)
+# set -a ensures all variables are exported to the daemon child process.
+set -a
+[ -f .env ] && source .env
+set +a
+
 mkdir -p logs
 
 DAEMONPID=.zpdi_daemon.pid
@@ -41,10 +48,19 @@ while true; do
     # Clear any SWMR lock left by a prior crash before reopening the file.
     [ -f data/zpdi_stream.h5 ] && h5clear -s data/zpdi_stream.h5 2>/dev/null || true
 
+    # Truncate old health log so the age check starts fresh for this daemon
+    # instance. Otherwise a stale health.jsonl from a previous run causes an
+    # immediate kill before the daemon can write its first heartbeat.
+    : > logs/health.jsonl 2>/dev/null || true
+
     python3 zpdi_mobile_node.py >> logs/daemon.log 2>&1 &
     dpid=$!
     echo "$dpid" > "$DAEMONPID"
     _log "daemon started (pid=$dpid)"
+
+    # Grace period: the first health heartbeat is written at t≈30s by the
+    # daemon's _health_watchdog. Give it 35s before we enforce staleness.
+    sleep 35
 
     # Poll while daemon is alive; check health log age every 5s.
     while kill -0 "$dpid" 2>/dev/null; do
@@ -57,6 +73,13 @@ while true; do
                 kill -SIGKILL "$dpid" 2>/dev/null || true
                 break
             fi
+        else
+            # Health log missing entirely → daemon is not healthy
+            _log "health log missing — killing daemon (pid=$dpid)"
+            kill -SIGTERM "$dpid" 2>/dev/null || true
+            sleep 2
+            kill -SIGKILL "$dpid" 2>/dev/null || true
+            break
         fi
         sleep 5
     done

@@ -11,3 +11,7 @@ class SensorModality(Enum):
     ACCEL = "accel"
     MAGNETOMETER = "magnetometer"
     BAROMETER = "barometer"
+    GYROSCOPE = "gyroscope"
+    ROTATION_VECTOR = "rotation_vector"
+    GEOMAGNETIC_ROTATION = "geomagnetic_rotation"
+    GRAVITY = "gravity"

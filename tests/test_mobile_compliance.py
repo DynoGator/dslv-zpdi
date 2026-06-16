@@ -21,12 +21,11 @@ from src.layer1_ingestion.mobile_ingestion import (
     build_mobile_payload,
     score_mobile_payload,
     SENSORS,
-    TERMUX_SENSOR_BIN,
 )
 from src.layer1_ingestion.payload import SensorModality
-from src.layer2_core.coherence import CoherenceScorer, CoherencePacket
+from src.layer2_core.coherence import CoherenceScorer
 from src.layer2_core.wiring import wire_mobile_to_coherence
-from src.layer3_telemetry.mobile_router import route_packet, SecondaryLog
+from src.layer3_telemetry.mobile_router import route_packet
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +155,24 @@ def test_mobile_node_produces_only_secondary_stream():
 
 
 def test_primary_hdf5_is_empty_after_mobile_run():
-    """Live integration: 10-second mobile run → zero HDF5 rows, non-zero JSONL."""
+    """Live integration: 10-second mobile run → zero HDF5 rows, non-zero JSONL.
+
+    Skipped automatically if a production daemon is already running,
+    because termux-sensor allows only one streaming instance at a time.
+    """
+    # Detect running production daemon
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "zpdi_mobile_node.py"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            pytest.skip("Production daemon already running — termux-sensor singleton prevents parallel streaming")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
     hdf5_path = Path("./data/zpdi_test_primary.h5")
     jsonl_path = Path("./logs/zpdi_test_secondary.jsonl")
     hdf5_path.unlink(missing_ok=True)
@@ -183,7 +199,7 @@ def test_primary_hdf5_is_empty_after_mobile_run():
         proc.wait()
 
     import h5py
-    with h5py.File(hdf5_path, "r") as f:
+    with h5py.File(hdf5_path, "r", swmr=True) as f:
         dset = f["payloads"]
         assert dset.shape[0] == 0, "Primary HDF5 must be empty for Tier-2"
 
@@ -242,3 +258,144 @@ def test_mobile_coherence_scoring():
     assert hasattr(scores, "r_local")
     assert hasattr(scores, "r_smooth")
     assert hasattr(scores, "r_global")
+
+
+# ---------------------------------------------------------------------------
+# Hardening regression tests (Rev 3.5)
+# ---------------------------------------------------------------------------
+
+def test_hmac_signing_when_secret_set():
+    """SPEC-008: HMAC-SHA256 must be present when ZPDI_HMAC_SECRET is set."""
+    import os
+    old_secret = os.environ.get("ZPDI_HMAC_SECRET")
+    os.environ["ZPDI_HMAC_SECRET"] = "test-secret-key"
+    try:
+        # Re-import to pick up the new secret
+        import importlib
+        import zpdi_mobile_node
+        importlib.reload(zpdi_mobile_node)
+        raw = b'{"test":1}'
+        sig = zpdi_mobile_node._sign_payload(raw, b"test-secret-key")
+        assert sig != ""
+        assert len(sig) == 64  # hex SHA-256
+    finally:
+        if old_secret is None:
+            os.environ.pop("ZPDI_HMAC_SECRET", None)
+        else:
+            os.environ["ZPDI_HMAC_SECRET"] = old_secret
+
+
+def test_gps_enrichment_in_payload():
+    """GPS poller metadata must appear in the serialized payload."""
+    from src.layer1_ingestion.mobile_ingestion import build_mobile_payload
+    loc = {
+        "latitude": 33.4484,
+        "longitude": -112.0740,
+        "altitude": 331.0,
+        "accuracy": 12.5,
+        "provider": "gps",
+        "ts": time.time(),
+    }
+    p = build_mobile_payload("ICM45631 Accelerometer", {"x": 1, "y": 0, "z": 0}, loc)
+    json_str = p.to_json()
+    assert json_str is not None
+    d = json.loads(json_str)
+    assert d["latitude"] == 33.4484
+    assert d["longitude"] == -112.0740
+    assert d["altitude"] == 331.0
+    assert d["accuracy"] == 12.5
+    assert d["location_provider"] == "gps"
+
+
+def test_aes_encryption_envelope():
+    """SPEC-008: AES-256-GCM envelope must contain nonce, ct, and enc label."""
+    import base64
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    key = AESGCM.generate_key(bit_length=256)
+    aesgcm = AESGCM(key)
+    plaintext = b'{"sensor":"magnetometer"}'
+    import zpdi_mobile_node
+    env = zpdi_mobile_node._encrypt_payload(aesgcm, plaintext)
+    assert env["enc"] == "aes-256-gcm"
+    assert "nonce" in env
+    assert "ct" in env
+    # Verify round-trip
+    nonce = base64.b64decode(env["nonce"])
+    ct = base64.b64decode(env["ct"])
+    decrypted = aesgcm.decrypt(nonce, ct, None)
+    assert decrypted == plaintext
+
+
+def test_expanded_sensor_modalities():
+    """Rev 3.5 expanded sensor list must map to canonical modalities."""
+    from src.layer1_ingestion.mobile_ingestion import SENSOR_MODALITY_MAP
+    for s in SENSORS:
+        assert s in SENSOR_MODALITY_MAP, f"{s} missing from modality map"
+        assert SENSOR_MODALITY_MAP[s] != "unknown"
+
+
+def test_gyroscope_phase_extraction():
+    """Gyroscope magnitude must produce non-empty phases after window fill."""
+    from src.layer1_ingestion.mobile_ingestion import build_mobile_payload
+    for i in range(8):
+        reading = {"x": float(i), "y": 0.0, "z": 0.5}
+        p = build_mobile_payload("ICM45631 Gyroscope", reading)
+    assert len(p.extracted_phases) > 0
+
+
+# ---------------------------------------------------------------------------
+# Fusion engine integration tests (SPEC-006.6)
+# ---------------------------------------------------------------------------
+
+def test_rotation_vector_updates_orientation_tracker():
+    """Rotation-vector readings must feed the module-level OrientationTracker."""
+    from src.layer1_ingestion import mobile_ingestion as mi
+    mi._ORIENTATION.reset()
+    # Feed two rotation-vector readings
+    mi._build_extracted_phases("Rotation Vector Sensor", {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
+    mi._build_extracted_phases("Rotation Vector Sensor", {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
+    # Stability must be computed (two samples in buffer)
+    assert mi._ORIENTATION.stability() <= 1.0
+
+
+def test_fusion_weight_applied_to_scores():
+    """apply_orientation_weight must scale r_local and r_smooth by stability."""
+    from src.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+    import math
+    s45 = math.sqrt(2) / 2
+    t = OrientationTracker()
+    # identity → 90° rotation: dot = cos(45°) = s45
+    t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
+    t.push({"x": 0.0, "y": 0.0, "z": s45, "cos_value": s45})
+    r_in, rs_in = 0.8, 0.5
+    r_out, rs_out, w = apply_orientation_weight(r_in, rs_in, t)
+    assert abs(w - s45) < 0.01, f"stability={w} expected≈{s45}"
+    assert abs(r_out - r_in * w) < 1e-9
+    assert abs(rs_out - rs_in * w) < 1e-9
+    assert r_out < r_in  # rotation penalty reduces the score
+
+
+def test_new_sensor_modalities_in_enum():
+    """All 7 Pixel 9 Pro XL sensor modalities must be in SensorModality enum."""
+    from src.layer1_ingestion.payload import SensorModality
+    required = {"gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity"}
+    enum_values = {m.value for m in SensorModality}
+    for mod in required:
+        assert mod in enum_values, f"SensorModality missing: {mod}"
+
+
+def test_wiring_accepts_all_mobile_modalities():
+    """wire_mobile_to_coherence must not silently kill gyro/rotation/gravity."""
+    from src.layer2_core.wiring import wire_mobile_to_coherence
+    mobile_modalities = ("gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity")
+    for mod in mobile_modalities:
+        payload_dict = {
+            "node_id": "test",
+            "modality": mod,
+            "trust_state": "SECONDARY_QUARANTINED",
+            "extracted_phases": [0.1, 0.2, 0.3],
+            "payload_uuid": "test-uuid",
+            "timestamp_utc": 0.0,
+        }
+        result = wire_mobile_to_coherence(payload_dict)
+        assert result is not None, f"wire_mobile_to_coherence returned None for modality={mod}"

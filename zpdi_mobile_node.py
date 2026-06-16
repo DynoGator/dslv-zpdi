@@ -1,18 +1,23 @@
-"""dslv-zpdi Tier-1 mobile metrology node.
+"""dslv-zpdi Tier-1 mobile metrology node (Rev 3.5 — Hardened).
 
 Asynchronous daemon that polls Termux sensors from inside a Debian proot,
-hashes each payload for provenance, and fans out to local HDF5 storage and
-a WSS transport with silent failover to a JSONL log if the socket drops.
+enriches each payload with GPS location when available, signs with
+HMAC-SHA256 for provenance, optionally encrypts with AES-256-GCM, and
+fans out to local HDF5 storage and a hardened WSS transport with circuit-
+breaker backoff and silent failover to a JSONL log if the socket drops.
 """
 
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import hashlib
+import hmac
 import json
 import logging
 import os
+import secrets
 import signal
 import sqlite3
 import ssl
@@ -25,10 +30,11 @@ from typing import Any
 import h5py
 import numpy as np
 import websockets
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import ConnectionClosed, InvalidHandshake, WebSocketException
-from websockets.protocol import State
 
+from src.layer1_ingestion.gps_poller import GPSPoller
 from src.layer1_ingestion.mobile_ingestion import (
     build_mobile_payload,
     IngestionPayload,
@@ -38,11 +44,9 @@ from src.layer1_ingestion.mobile_ingestion import (
 )
 from src.layer3_telemetry.mobile_router import route_packet, SecondaryLog
 
-# Cadence requested from termux-sensor's streaming mode (`-d <ms>`). The
-# Termux:API service caps the true rate at whatever the slowest sensor in
-# the set can deliver; values below ~50ms typically saturate without
-# raising the effective frequency. 250ms is a reasonable production
-# default; calibrate per-deployment.
+# ---------------------------------------------------------------------------
+# Environment-configurable constants
+# ---------------------------------------------------------------------------
 DEFAULT_STREAM_DELAY_MS = int(os.environ.get("ZPDI_STREAM_DELAY_MS", "250"))
 DEFAULT_WSS_URI = os.environ.get("ZPDI_WSS_URI", "wss://edge.placeholder.invalid:8443/ingest")
 DEFAULT_HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "./data/zpdi_stream.h5"))
@@ -50,9 +54,10 @@ DEFAULT_SQLITE_PATH = Path(os.environ.get("ZPDI_SQLITE_PATH", "./data/zpdi_cache
 DEFAULT_FALLBACK_LOG = Path(os.environ.get("ZPDI_FALLBACK_LOG", "./logs/zpdi_fallback.jsonl"))
 DEFAULT_HEALTH_LOG = Path(os.environ.get("ZPDI_HEALTH_LOG", "./logs/health.jsonl"))
 DEFAULT_CA_BUNDLE = os.environ.get("ZPDI_WSS_CA_BUNDLE") or None
-
-# Module-level stream liveness counter (incremented by _consume_stream)
-_stream_sample_count = 0
+DEFAULT_WSS_TOKEN = os.environ.get("ZPDI_WSS_TOKEN", "")
+DEFAULT_HMAC_SECRET = os.environ.get("ZPDI_HMAC_SECRET", "").encode("utf-8")
+DEFAULT_NODE_ID = os.environ.get("ZPDI_NODE_ID", "dslv-zpdi/mobile-tier2")
+DEFAULT_AES_KEY_B64 = os.environ.get("ZPDI_AES_KEY", "")
 
 QUEUE_MAX = 4096
 HDF5_DATASET = "payloads"
@@ -60,25 +65,62 @@ HDF5_CHUNK = 256
 
 log = logging.getLogger("zpdi")
 
+# Module-level stream liveness counter
+_stream_sample_count = 0
+
 
 @dataclass(frozen=True)
 class Payload:
-    """A single hashed sensor sample ready for both sinks."""
+    """A single hashed, signed sensor sample ready for both sinks."""
 
     body: dict[str, Any]
     raw: bytes      # canonical JSON bytes — the exact bytes that were hashed
     digest: str     # hex SHA-256 of `raw`
 
 
-# --- Sensor streaming ---------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Crypto helpers
+# ---------------------------------------------------------------------------
+
+def _load_aes_key() -> AESGCM | None:
+    """Load AES-256-GCM key from base64 env var, if present."""
+    if not DEFAULT_AES_KEY_B64:
+        return None
+    try:
+        key = base64.b64decode(DEFAULT_AES_KEY_B64)
+        if len(key) != 32:
+            log.error("ZPDI_AES_KEY must decode to exactly 32 bytes (got %d)", len(key))
+            return None
+        return AESGCM(key)
+    except Exception as exc:
+        log.error("Failed to load ZPDI_AES_KEY: %s", exc)
+        return None
+
+
+def _encrypt_payload(aesgcm: AESGCM, plaintext: bytes) -> dict[str, str]:
+    """Encrypt plaintext with AES-256-GCM and return an envelope dict."""
+    nonce = secrets.token_bytes(12)
+    ciphertext = aesgcm.encrypt(nonce, plaintext, None)
+    return {
+        "enc": "aes-256-gcm",
+        "nonce": base64.b64encode(nonce).decode("ascii"),
+        "ct": base64.b64encode(ciphertext).decode("ascii"),
+    }
+
+
+def _sign_payload(raw: bytes, secret: bytes) -> str:
+    """Compute HMAC-SHA256 over raw bytes and return hex digest."""
+    if not secret:
+        return ""
+    return hmac.new(secret, raw, hashlib.sha256).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Sensor streaming
+# ---------------------------------------------------------------------------
 
 async def _release_sensors() -> None:
-    """Fire `termux-sensor -c` to tell Android to release sensor handles.
-
-    Called on every stream teardown as a backstop in case the bash
-    wrapper's own SIGTERM trap did not finish its cleanup call. Failures
-    are logged at debug level; this must never block shutdown.
-    """
+    """Fire `termux-sensor -c` to tell Android to release sensor handles."""
     try:
         proc = await asyncio.create_subprocess_exec(
             TERMUX_SENSOR_BIN, "-c",
@@ -96,7 +138,7 @@ async def _release_sensors() -> None:
 
 
 async def _drain_stderr(stream: asyncio.StreamReader) -> None:
-    """Drain termux-sensor stderr to logs so a full pipe never blocks the writer."""
+    """Drain termux-sensor stderr so a full pipe never blocks the writer."""
     while True:
         line = await stream.readline()
         if not line:
@@ -107,33 +149,15 @@ async def _drain_stderr(stream: asyncio.StreamReader) -> None:
 async def _consume_stream(
     stdout: asyncio.StreamReader,
     queues: tuple[asyncio.Queue[Payload], ...],
+    gps_poller: GPSPoller,
 ) -> None:
-    """Parse termux-sensor's continuous JSON stream and fan out to queues.
-
-    termux-sensor emits pretty-printed JSON objects back-to-back on stdout
-    in streaming mode (one line per token). We accumulate lines and call
-    json.JSONDecoder.raw_decode whenever the buffer might contain a
-    complete object; raw_decode tells us where parsing stopped so we
-    keep the residue for the next iteration.
-
-    The loop runs plain `await stdout.readline()` with no `wait_for`
-    wrapper: empirically, wrapping readline in wait_for against a
-    streaming subprocess silently starves the reader on this Python /
-    asyncio build (measured 0 of 18 objects across a 6s window with
-    wait_for, 18/18 without). Stop-event responsiveness is therefore
-    delegated to the supervisor in `_stream`, which terminates the
-    subprocess on shutdown so readline returns EOF and this loop exits.
-
-    The timestamp is taken inside _build_payload at the instant
-    raw_decode returns — the closest the daemon can stamp to the moment
-    the sensor event surfaced from the kernel.
-    """
+    """Parse termux-sensor's continuous JSON stream and fan out to queues."""
     decoder = json.JSONDecoder()
     buf = ""
     while True:
         line = await stdout.readline()
         if not line:
-            return  # subprocess closed stdout — supervisor will decide what next
+            return
         buf += line.decode("utf-8", errors="replace")
         while True:
             stripped = buf.lstrip()
@@ -143,20 +167,22 @@ async def _consume_stream(
             try:
                 reading, idx = decoder.raw_decode(stripped)
             except json.JSONDecodeError:
-                buf = stripped  # incomplete — wait for more bytes
+                buf = stripped
                 break
             buf = stripped[idx:]
             if not isinstance(reading, dict):
                 continue
-            # termux-sensor emits one dict with all requested sensors.
-            # Produce one canonical IngestionPayload per sensor.
+            # Fetch latest location fix (non-blocking)
+            loc = await gps_poller.get_latest()
+            loc_dict = loc.to_dict() if loc else None
             for sensor_name, sensor_reading in reading.items():
                 if sensor_name not in SENSORS:
                     continue
-                ingestion = build_mobile_payload(sensor_name, sensor_reading)
+                ingestion = build_mobile_payload(sensor_name, sensor_reading, loc_dict)
+                ingestion.node_id = DEFAULT_NODE_ID
                 payload = _ingestion_to_legacy(ingestion)
                 if payload is None:
-                    continue  # KILLED packet dropped at serialization gate
+                    continue
                 global _stream_sample_count
                 _stream_sample_count += 1
                 for q in queues:
@@ -174,12 +200,9 @@ async def _consume_stream(
 async def _stream(
     queues: tuple[asyncio.Queue[Payload], ...],
     stop: asyncio.Event,
+    gps_poller: GPSPoller,
 ) -> None:
-    """Keep a termux-sensor subprocess alive for the daemon's lifetime.
-
-    Restarts on EOF or spawn failure with capped exponential backoff so a
-    transient Termux:API hiccup never takes the node down silently.
-    """
+    """Keep a termux-sensor subprocess alive for the daemon's lifetime."""
     backoff = 0.5
     while not stop.is_set():
         cmd = [
@@ -188,12 +211,6 @@ async def _stream(
             "-d", str(DEFAULT_STREAM_DELAY_MS),
         ]
         try:
-            # start_new_session=True puts the bash wrapper into its own
-            # process group so we can SIGTERM the whole group on shutdown,
-            # not just the wrapper. Without it, the underlying termux-api
-            # streaming child is orphaned and continues holding sensor
-            # handles in the Android service, eventually starving fresh
-            # invocations until manually cleaned up.
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -209,23 +226,18 @@ async def _stream(
                 backoff = min(backoff * 2, 5.0)
                 continue
 
-        log.info("termux-sensor stream started pid=%s delay=%dms", proc.pid, DEFAULT_STREAM_DELAY_MS)
+        log.info("termux-sensor stream started pid=%s delay=%dms sensors=%d", proc.pid, DEFAULT_STREAM_DELAY_MS, len(SENSORS))
         backoff = 0.5
         assert proc.stdout is not None and proc.stderr is not None
         stderr_task = asyncio.create_task(_drain_stderr(proc.stderr))
-        consume_task = asyncio.create_task(_consume_stream(proc.stdout, queues))
+        consume_task = asyncio.create_task(_consume_stream(proc.stdout, queues, gps_poller))
         stop_task = asyncio.create_task(stop.wait())
         try:
-            # Race the consumer against the stop signal. Whichever wins,
-            # we tear down the subprocess so the other side unblocks.
             await asyncio.wait(
                 {consume_task, stop_task},
                 return_when=asyncio.FIRST_COMPLETED,
             )
         finally:
-            # Kill the whole process group so the underlying termux-api
-            # child dies with the bash wrapper. ProcessLookupError fires
-            # if the group already exited via consumer-EOF — harmless.
             with contextlib.suppress(ProcessLookupError, PermissionError):
                 os.killpg(proc.pid, signal.SIGTERM)
             try:
@@ -234,8 +246,6 @@ async def _stream(
                 with contextlib.suppress(ProcessLookupError, PermissionError):
                     os.killpg(proc.pid, signal.SIGKILL)
                 await proc.wait()
-            # Defense in depth: tell Android to release sensor handles
-            # whether or not the bash trap completed its own cleanup call.
             await _release_sensors()
             for t in (consume_task, stderr_task, stop_task):
                 if not t.done():
@@ -251,40 +261,36 @@ async def _stream(
 
 
 def _ingestion_to_legacy(ingestion: IngestionPayload) -> Payload | None:
-    """Convert a canonical IngestionPayload to the legacy Payload shape.
-
-    trust_state is set inside ingestion.to_json() (SPEC-005A.3 gate).
-    KILLED packets return None and are silently dropped.
-    Coherence scores are computed here (Layer 2) and embedded for routing.
-    """
+    """Convert a canonical IngestionPayload to the legacy Payload shape."""
     json_str = ingestion.to_json()
     if json_str is None:
         return None
     body = json.loads(json_str)
-    # Backward-compat fields for existing sinks / verifier
     body["node"] = ingestion.node_id
     body["schema"] = ingestion.schema_version
     body["timestamps"] = {
         "wall_ns": int(ingestion.timestamp_utc * 1e9),
         "monotonic_ns": ingestion.ingest_monotonic_ns,
     }
-    # Layer 2 coherence scoring (SPEC-006)
     coherence = score_mobile_payload(ingestion)
     if coherence is not None:
         body["r_local"] = coherence.r_local
         body["r_smooth"] = coherence.r_smooth
         body["r_global"] = coherence.r_global
-    # Layer 3 routing decision (SPEC-007)
     body["route"] = route_packet(body)
-    # Canonical JSON without sha256 for digest computation
     canonical = {k: v for k, v in body.items() if k != "sha256"}
     raw = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
     digest = hashlib.sha256(raw).hexdigest()
     body["sha256"] = digest
+    # HMAC authentication (SPEC-008)
+    if DEFAULT_HMAC_SECRET:
+        body["hmac"] = _sign_payload(raw, DEFAULT_HMAC_SECRET)
     return Payload(body=body, raw=raw, digest=digest)
 
 
-# --- HDF5 sink ----------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# HDF5 sink
+# ---------------------------------------------------------------------------
 
 class HDF5Sink:
     """Append-only, resizable HDF5 dataset of JSON-encoded payloads + digests."""
@@ -313,7 +319,6 @@ class HDF5Sink:
                 chunks=(HDF5_CHUNK,),
                 dtype=dtype,
             )
-        # SWMR lets an external reader tail the file while we write.
         with contextlib.suppress(Exception):
             self._file.swmr_mode = True
 
@@ -328,7 +333,6 @@ class HDF5Sink:
     async def append(self, p: Payload) -> None:
         if self._dset is None:
             return
-        # SPEC-007 enforcement: primary stream only
         route = p.body.get("route", {})
         if route.get("stream") != "PRIMARY":
             return
@@ -347,7 +351,9 @@ class HDF5Sink:
         self._file.flush()
 
 
-# --- Fallback JSONL log -------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Fallback JSONL log
+# ---------------------------------------------------------------------------
 
 class FallbackLog:
     def __init__(self, path: Path) -> None:
@@ -362,14 +368,15 @@ class FallbackLog:
             await asyncio.to_thread(self._write_sync, p)
 
     def _write_sync(self, p: Payload) -> None:
-        # Serialize the body (which includes the sha256) for the log
         full_raw = json.dumps(p.body, sort_keys=True, separators=(",", ":")).encode("utf-8")
         with self._path.open("ab") as fh:
             fh.write(full_raw)
             fh.write(b"\n")
 
 
-# --- SQLite Cache (for Web Server) --------------------------------------------
+# ---------------------------------------------------------------------------
+# SQLite Cache (for Web Server)
+# ---------------------------------------------------------------------------
 
 class SQLiteCache:
     """Lightweight, WAL-mode cache for the latest sensor state."""
@@ -403,7 +410,6 @@ class SQLiteCache:
 
     def _update_sync(self, p: Payload) -> None:
         assert self._conn is not None
-        # Upsert the single row with the latest sample
         self._conn.execute(
             "INSERT OR REPLACE INTO latest_state (id, wall_ns, payload) "
             "VALUES (1, ?, ?)",
@@ -412,42 +418,65 @@ class SQLiteCache:
         self._conn.commit()
 
 
-# --- WSS transport ------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Hardened WSS transport with circuit-breaker backoff
+# ---------------------------------------------------------------------------
 
 class WSSTransport:
-    """Maintains a single WSS connection with reconnect; silently fails over."""
+    """Maintains a single WSS connection with jittered exponential backoff
+    and circuit-breaker silent failover.
+    """
 
-    def __init__(self, uri: str, ca_bundle: str | None, fallback: FallbackLog) -> None:
+    CIRCUIT_OPEN_THRESHOLD = 5          # consecutive failures before opening
+    CIRCUIT_OPEN_COOLDOWN_S = 30.0      # seconds to stay open before half-open
+
+    def __init__(
+        self,
+        uri: str,
+        ca_bundle: str | None,
+        fallback: FallbackLog,
+        token: str,
+        aesgcm: AESGCM | None,
+    ) -> None:
         self._uri = uri
         self._ssl_ctx = self._build_ssl_ctx(ca_bundle)
         self._fallback = fallback
+        self._token = token
+        self._aesgcm = aesgcm
         self._ws: ClientConnection | None = None
         self._connect_lock = asyncio.Lock()
+        self._consecutive_failures = 0
+        self._circuit_open_until: float = 0.0
 
     @property
     def connected(self) -> bool:
         return self._ws is not None and self._ws.state.name == "OPEN"
 
     def _build_ssl_ctx(self, ca_bundle: str | None) -> ssl.SSLContext | None:
-        # Use default context; if it's a localhost/development URI, we might
-        # need to relax this, but per production requirements we stick to secure.
         if self._uri.startswith("ws://"):
-            # If the URI is explicitly insecure (e.g. localhost testing),
-            # websockets.connect doesn't need an SSL context.
             return None
         ctx = ssl.create_default_context()
         if ca_bundle:
             ctx.load_verify_locations(cafile=ca_bundle)
         return ctx
 
+    def _circuit_open(self) -> bool:
+        return time.monotonic() < self._circuit_open_until
+
     async def _ensure_connection(self) -> bool:
         if self._ws is not None and self._ws.state.name == "OPEN":
             return True
+        if self._circuit_open():
+            return False
         async with self._connect_lock:
             if self._ws is not None and self._ws.state.name == "OPEN":
                 return True
+            if self._circuit_open():
+                return False
             try:
-                # Disable SSL for localhost development if using ws://
+                extra_headers = {}
+                if self._token:
+                    extra_headers["Authorization"] = f"Bearer {self._token}"
                 is_secure = self._uri.startswith("wss://")
                 self._ws = await asyncio.wait_for(
                     websockets.connect(
@@ -457,13 +486,19 @@ class WSSTransport:
                         ping_timeout=10,
                         close_timeout=2,
                         max_size=2**20,
+                        additional_headers=extra_headers,
                     ),
                     timeout=5.0,
                 )
                 log.info("WSS connected: %s", self._uri)
+                self._consecutive_failures = 0
                 return True
             except (OSError, asyncio.TimeoutError, InvalidHandshake, WebSocketException) as exc:
                 log.debug("WSS connect failed: %s", exc)
+                self._consecutive_failures += 1
+                if self._consecutive_failures >= self.CIRCUIT_OPEN_THRESHOLD:
+                    self._circuit_open_until = time.monotonic() + self.CIRCUIT_OPEN_COOLDOWN_S
+                    log.warning("WSS circuit breaker OPEN for %.0fs after %d failures", self.CIRCUIT_OPEN_COOLDOWN_S, self._consecutive_failures)
                 self._ws = None
                 return False
 
@@ -471,16 +506,21 @@ class WSSTransport:
         if await self._ensure_connection():
             try:
                 assert self._ws is not None
-                # Serialize the body (which includes the sha256) for the wire
                 full_raw = json.dumps(p.body, sort_keys=True, separators=(",", ":")).encode("utf-8")
-                await self._ws.send(full_raw)
+                # Optional payload-level encryption (SPEC-008)
+                if self._aesgcm is not None:
+                    envelope = _encrypt_payload(self._aesgcm, full_raw)
+                    wire_raw = json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                else:
+                    wire_raw = full_raw
+                await self._ws.send(wire_raw)
                 return
             except (ConnectionClosed, WebSocketException, OSError) as exc:
                 log.debug("WSS send failed, will fail over: %s", exc)
                 with contextlib.suppress(Exception):
                     await self._ws.close()
                 self._ws = None
-        # Silent failover — never raise out of the transport.
+        # Silent failover
         await self._fallback.write(p)
 
     async def aclose(self) -> None:
@@ -490,7 +530,9 @@ class WSSTransport:
             self._ws = None
 
 
-# --- Orchestration ------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
 
 async def _storage_consumer(
     queue: asyncio.Queue[Payload],
@@ -535,12 +577,10 @@ async def _transport_consumer(
             p = await asyncio.wait_for(queue.get(), timeout=0.5)
         except asyncio.TimeoutError:
             continue
-        # All mobile packets are secondary — persist to exploratory JSONL
         try:
             await secondary.write(p)
         except Exception as exc:
             log.exception("secondary log write failed: %s", exc)
-        # Attempt WSS transport (placeholder URI — silent failover to fallback)
         try:
             await transport.send(p)
         except Exception as exc:
@@ -551,6 +591,7 @@ async def _health_watchdog(
     path: Path,
     queues: tuple[asyncio.Queue[Payload], ...],
     transport: WSSTransport,
+    gps_poller: GPSPoller,
     stop: asyncio.Event,
 ) -> None:
     """Write health heartbeat every 30s; supervisor checks staleness."""
@@ -565,12 +606,15 @@ async def _health_watchdog(
         current_count = _stream_sample_count
         sensor_alive = current_count > prev_sample_count
         prev_sample_count = current_count
+        loc = await gps_poller.get_latest()
         record = {
             "ts_utc": time.time(),
             "pid": os.getpid(),
             "sensor_alive": sensor_alive,
             "queue_depths": [q.qsize() for q in queues],
             "wss_connected": transport.connected,
+            "wss_circuit_open": transport._circuit_open(),
+            "gps_fix": loc.to_dict() if loc else None,
         }
         try:
             with path.open("a") as fh:
@@ -586,6 +630,14 @@ async def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    aesgcm = _load_aes_key()
+    if aesgcm:
+        log.info("AES-256-GCM payload encryption ENABLED")
+    if DEFAULT_HMAC_SECRET:
+        log.info("HMAC-SHA256 payload signing ENABLED")
+    if DEFAULT_WSS_TOKEN:
+        log.info("WSS Bearer token authentication ENABLED")
+
     hdf5_sink = HDF5Sink(DEFAULT_HDF5_PATH)
     hdf5_sink.open()
     cache = SQLiteCache(DEFAULT_SQLITE_PATH)
@@ -594,9 +646,9 @@ async def main() -> int:
     fallback.prepare()
     secondary = SecondaryLog(DEFAULT_FALLBACK_LOG)
     secondary.prepare()
-    transport = WSSTransport(DEFAULT_WSS_URI, DEFAULT_CA_BUNDLE, fallback)
+    transport = WSSTransport(DEFAULT_WSS_URI, DEFAULT_CA_BUNDLE, fallback, DEFAULT_WSS_TOKEN, aesgcm)
+    gps_poller = GPSPoller()
 
-    # One queue per consumer so a stalled sink can't starve the other.
     storage_q: asyncio.Queue[Payload] = asyncio.Queue(maxsize=QUEUE_MAX)
     cache_q: asyncio.Queue[Payload] = asyncio.Queue(maxsize=QUEUE_MAX)
     transport_q: asyncio.Queue[Payload] = asyncio.Queue(maxsize=QUEUE_MAX)
@@ -608,18 +660,20 @@ async def main() -> int:
             loop.add_signal_handler(sig, stop.set)
 
     tasks = [
-        asyncio.create_task(_stream((storage_q, cache_q, transport_q), stop), name="stream"),
+        asyncio.create_task(_stream((storage_q, cache_q, transport_q), stop, gps_poller), name="stream"),
+        asyncio.create_task(gps_poller.run(), name="gps"),
         asyncio.create_task(_storage_consumer(storage_q, hdf5_sink, stop), name="storage"),
         asyncio.create_task(_cache_consumer(cache_q, cache, stop), name="cache"),
         asyncio.create_task(_transport_consumer(transport_q, transport, secondary, stop), name="transport"),
-        asyncio.create_task(_health_watchdog(DEFAULT_HEALTH_LOG, (storage_q, cache_q, transport_q), transport, stop), name="health"),
+        asyncio.create_task(_health_watchdog(DEFAULT_HEALTH_LOG, (storage_q, cache_q, transport_q), transport, gps_poller, stop), name="health"),
     ]
 
-    log.info("zpdi node up — stream delay=%dms sensors=%s", DEFAULT_STREAM_DELAY_MS, SENSORS)
+    log.info("zpdi node up — delay=%dms sensors=%d node=%s", DEFAULT_STREAM_DELAY_MS, len(SENSORS), DEFAULT_NODE_ID)
     try:
         await stop.wait()
     finally:
         log.info("shutdown signal received — draining")
+        gps_poller.stop()
         for t in tasks:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)

@@ -35,7 +35,10 @@ def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
         SensorModality(modality_str)
     except ValueError:
         # Unknown modality — if it's a mobile modality, allow it through
-        if modality_str not in {"accel", "magnetometer", "barometer"}:
+        if modality_str not in {
+                "accel", "magnetometer", "barometer",
+                "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
+            }:
             return None  # Unknown modality = silent kill
 
     # State machine enforcement (Section 5.2B)
@@ -67,7 +70,10 @@ def wire_mobile_to_coherence(payload_dict: dict) -> Optional[CoherencePacket]:
     try:
         SensorModality(modality_str)
     except ValueError:
-        if modality_str not in {"accel", "magnetometer", "barometer"}:
+        if modality_str not in {
+                "accel", "magnetometer", "barometer",
+                "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
+            }:
             return None
 
     trust_state = payload_dict.get('trust_state', '')
