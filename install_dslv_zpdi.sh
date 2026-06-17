@@ -178,18 +178,18 @@ if [[ "$EUID" -ne 0 ]]; then
     log_fail "Please run this script with sudo."
 fi
 
-# Python version check (pyproject.toml requires >=3.9)
+# Python version check (pyproject.toml requires >=3.10,<3.15)
 PYTHON_CMD=$(command -v python3 || true)
 if [[ -z "$PYTHON_CMD" ]]; then
-    log_fail "python3 not found. Required: >=3.9"
+    log_fail "python3 not found. Required: >=3.10,<3.15"
 fi
 
 PY_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 PY_MAJOR=$(echo "$PY_VERSION" | cut -d. -f1)
 PY_MINOR=$(echo "$PY_VERSION" | cut -d. -f2)
 
-if [[ "$PY_MAJOR" -lt 3 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 9 ]]; then
-    log_fail "Python 3.9+ required (found $PY_VERSION). Upgrade Python before continuing."
+if [[ "$PY_MAJOR" -lt 3 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 10 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -gt 14 ]]; then
+    log_fail "Python >=3.10,<3.15 required (found $PY_VERSION). Upgrade Python before continuing."
 fi
 
 log_ok "OS Detected: $OS_ID ($OS_CODENAME) — Python $PY_VERSION"

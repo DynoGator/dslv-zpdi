@@ -1,0 +1,42 @@
+name: Documentation Issue
+description: Report inaccurate, missing, or stale DSLV-ZPDI documentation.
+title: "docs(scope): brief description"
+labels: ["documentation", "triage"]
+assignees: ["DynoGator"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Documentation changes must distinguish validated field results from
+        experimental, planned, or simulator-only claims.
+  - type: input
+    id: location
+    attributes:
+      label: Document location
+      description: File path, section, or URL.
+      placeholder: "docs/PHASE_2A_HARDWARE_BUILD_LIST.md#..."
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is inaccurate or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction
+      description: Include source evidence when possible.
+  - type: dropdown
+    id: validation_level
+    attributes:
+      label: Validation level affected
+      options:
+        - Simulator-only
+        - Bench-tested hardware
+        - Field-validated hardware
+        - Historical / archive documentation
+        - Unknown
+    validations:
+      required: true

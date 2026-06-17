@@ -15,7 +15,7 @@ body:
     attributes:
       label: Revision / commit
       description: Output of `python -c "import dslv_zpdi; print(dslv_zpdi.__version__)"` plus `git rev-parse --short HEAD`.
-      placeholder: "4.8.0 @ 985d8ca"
+      placeholder: "5.0.0 @ 98b42dc"
     validations:
       required: true
   - type: dropdown

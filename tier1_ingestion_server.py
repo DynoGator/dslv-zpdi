@@ -15,7 +15,7 @@ Environment variables (shared key material with mobile node .env):
   ZPDI_WSS_TOKEN       Bearer token required in Authorization header
   ZPDI_HMAC_SECRET     Shared HMAC-SHA256 secret
   ZPDI_AES_KEY         Base64-encoded 32-byte AES-256-GCM key (optional)
-  ZPDI_SERVER_HOST     Bind address          (default: 0.0.0.0)
+  ZPDI_SERVER_HOST     Bind address          (default: 127.0.0.1)
   ZPDI_SERVER_PORT     Bind port             (default: 8443)
   ZPDI_SERVER_TLS_CERT Path to TLS cert PEM  (omit for plain WS)
   ZPDI_SERVER_TLS_KEY  Path to TLS key PEM
@@ -56,7 +56,7 @@ log = logging.getLogger("zpdi.tier1")
 _WSS_TOKEN: str = os.environ.get("ZPDI_WSS_TOKEN", "")
 _HMAC_SECRET: bytes = os.environ.get("ZPDI_HMAC_SECRET", "").encode("utf-8")
 _AES_KEY_B64: str = os.environ.get("ZPDI_AES_KEY", "")
-SERVER_HOST: str = os.environ.get("ZPDI_SERVER_HOST", "0.0.0.0")
+SERVER_HOST: str = os.environ.get("ZPDI_SERVER_HOST", "127.0.0.1")
 SERVER_PORT: int = int(os.environ.get("ZPDI_SERVER_PORT", "8443"))
 TLS_CERT: str | None = os.environ.get("ZPDI_SERVER_TLS_CERT")
 TLS_KEY: str | None = os.environ.get("ZPDI_SERVER_TLS_KEY")

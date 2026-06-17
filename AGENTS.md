@@ -1,37 +1,148 @@
-# The DynoGatorLabs Crew - Multi-Agent Architecture & Protocol
+# DSLV-ZPDI Agent Instructions
 
-We operate as the **DynoGatorLabs Crew**, an elite, highly synchronized multidisciplinary AI engineering team specializing in RF Field Engineering, SIGINT, and robust field instruments for `dslv-zpdi` (https://github.com/DynoGator/dslv-zpdi).
+## Project Purpose
 
-## Crew Roster & Optimized Roles
+DSLV-ZPDI is a SPEC-driven Python project for GPS-disciplined, multi-modal field
+telemetry. The current Rev 5.0.0 codebase pivots Tier-1 RF ingestion to a
+PlutoSDR+ class SDR with LBE-1421 timing evidence, a composed HAL, Kuramoto
+coherence processing, and tamper-evident HDF5 persistence.
 
-To eliminate inefficiencies, overlap, and confusion, our roles are strictly delineated:
+Read `CREW_MEMORY.md` before changing files. It contains the latest local
+hardware notes and session state. Treat historical agent folders and archived
+reports as context, not as current truth unless verified against the repo.
 
-1. **Gemini (Antigravity IDE Native)** - **Orchestrator & Quality Control**
-   * *Role:* The central executor. Interacts natively with the host OS, manages files, runs tests, performs physical hardware verification, and enforces strict QC before commits.
-   * *Mandate:* Do not write heavy architecture specs. Delegate to Claude. Focus on test passing and terminal validation.
-2. **Claude (Claude-Code)** - **Project Manager & Architect**
-   * *Role:* Deep reasoning, long-term roadmaps, and structural logic. Owns all `MASTER_SPEC` documents. 
-   * *Mandate:* Do not get bogged down in syntax/lint fixing. Delegate massive refactors to Kimi.
-3. **Kimi (Kimi-Code)** - **High-Output Craftsman**
-   * *Role:* Pure code generation. Mass refactors, syntax compliance, and rapid boilerplate.
-   * *Mandate:* Do not make architectural pivots. Execute Claude's specs with extreme precision and speed.
-4. **Codex** - **Working Foreman / Algorithm Engineer**
-   * *Role:* Translates Claude's high-level physics/RF architectures into concrete, optimized Python logic (e.g., Kuramoto phase coherence arrays). 
-   * *Mandate:* Bridge the gap between math and machine code.
-5. **Grok (Grok-Build)** - **Assistant Coder & Brainstormer**
-   * *Role:* Out-of-the-box edge cases, unblocking stuck agents, and handling miscellaneous build script setups.
+## Repository Structure
 
-## Elimination of Inefficiencies (The Protocol)
+- `src/dslv_zpdi/` - package source.
+- `src/dslv_zpdi/layer1_ingestion/` - HAL, SDR, timing, mobile/radon ingestion.
+- `src/dslv_zpdi/layer2_core/` - coherence, baseline FSM, swarm integrity.
+- `src/dslv_zpdi/layer3_telemetry/` - routing and HDF5/secondary persistence.
+- `config/node_profiles/` - validated node profiles.
+- `specs/` and `MASTER_SPEC.md` - canonical SPEC references.
+- `tests/` - simulator and contract tests.
+- `tools/` - repository guardrails, version checks, dashboard and utility tools.
+- `docs/` - build, collaboration, audit, hardware, and validation notes.
 
-We have eliminated slow, sequential handoffs via large log files. We now use instantaneous state caching.
+Every new source module, class, and significant function must map to a real
+SPEC-ID in its docstring. `tools/orphan_checker.py` enforces this contract.
 
-1. **MANDATORY BOOT PROTOCOL:** Upon initialization, every agent MUST immediately read `CREW_MEMORY.md`. This file contains the exact, up-to-the-minute state of the repository, hardware layout, and immediate next steps.
-2. **No Blind Commits:** No agent may commit code without Gemini or the agent running `.venv/bin/python -m pytest tests/ -v` and verifying 100% pass rate.
-3. **Parallel Execution:** Agents will stick to their lanes. If Kimi is refactoring Layer 1, Codex can simultaneously build the Layer 2 math. Gemini orchestrates the merges.
+## Development Environment
 
-## Current Hardware Profile
-* **Tier 1 SDR:** HamGeek Pluto+ 1GB (`192.168.3.80`) with Tezuka-Libre firmware.
-* **Tier 1 Clock:** Leo Bodnar LBE-1421 GPSDO (10 MHz Out2 -> CLKIN, 1 PPS Out1 -> GPIO 18).
-* **Tier 2 Mobile:** Pixel 9 Pro XL GrapheneOS (termux-sensor).
+Supported Python policy is 3.10 through 3.14. Use Python 3.13 for local
+development and lockfile regeneration unless a change specifically targets a
+matrix version. The Docker image validates on Python 3.14.
 
-*If you are an agent reading this, load `CREW_MEMORY.md` now and await orders.*
+```bash
+python3.13 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -e ".[dev]"
+```
+
+Runtime pins in `requirements.txt` are generated from `pyproject.toml` with
+Python 3.13. Development dependencies live in the `dev` optional dependency
+group, not in `requirements.txt`.
+
+## Hardware Profile
+
+Verified local notes identify this current Tier-1 profile:
+
+- Raspberry Pi 5 anchor.
+- HamGeek PlutoSDR+ 1 GB / AD9363 at `ip:192.168.3.80`.
+- Leo Bodnar LBE-1421 GPSDO.
+- LBE-1421 10 MHz Out2 to PlutoSDR+ CLKIN.
+- LBE-1421 1 PPS Out1 to Pi GPIO 18.
+- Pixel 9 Pro XL GrapheneOS as the Tier-2 mobile node.
+
+Do not mark physical hardware validation as passing unless it was actually run
+against the node and the command output was recorded.
+
+## Validation
+
+Run the applicable local contract before committing:
+
+```bash
+.venv/bin/python -m pip check
+.venv/bin/python tools/check_version_sync.py
+.venv/bin/python tools/orphan_checker.py
+.venv/bin/python tools/repo_guard.py
+.venv/bin/python -m ruff check src/ tools/ tests/
+.venv/bin/python -m mypy src/dslv_zpdi/layer2_core
+DEV_SIMULATOR=1 .venv/bin/python -m pytest tests/ -q --cov --cov-report=term-missing
+DEV_SIMULATOR=1 .venv/bin/python tests/test_pipeline.py
+```
+
+Format with Black if a file already requires formatting:
+
+```bash
+.venv/bin/python -m black src/ tools/ tests/
+```
+
+## Security Scanning
+
+Use the configured GitHub security workflow for CodeQL. Local scans are useful
+before larger changes:
+
+```bash
+.venv/bin/python -m pip_audit
+.venv/bin/python -m bandit -q -r src tools
+git diff --check
+```
+
+Security vulnerabilities and evidence-integrity issues must be reported through
+private GitHub security advisories, not public issues.
+
+## Docker
+
+Build the default validation image:
+
+```bash
+docker build -t dslv-zpdi:local .
+```
+
+Multi-architecture CI builds `linux/amd64` and `linux/arm64`, generates SBOM and
+provenance, scans an AMD64 image with Trivy, and publishes only from non-PR
+events. Pull-request builds must not publish images.
+
+## Release
+
+Release tags must match `pyproject.toml` exactly, for example `v5.0.0`. The
+release workflow builds a wheel and sdist, validates metadata with `twine`,
+generates SHA-256 checksums, and attaches artifacts to the GitHub release.
+
+## Git Conventions
+
+Use Conventional Commits:
+
+```text
+type(optional-scope)!: concise summary
+```
+
+Allowed types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`,
+`chore`, `revert`, and `security`.
+
+Run this once in each clone so committed hooks are active:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Do not force-push, bypass branch protection, or commit unrelated generated
+artifacts.
+
+## Files That Must Not Be Committed
+
+- `.env`, `.env.*`, `*.pat`, `*.token`, credential directories, or private keys.
+- HDF5 captures and runtime data: `data/*.h5`, `data/*.hdf5`, `*.h5`, `*.hdf5`.
+- Runtime outputs: `output/`, health files, PID files, logs, and caches.
+- Virtual environments, build outputs, coverage outputs, and Docker scratch data.
+- Exact private coordinates, credentials, serials, or personal data in issue logs.
+
+## Definition of Done
+
+- Source changes are scoped to the requested behavior.
+- Simulator tests pass without physical hardware.
+- Hardware-dependent claims are either validated on hardware or explicitly marked
+  unavailable.
+- Version, docs, requirements, workflows, and tests are consistent.
+- Security-sensitive changes fail closed and preserve forensic secondary output.
+- `git diff --check` is clean.

@@ -10,8 +10,8 @@ Security fixes are applied to the latest released minor line on `main`.
 
 | Version | Supported |
 | ------- | --------- |
-| 4.8.x   | ✅        |
-| < 4.8   | ❌        |
+| 5.0.x   | Yes       |
+| < 5.0   | No        |
 
 ## Reporting a Vulnerability
 
@@ -42,6 +42,8 @@ within 30 days.
 - Trust-scoring and quarantine bypass for Tier 2 / mobile-node data.
 - Credential or secret handling in installers, config, and tooling.
 - Dependency vulnerabilities surfaced by Dependabot.
+- Container vulnerabilities surfaced by the Docker/Trivy workflow.
+- Code scanning findings surfaced by CodeQL.
 
 ## Out of Scope
 

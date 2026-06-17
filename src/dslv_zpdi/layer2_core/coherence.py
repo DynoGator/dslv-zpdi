@@ -17,6 +17,7 @@ import time
 import uuid
 from collections import deque
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -57,22 +58,22 @@ class CoherenceScorer:
         alpha: float = 0.2,
         window_ms: int = 300,
         min_nodes: int = 4,
-        baseline_state_path=None,
-        min_baseline_samples=10,
-        baseline_duration_hours=72,
+        baseline_state_path: str | os.PathLike[str] | None = None,
+        min_baseline_samples: int = 10,
+        baseline_duration_hours: float = 72,
         event_cooldown_s: float = 5.0,
-    ):
+    ) -> None:
         """SPEC-006 / SPEC-009 — Initialize coherence engine with baseline support."""
         self.alpha = alpha
         self.window_ms = window_ms
         self.min_nodes = min_nodes
-        self.history: dict[str, deque] = {}
-        self.fleet_state: dict[str, dict] = {}
-        self.global_events: list[dict] = []
+        self.history: dict[str, deque[tuple[float, float]]] = {}
+        self.fleet_state: dict[str, dict[str, Any]] = {}
+        self.global_events: list[dict[str, Any]] = []
         self.event_cooldown_s = event_cooldown_s
 
         # SPEC-009: Baseline FSM state
-        self.baseline_state_path = baseline_state_path
+        self.baseline_state_path = os.fspath(baseline_state_path) if baseline_state_path else None
         self.min_baseline_samples = min_baseline_samples
         self.baseline_duration_hours = baseline_duration_hours
         self._baseline_state = BaselineState.NOT_STARTED
@@ -104,14 +105,14 @@ class CoherenceScorer:
         return self._baseline_state == BaselineState.LEARNING
 
     @baseline_learning_mode.setter
-    def baseline_learning_mode(self, value: bool):
+    def baseline_learning_mode(self, value: bool) -> None:
         """Compatibility setter for legacy code that sets baseline_learning_mode directly."""
         if value and self._baseline_state == BaselineState.NOT_STARTED:
             self._baseline_state = BaselineState.LEARNING
         elif not value and self._baseline_state == BaselineState.LEARNING:
             self._baseline_state = BaselineState.LOCKED
 
-    def start_baseline(self, started_utc=None):
+    def start_baseline(self, started_utc: float | None = None) -> None:
         """SPEC-009 — Transition NOT_STARTED → LEARNING. Restarting from LOCKED is forbidden."""
         if self._baseline_state == BaselineState.LOCKED:
             logger.warning("SPEC-009: Cannot restart baseline from LOCKED state")
@@ -121,13 +122,13 @@ class CoherenceScorer:
         self.baseline_samples = []
         self._save_baseline_state()
 
-    def update_baseline(self, r_local):
+    def update_baseline(self, r_local: float) -> None:
         """SPEC-009 — Collect r_local sample during LEARNING phase."""
         if self._baseline_state == BaselineState.LEARNING:
             self.baseline_samples.append(r_local)
             self._save_baseline_state()
 
-    def get_baseline_status(self) -> dict:
+    def get_baseline_status(self) -> dict[str, Any]:
         """SPEC-009 — Get current baseline learning status."""
         return {
             "ready": self._baseline_state == BaselineState.LOCKED,
@@ -137,7 +138,7 @@ class CoherenceScorer:
             "started_utc": self.baseline_started_utc,
         }
 
-    def _save_baseline_state(self):
+    def _save_baseline_state(self) -> None:
         """SPEC-009.1 — Atomic baseline persistence with write verification."""
         if not self.baseline_state_path:
             return
@@ -190,7 +191,7 @@ class CoherenceScorer:
             return 0.0
         return float(abs(weighted_sum / total_weight))
 
-    def finalize_baseline(self, force=False):
+    def finalize_baseline(self, force: bool = False) -> float | None:
         """SPEC-009 — Transition LEARNING → LOCKED after minimum samples and duration gate."""
         if self._baseline_state != BaselineState.LEARNING:
             return None
@@ -220,7 +221,7 @@ class CoherenceScorer:
         self._save_baseline_state()
         return self.dynamic_threshold
 
-    def update(self, payload: dict, phases: list[float]) -> CoherencePacket:
+    def update(self, payload: dict[str, Any], phases: list[float]) -> CoherencePacket:
         """SPEC-006.3 — Main entry point with EWMA smoothing per Section 5.5.3."""
         node_id = payload.get("node_id", "UNKNOWN")
         modality = payload.get("modality", "unknown")
@@ -272,7 +273,7 @@ class CoherenceScorer:
 
         return packet
 
-    def _check_global_confirmation(self, ts: float, packet: CoherencePacket):
+    def _check_global_confirmation(self, ts: float, packet: CoherencePacket) -> None:
         """SPEC-006.4 — Multi-node event confirmation within sliding window.
         Requires >=min_nodes with r_smooth >= threshold within window_ms."""
         window_s = self.window_ms / 1000.0

@@ -5,7 +5,6 @@ Pets /dev/watchdog on every pipeline tick. System reboots if starved.
 
 import logging
 import os
-from typing import Optional
 
 logger = logging.getLogger("dslv-zpdi.watchdog")
 
@@ -18,7 +17,7 @@ class PiWatchdog:
 
     def __init__(self, device: str = WATCHDOG_DEVICE):
         self.device = device
-        self._fd: Optional[int] = None
+        self._fd: int | None = None
 
     def open(self) -> bool:
         """Open watchdog device. Returns False if unavailable."""

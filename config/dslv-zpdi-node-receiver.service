@@ -15,6 +15,7 @@ ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/pytho
 Environment=PYTHONUNBUFFERED=1
 Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/primary
 Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/secondary
+Environment=DSLV_RECEIVER_HOST=10.42.0.1
 Environment=DSLV_RECEIVER_PORT=5775
 Restart=on-failure
 RestartSec=15

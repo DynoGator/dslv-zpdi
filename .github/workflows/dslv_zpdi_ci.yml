@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.11", "3.12", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     env:
       DEV_SIMULATOR: "1"
     steps:
@@ -67,7 +67,7 @@ jobs:
         run: python tests/test_pipeline.py
 
       - name: Upload coverage report
-        if: matrix.python == '3.11'
+        if: matrix.python == '3.13'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
@@ -85,7 +85,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: pip
 
       - name: Build tooling

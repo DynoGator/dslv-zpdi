@@ -1,17 +1,40 @@
 name: Hardware Incident
-description: Report a field node signal or telemetry anomaly
-title: "[HARDWARE] "
-labels: ["hardware", "anomaly"]
+description: Report a field node signal, timing, SDR, or telemetry anomaly.
+title: "fix(hardware): brief incident summary"
+labels: ["hardware", "anomaly", "triage"]
+assignees: ["DynoGator"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please use this form to report anomalies specifically related to SDR hardware, GPSDO timing, or telemetry coherence issues.
+        Use this form for SDR, GPSDO/PPS/NMEA, timing, power, thermal, or
+        telemetry anomalies. **Redact exact coordinates, serial numbers,
+        credentials, private RF recordings, and personal data.** If the report
+        describes a security or evidence-integrity vulnerability, use the
+        private security advisory link instead of a public issue.
   - type: textarea
     id: description
     attributes:
       label: Incident Description
       description: Describe the anomaly observed in the field node.
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Revision / commit
+      placeholder: "5.0.0 @ 98b42dc"
+    validations:
+      required: true
+  - type: dropdown
+    id: node_role
+    attributes:
+      label: Node role
+      options:
+        - Tier 1 anchor
+        - Tier 2 mobile node
+        - Simulator
+        - Other
     validations:
       required: true
   - type: input
@@ -22,10 +45,42 @@ body:
     validations:
       required: true
   - type: textarea
+    id: timing_evidence
+    attributes:
+      label: Timing evidence
+      description: PPS, NMEA, chrony, GPS fix, or GPSDO observations.
+      render: shell
+  - type: textarea
+    id: sdr_evidence
+    attributes:
+      label: SDR evidence
+      description: PlutoSDR+ / HackRF reachability, IIO attributes, sample loss, clock source, or RF observations.
+      render: shell
+  - type: dropdown
+    id: power_environment
+    attributes:
+      label: Power / environment changed?
+      options:
+        - "No"
+        - "Yes — power, cabling, temperature, antenna, or GPS sky view changed"
+        - "Unknown"
+    validations:
+      required: true
+  - type: textarea
     id: telemetry_data
     attributes:
       label: Telemetry / Coherence Logs
       description: Paste relevant telemetry data or coherence anomalies.
       render: json
+    validations:
+      required: false
+  - type: dropdown
+    id: integrity
+    attributes:
+      label: Data-integrity impact
+      options:
+        - "No — operational anomaly only"
+        - "Maybe — affected quarantine or trust state"
+        - "Yes — affected HDF5 evidence or primary routing"
     validations:
       required: true

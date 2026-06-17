@@ -30,6 +30,7 @@ from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
 from dslv_zpdi.layer1_ingestion.sdr.qualification import Tier1QualificationPolicy
 from dslv_zpdi.layer1_ingestion.sdr.simulated import SimulatedSdrBackend
 from dslv_zpdi.layer1_ingestion.timing.lbe1421 import LBE1421TimingAuthority
+from dslv_zpdi.layer1_ingestion.timing.simulated import SimulatedTimingAuthority
 
 logger = logging.getLogger("dslv-zpdi.hal")
 
@@ -119,11 +120,16 @@ def get_tier1_hal(
 
     # Timing authority
     timing_cfg = profile.timing
-    timing_authority = LBE1421TimingAuthority(
-        pps_device=timing_cfg.pps_device,
-        nmea_port=timing_cfg.nmea_port,
-        reference_frequency_hz=timing_cfg.reference_frequency_hz,
-    )
+    if simulator:
+        timing_authority = SimulatedTimingAuthority(
+            reference_frequency_hz=timing_cfg.reference_frequency_hz
+        )
+    else:
+        timing_authority = LBE1421TimingAuthority(
+            pps_device=timing_cfg.pps_device,
+            nmea_port=timing_cfg.nmea_port,
+            reference_frequency_hz=timing_cfg.reference_frequency_hz,
+        )
 
     # SDR backend
     sdr_cfg = profile.sdr

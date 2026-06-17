@@ -7,8 +7,8 @@ import math
 import os
 import random
 import subprocess
+from collections.abc import Callable
 from threading import Event, Thread
-from typing import Callable, Optional
 
 logger = logging.getLogger("dslv-zpdi.timing")
 
@@ -21,7 +21,7 @@ class TimingMonitor:
         check_interval_seconds: float = 10,
         jitter_threshold_ns: int = 50000,
         simulated: bool = False,
-        jitter_source: Optional[Callable[[], float]] = None,
+        jitter_source: Callable[[], float] | None = None,
     ):
         self.check_interval = check_interval_seconds
         self.threshold_ns = jitter_threshold_ns

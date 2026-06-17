@@ -21,6 +21,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 
 _TIMEOUT = 6.0
 _USER_AGENT = "DSLV-ZPDI-Dashboard/1.0 (+https://dynogatorlabs)"
@@ -36,8 +37,11 @@ ENDPOINTS = {
 
 
 def _fetch_json(url: str):
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(f"Unsupported NOAA endpoint URL scheme: {parsed.scheme}")
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:  # nosec B310
         return json.loads(resp.read().decode("utf-8", errors="replace"))
 
 

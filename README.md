@@ -71,6 +71,12 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 ### Prerequisites
 
+**Python runtime**
+- Supported source/runtime versions: Python 3.10 through 3.14.
+- Recommended local development version: Python 3.13.
+- Container validation version: Python 3.14.
+- `requirements.txt` is generated from `pyproject.toml` using Python 3.13.
+
 **Core hardware (Tier 1 Anchor)**
 - Raspberry Pi 5 (16 GB) or compatible (see Hardware Agnosticism section)
 - HamGeek PlutoSDR+ with 10 MHz EXT_REF_CLK connected to GPSDO
@@ -190,6 +196,13 @@ All `DSLV_*` variables override the YAML. Invalid values log a warning and fall 
 | `DSLV_PRIMARY_OUTPUT_DIR`   | `paths.primary_output`                 | `/mnt/ssd/primary`             |
 | `DSLV_SECONDARY_OUTPUT_DIR` | `paths.secondary_output`               | `/mnt/ssd/secondary`           |
 | `DSLV_BASELINE_STATE_PATH`  | `paths.baseline_state`                 | `/var/lib/dslv_zpdi/bl.json`   |
+| `DSLV_RECEIVER_HOST`        | Node receiver bind host                | `10.42.0.1`                    |
+| `DSLV_WEBDASH_HOST`         | Web dashboard bind host                | `10.42.0.1`                    |
+| `ZPDI_SERVER_HOST`          | Tier-1 WSS ingest bind host            | `10.42.0.1`                    |
+
+Network listeners default to `127.0.0.1`. The bundled field systemd units bind
+the node receiver and dashboard to `10.42.0.1`; set `ZPDI_SERVER_HOST`
+explicitly before exposing the WebSocket ingest server to mobile nodes.
 
 ### `~/.config/dslv-zpdi/dashboard.toml` — Dashboard Config
 

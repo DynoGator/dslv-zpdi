@@ -15,6 +15,7 @@ Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/tools
 Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/primary
 Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/secondary
+Environment=DSLV_WEBDASH_HOST=10.42.0.1
 Environment=DSLV_WEBDASH_PORT=8080
 Restart=on-failure
 RestartSec=15

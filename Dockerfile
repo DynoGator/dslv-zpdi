@@ -32,4 +32,8 @@ RUN python tools/orphan_checker.py
 RUN python tools/check_version_sync.py
 RUN python tools/repo_guard.py
 
+RUN useradd --create-home --shell /usr/sbin/nologin dslv \
+    && chown -R dslv:dslv /app
+USER dslv
+
 CMD ["pytest", "-q", "tests"]

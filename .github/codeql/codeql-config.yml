@@ -1,0 +1,15 @@
+name: dslv-zpdi-codeql
+
+queries:
+  - uses: security-and-quality
+
+paths:
+  - src
+  - tools
+  - tests
+
+paths-ignore:
+  - GEM-HOME/**
+  - CLAUDE-HOME/**
+  - GEMINI-HOME/**
+  - docs/archive/**

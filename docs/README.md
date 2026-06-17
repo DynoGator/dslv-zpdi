@@ -22,6 +22,7 @@ development is the repository root (see `AGENTS.md`, `CONTRIBUTING.md`,
 | [collaboration/README.md](collaboration/README.md) | Shared operating procedure for all agents. |
 | [collaboration/NEXT_STEPS.md](collaboration/NEXT_STEPS.md) | Active forward development plan. |
 | [collaboration/TURNOVER_TEMPLATE.md](collaboration/TURNOVER_TEMPLATE.md) | Template for root-level turnover notes. |
+| [DISCUSSIONS_GUIDE.md](DISCUSSIONS_GUIDE.md) | GitHub Discussions category and security-boundary guidance. |
 
 Per protocol, **current** turnover notes live at the repo root as
 `TURNOVER_YYYY-MM-DD_<topic>.md` and are **not** moved into `docs/`.
@@ -54,6 +55,8 @@ by `tools/orphan_checker.py`.
 | Path | Purpose |
 | --- | --- |
 | `audits/` | Repository audit and hardening reports. |
+| [security/AUDIT_AND_ACCOUNTABILITY.md](security/AUDIT_AND_ACCOUNTABILITY.md) | GitHub audit-log boundary, repository accountability controls, and branch-protection recommendations. |
+| [security/HDF5_TAMPER_EVIDENCE_AND_KEY_MANAGEMENT.md](security/HDF5_TAMPER_EVIDENCE_AND_KEY_MANAGEMENT.md) | HDF5 tamper-evidence and HMAC key-management guidance. |
 
 ## Validation evidence
 

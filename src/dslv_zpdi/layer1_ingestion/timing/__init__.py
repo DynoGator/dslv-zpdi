@@ -9,6 +9,7 @@ from dslv_zpdi.layer1_ingestion.timing.chrony_monitor import ChronyMonitor
 from dslv_zpdi.layer1_ingestion.timing.lbe1421 import LBE1421TimingAuthority
 from dslv_zpdi.layer1_ingestion.timing.nmea_stream import NmeaStream, parse_gga
 from dslv_zpdi.layer1_ingestion.timing.pps_listener import PpsListener
+from dslv_zpdi.layer1_ingestion.timing.simulated import SimulatedTimingAuthority
 
 __all__ = [
     "ClockAttestation",
@@ -19,4 +20,5 @@ __all__ = [
     "NmeaStream",
     "parse_gga",
     "PpsListener",
+    "SimulatedTimingAuthority",
 ]
