@@ -24,6 +24,17 @@ See `docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md` for full detail.
 
 See the TURNOVER file for exact reproduction commands and the work report for root-cause detail + coverage.
 
+## Done In The 2026-06-17 Codex → Kimi Repository Automation Audit
+- Completed the autonomous audit/hardening pass Codex started.
+- Security: network listeners default to loopback with configurable bind hosts; URL scheme validation before `urlopen`; Bandit medium gate clean.
+- Dependencies: declared missing runtime deps (`cryptography`, `websockets`); regenerated `requirements.txt`; fixed license metadata.
+- CI/CD: added Conventional Commits enforcement, dependency-review, CodeQL config, and strengthened Docker/release/security workflows.
+- Governance: added/updated issue templates, PR template, `AGENTS.md`, `SECURITY.md`, `docs/DISCUSSIONS_GUIDE.md`, `docs/security/AUDIT_AND_ACCOUNTABILITY.md`.
+- Validation: pytest 184 passed / 1 skipped / 58.69% coverage; package build + twine check clean; AMD64 and ARM64 Docker builds pass.
+- Deliverables: PR #7 (`codex/repo-hardening-2026-06-17`), `TURNOVER_2026-06-17_Codex_Kimi_Hardening.md`.
+
+See the turnover file for exact reproduction commands, GitHub status, and remaining work.
+
 ## Priority 0 - Keep The Repo Trustworthy
 
 - Keep every function/class mapped to a real SPEC-ID; run `tools/orphan_checker.py` before commit.
