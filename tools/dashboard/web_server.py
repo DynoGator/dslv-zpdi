@@ -24,6 +24,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 try:
     from flask import Flask, Response
@@ -207,9 +208,12 @@ setInterval(refresh,5000);
 def _probe_node(probe_url: str, timeout: float = 3.0) -> tuple[bool, int | None]:
     """HTTP GET probe. Returns (online, latency_ms)."""
     try:
+        parsed = urlparse(probe_url)
+        if parsed.scheme not in {"http", "https"}:
+            return False, None
         t0 = time.monotonic()
         req = urllib.request.Request(probe_url, method="GET")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             resp.read(64)
         ms = int((time.monotonic() - t0) * 1000)
         return True, ms
@@ -419,10 +423,11 @@ def create_app() -> Flask:
 
 def main() -> None:
     port = int(os.getenv("DSLV_WEBDASH_PORT", "8080"))
+    host = os.getenv("DSLV_WEBDASH_HOST", "127.0.0.1")
     logging.basicConfig(level=logging.INFO)
     app = create_app()
-    logger.info("DSLV-ZPDI web dashboard starting on 0.0.0.0:%d", port)
-    app.run(host="0.0.0.0", port=port, threaded=True)
+    logger.info("DSLV-ZPDI web dashboard starting on %s:%d", host, port)
+    app.run(host=host, port=port, threaded=True)
 
 
 if __name__ == "__main__":

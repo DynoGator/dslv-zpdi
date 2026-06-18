@@ -38,6 +38,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 logger = logging.getLogger("dslv-zpdi.radoneye")
 
@@ -302,6 +303,9 @@ class RadonEyeHttpTransport:
         timeout_sec: float = 5.0,
     ):
         self.url = base_url.rstrip("/") + endpoint
+        parsed = urlparse(self.url)
+        if parsed.scheme not in {"http", "https"}:
+            raise ValueError(f"Unsupported RadonEye HTTP URL scheme: {parsed.scheme}")
         self.timeout = timeout_sec
 
     def read(self) -> RadonSample:
@@ -314,7 +318,7 @@ class RadonEyeHttpTransport:
             headers={"Accept": "application/json"},
         )
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # nosec B310
                 body = resp.read().decode("utf-8")
                 latency_ms = (time.perf_counter() - t0) * 1000.0
                 data = json.loads(body)

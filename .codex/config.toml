@@ -1,0 +1,12 @@
+# Project-scoped Codex defaults for DSLV-ZPDI.
+model_reasoning_effort = "xhigh"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+web_search = "live"
+model_verbosity = "low"
+
+[features]
+shell_snapshot = true
+unified_exec = true
+multi_agent = true
+memories = true

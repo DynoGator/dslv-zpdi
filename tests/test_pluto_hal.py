@@ -18,7 +18,7 @@ def _real_pluto_accessible() -> bool:
     try:
         import iio  # pylint: disable=import-outside-toplevel
 
-        ctx = iio.Context("ip:192.168.2.1")
+        ctx = iio.Context("ip:192.168.3.80")
         return ctx.find_device("ad9361-phy") is not None
     except Exception:
         return False

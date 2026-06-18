@@ -35,6 +35,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 logger = logging.getLogger("dslv-zpdi.pixel-bridge")
 
@@ -201,11 +202,14 @@ class PixelHttpTransport:
         import urllib.request
 
         url = f"{self.base_url}{self.endpoint}"
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"}:
+            raise ValueError(f"Unsupported Pixel telemetry URL scheme: {parsed.scheme}")
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
         last_exc: Exception | None = None
         for attempt in range(self.retries + 1):
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # nosec B310
                     return json.loads(resp.read().decode("utf-8"))
             except Exception as exc:
                 last_exc = exc

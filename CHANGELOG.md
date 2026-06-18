@@ -1,5 +1,38 @@
 # Changelog
 
+## [Unreleased] — Repository hardening follow-up (2026-06-17)
+
+### Fixed
+- Simulator Tier-1 HAL construction now uses an explicit simulated timing
+  authority instead of opening real PPS/NMEA devices during `--simulator` runs.
+- Layer 2 strict mypy target annotations now cover baseline persistence and BCI
+  ingest/reset methods.
+- Conventional Commit local hook now uses a real script instead of a malformed
+  shell file with literal newline escapes.
+
+### Changed
+- Python support policy reconciled to 3.10 through 3.14, with Python 3.13 as the
+  local development and requirements-generation interpreter.
+- Docker runtime drops to a non-root user after build-time validation.
+- Package license metadata now uses a SPDX license expression compatible with
+  current setuptools guidance.
+- Node receiver and web dashboard bind hosts are configurable and default to
+  loopback for safer local development.
+- HTTP fallback clients validate URL schemes before local `urlopen` calls.
+
+### CI/CD
+- CodeQL upgraded to v4 with explicit code scanning permissions, scheduled
+  scanning, and scoped analysis paths.
+- Docker workflow now lowercases GHCR image tags, skips publication on pull
+  requests, scans the AMD64 image with Trivy, and emits SBOM/provenance.
+- Dependency Review now checks pull-request dependency diffs for high-severity
+  advisories and denied copyleft licenses.
+- Release workflow now verifies tag/package version consistency, builds wheel
+  and sdist artifacts, validates metadata, and publishes checksums.
+- PR title validation enforces the repository Conventional Commit policy.
+- GitHub Discussions enabled; category setup and audit/accountability boundaries
+  are documented.
+
 ## [5.0.0] — PlutoSDR+ Tier-1 hardware pivot (2026-06-15)
 
 ### Added

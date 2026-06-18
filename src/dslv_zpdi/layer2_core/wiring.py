@@ -8,7 +8,6 @@ Rev 3.1 FIXES:
   - No scipy imports (Layer 2 is hardware-agnostic)
 """
 import json
-from typing import Optional
 
 from dslv_zpdi.layer1_ingestion.payload import SensorModality
 
@@ -17,7 +16,7 @@ from .coherence import CoherencePacket, CoherenceScorer
 coherence_engine = CoherenceScorer()
 
 
-def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
+def wire_to_coherence(json_payload: str) -> CoherencePacket | None:
     """SPEC-006.5a — Layer 2 Wiring (Rev 3.1)
     Called by DualStreamRouter after every Layer 1 emission.
     Never called directly from Layer 1 or Layer 3.
@@ -57,7 +56,7 @@ def wire_to_coherence(json_payload: str) -> Optional[CoherencePacket]:
     return coherence_packet
 
 
-def wire_mobile_to_coherence(payload_dict: dict) -> Optional[CoherencePacket]:
+def wire_mobile_to_coherence(payload_dict: dict) -> CoherencePacket | None:
     """Mobile-specific wiring that bypasses the Tier-1 trust gate.
 
     Tier-2 packets are inherently SECONDARY_QUARANTINED, but we still

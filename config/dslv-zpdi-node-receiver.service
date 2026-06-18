@@ -10,11 +10,12 @@ Wants=dslv-zpdi-preflight.service
 Type=simple
 User=dynogator
 Group=dynogator
-WorkingDirectory=/home/dynogator/Gem-home/dslv-zpdi
-ExecStart=/home/dynogator/Gem-home/dslv-zpdi/venv/bin/python -m dslv_zpdi.layer3_telemetry.node_receiver
+WorkingDirectory=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi
+ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/python -m dslv_zpdi.layer3_telemetry.node_receiver
 Environment=PYTHONUNBUFFERED=1
-Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/Gem-home/dslv-zpdi/output/primary
-Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/Gem-home/dslv-zpdi/output/secondary
+Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/primary
+Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/secondary
+Environment=DSLV_RECEIVER_HOST=10.42.0.1
 Environment=DSLV_RECEIVER_PORT=5775
 Restart=on-failure
 RestartSec=15
@@ -23,7 +24,7 @@ ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=yes
 NoNewPrivileges=true
-ReadWritePaths=/home/dynogator/Gem-home/dslv-zpdi/output
+ReadWritePaths=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output
 
 StandardOutput=journal
 StandardError=journal

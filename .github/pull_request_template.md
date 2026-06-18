@@ -1,4 +1,4 @@
-## 🚀 Proposed Changes
+## Proposed Changes
 
 **SPEC-ID Mapping:**
 List the SPEC-IDs this change implements or modifies. 
@@ -11,12 +11,18 @@ Briefly describe the intent of the change.
 - [ ] fix: Bug fix (restoring spec-parity)
 - [ ] docs: Documentation update
 - [ ] ci: Tooling/CI improvement
+- [ ] security: Security or evidence-integrity improvement
 
-## 🛡️ Pre-Flight Checklist
-- [ ] `python tools/orphan_checker.py` passes 100%.
-- [ ] `python tests/test_pipeline.py` passes with 10/10 results.
-- [ ] Change log entry added to `V3_DSLV-ZPDI_LIVING_MASTER.md`.
-- [ ] Documentation updated in Living Master if interface changed.
+## Pre-Flight Checklist
+- [ ] `python tools/check_version_sync.py` passes.
+- [ ] `python tools/orphan_checker.py` passes.
+- [ ] `python tools/repo_guard.py` passes.
+- [ ] `python -m ruff check src/ tools/ tests/` passes.
+- [ ] `python -m mypy src/dslv_zpdi/layer2_core` passes when Layer 2 is touched.
+- [ ] `DEV_SIMULATOR=1 python -m pytest tests/ -q --cov` passes.
+- [ ] Changelog updated when behavior, CI, security, or release automation changes.
+- [ ] Hardware claims are backed by actual hardware command output or marked not run.
+- [ ] Security issues are handled privately, not in public issue or PR comments.
 
 ---
-*Autonomous Co-Pilot review requested.*
+Autonomous review requested.

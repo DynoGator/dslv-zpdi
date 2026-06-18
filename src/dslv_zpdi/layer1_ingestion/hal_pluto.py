@@ -64,23 +64,23 @@ class PlutoHAL(BaseHAL):
 
     def __init__(
         self,
-        uri: str = "ip:192.168.2.1",
+        uri: str = "ip:192.168.3.80",
         pps_device: str = "/dev/pps0",
         nmea_port: str = "/dev/ttyACM0",
         external_clock: bool = False,
-        gain: int = 64,
+        gain: int = 62,
     ):
         """
         SPEC-004A.5.HAL.INIT — Initialize Pluto HAL.
 
         Args:
-            uri: libiio URI for the Pluto (e.g. ip:192.168.2.1, usb:3.15.5).
+            uri: libiio URI for the Pluto (e.g. ip:192.168.3.80, usb:3.15.5).
             pps_device: Host PPS device for UTC epoch anchoring.
             nmea_port: GPSDO NMEA telemetry port (used when external_clock=True).
             external_clock: Assert that the Pluto is GPSDO-referenced.
                 When True, the HAL still cannot read the clock state in software,
                 so this is a user assertion backed by wiring and PPS/NMEA checks.
-            gain: RX gain in dB (AD9361 manual gain range).
+            gain: RX gain in dB (AD9361 manual gain range, -10 to +62 dB).
         """
         if not IIO_AVAILABLE and not SOAPYSDR_AVAILABLE:
             raise DriverUnavailableError(

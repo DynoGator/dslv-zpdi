@@ -82,7 +82,7 @@ class BarometricCoherenceEngine:
         radon_pCiL: float,  # noqa: N803 - unit-encoded contract arg (pCi/L)
         pressure_hPa: float,  # noqa: N803 - unit-encoded contract arg (hPa)
         rh_pct: float | None = None,
-    ):
+    ) -> None:
         """SPEC-019.3 — Ingest a new observation triple."""
         self._timestamps.append(timestamp_utc)
         self._radon.append(radon_pCiL)
@@ -186,7 +186,7 @@ class BarometricCoherenceEngine:
     def last_result(self) -> BCIResult | None:
         return self._last_result
 
-    def reset(self):
+    def reset(self) -> None:
         """Clear all history — used at session boundaries."""
         self._radon.clear()
         self._pressure.clear()

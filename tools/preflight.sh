@@ -11,7 +11,7 @@ WARN(){ logger -t dslv-zpdi-preflight -p user.warning -- "$*"; echo "[preflight]
 
 LOG "===== DSLV-ZPDI preflight starting ====="
 
-# 1. Kill any known conflicting SDR tools that grab the HackRF
+# 1. Kill any known conflicting SDR tools
 for proc in gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx airspy_rx hackrf_transfer hackrf_sweep hackrf_spectrum; do
     if pgrep -x "$proc" >/dev/null 2>&1; then
         WARN "conflicting process detected: $proc — killing"
@@ -21,32 +21,40 @@ for proc in gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx airspy_rx hackrf
     fi
 done
 
-# 2. Verify HackRF presence (non-fatal)
-if command -v hackrf_info >/dev/null 2>&1; then
-    if hackrf_info 2>&1 | grep -q "Found HackRF"; then
-        LOG "HackRF detected"
+# 2. Verify PlutoSDR+ reachability (non-fatal)
+PLUTO_URI="${DSLV_SDR_URI:-ip:192.168.3.80}"
+if command -v iio_info >/dev/null 2>&1; then
+    if iio_info -u "$PLUTO_URI" >/dev/null 2>&1; then
+        LOG "PlutoSDR+ reachable at $PLUTO_URI"
     else
-        WARN "HackRF not detected (check USB cable / power)"
+        WARN "PlutoSDR+ not reachable at $PLUTO_URI (check network / power)"
     fi
 else
-    WARN "hackrf_info not installed"
+    WARN "iio_info not installed; cannot verify PlutoSDR+"
 fi
 
-# 3. Verify PPS device (non-fatal — awaiting GPSDO)
+# 3. Verify HackRF presence (legacy / optional)
+if command -v hackrf_info >/dev/null 2>&1; then
+    if hackrf_info 2>&1 | grep -q "Found HackRF"; then
+        LOG "HackRF detected (legacy)"
+    fi
+fi
+
+# 4. Verify PPS device (non-fatal — awaiting GPSDO)
 if [ -e /dev/pps0 ]; then
     LOG "PPS device /dev/pps0 present"
 else
     WARN "/dev/pps0 not present (GPSDO may not be connected yet)"
 fi
 
-# 4. Verify chrony is running
+# 5. Verify chrony is running
 if systemctl is-active --quiet chrony; then
     LOG "chrony active"
 else
     WARN "chrony not active"
 fi
 
-# 5. Verify pipeline state dir exists and is writable
+# 6. Verify pipeline state dir exists and is writable
 STATE_DIR=/var/lib/dslv_zpdi
 OUT_DIR="$REPO/output"
 for d in "$STATE_DIR" "$OUT_DIR" "$OUT_DIR/primary" "$OUT_DIR/secondary"; do
@@ -56,32 +64,32 @@ for d in "$STATE_DIR" "$OUT_DIR" "$OUT_DIR/primary" "$OUT_DIR/secondary"; do
     chown -R dynogator:dynogator "$d" 2>/dev/null || true
 done
 
-# 6. Clear any root-owned files that would block unprivileged writes
+# 7. Clear any root-owned files that would block unprivileged writes
 find "$OUT_DIR" -not -user dynogator -exec chown dynogator:dynogator {} + 2>/dev/null || true
 
-# 7. Log thermal & power state for post-mortem context
+# 8. Log thermal & power state for post-mortem context
 if command -v vcgencmd >/dev/null 2>&1; then
     TEMP=$(vcgencmd measure_temp 2>/dev/null | tr -d '\n')
     THR=$(vcgencmd get_throttled 2>/dev/null | tr -d '\n')
     LOG "$TEMP  $THR"
 fi
 
-# 8. Repo validation (non-fatal)
+# 9. Repo validation (non-fatal)
 # REPO already defined at top of script
 if [ -d "$REPO" ]; then
-    if "$REPO/venv/bin/python" "$REPO/tools/check_version_sync.py" >/dev/null 2>&1; then
+    if "$REPO/.venv/bin/python" "$REPO/tools/check_version_sync.py" >/dev/null 2>&1; then
         LOG "repo version sync OK"
     else
         WARN "repo version sync failed"
     fi
-    if "$REPO/venv/bin/python" "$REPO/tools/repo_guard.py" >/dev/null 2>&1; then
+    if "$REPO/.venv/bin/python" "$REPO/tools/repo_guard.py" >/dev/null 2>&1; then
         LOG "repo guard OK"
     else
         WARN "repo guard failed"
     fi
 fi
 
-# 9. Governor check
+# 10. Governor check
 GOV=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "?")
 if [ "$GOV" = "performance" ]; then
     LOG "governor=performance"

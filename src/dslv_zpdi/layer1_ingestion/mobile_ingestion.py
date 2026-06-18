@@ -18,12 +18,12 @@ import math
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from src.dslv_zpdi.layer2_core.coherence import CoherencePacket, CoherenceScorer
-from src.dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
+from dslv_zpdi.layer2_core.coherence import CoherencePacket, CoherenceScorer
+from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker, apply_orientation_weight
 
 log = logging.getLogger("zpdi.layer1")
 
@@ -66,7 +66,7 @@ _ORIENTATION = OrientationTracker(window=8)
 # Lightweight Hilbert transform (numpy-only, no scipy dependency)
 # ---------------------------------------------------------------------------
 # SPEC-003A
-def _hilbert_phases(signal: np.ndarray) -> List[float]:
+def _hilbert_phases(signal: np.ndarray) -> list[float]:
     """Return instantaneous phases of the analytic signal via FFT."""
     if len(signal) < 4:
         return []
@@ -96,10 +96,10 @@ class _PhaseBuffers:
 
     def __init__(self, window: int = PHASE_WINDOW):
         """SPEC-003A"""
-        self._bufs: dict[str, List[float]] = {}
+        self._bufs: dict[str, list[float]] = {}
         self._window = window
 
-    def push(self, sensor: str, value: float) -> List[float]:
+    def push(self, sensor: str, value: float) -> list[float]:
         """SPEC-003A"""
         buf = self._bufs.setdefault(sensor, [])
         buf.append(value)
@@ -123,7 +123,7 @@ def _extract_magnitude(reading: dict[str, Any]) -> float:
     return math.sqrt(x * x + y * y + z * z)
 
 
-def _build_extracted_phases(sensor_name: str, reading: dict[str, Any]) -> List[float]:
+def _build_extracted_phases(sensor_name: str, reading: dict[str, Any]) -> list[float]:
     """Layer 1 phase extraction per SPEC-005.
 
     * Accelerometer  → magnitude vector → Hilbert → phases
@@ -158,7 +158,7 @@ class IngestionPayload:
     timestamp_utc: float = 0.0
     ingest_monotonic_ns: int = 0
     raw_value: Any = None
-    extracted_phases: List[float] = field(default_factory=list)
+    extracted_phases: list[float] = field(default_factory=list)
     gps_locked: bool = False
     pps_jitter_ns: float = float("inf")
     calibration_valid: bool = False
@@ -166,21 +166,21 @@ class IngestionPayload:
     drift_percent: float = 0.0
     source_path: str = TERMUX_SENSOR_BIN
     trust_state: str = "ASSEMBLED"
-    quarantine_reason: Optional[str] = None
-    env_class: Optional[str] = None
-    event_window_id: Optional[str] = None
-    parent_trigger_id: Optional[str] = None
+    quarantine_reason: str | None = None
+    env_class: str | None = None
+    event_window_id: str | None = None
+    parent_trigger_id: str | None = None
     payload_checksum: str = ""
     hardware_tier: int = 2
     # Location enrichment (GPS / network / passive)
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    altitude: Optional[float] = None
-    accuracy: Optional[float] = None
-    location_provider: Optional[str] = None
-    location_timestamp: Optional[float] = None
+    latitude: float | None = None
+    longitude: float | None = None
+    altitude: float | None = None
+    accuracy: float | None = None
+    location_provider: str | None = None
+    location_timestamp: float | None = None
 
-    def validate(self) -> Tuple[str, Optional[str]]:
+    def validate(self) -> tuple[str, str | None]:
         """SPEC-005A.2 — Payload Self-Validation (Rev 3.5)
 
         Returns (trust_state, quarantine_reason).
@@ -198,7 +198,7 @@ class IngestionPayload:
             return "SECONDARY_QUARANTINED", "PPS jitter exceeds Tier 1 threshold (10µs)"
         return "ASSEMBLED", None
 
-    def to_json(self) -> Optional[str]:
+    def to_json(self) -> str | None:
         """SPEC-005A.3 — Serialization Gate (Rev 3.5)
 
         Calls validate() first.  KILLED packets are dropped (returns None).

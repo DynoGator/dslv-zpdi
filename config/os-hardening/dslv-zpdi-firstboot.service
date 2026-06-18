@@ -6,7 +6,7 @@ ConditionPathExists=!/var/lib/dslv_zpdi/.first-boot-complete
 
 [Service]
 Type=oneshot
-ExecStart=/home/dynogator/Gem-home/dslv-zpdi/venv/bin/python /home/dynogator/Gem-home/dslv-zpdi/tools/first_boot.py
+ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/python /home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/tools/first_boot.py
 StandardOutput=journal
 StandardError=journal
 

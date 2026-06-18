@@ -8,7 +8,6 @@ import asyncio
 import hashlib
 import json
 import logging
-import sys
 
 # Configure logging
 logging.basicConfig(
@@ -28,10 +27,9 @@ async def handle_connection(websocket):
             try:
                 # 1. Parse JSON
                 if isinstance(message, bytes):
-                    raw_received = message
                     data = json.loads(message.decode("utf-8"))
                 else:
-                    raw_received = message.encode("utf-8")
+                    message.encode("utf-8")
                     data = json.loads(message)
 
                 # 2. Extract provided digest
@@ -47,8 +45,8 @@ async def handle_connection(websocket):
 
                 # 4. Verify
                 if actual_digest == provided_digest:
-                    log.info("VERIFIED: node=%s wall=%s digest=%s...", 
-                             data.get("node"), 
+                    log.info("VERIFIED: node=%s wall=%s digest=%s...",
+                             data.get("node"),
                              data.get("timestamps", {}).get("wall_ns"),
                              actual_digest[:12])
                 else:

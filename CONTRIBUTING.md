@@ -1,7 +1,6 @@
 # DSLV-ZPDI Contributing Guidelines
 
-**Role:** Autonomous Co-Pilot & Systems Engineer
-**Status:** Rev 4.2.0 Canonical (Phase 2A Hardware Transition — LBE-1421)
+**Status:** Rev 5.0.0 development policy
 
 ---
 
@@ -15,13 +14,16 @@ DSLV-ZPDI is a SPEC-driven project.
 - Refer to `MASTER_SPEC.md` for the canonical law layer.
 
 ## 3. DEVELOPMENT WORKFLOW
-- **Hardware Abstraction:** Utilize the `BaseHAL` (`src/layer1_ingestion/hal_base.py`) for any new sensor modalities.
-- **Simulation:** Implement a `SimulatedHAL` for CI/CD and virtual validation before physical deployment.
+- **Python policy:** support Python 3.10 through 3.14. Use Python 3.13 for local editable installs and requirements regeneration unless testing a matrix-specific issue.
+- **Hardware Abstraction:** Use the composed HAL interfaces under `src/dslv_zpdi/layer1_ingestion/` for new hardware.
+- **Simulation:** Simulator mode must not touch physical SDR, PPS, NMEA, or GPSDO devices. CI must remain hardware-independent.
 - **Testing:** Add regression tests to the `tests/` suite. Ensure they pass with `DEV_SIMULATOR=1`.
 
 ## 4. GIT PROTOCOL
-- **Commits:** Use conventional commit messages: `<type>(<scope>): <Active_Revision> — <description>`.
-- **Pre-Commit:** Run `python tools/orphan_checker.py` and `python tests/test_pipeline.py` before pushing.
+- **Commits:** Use Conventional Commits: `type(optional-scope)!: summary`.
+- **Allowed types:** `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `revert`, `security`.
+- **Local hooks:** run `git config core.hooksPath .githooks` so the committed hooks are active.
+- **Pre-push validation:** run `python tools/orphan_checker.py`, `python tools/repo_guard.py`, `python -m ruff check src/ tools/ tests/`, and `DEV_SIMULATOR=1 python -m pytest tests/ -q`.
 
 ---
 *For institutional credibility, we do not compromise on technical integrity.*

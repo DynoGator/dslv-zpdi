@@ -6,6 +6,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libhackrf-dev \
     soapysdr-module-hackrf \
+    libiio-dev \
+    libad9361-dev \
     libusb-1.0-0-dev \
     pkg-config \
     git \
@@ -29,5 +31,9 @@ RUN pytest -q tests
 RUN python tools/orphan_checker.py
 RUN python tools/check_version_sync.py
 RUN python tools/repo_guard.py
+
+RUN useradd --create-home --shell /usr/sbin/nologin dslv \
+    && chown -R dslv:dslv /app
+USER dslv
 
 CMD ["pytest", "-q", "tests"]

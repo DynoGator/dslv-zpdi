@@ -1,14 +1,14 @@
 # DSLV-ZPDI Continued Development Plan
 
-**Status date:** 2026-06-11
-**Baseline:** Rev 4.8.1 (Grok autonomous simulator session on Pixel proot host). Simulator suite 113 passed (full collection now works on no-lib hosts), ruff clean, version-sync clean, coverage ~53% (node_receiver now exercised by contract tests). See GROK_WORK_REPORT_2026-06-11.md and TURNOVER_2026-06-11_Grok_NodeBridgeHardening.md.
+**Status date:** 2026-06-17
+**Baseline:** Rev 5.0.0 with PlutoSDR+ / LBE-1421 Tier-1 pivot, simulator-first CI, and Python 3.10 through 3.14 support. Historical Rev 4.8.1 simulator notes remain below for context.
 
 ## Done In The 2026-06-10 Repository Hardening Session
 
 - Fixed 4 failing async tests on `main` (added `pytest-asyncio`).
 - Reconciled the 4.7.2→4.8.0 version desync across all authorities; added `RELEASE_NOTES_v4.8.0.md`.
 - Cleared 117 ruff findings in the Phase 2B modules (no metrology semantics changed).
-- Replaced the weak CI with a full Python 3.10–3.13 validation + package-build matrix.
+- Replaced the weak CI with a full Python validation + package-build matrix; the current matrix is 3.10 through 3.14.
 - Added `SECURITY.md`, Dependabot, YAML issue forms, `CODEOWNERS`, `compose.yaml`, `.dockerignore`, `docs/README.md`, coverage config.
 - Enabled Dependabot alerts + security updates.
 
@@ -23,6 +23,17 @@ See `docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md` for full detail.
 - P2 items above now complete. P1 (hardware truth on Pi 5) is next priority.
 
 See the TURNOVER file for exact reproduction commands and the work report for root-cause detail + coverage.
+
+## Done In The 2026-06-17 Codex → Kimi Repository Automation Audit
+- Completed the autonomous audit/hardening pass Codex started.
+- Security: network listeners default to loopback with configurable bind hosts; URL scheme validation before `urlopen`; Bandit medium gate clean.
+- Dependencies: declared missing runtime deps (`cryptography`, `websockets`); regenerated `requirements.txt`; fixed license metadata.
+- CI/CD: added Conventional Commits enforcement, dependency-review, CodeQL config, and strengthened Docker/release/security workflows.
+- Governance: added/updated issue templates, PR template, `AGENTS.md`, `SECURITY.md`, `docs/DISCUSSIONS_GUIDE.md`, `docs/security/AUDIT_AND_ACCOUNTABILITY.md`.
+- Validation: pytest 184 passed / 1 skipped / 58.69% coverage; package build + twine check clean; AMD64 and ARM64 Docker builds pass.
+- Deliverables: PR #7 (`codex/repo-hardening-2026-06-17`), `TURNOVER_2026-06-17_Codex_Kimi_Hardening.md`.
+
+See the turnover file for exact reproduction commands, GitHub status, and remaining work.
 
 ## Priority 0 - Keep The Repo Trustworthy
 

@@ -12,7 +12,9 @@ import json
 import math
 import os
 import subprocess
+import tempfile
 import time
+from pathlib import Path
 
 from rich.panel import Panel
 from rich.table import Table
@@ -54,8 +56,9 @@ _HEALTH_STALE_S = 12.0  # Health data older than this means pipeline is not upda
 
 
 def _read_health() -> dict:
-    """Read the pipeline health endpoint (with /tmp fallback). Adds _stale flag."""
-    for p in ("/run/dslv-zpdi/health.json", "/tmp/health.json"):
+    """Read the pipeline health endpoint with non-systemd fallback."""
+    fallback = Path(tempfile.gettempdir()) / "health.json"
+    for p in (Path("/run/dslv-zpdi/health.json"), fallback):
         try:
             mtime = os.stat(p).st_mtime
             with open(p, encoding="utf-8") as f:

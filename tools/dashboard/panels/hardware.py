@@ -1,6 +1,6 @@
-"""Hardware status panel: HackRF, PPS, GPSDO, chrony.
+"""Hardware status panel: PlutoSDR+/SDR, PPS, GPSDO, chrony.
 
-Expensive probes (hackrf_info, chronyc) are cached for a few seconds so
+Expensive probes (iio_info, hackrf_info, chronyc) are cached for a few seconds so
 they don't dominate the dashboard refresh loop.
 """
 
@@ -48,9 +48,48 @@ def _hackrf_info() -> dict:
             "fw": fw.group(1) if fw else "?",
             "rev": rev.group(1) if rev else "?",
             "board": board.group(1) if board else "HackRF",
+            "source": "hackrf",
         }
     except Exception:
-        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-"}
+        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "hackrf"}
+
+
+def _pluto_info() -> dict:
+    """Probe PlutoSDR+ via libiio (non-fatal)."""
+    uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.3.80")
+    try:
+        import iio  # pylint: disable=import-outside-toplevel
+
+        ctx = iio.Context(uri)
+        ad9361 = ctx.find_device("ad9361-phy")
+        if ad9361 is None:
+            return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "pluto"}
+        # Best-effort metadata
+        board = ctx.attrs.get("hw_model", "PlutoSDR+")
+        fw = ctx.attrs.get("fw_version", "?")
+        serial = ctx.attrs.get("hw_serial", "?")
+        return {
+            "detected": True,
+            "serial": serial,
+            "fw": fw,
+            "rev": "?",
+            "board": board,
+            "source": "pluto",
+        }
+    except Exception:
+        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "pluto"}
+
+
+def _sdr_info() -> dict:
+    """Return the first detected Tier-1/legacy SDR, preferring Pluto."""
+    pluto = _pluto_info()
+    if pluto["detected"]:
+        return pluto
+    hackrf = _hackrf_info()
+    if hackrf["detected"]:
+        return hackrf
+    # Default to Pluto so the panel shows the expected target even when absent.
+    return pluto
 
 
 def _pps_device() -> bool:
@@ -133,12 +172,12 @@ def _chrony_stats() -> dict:
 class HardwarePanel:
     def __init__(self, border_style: str = "yellow"):
         self.border_style = border_style
-        self._hackrf = _Cache(_HACKRF_TTL)
+        self._sdr = _Cache(_HACKRF_TTL)
         self._chrony = _Cache(_CHRONY_TTL)
         self._gpsdo = _Cache(_GPSDO_TTL)
 
     def render(self, compact: bool = False) -> Panel:
-        hrf = self._hackrf.get(_hackrf_info)
+        sdr = self._sdr.get(_sdr_info)
         pps_dev = _pps_device()
         pps_mod = _pps_module_loaded()
         gpsdo = _gpsdo_serial()
@@ -152,8 +191,8 @@ class HardwarePanel:
         t.add_column(style="bright_cyan", justify="right")
         t.add_column()
 
-        hrf_style = "bright_green" if hrf["detected"] else "bright_red"
-        hrf_glyph = "◉" if hrf["detected"] else "○"
+        sdr_style = "bright_green" if sdr["detected"] else "bright_red"
+        sdr_glyph = "◉" if sdr["detected"] else "○"
 
         rms = chr_["rms_ns"]
         if rms != rms:  # NaN
@@ -166,23 +205,24 @@ class HardwarePanel:
             rms_txt = f"{rms/1_000_000:.1f}ms"
 
         if compact:
-            # Row 1: HackRF + PPS + Clock
+            # Row 1: SDR + PPS + Clock
             pps_ok = pps_dev and pps_mod
-            clk = "EXT" if hrf.get("clock_source") == "external" else "INT"
-            t.add_row("Hrf", f"[{hrf_style}]{hrf_glyph}[/] {clk} [dim]•[/] PPS[{'G' if pps_ok else 'R'}]")
+            clk = "EXT" if sdr.get("clock_source") == "external" else "INT"
+            t.add_row("SDR", f"[{sdr_style}]{sdr_glyph}[/] {clk} [dim]•[/] PPS[{'G' if pps_ok else 'R'}]")
             # Row 2: GPS Fix + Holdover
             gps_sty = "bright_green" if gpsdo else "bright_red"
-            hold = " [yellow]HLD[/]" if hrf.get("holdover") else ""
+            hold = " [yellow]HLD[/]" if sdr.get("holdover") else ""
             t.add_row("Gps", f"[{gps_sty}]{'◉' if gpsdo else '○'}[/] fix={gpsdo_nmea['fix']}{hold}")
             # Row 3: Chrony RMS + Stratum
             t.add_row("Chr", f"str={chr_['stratum']} [magenta]rms={rms_txt}[/]")
         else:
+            source_label = "Pluto" if sdr.get("source") == "pluto" else "SDR"
             t.add_row(
-                "HackRF",
-                f"[{hrf_style}]{hrf_glyph} {_esc(hrf['board'])} "
-                f"{_esc(hrf['rev'])} fw={_esc(hrf['fw'])}[/]",
+                source_label,
+                f"[{sdr_style}]{sdr_glyph} {_esc(sdr['board'])} "
+                f"{_esc(sdr['rev'])} fw={_esc(sdr['fw'])}[/]",
             )
-            t.add_row("S/N", f"[dim]{_esc(hrf['serial'][-12:])}[/]")
+            t.add_row("S/N", f"[dim]{_esc(sdr['serial'][-12:])}[/]")
 
             pps_ok = pps_dev and pps_mod
             pps_style = "bright_green" if pps_ok else "yellow"

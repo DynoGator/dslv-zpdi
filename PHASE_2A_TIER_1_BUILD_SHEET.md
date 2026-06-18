@@ -3,7 +3,7 @@
 > **Canonical source:** `PHASE_2A_TIER_1_BUILD_SHEET.md` in the repo root  
 > **Target:** Tier 1 Anchor Node (\"Thoth's Eye\") & Tier 2 Swarm
 > **Status:** ACTIVE / RF Metrology Focus
-> **Last Updated:** 2026-04-26 (v4.6.0-LBE1421)
+> **Last Updated:** 2026-06-16 (v5.0.0-Pluto-LBE1421)
 
 ---
 
@@ -25,15 +25,17 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 | Category | Required Component | Part / Variant | Qty | Role |
 | :--- | :--- | :--- | :--- | :--- |
 | Compute | Raspberry Pi 5 | PI5-16GB | 1 | Primary Logic & I/O |
-| SDR (RF Eye) | HackRF One | Great Scott Gadgets | 1 | RF Ingestion (External CLKIN) |
+| SDR (RF Eye) | HamGeek PlutoSDR+ | AD9361 / 1 GB | 1 | RF Ingestion (External 10 MHz CLKIN) |
+| Legacy SDR | HackRF One | Great Scott Gadgets | 0-1 | Optional / legacy reference floor |
 | Clock Authority | GPSDO | Leo Bodnar LBE-1421 | 1 | 10 MHz + 1 PPS (Out2/Out1) |
 | SDR Antenna | Wideband Antenna | ANT500 | 1 | 75 MHz - 1 GHz Coverage |
 | GNSS Antenna | Active GPS Antenna | 3-5V Active Patch | 1 | Required for LBE-1421 Lock |
-| RF Cabling | SMA to SMA | M-to-M 50 Ohm (<= 1FT) | 1 | LBE-1421 Out2 -> HackRF CLKIN |
+| RF Cabling | SMA to SMA | M-to-M 50 Ohm (<= 1FT) | 1 | LBE-1421 Out2 -> PlutoSDR+ EXT_REF_CLK |
 | PPS Wiring | Jumper Wires | Premium F-to-F | 2 | LBE-1421 Out1 -> Pi 5 GPIO 18 |
 | Storage | Industrial microSD | VIOFO 128GB | 1 | HDF5 Persistence |
-| Cooling | Active Cooling | RPi 5 Active Cooler | 1 | Mandatory for 20MHz IQ |
+| Cooling | Active Cooling | RPi 5 Active Cooler | 1 | Mandatory for sustained 10 MHz IQ |
 | Power | USB-C Power | RPi 27W Power Supply | 1 | Required for Pi 5 + peripherals |
+| Networking | USB/Ethernet | Pi 5 USB 3.0 / GigE | 1 | PlutoSDR+ data link (ip:192.168.3.80) |
 
 ---
 
@@ -51,17 +53,17 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 ## 4. Physical Assembly & Wiring Procedure
 
 **Step 1.** Install the Raspberry Pi 5 Active Cooler.
-**Step 2.** **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1421 `Out2` port (configured to 10,000,000 Hz) to the HackRF One `CLKIN` port. Use a 50 Ohm terminator if cable length exceeds 1 foot.
+**Step 2.** **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1421 `Out2` port (configured to 10,000,000 Hz) to the PlutoSDR+ `EXT_REF_CLK` port. Use a 50 Ohm terminator if cable length exceeds 1 foot.
 **Step 3.** **OS Timestamping (Heartbeat):** Connect jumper from LBE-1421 `Out1` (configured to 1 PPS mode) to Pi 5 **GPIO 18** (Physical Pin 12). Bridge ground between LBE-1421 and Pi 5.
 **Step 4.** **Power & Telemetry:** Connect LBE-1421 via USB-C to Pi 5. This provides power (250mA draw) and enables NMEA telemetry on `/dev/ttyACM0`.
-**Step 5.** Connect HackRF One to Pi 5 via USB 3.0. Connect antennas to respective ports.
+**Step 5.** Connect PlutoSDR+ to Pi 5 via USB 3.0 or Ethernet and configure the host interface for the `192.168.3.0/24` subnet (Pluto at `192.168.3.80`). Connect antennas to respective ports.
 
 ### Dual-Output Architecture (LBE-1421)
 
-The LBE-1421 has **two independent outputs**, unlike the deprecated LBE-1421 single-output unit:
+The LBE-1421 has **two independent outputs**, unlike the deprecated LBE-1420 single-output unit:
 
 - **Out1** → 1 PPS to Pi 5 GPIO 18 (UTC epoch anchoring via `pps-gpio` + `chronyd`)
-- **Out2** → 10 MHz to HackRF CLKIN (hardware ADC phase-lock)
+- **Out2** → 10 MHz to PlutoSDR+ `EXT_REF_CLK` (hardware ADC phase-lock)
 
 Because the outputs are independent, **Out2 can be reconfigured** (e.g., to a verification frequency or to discipline a second device) without affecting the 1 PPS timing on Out1. For Phase 2B, Out2 is the primary 10 MHz reference; the second output role is reserved for future expansion (e.g., a second SDR or a standalone frequency counter for timing-health cross-check).
 
@@ -70,11 +72,12 @@ Because the outputs are independent, **Out2 can be reconfigured** (e.g., to a ve
 ## 5. OS Configuration & Verification
 
 1. **PPS Support:** Add `dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0` to `/boot/firmware/config.txt`.
-2. **Tools:** `sudo apt install pps-tools chrony hackrf`
-3. **Verify ADC Lock:** `hackrf_debug --clock_source` must report `external`.
-4. **Verify PPS:** `ppstest /dev/pps0` should show stable 1s intervals.
-5. **Verify NMEA:** `cat /dev/ttyACM0` should show GPGGA/GPRMC sentences.
-6. **Hardening:** Run `sudo ./install_dslv_zpdi.sh --tier1`.
+2. **Tools:** `sudo apt install pps-tools chrony libiio-utils python3-libiio libad9361-dev`
+3. **Verify Network/Pluto Reachability:** `python -c "import iio; print(iio.Context('ip:192.168.3.80').name)"`
+4. **Verify ADC Lock:** `python -m dslv_zpdi.cli.preflight` or check the dashboard SDR health panel.
+5. **Verify PPS:** `ppstest /dev/pps0` should show stable 1s intervals.
+6. **Verify NMEA:** `cat /dev/ttyACM0` should show GPGGA/GPRMC sentences.
+7. **Hardening:** Run `sudo ./install_dslv_zpdi.sh --tier1`.
 
 ---
 

@@ -3,7 +3,7 @@
 **Purpose:** Shared operating map for Gemini CLI, Claude Code, Kimi Code, and Codex CLI.
 **Canonical repository:** `https://github.com/DynoGator/dslv-zpdi`
 **Local canonical checkout on this machine:** `/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi`
-**Active revision:** Rev 4.7.1
+**Active revision:** Rev 5.0.0
 
 ## Source of Truth
 
@@ -39,11 +39,14 @@ Record the stash name in the next turnover note. Do not overwrite another agent'
 Each machine should build a local editable virtual environment:
 
 ```bash
-python3 -m venv .venv
+python3.13 -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
 ```
 
-Use `.venv/bin/python` for tests and tools. Avoid relying on a global `python` executable or a globally installed `dslv_zpdi` package, because stale imports can hide current checkout defects.
+Use `.venv/bin/python` for tests and tools. The supported Python range is 3.10
+through 3.14; use 3.13 for normal local development. Avoid relying on a global
+`python` executable or a globally installed `dslv_zpdi` package, because stale
+imports can hide current checkout defects.
 
 ## Validation Contract
 
@@ -54,6 +57,8 @@ Run the full local contract before commit and push:
 .venv/bin/python tools/check_version_sync.py
 .venv/bin/python tools/orphan_checker.py
 .venv/bin/python tools/repo_guard.py
+.venv/bin/python -m ruff check src/ tools/ tests/
+.venv/bin/python -m mypy src/dslv_zpdi/layer2_core
 DEV_SIMULATOR=1 .venv/bin/python -m pytest tests/ -v
 DEV_SIMULATOR=1 .venv/bin/python tests/test_pipeline.py
 ```
@@ -88,7 +93,7 @@ Each turnover should include:
 
 ## Git Hygiene
 
-- Use conventional commits: `<type>(<scope>): Rev <version> - <description>`.
+- Use Conventional Commits: `type(optional-scope)!: summary`.
 - Keep one logical change per commit.
 - Fetch before work, validate before commit, push after commit.
 - Remove embedded credentials from local remotes. Use `https://github.com/DynoGator/dslv-zpdi.git` or SSH, never a token-bearing remote URL.

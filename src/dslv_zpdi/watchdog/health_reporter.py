@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 from threading import Event, Thread
@@ -71,8 +72,8 @@ class HealthReporter:
                 os.fsync(f.fileno())
             os.replace(tmp, self.path)
         except PermissionError:
-            # Fallback to /tmp when not running under systemd RuntimeDirectory
-            fallback = Path("/tmp") / self.path.name
+            # Fallback when not running under systemd RuntimeDirectory.
+            fallback = Path(tempfile.gettempdir()) / self.path.name
             try:
                 with open(fallback, "w", encoding="utf-8") as f:
                     json.dump(payload, f, indent=None, default=str)

@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI Unified Installer / Validator / Hardening
-# Revision: 4.6.1-LBE1421-RESCUE
+# Revision: 5.0.0-PLUTO-LBE1421
 # OS Support: Raspberry Pi OS Bookworm (Deb 12) & Trixie (Deb 13)
-# Date: 2026-04-27
+# Date: 2026-06-16
 #
 # Bootstraps package + venv + editable install (base), optionally applies
-# Tier 1 timing provisioning, system hardening (kernel freeze, service disable,
-# CPU/USB tuning, sysctl, modprobe blacklist, HackRF udev rules), operations
-# dashboard (rich TUI + desktop autostart), bloatware removal, and
-# passwordless-sudo. Idempotent: safe to re-run.
+# Tier 1 timing provisioning for the HamGeek PlutoSDR+ + Leo Bodnar LBE-1421
+# GPSDO stack, system hardening (kernel freeze, service disable, CPU/USB
+# tuning, sysctl, modprobe blacklist), operations dashboard (rich TUI +
+# desktop autostart), bloatware removal, and passwordless-sudo.
+# Idempotent: safe to re-run.
 #
-# Rescue release notes (4.6.1):
+# Release notes (5.0.0):
+#   - Canonical Tier-1 SDR is now the HamGeek PlutoSDR+ (libiio / AD9361)
+#   - LBE-1421 GPSDO provides 10 MHz reference + 1 PPS
+#   - HackRF support is legacy/optional only
 #   - Treats `pip check` as warn-only (Trixie venvs flag spurious dist conflicts)
 #   - Runs Tier 1 hardware audit non-fatally in --simulator mode
 #   - Soft-fails on usbguard/auditd/apt-mark hold gaps
-#   - Installs HackRF udev rules from config/os-hardening/99-hackrf.rules
-#   - Adds the invoking user to plugdev so HackRF doesn't need sudo
 #   - Uses bash -c (not -lc) so a flaky ~/.bashrc cannot abort install
 #   - Pre-flight import smoke test of dslv_zpdi.main_pipeline before systemd
 #   - Preserves existing ~/.config/dslv-zpdi user configs across re-installs
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 4.6.1-RESCUE"
+SCRIPT_REV="Rev 5.0.0-PLUTO-LBE1421"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
@@ -77,11 +79,11 @@ Core install:
   --dir PATH          Install or update repo at PATH
   --repo URL          Clone from alternate git URL
 
-System hardening (2026-04-19 session):
+System hardening (2026-06-16 session):
   --harden            Install tuning+preflight+main systemd services,
-                      freeze kernel/firmware/hackrf packages, apply
-                      sysctl tuning, modprobe blacklist, CPU governor
-                      lock, USB power-mgmt defeat.
+                      freeze kernel/firmware packages, apply sysctl
+                      tuning, modprobe blacklist, CPU governor lock,
+                      USB power-mgmt defeat.
   --dashboard         Install rich+pyfiglet, enable desktop
                       autostart of the operations TUI.
   --bloatware         Remove firefox, libreoffice, nodejs, realvnc,
@@ -108,7 +110,7 @@ Examples:
   # Just add dashboard to an existing deployment
   sudo ./install_dslv_zpdi.sh --dashboard --skip-tests --skip-apt
 
-  # Production hardware activation (after GPSDO arrives)
+  # Production Tier-1 activation (PlutoSDR+ + LBE-1421)
   sudo ./install_dslv_zpdi.sh --tier1
 USAGE
 }
@@ -176,18 +178,18 @@ if [[ "$EUID" -ne 0 ]]; then
     log_fail "Please run this script with sudo."
 fi
 
-# Python version check (pyproject.toml requires >=3.9)
+# Python version check (pyproject.toml requires >=3.10,<3.15)
 PYTHON_CMD=$(command -v python3 || true)
 if [[ -z "$PYTHON_CMD" ]]; then
-    log_fail "python3 not found. Required: >=3.9"
+    log_fail "python3 not found. Required: >=3.10,<3.15"
 fi
 
 PY_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 PY_MAJOR=$(echo "$PY_VERSION" | cut -d. -f1)
 PY_MINOR=$(echo "$PY_VERSION" | cut -d. -f2)
 
-if [[ "$PY_MAJOR" -lt 3 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 9 ]]; then
-    log_fail "Python 3.9+ required (found $PY_VERSION). Upgrade Python before continuing."
+if [[ "$PY_MAJOR" -lt 3 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 10 ]] || [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -gt 14 ]]; then
+    log_fail "Python >=3.10,<3.15 required (found $PY_VERSION). Upgrade Python before continuing."
 fi
 
 log_ok "OS Detected: $OS_ID ($OS_CODENAME) — Python $PY_VERSION"
@@ -229,6 +231,9 @@ BASE_PACKAGES=(
     build-essential
     libhdf5-dev
     libusb-1.0-0-dev
+    libiio-utils
+    python3-libiio
+    libad9361-dev
 )
 
 TIER1_PACKAGES=(
@@ -236,13 +241,8 @@ TIER1_PACKAGES=(
     pps-tools
     ethtool
     pciutils
-    libiio-utils
     libiio-dev
-    python3-libiio
     python3-soapysdr
-    libiio-dev
-    libad9361-dev
-    python3-libiio
 )
 
 log_info "Starting DSLV-ZPDI install (${SCRIPT_REV})"
@@ -373,7 +373,7 @@ fi
 
 log_ok "Repository structure validated"
 
-VENV_DIR="$INSTALL_DIR/venv"
+VENV_DIR="$INSTALL_DIR/.venv"
 log_info "Creating virtual environment at $VENV_DIR"
 run_as_real_user "python3 -m venv --clear '$VENV_DIR'" || log_fail "venv creation failed"
 
@@ -587,7 +587,7 @@ UNIT
 
     # 4. Main pipeline service with preflight dependency + RT priority
     log_info "Installing dslv-zpdi.service (main pipeline)"
-    PIPE_EXEC="${INSTALL_DIR}/venv/bin/python -m dslv_zpdi.main_pipeline"
+    PIPE_EXEC="${INSTALL_DIR}/.venv/bin/python -m dslv_zpdi.main_pipeline"
     PIPE_ENV=""
     if [[ "$SIMULATOR_MODE" -eq 1 ]] || [[ -z "${GPSDO_PRESENT:-}" ]]; then
         # Default to simulator mode until GPSDO delivery is confirmed
@@ -733,7 +733,7 @@ EOF
         if ! grep -q 'DSLV-ZPDI Pi 5 PWM fan curve' "$FIRMWARE_CONFIG"; then
             cat >> "$FIRMWARE_CONFIG" <<'FAN'
 
-# DSLV-ZPDI Pi 5 PWM fan curve (Rev 4.6.1-RESCUE)
+# DSLV-ZPDI Pi 5 PWM fan curve (Rev 5.0.0-PLUTO-LBE1421)
 # 40 C : fan kicks on (low)
 # 50 C : half power
 # 60 C : full blast

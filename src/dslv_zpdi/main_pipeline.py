@@ -1,6 +1,6 @@
 """
-SPEC-011 | Production pipeline loop (Rev 4.7.2)
-Top-level integration: HAL -> Coherence -> HDF5 persistence.
+SPEC-011 | Production pipeline loop (Rev 5.0.0)
+Top-level integration: Tier-1 HAL -> Coherence -> HDF5 persistence.
 """
 
 from __future__ import annotations
@@ -9,12 +9,13 @@ import argparse
 import logging
 import queue
 import signal
+import sys
 import threading
 import time
 from pathlib import Path
 
-from dslv_zpdi.layer1_ingestion.hal_factory import get_hal
-from dslv_zpdi.layer1_ingestion.hal_simulated import SimulatedHAL
+from dslv_zpdi.config_models import NodeProfile
+from dslv_zpdi.layer1_ingestion.hal_factory import get_tier1_hal
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
@@ -108,18 +109,23 @@ def main():
     parser.add_argument("--mode", choices=["sdr", "pps", "alternate"], default="sdr")
     parser.add_argument("--interval", type=float, default=0.1)
     parser.add_argument("--config", type=str, default="config/deployment.yaml")
+    parser.add_argument(
+        "--node-profile",
+        type=str,
+        default="config/node_profiles/tier1_pluto_lbe1421.yaml",
+        help="Tier-1 hardware node profile (YAML)",
+    )
     parser.add_argument("--output", type=str, help="Base output directory")
     args = parser.parse_args()
 
+    try:
+        profile = NodeProfile.from_yaml(args.node_profile)
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.error("Cannot load node profile %s: %s", args.node_profile, exc)
+        sys.exit(1)
+
     state = PipelineState()
-    hal = get_hal(simulator=args.simulator)
-    _hw_fallback = not args.simulator and isinstance(hal, SimulatedHAL)
-    if _hw_fallback:
-        logger.warning(
-            "Hardware HAL unavailable — pipeline running in SIMULATOR mode. "
-            "Connect HackRF + GPSDO and restart the service to enable hardware ingestion."
-        )
-        args.simulator = True  # Skip PPS edge-wait; use time.sleep pacing
+    hal = get_tier1_hal(profile, simulator=args.simulator)
 
     writer_kwargs = {}
     if args.output:
@@ -134,8 +140,6 @@ def main():
     # SPEC-014 | Initialize dashboard health reporter
     health_reporter = HealthReporter(interval_sec=2.0)
     health_reporter.start()
-    if _hw_fallback:
-        health_reporter.update({"sim_fallback": True, "hal_mode": "simulator"})
 
     ingest_q = queue.Queue(maxsize=1024)
 
