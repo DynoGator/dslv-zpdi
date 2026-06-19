@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased] — Dashboard node-registry wiring and reboot prep (2026-06-19)
+
+### Fixed
+- `tier1_ingestion_server.py`: `_register_node_seen()` now called on every
+  ACCEPTED packet, writing `output/secondary/node_registry.jsonl` (throttled to
+  once per 30 s per node). This populates `telemetry_nodes` in the Flask
+  dashboard, which previously always returned an empty array.
+
+### Verified
+- All 184 tests pass (1 skipped) after the dashboard fix.
+- Repo fully clean: 0 open branches beyond `main`, 0 open issues, 0 open PRs.
+- Termux:Boot script (`~/.termux/boot/99-start-zpdi.sh`) confirmed to launch
+  `supervisor.sh`, which starts all three services (tier1 :8443, daemon,
+  dashboard :8080) automatically on device boot.
+
+---
+
 ## [Unreleased] — Mobile node sync and installer hardening (2026-06-19)
 
 ### Added
