@@ -1,5 +1,31 @@
 # Changelog
 
+## [Unreleased] — Mobile node sync and installer hardening (2026-06-19)
+
+### Added
+- `supervisor.sh` now manages all three mobile services (tier1 server :8443,
+  Flask web dashboard :8080, mobile daemon) — previously only the daemon was
+  supervised. Ancillary services auto-restart if they exit unexpectedly.
+  `DSLV_WEBDASH_HOST` defaults to `0.0.0.0` so the dashboard is reachable on LAN.
+- `install_zpdi_mobile.sh` Rev 5: `pip install -e ".[dev]"` replaces bare
+  requirements.txt install; `hdf5-tools` apt package added (provides `h5clear`);
+  complete `.env` with all 16 required variables including AES-256-GCM + HMAC keys,
+  server host/port, webdash host/port, and path variables; non-destructive
+  `add_if_missing` upgrade path for existing installs; boot script copied from
+  repo (`termux-boot/99-start-zpdi.sh`) instead of inlining a stale duplicate;
+  runtime directories created; post-install smoke test runs full pytest suite.
+- `.gitignore` now excludes `.grok/` (Grok agent workspace), `logs/` (runtime
+  logs), and `*.pid` (daemon PID files).
+
+### Changed
+- `README.md`: mobile node prerequisites and "Connect the Pixel 9 Pro XL" section
+  updated to reflect the current three-service WSS-based architecture with
+  one-shot installer, service table, start/stop commands, and health check.
+- `docs/collaboration/README.md`: local checkout path corrected to `/root/dslv-zpdi`
+  (Pixel 9 Pro XL / GrapheneOS / PRoot Debian).
+- `CREW_MEMORY.md`: updated to 2026-06-19 with v5.0.0 feature inventory, mobile
+  hardware config table, and post-sync next-actions.
+
 ## [Unreleased] — Repository hardening follow-up (2026-06-17)
 
 ### Fixed

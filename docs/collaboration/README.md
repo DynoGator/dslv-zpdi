@@ -2,7 +2,7 @@
 
 **Purpose:** Shared operating map for Gemini CLI, Claude Code, Kimi Code, and Codex CLI.
 **Canonical repository:** `https://github.com/DynoGator/dslv-zpdi`
-**Local canonical checkout on this machine:** `/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi`
+**Local canonical checkout on this machine (mobile/PRoot):** `/root/dslv-zpdi`
 **Active revision:** Rev 5.0.0
 
 ## Source of Truth

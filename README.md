@@ -88,14 +88,12 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 - 7" DSI display (800×480) — optional; dashboard runs headless if absent
 
 **Mobile node (optional but supported)**
-- Google Pixel 9 Pro XL running GrapheneOS
-- Connect to `PiRepo` Wi-Fi hotspot (see Network Configuration below)
-- Telemetry sender POSTs JSON to `http://10.42.0.1:5775/api/v1/ingest`
-
-**Python dependencies (beyond standard requirements.txt)**
-```bash
-pip install flask psutil   # required for node-receiver and web dashboard
-```
+- Google Pixel 9 Pro XL running GrapheneOS + Termux + proot-distro (Debian)
+- Runs the full Tier-2 stack (`supervisor.sh` manages three services):
+  - `zpdi_mobile_node.py` — sensor collection via termux-sensor → HDF5 + WSS
+  - `tier1_ingestion_server.py` — local WSS ingest receiver (port 8443)
+  - `tools/dashboard/web_server.py` — status dashboard (port 8080)
+- Install: run `bash install_zpdi_mobile.sh` from Termux (see Mobile Node section below)
 
 ### One-Shot Bootstrap (Recommended)
 
@@ -497,33 +495,67 @@ sudo nmcli connection up PiRepo
 
 The Pi holds static IP `10.42.0.1/24`. Connected devices receive `10.42.0.x` via DHCP.
 
-### Connect the Pixel 9 Pro XL
+### Mobile Node — Pixel 9 Pro XL (GrapheneOS / PRoot)
 
-1. Open **Settings → Network → Wi-Fi** on the Pixel 9 Pro XL (GrapheneOS).
-2. Connect to `PiRepo`.
-3. The device will receive a `10.42.0.x` IP automatically.
-4. Node telemetry is sent to `http://10.42.0.1:5775/api/v1/ingest`.
-5. The web dashboard is viewable at `http://10.42.0.1:8080/`.
+The mobile device runs a full self-contained Tier-2 stack inside a Debian proot.
+
+**One-shot install (run from Termux, not inside proot):**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/DynoGator/dslv-zpdi/main/install_zpdi_mobile.sh)
+```
+Or if already cloned:
+```bash
+bash /root/dslv-zpdi/install_zpdi_mobile.sh
+```
+
+This (Rev 5) installer:
+1. Installs Debian proot, `hdf5-tools`, all Python deps via `pip install -e ".[dev]"`
+2. Generates a complete `.env` with fresh AES-256-GCM + HMAC-SHA256 keys
+3. Creates `data/`, `logs/`, `output/primary`, `output/secondary`
+4. Copies `termux-boot/99-start-zpdi.sh` → `~/.termux/boot/` for auto-boot
+5. Runs the full test suite as a smoke check
+
+**Services managed by `supervisor.sh`:**
+
+| Service | Port | Purpose |
+|---|---|---|
+| `tier1_ingestion_server.py` | 8443 (WS) | Receives sensor payloads from mobile daemon |
+| `zpdi_mobile_node.py` | — | Polls termux-sensor, writes HDF5 + SQLite, forwards via WSS |
+| `tools/dashboard/web_server.py` | 8080 (HTTP) | Status dashboard viewable on LAN |
+
+**Manual start (from inside proot):**
+```bash
+cd /root/dslv-zpdi
+h5clear -s data/zpdi_stream.h5 2>/dev/null || true
+set -a && source .env && set +a
+source .venv/bin/activate
+nohup bash supervisor.sh >> logs/supervisor.log 2>&1 &
+```
+
+**Status check:**
+```bash
+tail -1 /root/dslv-zpdi/logs/health.jsonl | python3 -m json.tool
+# Healthy: sensor_alive=true, wss_connected=true, gps_fix present
+```
+
+**Web dashboard URL** (on device or LAN):
+```
+http://<device-ip>:8080/
+```
+
+**Auto-boot (Termux:Boot):**
+Give Termux and Termux:Boot unrestricted battery usage in Android Settings.
+The boot script acquires a wake-lock, clears stale locks, and launches
+`supervisor.sh` in an independent proot session.
 
 ### Node Receiver API (SPEC-014)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/ingest` | POST | JSON telemetry from any swarm node |
-| `/api/v1/ingest/radoneye` | POST | EcoSense RadonEye Pro staging (SPEC-015 pending) |
+| `/api/v1/ingest` | POST | JSON telemetry from any swarm node (legacy HTTP) |
+| `/api/v1/ingest/radoneye` | POST | EcoSense RadonEye Pro staging (SPEC-015) |
 | `/api/v1/health` | GET | Service health + HDF5 writer stats |
-
-**RadonEye Pro integration path** (future — SPEC-015 pending):
-```json
-POST http://10.42.0.1:5775/api/v1/ingest/radoneye
-{
-  "source": "EcoSense_RadonEye_Pro",
-  "radon_bq_m3": 12.5,
-  "timestamp_utc": 1748560000.0,
-  "unit_id": "RE200-XXXXXX"
-}
-```
-Packets stage to `output/secondary/radoneye_staging.jsonl` until SPEC-015 is ratified.
+| `ws://<host>:8443/ingest` | WS | WebSocket ingest — Tier-2 mobile daemon primary path |
 
 ---
 
