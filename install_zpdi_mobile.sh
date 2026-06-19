@@ -1,142 +1,270 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# dslv-zpdi Mobile Tier-2 Automated Deployment Script
-# Execute natively in Termux to transform an Android device into a production node.
+# dslv-zpdi Mobile Tier-2 Automated Deployment Script (Rev 5)
+#
+# Run natively in Termux (NOT inside proot) to deploy a production mobile node.
+# This script sets up the full three-service stack:
+#   • tier1_ingestion_server.py  — local WSS receiver (port 8443)
+#   • zpdi_mobile_node.py        — Tier-2 mobile daemon (sensor collection)
+#   • tools/dashboard/web_server.py — Flask status dashboard (port 8080)
+#
+# All three are managed by supervisor.sh inside a persistent proot session
+# and auto-started on boot via Termux:Boot.
+#
+# Prerequisites: Termux, Termux:API, Termux:Boot installed from F-Droid.
 
 set -euo pipefail
 
 LOG_FILE="$HOME/install_zpdi.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+REPO_URL="https://github.com/DynoGator/dslv-zpdi.git"
+PROJECT_DIR="/root/dslv-zpdi"
+PROOT_DISTRO="/data/data/com.termux/files/usr/bin/proot-distro"
+
 echo "======================================================="
-echo "   dslv-zpdi Mobile Node Automated Installer (Rev 4)   "
+echo "   dslv-zpdi Mobile Node Automated Installer (Rev 5)   "
 echo "======================================================="
 echo "[*] Starting deployment at $(date)"
+echo "[*] Log: $LOG_FILE"
+echo ""
 
-# 1. System Preparation
-echo "[*] Enforcing Termux Storage Setup..."
+# ---------------------------------------------------------------------------
+# 1. Termux host setup
+# ---------------------------------------------------------------------------
+echo "[1/7] Termux host setup..."
 termux-setup-storage || true
-sleep 2
 
-echo "[*] Requesting Android Wake-Lock..."
-termux-wake-lock || echo "[!] WARNING: termux-wake-lock failed. Install Termux:API."
+echo "  [*] Requesting wake-lock..."
+termux-wake-lock || echo "  [!] termux-wake-lock failed — install Termux:API from F-Droid"
 
-# 2. Dependency Management
-echo "[*] Updating Termux pkg repositories..."
-pkg update -y
+echo "  [*] Updating package lists..."
+pkg update -y -o Dpkg::Options::="--force-confold"
 
-echo "[*] Installing Termux dependencies (proot-distro, termux-api, git, openssl)..."
+echo "  [*] Installing Termux host packages..."
 pkg install -y proot-distro termux-api git openssl
 
-# 3. PRoot Debian Configuration
-echo "[*] Installing/Verifying Debian PRoot..."
-proot-distro install debian || echo "[*] Debian already installed."
+# ---------------------------------------------------------------------------
+# 2. PRoot Debian installation
+# ---------------------------------------------------------------------------
+echo ""
+echo "[2/7] PRoot Debian setup..."
+if "$PROOT_DISTRO" list 2>/dev/null | grep -q "^debian"; then
+    echo "  [*] Debian proot already installed."
+else
+    echo "  [*] Installing Debian proot..."
+    "$PROOT_DISTRO" install debian
+fi
 
-# 4. Constructing PRoot execution bridge
-BOOTSTRAP_SCRIPT="$HOME/bootstrap_proot.sh"
-cat << 'EOF' > "$BOOTSTRAP_SCRIPT"
+# ---------------------------------------------------------------------------
+# 3. Debian environment setup (runs inside proot)
+# ---------------------------------------------------------------------------
+echo ""
+echo "[3/7] Configuring Debian proot environment..."
+
+BOOTSTRAP_SCRIPT="$HOME/.zpdi_bootstrap.sh"
+cat << 'PROOT_EOF' > "$BOOTSTRAP_SCRIPT"
 #!/bin/bash
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[*] [Debian] Updating apt repositories..."
-apt-get update -y
-echo "[*] [Debian] Installing build dependencies..."
-apt-get install -y python3 python3-venv python3-dev git build-essential libhdf5-dev pkg-config cmake sqlite3 curl openssl
+echo "  [proot] Updating apt..."
+apt-get update -y -qq
 
-if [ ! -d "/root/dslv-zpdi" ]; then
-    echo "[*] [Debian] Cloning repository..."
-    # Replace with the actual repository URL once deployed
+echo "  [proot] Installing build dependencies..."
+apt-get install -y -qq \
+    python3 python3-venv python3-dev python3-pip \
+    git build-essential \
+    libhdf5-dev hdf5-tools \
+    pkg-config cmake sqlite3 \
+    curl openssl
+
+echo "  [proot] Cloning or updating repository..."
+if [ ! -d "/root/dslv-zpdi/.git" ]; then
     git clone https://github.com/DynoGator/dslv-zpdi.git /root/dslv-zpdi
 else
-    echo "[*] [Debian] Repository exists. Pulling latest..."
     cd /root/dslv-zpdi
-    git fetch && git pull
+    git fetch origin
+    git reset --hard origin/main
 fi
 
 cd /root/dslv-zpdi
 
-echo "[*] [Debian] Setting up Python virtual environment..."
-python3 -m venv .venv
-source .venv/bin/activate
+echo "  [proot] Creating Python virtual environment..."
+python3 -m venv .venv --upgrade-deps
 
-echo "[*] [Debian] Installing Python dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+echo "  [proot] Installing package in editable mode with dev extras..."
+.venv/bin/pip install --quiet --upgrade pip
+.venv/bin/pip install --quiet -e ".[dev]"
 
-echo "[*] [Debian] Generating secure .env..."
+echo "  [proot] Verifying package version..."
+.venv/bin/python -c "import dslv_zpdi; print('  [proot] dslv-zpdi version:', dslv_zpdi.__version__)"
+
+echo "  [proot] Creating runtime directories..."
+mkdir -p data logs output/primary output/secondary
+
+echo "  [proot] Generating .env (preserving existing)..."
 if [ ! -f ".env" ]; then
     AES_KEY=$(openssl rand -base64 32)
     HMAC_SECRET=$(openssl rand -hex 32)
-    cat <<ENV_EOF > .env
-ZPDI_LOG_LEVEL=INFO
-ZPDI_STREAM_DELAY_MS=250
-ZPDI_NODE_ID=dslv-zpdi/mobile-tier2-autodeploy
-ZPDI_AES_KEY=${AES_KEY}
+    cat > .env << ENV_EOF
+# dslv-zpdi Mobile Node — generated by install_zpdi_mobile.sh Rev 5
+# $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# --- GitHub integration ---
+GITHUB_PAT=
+GITHUB_REMOTE_URL=https://github.com/DynoGator/dslv-zpdi.git
+
+# --- Node identity ---
+ZPDI_NODE_ID=dslv-zpdi/mobile-tier2
+
+# --- Tier-1 WSS ingestion server (local) ---
+ZPDI_SERVER_HOST=0.0.0.0
+ZPDI_SERVER_PORT=8443
+
+# --- Mobile daemon WSS endpoint (points at local tier1 server) ---
+ZPDI_WSS_URI=ws://127.0.0.1:8443/ingest
+ZPDI_WSS_TOKEN=
+ZPDI_WSS_CA_BUNDLE=
+
+# --- Payload crypto (generated at install time) ---
+# To disable crypto: leave ZPDI_HMAC_SECRET and ZPDI_AES_KEY empty.
+# These must match any upstream Tier-1 server that receives payloads.
 ZPDI_HMAC_SECRET=${HMAC_SECRET}
-ZPDI_WSS_URI=wss://edge.placeholder.invalid:8443/ingest
+ZPDI_AES_KEY=${AES_KEY}
+
+# --- Local storage paths ---
+ZPDI_HDF5_PATH=./data/zpdi_stream.h5
+ZPDI_SQLITE_PATH=./data/zpdi_cache.db
+ZPDI_FALLBACK_LOG=./logs/zpdi_fallback.jsonl
+ZPDI_HEALTH_LOG=./logs/health.jsonl
+
+# --- Sensor collection ---
+ZPDI_STREAM_DELAY_MS=250
+
+# --- Flask web dashboard ---
+DSLV_WEBDASH_HOST=0.0.0.0
+DSLV_WEBDASH_PORT=8080
+DSLV_PRIMARY_OUTPUT_DIR=./output/primary
+DSLV_SECONDARY_OUTPUT_DIR=./output/secondary
 ENV_EOF
-    echo "[*] [Debian] .env generated securely."
+    echo "  [proot] .env generated with fresh crypto keys."
 else
-    echo "[*] [Debian] .env already exists. Preserving."
+    echo "  [proot] .env already exists — preserving."
+    # Ensure required keys are present (non-destructive append for missing keys).
+    add_if_missing() {
+        local key="$1" val="$2"
+        grep -q "^${key}=" .env 2>/dev/null || echo "${key}=${val}" >> .env
+    }
+    add_if_missing ZPDI_SERVER_HOST "0.0.0.0"
+    add_if_missing ZPDI_SERVER_PORT "8443"
+    add_if_missing ZPDI_WSS_URI "ws://127.0.0.1:8443/ingest"
+    add_if_missing ZPDI_HDF5_PATH "./data/zpdi_stream.h5"
+    add_if_missing ZPDI_SQLITE_PATH "./data/zpdi_cache.db"
+    add_if_missing ZPDI_FALLBACK_LOG "./logs/zpdi_fallback.jsonl"
+    add_if_missing ZPDI_HEALTH_LOG "./logs/health.jsonl"
+    add_if_missing DSLV_WEBDASH_HOST "0.0.0.0"
+    add_if_missing DSLV_WEBDASH_PORT "8080"
+    add_if_missing DSLV_PRIMARY_OUTPUT_DIR "./output/primary"
+    add_if_missing DSLV_SECONDARY_OUTPUT_DIR "./output/secondary"
+    echo "  [proot] .env patched with any missing keys."
 fi
-EOF
+
+echo "  [proot] Running test suite smoke check..."
+DEV_SIMULATOR=1 .venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -5
+
+echo "  [proot] Debian setup complete."
+PROOT_EOF
 
 chmod +x "$BOOTSTRAP_SCRIPT"
-
-echo "[*] Bridging into Debian PRoot..."
-proot-distro login debian -- bash "$BOOTSTRAP_SCRIPT"
-
-# 5. Configuration & Termux:Boot Hooks
-echo "[*] Securing Termux:Boot persistence layer..."
-mkdir -p "$HOME/.termux/boot"
-
-# We must ensure the boot script exists in the repository, but since the
-# repository is in PRoot (/root/dslv-zpdi), we can't easily symlink across PRoot
-# boundaries safely for Termux:Boot. Instead, we extract the daemon launcher directly
-# into the Termux boot folder.
-
-cat << 'BOOT_EOF' > "$HOME/.termux/boot/99-start-zpdi.sh"
-#!/data/data/com.termux/files/usr/bin/bash
-# dslv-zpdi Termux:Boot auto-start script (Autogenerated)
-set -euo pipefail
-
-BOOT_LOG="$HOME/.termux/boot/zpdi-boot.log"
-PROOT_DISTRO="/data/data/com.termux/files/usr/bin/proot-distro"
-PROJECT_DIR="/root/dslv-zpdi"
-SUPERVISOR="$PROJECT_DIR/supervisor.sh"
-
-echo "$(date '+%Y-%m-%d %H:%M:%S') [zpdi-boot] Boot event received" >> "$BOOT_LOG"
-
-if command -v termux-wake-lock >/dev/null 2>&1; then
-    termux-wake-lock
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [zpdi-boot] wake-lock acquired" >> "$BOOT_LOG"
-fi
-
-pkill -SIGTERM -f "supervisor.sh" 2>/dev/null || true
-pkill -SIGTERM -f "zpdi_mobile_node.py" 2>/dev/null || true
-sleep 1
-pkill -SIGKILL -f "zpdi_mobile_node.py" 2>/dev/null || true
-
-# Clear stale HDF5 lock in PRoot
-$PROOT_DISTRO login debian -- h5clear -s "$PROJECT_DIR/data/zpdi_stream.h5" 2>/dev/null || true
-
-nohup "$PROOT_DISTRO" login debian -- bash "$SUPERVISOR" >> "$BOOT_LOG" 2>&1 &
-echo "$(date '+%Y-%m-%d %H:%M:%S') [zpdi-boot] supervisor launched (proot PID=$!)" >> "$BOOT_LOG"
-BOOT_EOF
-
-chmod +x "$HOME/.termux/boot/99-start-zpdi.sh"
-
-echo "[*] Cleaning up temporary artifacts..."
+"$PROOT_DISTRO" login debian -- bash "$BOOTSTRAP_SCRIPT"
 rm -f "$BOOTSTRAP_SCRIPT"
 
-# 6. Verification
+# ---------------------------------------------------------------------------
+# 4. Termux:Boot persistence
+# ---------------------------------------------------------------------------
+echo ""
+echo "[4/7] Installing Termux:Boot auto-start..."
+
+mkdir -p "$HOME/.termux/boot"
+
+# Copy the canonical boot script from the repo (stays in sync with updates).
+"$PROOT_DISTRO" login debian -- cp \
+    "$PROJECT_DIR/termux-boot/99-start-zpdi.sh" \
+    /dev/null   # placeholder — actual copy done below via bind path
+
+# The boot script lives inside proot at /root/dslv-zpdi/termux-boot/
+# but Termux:Boot runs outside proot, so we copy it to the Termux home.
+BOOT_SRC_INSIDE_PROOT="$PROJECT_DIR/termux-boot/99-start-zpdi.sh"
+BOOT_DST="$HOME/.termux/boot/99-start-zpdi.sh"
+
+"$PROOT_DISTRO" login debian -- cat "$BOOT_SRC_INSIDE_PROOT" > "$BOOT_DST"
+chmod +x "$BOOT_DST"
+echo "  [*] Boot script installed: $BOOT_DST"
+
+# ---------------------------------------------------------------------------
+# 5. Runtime directory setup (Termux-side)
+# ---------------------------------------------------------------------------
+echo ""
+echo "[5/7] Verifying runtime directories inside proot..."
+"$PROOT_DISTRO" login debian -- bash -c "
+    cd $PROJECT_DIR
+    mkdir -p data logs output/primary output/secondary
+    echo '  [proot] Runtime directories OK.'
+"
+
+# ---------------------------------------------------------------------------
+# 6. Clear any stale HDF5 lock
+# ---------------------------------------------------------------------------
+echo ""
+echo "[6/7] Clearing any stale HDF5 SWMR lock..."
+"$PROOT_DISTRO" login debian -- bash -c "
+    if [ -f $PROJECT_DIR/data/zpdi_stream.h5 ]; then
+        h5clear -s $PROJECT_DIR/data/zpdi_stream.h5 2>/dev/null && echo '  [proot] HDF5 lock cleared.' || true
+    else
+        echo '  [proot] No HDF5 file yet — skipping.'
+    fi
+"
+
+# ---------------------------------------------------------------------------
+# 7. Post-install summary
+# ---------------------------------------------------------------------------
+echo ""
+echo "[7/7] Post-install verification..."
+"$PROOT_DISTRO" login debian -- bash -c "
+    cd $PROJECT_DIR
+    source .venv/bin/activate
+    python -c 'import dslv_zpdi; print(\"  Package version:\", dslv_zpdi.__version__)'
+    echo '  Services managed by supervisor.sh:'
+    echo '    tier1_ingestion_server.py  → ws://0.0.0.0:8443'
+    echo '    zpdi_mobile_node.py        → sensor collection + HDF5'
+    echo '    tools/dashboard/web_server → http://0.0.0.0:8080'
+"
+
+echo ""
 echo "======================================================="
-echo "   [SUCCESS] dslv-zpdi Mobile Node Deployed   "
+echo "   [SUCCESS] dslv-zpdi Mobile Node v5.0.0 Deployed    "
 echo "======================================================="
 echo ""
-echo "  Persistence configured via ~/.termux/boot/99-start-zpdi.sh"
-echo "  Secure crypto payloads configured in PRoot ~/.env"
+echo "  Stack services:"
+echo "    Tier-1 WSS server  :8443  (ws://127.0.0.1:8443/ingest)"
+echo "    Mobile daemon             (zpdi_mobile_node.py)"
+echo "    Web dashboard      :8080  (http://<device-ip>:8080)"
 echo ""
-echo "  ACTION REQUIRED: Reboot Android device to validate"
-echo "  Termux:Boot daemon recovery."
+echo "  Auto-start on boot:"
+echo "    $BOOT_DST"
+echo ""
+echo "  Manual start (from inside proot):"
+echo "    cd $PROJECT_DIR"
+echo "    nohup bash supervisor.sh >> logs/supervisor.log 2>&1 &"
+echo ""
+echo "  Manual start (from Termux, outside proot):"
+echo "    bash $PROJECT_DIR/launch_daemon.sh"
+echo ""
+echo "  Status check (inside proot):"
+echo "    tail -1 $PROJECT_DIR/logs/health.jsonl | python3 -m json.tool"
+echo ""
+echo "  REQUIRED: Disable battery optimisation for Termux and Termux:Boot"
+echo "  in Android Settings → Apps → Battery → Unrestricted."
+echo ""
+echo "  Log: $LOG_FILE"
 echo "======================================================="
