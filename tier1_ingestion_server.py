@@ -33,6 +33,7 @@ import logging
 import os
 import ssl
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -61,8 +62,40 @@ SERVER_PORT: int = int(os.environ.get("ZPDI_SERVER_PORT", "8443"))
 TLS_CERT: str | None = os.environ.get("ZPDI_SERVER_TLS_CERT")
 TLS_KEY: str | None = os.environ.get("ZPDI_SERVER_TLS_KEY")
 SECONDARY_LOG_PATH = Path(os.environ.get("ZPDI_SECONDARY_LOG", "./logs/tier1_secondary.jsonl"))
+_NODE_REGISTRY_PATH = Path(
+    os.environ.get("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary")
+) / "node_registry.jsonl"
 
 _secondary_log = SecondaryLog(SECONDARY_LOG_PATH)
+
+# Throttle node-registry writes: update at most once per 30 s per node_id.
+_node_last_registered: dict[str, float] = {}
+_NODE_REGISTRY_INTERVAL = 30.0
+
+
+def _register_node_seen(node_id: str) -> None:
+    """Update output/secondary/node_registry.jsonl so the web dashboard shows this node."""
+    now = time.time()
+    if now - _node_last_registered.get(node_id, 0) < _NODE_REGISTRY_INTERVAL:
+        return
+    _node_last_registered[node_id] = now
+    try:
+        _NODE_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        entries: dict[str, dict] = {}
+        if _NODE_REGISTRY_PATH.exists():
+            with _NODE_REGISTRY_PATH.open() as fh:
+                for line in fh:
+                    try:
+                        e = json.loads(line)
+                        entries[e.get("node_id", "?")] = e
+                    except Exception:
+                        pass
+        entries[node_id] = {"node_id": node_id, "last_seen_utc": now}
+        with _NODE_REGISTRY_PATH.open("w") as fh:
+            for entry in entries.values():
+                fh.write(json.dumps(entry) + "\n")
+    except Exception as exc:
+        log.debug("node registry update failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +253,7 @@ def _process_message(raw_message: str | bytes) -> _IngestResult:
         "ACCEPTED node=%s modality=%s r_smooth=%.3f stream=%s",
         node, modality, r_smooth, route.get("stream", "?"),
     )
+    _register_node_seen(node)
     return _IngestResult(True, "ok", node=node, modality=modality, route_stream=route.get("stream", ""))
 
 
