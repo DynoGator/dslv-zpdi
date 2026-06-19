@@ -34,6 +34,11 @@ dist/
 # agent workspaces (not source of truth)
 GEMINI-HOME/
 CLAUDE-HOME/
+.grok/
+
+# runtime artifacts
+logs/
+*.pid
 
 # user-level runtime config (example stays in tree)
 config/sensor_location.yaml
