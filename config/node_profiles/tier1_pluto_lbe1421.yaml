@@ -11,7 +11,7 @@ converter:
 hardware:
   pps:
     canonical_host_path: /dev/pps0
-    required: true
+    required: false
     sdr_pps_support: unverified
   reference_clock:
     connector_label_observed: 10M
