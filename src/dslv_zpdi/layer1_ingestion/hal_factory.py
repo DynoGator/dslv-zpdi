@@ -115,7 +115,7 @@ def get_tier1_hal(
         HardwareInitializationError: Backend cannot be initialized.
         QualificationError: If fail_closed and initial qualification fails.
     """
-    if simulator or profile.trust.get("allow_simulator_fallback", False):
+    if simulator or profile.trust.allow_simulator_fallback:
         simulator = True
 
     # Timing authority
