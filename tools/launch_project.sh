@@ -12,7 +12,7 @@
 set -Eeuo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENV="$REPO/venv"
+VENV="$REPO/.venv"
 LOG="$REPO/logs/launch.log"
 DASH="$REPO/tools/dashboard/launch.sh"
 

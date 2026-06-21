@@ -22,12 +22,18 @@ for proc in gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx airspy_rx hackrf
 done
 
 # 2. Verify PlutoSDR+ reachability (non-fatal)
-PLUTO_URI="${DSLV_SDR_URI:-ip:192.168.3.80}"
+# Try USB context first, then common network addresses used by Pluto/LibreSDR.
+PLUTO_REACHABLE=0
 if command -v iio_info >/dev/null 2>&1; then
-    if iio_info -u "$PLUTO_URI" >/dev/null 2>&1; then
-        LOG "PlutoSDR+ reachable at $PLUTO_URI"
-    else
-        WARN "PlutoSDR+ not reachable at $PLUTO_URI (check network / power)"
+    for PLUTO_URI in "${DSLV_SDR_URI:-usb:}" "ip:192.168.2.1" "ip:192.168.3.80"; do
+        if iio_info -u "$PLUTO_URI" >/dev/null 2>&1; then
+            LOG "PlutoSDR+ reachable at $PLUTO_URI"
+            PLUTO_REACHABLE=1
+            break
+        fi
+    done
+    if [ "$PLUTO_REACHABLE" -eq 0 ]; then
+        WARN "PlutoSDR+ not reachable via usb:/192.168.2.1/192.168.3.80 (check network / power)"
     fi
 else
     WARN "iio_info not installed; cannot verify PlutoSDR+"

@@ -47,7 +47,7 @@ sdr:
   rf_bandwidth_hz: 10000000
   sample_rate_hz: 10000000
   transmit_enabled: false
-  uri: 'usb:'
+  uri: '${DSLV_SDR_URI:-usb:}'
 timing:
   authority: lbe1421
   max_fix_age_s: 10.0
@@ -58,7 +58,7 @@ timing:
   reference_frequency_hz: 10000000
 trust:
   allow_simulator_fallback: false
-  fail_closed: false
+  fail_closed: true
   require_calibration_manifest: false
   require_firmware_fingerprint: false
   require_production_hmac_key: false

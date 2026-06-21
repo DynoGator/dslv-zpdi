@@ -64,7 +64,7 @@ class PipelineConfig(BaseModel):
     num_samples: int = 262144
     ingest_interval_sec: float = 0.1
     mode: str = "sdr"
-    output_dir: str = "/home/dynogator/dslv-zpdi/output"
+    output_dir: str = Field(default_factory=lambda: os.getenv("DSLV_OUTPUT_DIR", "./output"))
 
 
 class Config(BaseModel):

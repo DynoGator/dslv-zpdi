@@ -1,5 +1,6 @@
 #!/bin/bash
-cd /root/dslv-zpdi
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO"
 source .venv/bin/activate
 echo "Starting dslv-zpdi daemon..."
 python3 zpdi_mobile_node.py

@@ -623,6 +623,33 @@ SyslogIdentifier=dslv-zpdi
 WantedBy=multi-user.target
 UNIT
 
+    # 4b. Web dashboard service (HTML telemetry view on port 8080)
+    log_info "Installing dslv-zpdi-webdash.service"
+    cat > /etc/systemd/system/dslv-zpdi-webdash.service <<UNIT
+[Unit]
+Description=DSLV-ZPDI Web Dashboard (port 8080)
+After=network.target dslv-zpdi.service
+Wants=dslv-zpdi.service
+
+[Service]
+Type=simple
+User=${REAL_USER}
+Group=${REAL_USER}
+WorkingDirectory=${INSTALL_DIR}
+ExecStart=${INSTALL_DIR}/.venv/bin/python -m dashboard.web_server
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=${INSTALL_DIR}/tools
+Environment=DSLV_PRIMARY_OUTPUT_DIR=${INSTALL_DIR}/output/primary
+Environment=DSLV_SECONDARY_OUTPUT_DIR=${INSTALL_DIR}/output/secondary
+Environment=DSLV_WEBDASH_HOST=0.0.0.0
+Environment=DSLV_WEBDASH_PORT=8080
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
     # 5. Sysctl tuning — lower swap pressure, larger network buffers, fs hardening
     log_info "Installing sysctl tuning /etc/sysctl.d/99-dslv-zpdi.conf"
     cat > /etc/sysctl.d/99-dslv-zpdi.conf <<'SYSCTL'
@@ -711,37 +738,28 @@ AUDIT
 
     # 11. Air-Gap Hardening (Day 3) -- compute FIRMWARE_CONFIG here too,
     #     since the Tier 1 block (where it was defined first) may not have run.
+    #     NOTE: retained as a no-op on this node because WiFi/Ethernet are
+    #     required for web-sourced telemetry and dashboard access.
     FIRMWARE_CONFIG="${FIRMWARE_CONFIG:-/boot/firmware/config.txt}"
     [[ -f "$FIRMWARE_CONFIG" ]] || FIRMWARE_CONFIG="/boot/config.txt"
-    log_info "Disabling WiFi/Bluetooth for Air-Gap (SPEC-011.3)"
-    if [[ -f "$FIRMWARE_CONFIG" ]]; then
-        if ! grep -q "dtoverlay=disable-wifi" "$FIRMWARE_CONFIG"; then
-            cat >> "$FIRMWARE_CONFIG" << 'EOF'
+    log_info "Air-gap WiFi/BT disable skipped (network telemetry required)"
 
-# DSLV-ZPDI Air-Gap Configuration
-dtoverlay=disable-wifi
-dtoverlay=disable-bt
-EOF
-            log_ok "WiFi/BT disabled in $FIRMWARE_CONFIG"
-        fi
-    fi
-
-    # 11b. Pi 5 PWM fan curve -- fan kicks on early so the SoC stays cool
-    #      under sustained pipeline load.  40 C low / 50 C half / 60 C full.
+    # 11b. Pi 5 PWM fan curve -- aggressive ramp; full speed by 40 C.
     #      Hysteresis keeps the fan from chattering on the boundaries.
     if [[ -f "$FIRMWARE_CONFIG" ]]; then
         if ! grep -q 'DSLV-ZPDI Pi 5 PWM fan curve' "$FIRMWARE_CONFIG"; then
             cat >> "$FIRMWARE_CONFIG" <<'FAN'
 
 # DSLV-ZPDI Pi 5 PWM fan curve (Rev 5.0.0-PLUTO-LBE1421)
-# 40 C : fan kicks on (low)
-# 50 C : half power
-# 60 C : full blast
-# Hysteresis 5 C so the fan does not chatter on the boundaries.
-dtparam=fan_temp0=40000,fan_temp0_hyst=5000
-dtparam=fan_temp1=50000,fan_temp1_hyst=5000
-dtparam=fan_temp2=60000,fan_temp2_hyst=5000
-dtparam=fan_temp3=60000,fan_temp3_hyst=2000
+# 35 C : fan kicks on (low)
+# 37 C : medium
+# 39 C : high
+# 40 C : full blast (100%); maintained at/above 40 C
+# Hysteresis 1 C so the fan does not chatter on the boundaries.
+dtparam=fan_temp0=35000,fan_temp0_hyst=1000
+dtparam=fan_temp1=37000,fan_temp1_hyst=1000
+dtparam=fan_temp2=39000,fan_temp2_hyst=1000
+dtparam=fan_temp3=40000,fan_temp3_hyst=1000
 FAN
             log_ok "PWM fan curve appended to $FIRMWARE_CONFIG (active after reboot)"
         else
