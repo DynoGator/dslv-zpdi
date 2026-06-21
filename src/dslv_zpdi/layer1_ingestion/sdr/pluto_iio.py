@@ -210,11 +210,16 @@ class PlutoIioBackend(SdrBackend):
         rx_chan.attrs["sampling_frequency"].value = str(int(profile.sample_rate_sps))
 
         # Read back applied values
+        # Strip unit suffix (e.g., "62.000000 dB" -> 62.0)
+        gain_str = rx_chan.attrs["hardwaregain"].value.strip()
+        if gain_str.endswith(" dB"):
+            gain_str = gain_str[:-3].strip()
+
         applied = AppliedConfiguration(
             center_frequency_hz=int(rx_lo.attrs["frequency"].value),
             sample_rate_sps=int(rx_chan.attrs["sampling_frequency"].value),
             bandwidth_hz=int(rx_chan.attrs["rf_bandwidth"].value),
-            gain_db=float(rx_chan.attrs["hardwaregain"].value),
+            gain_db=float(gain_str),
             gain_mode=rx_chan.attrs["gain_control_mode"].value,
             receive_channels=profile.receive_channels,
             transmit_enabled=False,
