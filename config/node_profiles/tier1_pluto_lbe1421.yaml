@@ -51,7 +51,7 @@ sdr:
 timing:
   authority: lbe1421
   max_fix_age_s: 10.0
-  nmea_port: /dev/ttyACM0
+  nmea_port: /dev/null
   pps_degraded_ns: 1000.0
   pps_device: /dev/pps0
   pps_kill_ns: 10000.0
