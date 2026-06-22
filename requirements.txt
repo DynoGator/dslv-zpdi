@@ -60,7 +60,7 @@ pycparser==3.0
     # via cffi
 pydantic==2.13.4
     # via dslv-zpdi (pyproject.toml)
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pyfiglet==1.0.4
     # via dslv-zpdi (pyproject.toml)
