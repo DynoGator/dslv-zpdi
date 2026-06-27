@@ -589,8 +589,8 @@ UNIT
     log_info "Installing dslv-zpdi.service (main pipeline)"
     PIPE_EXEC="${INSTALL_DIR}/.venv/bin/python -m dslv_zpdi.main_pipeline"
     PIPE_ENV=""
-    if [[ "$SIMULATOR_MODE" -eq 1 ]] || [[ -z "${GPSDO_PRESENT:-}" ]]; then
-        # Default to simulator mode until GPSDO delivery is confirmed
+    if [[ "$SIMULATOR_MODE" -eq 1 ]]; then
+        # Use simulator mode only if explicitly requested via --simulator flag
         PIPE_EXEC="${PIPE_EXEC} --simulator"
         PIPE_ENV="Environment=DEV_SIMULATOR=1"
     fi
