@@ -48,10 +48,15 @@ DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates
 └────────────────────────┬─────────────────────────────────────────┘
                          │ Payload (JSON)
 ┌────────────────────────▼─────────────────────────────────────────┐
-│  LAYER 2 — CORE                                                  │
-│  KCET-ATLAS Kuramoto coherence engine (SPEC-006/009)            │
-│  Baseline FSM: NOT_STARTED → LEARNING → LOCKED                  │
-│  Trust wiring · Swarm integrity                                  │
+│  LAYER 2 — CORE  ( 🍄 OPHIOCORDYCEPS 🍄 )                        │
+│                                                                  │
+│            .-._                                                  │
+│           {_} _.-_      KCET-ATLAS Kuramoto coherence engine     │
+│          .-. { _}       (SPEC-006/009)                           │
+│          `-' .-.        Baseline FSM:                            │
+│              `-'        NOT_STARTED → LEARNING → LOCKED          │
+│                                                                  │
+│  Trust wiring · Swarm integrity · Resistance is futile           │
 └────────────────────────┬─────────────────────────────────────────┘
                          │ RoutingDecision
 ┌────────────────────────▼─────────────────────────────────────────┐
