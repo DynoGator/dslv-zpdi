@@ -14,7 +14,7 @@
 # Release notes (5.0.0):
 #   - Canonical Tier-1 SDR is now the HamGeek PlutoSDR+ (libiio / AD9361)
 #   - LBE-1421 GPSDO provides 10 MHz reference + 1 PPS
-#   - HackRF support is legacy/optional only
+#   - PlutoSDRplus support is legacy/optional only
 #   - Treats `pip check` as warn-only (Trixie venvs flag spurious dist conflicts)
 #   - Runs Tier 1 hardware audit non-fatally in --simulator mode
 #   - Soft-fails on usbguard/auditd/apt-mark hold gaps
@@ -278,7 +278,7 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
         if ! grep -q "refclock PPS /dev/pps0" /etc/chrony/chrony.conf 2>/dev/null; then
             cat >> /etc/chrony/chrony.conf << 'EOF'
 
-# DSLV-ZPDI RF Metrology Configuration (Rev 4.1+)
+# DSLV-ZPDI RF Metrology Configuration (Rev 5.0+)
 # Absolute UTC via Hardware PPS - prioritizes GPSDO over network
 refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
 EOF
@@ -297,7 +297,7 @@ EOF
             if ! grep -q "dtoverlay=pps-gpio" "$FIRMWARE_CONFIG"; then
                 cat >> "$FIRMWARE_CONFIG" << 'EOF'
 
-# DSLV-ZPDI PPS Configuration (Rev 4.1+)
+# DSLV-ZPDI PPS Configuration (Rev 5.0+)
 # WARNING: Pi 5 RP1 uses 3.3V logic. Verify GPSDO output voltage before connecting.
 dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
 EOF
@@ -377,7 +377,7 @@ VENV_DIR="$INSTALL_DIR/.venv"
 log_info "Creating virtual environment at $VENV_DIR"
 run_as_real_user "python3 -m venv --clear '$VENV_DIR'" || log_fail "venv creation failed"
 
-# 2. SoapySDR Venv Linkage Logic (Rev 4.3 feature)
+# 2. SoapySDR Venv Linkage Logic (Rev 5.0 feature)
 # Trixie/Bookworm Python packages are managed; we link them to venv for tier1.
 if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     log_info "Linking system SoapySDR to virtual environment"
@@ -523,7 +523,7 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
     log_info "Applying system hardening"
 
     # 1. Kernel & firmware & timing-stack freeze — so unattended upgrades
-    #    never break PPS/HackRF/chrony timing.
+    #    never break PPS/PlutoSDRplus/chrony timing.
     HOLD_PKGS=(
         linux-image-rpi-2712 linux-image-rpi-v8
         linux-headers-rpi-2712 linux-headers-rpi-v8
@@ -688,18 +688,18 @@ AUDIT
         log_warn "auditd not installed -- skipping audit rule install"
     fi
 
-    # 10b. HackRF udev rules -- ship the project's rules from
-    #      config/os-hardening/99-hackrf.rules so the device is usable
+    # 10b. PlutoSDRplus udev rules -- ship the project's rules from
+    #      config/os-hardening/99-PlutoSDRplus.rules so the device is usable
     #      by anyone in the plugdev group without sudo.
-    if [[ -f "${INSTALL_DIR}/config/os-hardening/99-hackrf.rules" ]]; then
-        install -m 0644 "${INSTALL_DIR}/config/os-hardening/99-hackrf.rules" \
-            /etc/udev/rules.d/99-dslv-hackrf.rules
+    if [[ -f "${INSTALL_DIR}/config/os-hardening/99-PlutoSDRplus.rules" ]]; then
+        install -m 0644 "${INSTALL_DIR}/config/os-hardening/99-PlutoSDRplus.rules" \
+            /etc/udev/rules.d/99-dslv-PlutoSDRplus.rules
         soft "udev rules reloaded" udevadm control --reload-rules
         soft "udev triggered for usb subsystem" udevadm trigger --subsystem-match=usb
-        log_ok "HackRF udev rules installed (/etc/udev/rules.d/99-dslv-hackrf.rules)"
+        log_ok "PlutoSDRplus udev rules installed (/etc/udev/rules.d/99-dslv-PlutoSDRplus.rules)"
     fi
 
-    # 10c. Ensure invoking user is in plugdev so HackRF / serial dongles
+    # 10c. Ensure invoking user is in plugdev so PlutoSDRplus / serial dongles
     #      are accessible without sudo.
     if [[ "$REAL_USER" != "root" ]]; then
         if ! id -nG "$REAL_USER" | tr ' ' '\n' | grep -qx plugdev; then

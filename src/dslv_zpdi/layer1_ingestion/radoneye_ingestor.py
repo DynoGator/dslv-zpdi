@@ -164,7 +164,7 @@ class RadonEyeBleTransport:
         try:
             from bleak import BleakScanner
         except (ImportError, OSError) as exc:
-            # Rev 4.8.x: bleak + dbus/bluez native stack on linux can raise
+            # Rev 5.0.x: bleak + dbus/bluez native stack on linux can raise
             # OSError (or dbus errors surfaced as such) at import time on
             # hosts without bluetooth libs / bus (simulator hosts). Broaden
             # per audit of native guards. SPEC-015.
@@ -188,7 +188,7 @@ class RadonEyeBleTransport:
         try:
             from bleak import BleakClient
         except (ImportError, OSError) as exc:
-            # Rev 4.8.x: guard bare import of BleakClient (native load via dbus)
+            # Rev 5.0.x: guard bare import of BleakClient (native load via dbus)
             # so hosts without bleak/dbus degrade with clear error instead of
             # uncaught exception. SPEC-015.
             logger.error("bleak transport unavailable: %s", exc)
@@ -268,7 +268,7 @@ class RadonEyeBleTransport:
         try:
             from bleak import BleakClient
         except (ImportError, OSError) as exc:
-            # Rev 4.8.x: guard bare import of BleakClient (native load via dbus)
+            # Rev 5.0.x: guard bare import of BleakClient (native load via dbus)
             # so hosts without bleak/dbus degrade with clear error instead of
             # uncaught exception. SPEC-015.
             logger.error("bleak transport unavailable: %s", exc)

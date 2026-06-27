@@ -29,7 +29,7 @@ All Tier 1 field deployments must utilize the following core stack:
 | Component | Model | Role |
 |-----------|-------|------|
 | Compute / Buffer | Raspberry Pi 5 (16GB) | High-bandwidth FFT processing, HDF5 storage |
-| SDR (The Eye) | HackRF One | RF ingestion with 20 MHz bandwidth, CLKIN for GPSDO |
+| SDR (The Eye) | PlutoSDRplus | RF ingestion with 20 MHz bandwidth, CLKIN for GPSDO |
 | Clock Authority | Leo Bodnar LBE-1421 GPSDO | 10 MHz + 1 PPS, USB-C, NMEA telemetry |
 | SDR Antenna | Great Scott Gadgets ANT500 | 75 MHz - 1 GHz coverage |
 | RF Interconnect | SMA Male to SMA Male Coaxial | 50 Ohm, ≤ 1FT |
@@ -42,7 +42,7 @@ All Tier 1 field deployments must utilize the following core stack:
 Physical connections are strictly standardized to bypass the OS kernel for critical timing loops.
 
 ### 3.1 RF Phase Lock (The ADC Slave)
-Connect the SMA cable from the LBE-1421 `Output` port directly to the HackRF One `CLKIN` port. This physically locks the HackRF's sampling rate to the GPS constellation.
+Connect the SMA cable from the LBE-1421 `Output` port directly to the PlutoSDRplus `CLKIN` port. This physically locks the PlutoSDRplus's sampling rate to the GPS constellation.
 
 ### 3.2 OS Timestamping (The Heartbeat)
 - Run a jumper wire from the LBE-1421 `1 PPS` output to the Pi 5's **GPIO Pin 18** (Physical Pin 12).
@@ -71,7 +71,7 @@ refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
 ### 4.2 Application Level (DualStreamRouter)
 
 - **Hardware Agnosticism:** SDR interaction must remain wrapped in `SoapySDR` (SPEC-004A.2).
-- **Forced Clock Assertion:** Before initiating the Kuramoto Coherence Engine, software MUST send `setClockSource("external")` to the HackRF.
+- **Forced Clock Assertion:** Before initiating the Kuramoto Coherence Engine, software MUST send `setClockSource("external")` to the PlutoSDRplus.
 - **Telemetry Verification:** Software should query the LBE-1421's NMEA stream via virtual serial port to verify an active GPS fix before allowing data ingestion.
 
 ---
@@ -82,7 +82,7 @@ refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
 |---------------------|-------------|--------|
 | Leo Bodnar Mini GPSDO | Leo Bodnar LBE-1421 GPSDO | **SUPERSEDED** |
 | Intel i210-T1 NIC | GPSDO 10 MHz reference | **REMOVED** |
-| RTL-SDR (v3/v4) | HackRF One with CLKIN | **TIER 2 ONLY** |
+| RTL-SDR (v3/v4) | PlutoSDRplus with CLKIN | **TIER 2 ONLY** |
 | PTP/IEEE 1588 | GPSDO direct clock injection | **REMOVED** |
 | Mini-USB connections | USB-C connections | **SUPERSEDED** |
 

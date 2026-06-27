@@ -2,7 +2,7 @@
 # DSLV-ZPDI clean-boot launcher
 #
 # Kills every DSLV-ZPDI process (dashboard, pipeline, SDR conflicts),
-# stops the systemd unit chain, validates the venv + HackRF, restarts
+# stops the systemd unit chain, validates the venv + PlutoSDRplus, restarts
 # the chain in order (tuning → preflight → pipeline), then opens the
 # Operations Dashboard in a new terminal.
 #
@@ -55,7 +55,7 @@ pkill -u "$USER" -f 'dslv_zpdi.main_pipeline'    2>/dev/null || true
 pkill -u "$USER" -f 'dslv_zpdi.capture_baseline' 2>/dev/null || true
 
 SDR_PROCS=(gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx
-           airspy_rx hackrf_transfer hackrf_sweep hackrf_spectrum)
+           airspy_rx PlutoSDRplus_transfer PlutoSDRplus_sweep PlutoSDRplus_spectrum)
 for proc in "${SDR_PROCS[@]}"; do
     if pgrep -x "$proc" >/dev/null 2>&1; then
         SAY "  - killing $proc"
@@ -100,39 +100,39 @@ OK "venv python: $PYVER"
          || WARN "dashboard package not importable" )
 sleep 2
 
-# --- 4. HackRF + driver sanity check -----------------------------------
-SAY "step 4/7 :: HackRF and driver sanity"
-if ! command -v hackrf_info >/dev/null 2>&1; then
-    WARN "hackrf-tools not installed (apt install hackrf)"
+# --- 4. PlutoSDRplus + driver sanity check -----------------------------------
+SAY "step 4/7 :: PlutoSDRplus and driver sanity"
+if ! command -v PlutoSDRplus_info >/dev/null 2>&1; then
+    WARN "PlutoSDRplus-tools not installed (apt install PlutoSDRplus)"
 else
-    if HRF_OUT="$(hackrf_info 2>&1)"; then
-        if echo "$HRF_OUT" | grep -q 'Found HackRF'; then
+    if HRF_OUT="$(PlutoSDRplus_info 2>&1)"; then
+        if echo "$HRF_OUT" | grep -q 'Found PlutoSDRplus'; then
             SERIAL=$(echo "$HRF_OUT" | awk -F': *' '/Serial number/{print $2; exit}')
             REV=$(echo   "$HRF_OUT" | awk -F': *' '/Hardware Revision/{print $2; exit}')
             FW=$(echo    "$HRF_OUT" | awk -F': *' '/Firmware Version/{print $2; exit}')
-            OK "HackRF detected: $REV  fw=$FW  s/n=${SERIAL: -12}"
+            OK "PlutoSDRplus detected: $REV  fw=$FW  s/n=${SERIAL: -12}"
         else
-            WARN "hackrf_info succeeded but no device found — check USB cable / power"
+            WARN "PlutoSDRplus_info succeeded but no device found — check USB cable / power"
         fi
     else
-        WARN "hackrf_info failed:"
+        WARN "PlutoSDRplus_info failed:"
         echo "$HRF_OUT" | sed 's/^/    /'
     fi
 fi
 
 if ! groups "$USER" | grep -qw plugdev; then
-    WARN "user $USER not in 'plugdev' group — HackRF may require sudo"
+    WARN "user $USER not in 'plugdev' group — PlutoSDRplus may require sudo"
 else
-    OK "user in 'plugdev' — HackRF usable without sudo"
+    OK "user in 'plugdev' — PlutoSDRplus usable without sudo"
 fi
 
 sleep 3
 
-if [ -e /lib/udev/rules.d/60-libhackrf0.rules ] \
-   || [ -e /etc/udev/rules.d/53-hackrf.rules ]; then
-    OK "HackRF udev rules present"
+if [ -e /lib/udev/rules.d/60-libPlutoSDRplus0.rules ] \
+   || [ -e /etc/udev/rules.d/53-PlutoSDRplus.rules ]; then
+    OK "PlutoSDRplus udev rules present"
 else
-    WARN "no HackRF udev rules found (device may need sudo to open)"
+    WARN "no PlutoSDRplus udev rules found (device may need sudo to open)"
 fi
 sleep 3
 

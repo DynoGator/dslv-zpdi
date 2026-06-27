@@ -2,7 +2,7 @@
 
 **Report Date:** 2026-04-11  
 **Project Phase:** Phase 2A (Hardware Transition)  
-**Revision:** Rev 4.1-PIVOT  
+**Revision:** Rev 5.0-PIVOT  
 **Git Commit:** `1dd700d`  
 **GitHub:** https://github.com/DynoGator/dslv-zpdi  
 
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-The Phase 2A Hardware Timing Refactor has been **successfully completed**. The project has pivoted from the deprecated IT Network Timing architecture (Intel i210-T1 + RTL-SDR) to the RF Metrology Timing architecture (Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO).
+The Phase 2A Hardware Timing Refactor has been **successfully completed**. The project has pivoted from the deprecated IT Network Timing architecture (Intel i210-T1 + RTL-SDR) to the RF Metrology Timing architecture (Raspberry Pi 5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO).
 
 This pivot achieves **hardware-level ADC phase coherence** by injecting an atomic-level reference signal directly into the SDR front-end, eliminating the USB jitter that mathematically invalidated true phase coherence in the previous architecture.
 
@@ -22,31 +22,31 @@ This pivot achieves **hardware-level ADC phase coherence** by injecting an atomi
 
 #### `src/dslv_zpdi/layer1_ingestion/hal_hardware.py`
 **Status:** Complete Rewrite  
-**SPEC-ID:** SPEC-005A.HAL-HW (Rev 4.1-PIVOT)
+**SPEC-ID:** SPEC-005A.HAL-HW (Rev 5.0-PIVOT)
 
 | Aspect | Old (Deprecated) | New (RF Metrology) |
 |--------|------------------|-------------------|
-| SDR Hardware | RTL-SDR (rtlsdr library) | HackRF One (pyhackrf library) |
+| SDR Hardware | RTL-SDR (rtlsdr library) | PlutoSDRplus (pyPlutoSDRplus library) |
 | Timing Method | i210-T1 NIC PTP (IEEE 1588) | GPSDO 10 MHz → CLKIN |
 | Phase Lock | Software timestamp on USB arrival | Hardware ADC phase-lock at analog level |
 | Bandwidth | 2.4 MHz | 20 MHz |
 | Node ID | CM5-ALPHA | PI5-ALPHA |
 
 **Key Implementation Details:**
-- GPSDO 10 MHz reference → HackRF CLKIN port (hardware ADC lock)
+- GPSDO 10 MHz reference → PlutoSDRplus CLKIN port (hardware ADC lock)
 - GPSDO 1 PPS → GPIO 18 (pps-gpio kernel module)
 - Phase extraction from GPS-locked IQ samples
 - `verify_gpsdo_lock()` method for clock source verification
-- Graceful degradation if pyhackrf not installed
+- Graceful degradation if pyPlutoSDRplus not installed
 
 #### `src/dslv_zpdi/layer1_ingestion/hal_simulated.py`
 **Status:** Updated  
-**SPEC-ID:** SPEC-005A.HAL-SIM (Rev 4.1-PIVOT)
+**SPEC-ID:** SPEC-005A.HAL-SIM (Rev 5.0-PIVOT)
 
-- Updated to simulate HackRF + GPSDO stack
+- Updated to simulate PlutoSDRplus + GPSDO stack
 - Simulated GPS-locked IQ samples
 - Added `verify_gpsdo_lock()` for CI/CD testing
-- Default sample rate: 20 MHz (HackRF capability)
+- Default sample rate: 20 MHz (PlutoSDRplus capability)
 
 #### `src/dslv_zpdi/layer1_ingestion/cm5_ingestion.py`
 **Status:** Updated  
@@ -66,11 +66,11 @@ This pivot achieves **hardware-level ADC phase coherence** by injecting an atomi
 **SPEC-ID:** SPEC-004A.1-PROVISION
 
 **New Validation Checks:**
-1. HackRF presence detection (`hackrf_info`)
-2. HackRF clock source verification (`hackrf_debug --clock_source`)
+1. PlutoSDRplus presence detection (`PlutoSDRplus_info`)
+2. PlutoSDRplus clock source verification (`PlutoSDRplus_debug --clock_source`)
 3. PPS device availability (`/dev/pps0`)
-4. udev rules for PPS and HackRF
-5. Python dependencies (`pyhackrf`)
+4. udev rules for PPS and PlutoSDRplus
+5. Python dependencies (`pyPlutoSDRplus`)
 6. Timing health check (`check_timing.py`)
 
 **Output Format:** Structured audit summary with ✅/❌ indicators
@@ -109,7 +109,7 @@ This pivot achieves **hardware-level ADC phase coherence** by injecting an atomi
 **Status:** Updated
 
 **Changes:**
-- Replaced "Intel i210-T1 timing spec" → "HackRF + GPSDO RF Metrology timing"
+- Replaced "Intel i210-T1 timing spec" → "PlutoSDRplus + GPSDO RF Metrology timing"
 - Updated Phase 2A deployment targets
 - Removed references to CM5/i210-T1 as primary hardware
 
@@ -143,7 +143,7 @@ OS Clock Accurate                                            RF Sampling
 ### New Architecture (RF Metrology Timing)
 ```
 ┌─────────────┐     GPIO      ┌──────────────┐    10 MHz     ┌──────────┐
-│ Raspberry   │ ←───────────→ │ Leo Bodnar   │ ←──────────→ │ HackRF   │
+│ Raspberry   │ ←───────────→ │ Leo Bodnar   │ ←──────────→ │ PlutoSDRplus   │
 │ Pi 5        │   1 PPS       │ LBE-1421   │   Reference  │ One      │
 └─────────────┘               └──────────────┘              └──────────┘
        │                              │                            │
@@ -213,10 +213,10 @@ OK: no rogue nodes and no orphaned SPEC claims.
 
 | File | Change Type | SPEC-ID | Description |
 |------|-------------|---------|-------------|
-| `hal_hardware.py` | Rewrite | SPEC-005A.HAL-HW | Complete replacement of RTL-SDR with HackRF + GPSDO |
-| `hal_simulated.py` | Update | SPEC-005A.HAL-SIM | GPSDO/HackRF simulation for CI/CD |
+| `hal_hardware.py` | Rewrite | SPEC-005A.HAL-HW | Complete replacement of RTL-SDR with PlutoSDRplus + GPSDO |
+| `hal_simulated.py` | Update | SPEC-005A.HAL-SIM | GPSDO/PlutoSDRplus simulation for CI/CD |
 | `cm5_ingestion.py` | Update | SPEC-005A.HAL-FACTORY | Added verify_hardware_lock(), updated docs |
-| `provision_tier1.py` | Enhance | SPEC-004A.1-PROVISION | GPSDO/HackRF validation checks |
+| `provision_tier1.py` | Enhance | SPEC-004A.1-PROVISION | GPSDO/PlutoSDRplus validation checks |
 | `SPEC-004A.1.md` | Rewrite | SPEC-004A.1 | RF Metrology specification |
 | `README.md` | Rewrite | N/A | Complete documentation update |
 | `MASTER_SPEC.md` | Update | N/A | Hardware references updated |
@@ -236,12 +236,12 @@ OK: no rogue nodes and no orphaned SPEC claims.
 
 1. **Hardware Architecture Pivot**
    - Deprecated: Intel i210-T1 NIC + RTL-SDR + CM5
-   - Deployed: Leo Bodnar LBE-1421 GPSDO + HackRF One + Pi 5
+   - Deployed: Leo Bodnar LBE-1421 GPSDO + PlutoSDRplus + Pi 5
    - Rationale: Hardware-level ADC phase coherence eliminates USB jitter
 
 2. **Software Implementation**
-   - Complete rewrite of HardwareHAL for HackRF support
-   - pyhackrf integration with graceful fallback
+   - Complete rewrite of HardwareHAL for PlutoSDRplus support
+   - pyPlutoSDRplus integration with graceful fallback
    - GPSDO clock verification methods
    - Enhanced provisioning tool with hardware checks
 
@@ -258,11 +258,11 @@ OK: no rogue nodes and no orphaned SPEC claims.
 ### Next Actions at Handoff
 
 1. **Hardware Procurement**
-   - Order: Raspberry Pi 5 (16GB), HackRF One, Leo Bodnar LBE-1421 GPSDO
+   - Order: Raspberry Pi 5 (16GB), PlutoSDRplus, Leo Bodnar LBE-1421 GPSDO
    - Refer to: `PHASE_2A_TIER_1_BUILD_SHEET.md` for verified purchase links
 
 2. **Physical Assembly**
-   - GPSDO 10 MHz SMA → HackRF CLKIN
+   - GPSDO 10 MHz SMA → PlutoSDRplus CLKIN
    - GPSDO 1 PPS → Pi 5 GPIO 18
    - Run: `python tools/provision_tier1.py` to validate
 
@@ -295,10 +295,10 @@ All changes maintain SPEC-ID compliance. The orphan checker validates 100% cover
 
 **Commit Message:**
 ```
-feat(hardware): Rev 4.1-PIVOT — Complete RF Metrology Architecture Migration
+feat(hardware): Rev 5.0-PIVOT — Complete RF Metrology Architecture Migration
 
 BREAKING CHANGE: Deprecates CM5 + Intel i210-T1 PTP timing in favor of
-Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO RF Metrology stack.
+Raspberry Pi 5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO RF Metrology stack.
 
 [Full commit message in repository]
 ```
@@ -318,7 +318,7 @@ Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO RF Metrology stack.
 - **Mathematically invalidated true phase coherence**
 
 **New Architecture:**
-- HackRF ADC locked to GPS constellation via 10 MHz CLKIN
+- PlutoSDRplus ADC locked to GPS constellation via 10 MHz CLKIN
 - Phase relationships preserved at analog level
 - USB jitter affects only data transfer latency
 - Every IQ sample carries GPS-disciplined phase information
@@ -341,7 +341,7 @@ When a signal anomaly is detected across multiple nodes:
 | Component | Status | Replacement |
 |-----------|--------|-------------|
 | Intel i210-T1 NIC | DEPRECATED | GPSDO 10 MHz reference |
-| RTL-SDR (v3/v4) | TIER 2 ONLY | HackRF One with CLKIN |
+| RTL-SDR (v3/v4) | TIER 2 ONLY | PlutoSDRplus with CLKIN |
 | Raspberry Pi CM5 | PERMISSIBLE | Raspberry Pi 5 (16GB) preferred |
 | PTP/IEEE 1588 | DEPRECATED | GPSDO direct clock injection |
 
@@ -349,10 +349,10 @@ When a signal anomaly is detected across multiple nodes:
 
 ```bash
 # System packages
-sudo apt install pps-tools chrony hackrf libhackrf-dev
+sudo apt install pps-tools chrony PlutoSDRplus libPlutoSDRplus-dev
 
 # Python packages
-pip install pyhackrf
+pip install pyPlutoSDRplus
 ```
 
 ### C. Hardware Verification Commands
@@ -361,11 +361,11 @@ pip install pyhackrf
 # Check PPS
 ppstest /dev/pps0
 
-# Check HackRF
-hackrf_info
+# Check PlutoSDRplus
+PlutoSDRplus_info
 
 # Check clock source
-hackrf_debug --clock_source
+PlutoSDRplus_debug --clock_source
 
 # Run provisioning audit
 python tools/provision_tier1.py

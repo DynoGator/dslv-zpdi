@@ -1,10 +1,10 @@
-# Release Notes v4.7.1
+# Release Notes v5.0.0
 
-## DSLV-ZPDI v4.7.1 — Dependency and Validation Alignment
+## DSLV-ZPDI v5.0.0 — Dependency and Validation Alignment
 
 ### Summary
 Maintenance release aligning the package version with the current runtime
-dependency set and validation contract after the v4.7.0 node bridge,
+dependency set and validation contract after the v5.0.0 node bridge,
 multi-node HDF5 aggregation, and dashboard finalisation work.
 
 ### Changes
@@ -12,7 +12,7 @@ multi-node HDF5 aggregation, and dashboard finalisation work.
   node receiver and web dashboard runtime paths.
 - Kept project validation anchored on editable installs, pytest, orphan
   checking, version sync, and repo guard checks.
-- Preserved v4.7.0 operational scope while making dependency installation
+- Preserved v5.0.0 operational scope while making dependency installation
   reproducible on new development machines.
 - Added shared collaboration documentation and turnover process for Gemini CLI,
   Claude Code, Kimi Code, and Codex CLI.

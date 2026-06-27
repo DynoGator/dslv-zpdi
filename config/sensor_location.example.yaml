@@ -11,7 +11,7 @@ site_name: "Home Anchor"
 latitude: 39.7392
 longitude: -104.9903
 altitude_m: 1609
-# Heading the HackRF antenna is pointed in (degrees from true north).
+# Heading the PlutoSDRplus antenna is pointed in (degrees from true north).
 # Used to render the primary directional cone on the map.
 antenna_heading_deg: 0
 # Optional secondary ring radius (meters). Secondary (quarantined) events are

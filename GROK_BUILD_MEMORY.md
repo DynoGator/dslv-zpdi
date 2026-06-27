@@ -18,7 +18,7 @@
 | Branch | `mobile-node-rev35` |
 | Tracks | `origin/feat/mobile-node-hardening-phase2` |
 | Local HEAD | `29613bc` (synced with remote feature branch) |
-| `origin/main` | `d8a4f89` — Rev 4.7.2 (Kimi merge target, **95 commits ahead of local main**) |
+| `origin/main` | `d8a4f89` — Rev 5.0.2 (Kimi merge target, **95 commits ahead of local main**) |
 | Open PRs | None |
 | **Merge status** | **IN PROGRESS** — Kimi Code restructuring GitHub; **hold push to main** |
 
@@ -68,7 +68,7 @@
 | Git auth | `configure_git_auth.sh` | PAT via credential helper |
 | orphan_checker | `tools/orphan_checker.py` | **29 class-level SPEC gaps** — post-merge backfill |
 | health_check_mobile | `tools/health_check_mobile.sh` | Tier-2 mobile validator |
-| health_check (Tier-1) | on `main` only | HackRF/chrony/PPS — Pi 5 |
+| health_check (Tier-1) | on `main` only | PlutoSDRplus/chrony/PPS — Pi 5 |
 | patch_docs.py | on `main` only | MASTER_SPEC sync utility |
 
 ### orphan_checker known gaps (post-merge task)
@@ -82,10 +82,10 @@ Missing SPEC-ID on classes in: `gps_poller.py`, `payload.py`, `mobile_ingestion.
 |-----------|------|--------|
 | Pixel 9 Pro XL sensors | Tier-2 | **Live** — ICM45631, MMC5616, ICP20100, gyro, rotation, gravity |
 | LBE-1421 GPSDO | Tier-1 | Procurement per Phase 2A — not on Pixel |
-| HackRF One + amp lockout | Tier-1 | Pi 5 only — verify on anchor post-merge |
+| PlutoSDRplus + amp lockout | Tier-1 | Pi 5 only — verify on anchor post-merge |
 | chrony PPS | Tier-1 | `/dev/pps0` absent on Pixel (expected) |
 | RadonEye Pro | Tier-1 | SPEC-015 staging only — not promoted to primary |
-| Pi 5 anchor | Tier-1 | `origin/main` v4.7.2 — node receiver port 5775 |
+| Pi 5 anchor | Tier-1 | `origin/main` v5.0.0 — node receiver port 5775 |
 | PiRepo hotspot | Field | `10.42.0.1` gateway for swarm telemetry |
 
 ---
@@ -109,7 +109,7 @@ Missing SPEC-ID on classes in: `gps_poller.py`, `payload.py`, `mobile_ingestion.
 |-------|----------|-------|
 | WSS circuit breaker | Mitigated | Tier-1 server must run for WSS; fallback JSONL always available |
 | Supervisor stale-health kill | Mitigated | 35s grace + health log truncate on restart |
-| HackRF amp | N/A mobile | Tier-1 Pi concern — check `main` pipeline lockout |
+| PlutoSDRplus amp | N/A mobile | Tier-1 Pi concern — check `main` pipeline lockout |
 | chrony PPS jitter | N/A mobile | Tier-1 only; mobile has `pps_jitter_ns=inf` |
 | RadonEye staging | Open | SPEC-015 not ratified; endpoint secondary-only on Pi |
 | Multi-tree drift | Active | 4 parallel checkouts — canonical pointer TBD post-merge |
@@ -154,7 +154,7 @@ pytest tests/ -v
 ## Session Log (APPEND-ONLY)
 
 ### 2026-06-06 — Workspace Maximization & Shutdown Prep (Grok Build)
-- Fetched `origin/main` d8a4f89 (Rev 4.7.2); mobile branch unchanged at 29613bc
+- Fetched `origin/main` d8a4f89 (Rev 5.0.2); mobile branch unchanged at 29613bc
 - Ported Kimi collab docs from main; created mobile-adapted `docs/collaboration/`
 - Added `tools/health_check_mobile.sh`, `tools/orphan_checker.py`, `specs/` stubs
 - Ruff clean; 41/41+1skip tests pass; ruff installed in project `.venv`

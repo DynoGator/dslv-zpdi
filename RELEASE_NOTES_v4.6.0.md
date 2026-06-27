@@ -1,6 +1,6 @@
-# Release Notes v4.6.0
+# Release Notes v5.0.0
 
-## DSLV-ZPDI v4.6.0 — LBE-1421 Hardened Operations Stack
+## DSLV-ZPDI v5.0.0 — LBE-1421 Hardened Operations Stack
 
 ### Summary
 Production-hardened release integrating Leo Bodnar LBE-1421 GPSDO timing

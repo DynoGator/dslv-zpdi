@@ -1,19 +1,19 @@
-# TURNOVER 2026-06-01 — Claude Hardening Pass (Rev 4.7.2)
+# TURNOVER 2026-06-01 — Claude Hardening Pass (Rev 5.0.2)
 
 ## Context
 
 - Machine: this workstation (canonical checkout)
 - Checkout: `/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi`
 - Remote: `https://github.com/DynoGator/dslv-zpdi.git`
-- Starting commit: `4e58c6c` (Rev 4.7.1)
-- Active revision after pass: **Rev 4.7.2**
+- Starting commit: `4e58c6c` (Rev 5.0.1)
+- Active revision after pass: **Rev 5.0.2**
 - Agent: Claude Code, continuing the Codex CLI local-update session
 
 ## Work Completed
 
 Project-wide robustness / reliability / security hardening pass. Full detail in
 `SESSION_REPORT_2026-06-01_Hardening.md`; release detail in
-`RELEASE_NOTES_v4.7.2.md`.
+`RELEASE_NOTES_v5.0.0.md`.
 
 - **Data integrity:** replaced `os._exit(0)` SIGINT teardown in `main_pipeline.py`
   with a cooperative SIGINT/SIGTERM drain that flushes and closes the HDF5 writer,
@@ -27,7 +27,7 @@ Project-wide robustness / reliability / security hardening pass. Full detail in
   pylint 9.31 → 9.64/10; PEP 585/604 type modernization behind
   `from __future__ import annotations`.
 - **Versioning:** added `dslv_zpdi.__version__` and made `check_version_sync.py`
-  enforce it; bumped `pyproject`, README, CHANGELOG; added `RELEASE_NOTES_v4.7.2.md`.
+  enforce it; bumped `pyproject`, README, CHANGELOG; added `RELEASE_NOTES_v5.0.0.md`.
 
 ## Validation
 

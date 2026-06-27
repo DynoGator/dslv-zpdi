@@ -11,7 +11,7 @@ def test_lbe1421_stability_mock():
 
     # Simulate 1ns jitter (perfect LBE-1421)
     monitor._get_chronyc_jitter = lambda: 1.0
-    monitor._verify_hackrf_clock = lambda: True
+    monitor._verify_PlutoSDRplus_clock = lambda: True
     status = monitor.check_lock_state(hal)
     assert status["healthy"] is True
     assert status["metrics"]["pps_jitter_ns"] < 10.0
@@ -59,7 +59,7 @@ def test_lbe1421_holdover_seamless():
         def _get_chronyc_jitter(self):
             return 1.0
 
-        def _verify_hackrf_clock(self):
+        def _verify_PlutoSDRplus_clock(self):
             return True
 
     lost_hal = LostGPSHAL()

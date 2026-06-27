@@ -1,7 +1,7 @@
 # DSLV-ZPDI Session Report — Tier 1 Node Comprehensive Optimization
 
 **Date:** 2026-04-24  
-**Version:** v4.5.1 (post-optimization)  
+**Version:** v5.0.0 (post-optimization)  
 **Commit:** `699084f`  
 **Scope:** System-wide evaluation, data accuracy hardening, dashboard/waterfall/mapping optimization, Tier 1 node streamlining  
 
@@ -49,7 +49,7 @@ Performed a full-stack evaluation and optimization of the DSLV-ZPDI Tier 1 node 
 |---|---|---|---|
 | **Peak-hold bias** | `max()` per bin exaggerated signals | Mean-per-bin via `accum_sums` + `accum_counts` | `waterfall.py` |
 | **Data loss** | Only latest row kept; intermediate sweeps lost | Bounded queue (`deque maxlen=4`) FIFO pop | `waterfall.py` |
-| **Hot-plug** | `hackrf_present()` once at init | Re-check every 10 s in `_sync_stream()` | `waterfall.py` |
+| **Hot-plug** | `PlutoSDRplus_present()` once at init | Re-check every 10 s in `_sync_stream()` | `waterfall.py` |
 | **Resampling** | Nearest-neighbor (`int(i*scale)`) | Linear interpolation via `_resample_to_width()` | `waterfall.py` |
 | **Timestamp tracking** | None | Parallel `row_timestamps` list; `metrics()` exposes `last_row_timestamp` | `waterfall.py` |
 | **Spectrum alignment** | Could mismatch `self.width` | Pre-resampled to exact width before render | `waterfall.py` |
@@ -95,7 +95,7 @@ health_check.sh        → 1 warning (GPSDO serial absent — expected, hardware
 
 ---
 
-## 8. Changelog (v4.5.0 → v4.5.1)
+## 8. Changelog (v5.0.0 → v5.0.0)
 
 ### Added
 - `tools/health_check.sh` — 8-subsystem Tier 1 node validator
@@ -130,7 +130,7 @@ health_check.sh        → 1 warning (GPSDO serial absent — expected, hardware
 ## 9. Turnover Notes
 
 **Current System State:**
-- HackRF One r9 detected, fw 2.1.0, serial ending `61dc2a7c5f4f`
+- PlutoSDRplus r9 detected, fw 2.1.0, serial ending `61dc2a7c5f4f`
 - PPS device `/dev/pps0` present (kernel module loaded)
 - GPSDO LBE-1421 **not yet connected** via USB-C (NMEA serial absent) — expected hardware gap
 - chrony active on NTP (stratum 3, ~9 ms RMS offset) — GPSDO PPS will improve this to <1 µs once wired
@@ -140,7 +140,7 @@ health_check.sh        → 1 warning (GPSDO serial absent — expected, hardware
 
 **To Transition to Hardware Mode:**
 ```bash
-# 1. Wire LBE-1421: 10 MHz SMA → HackRF CLKIN, 1 PPS → Pi 5 GPIO 18 (verify 3.3V)
+# 1. Wire LBE-1421: 10 MHz SMA → PlutoSDRplus CLKIN, 1 PPS → Pi 5 GPIO 18 (verify 3.3V)
 # 2. Connect LBE-1421 USB-C for NMEA telemetry
 # 3. Switch pipeline to hardware:
 sudo tools/toggle_simulator.sh off
@@ -149,7 +149,7 @@ bash tools/health_check.sh
 ```
 
 **Known Limitations / Next Steps:**
-1. SoapySDR Python bindings not installed (`pyhackrf` fallback is active and functional).
+1. SoapySDR Python bindings not installed (`pyPlutoSDRplus` fallback is active and functional).
 2. GPSDO physical connection pending — PPS and NMEA will unlock `CAL_TRUSTED` state.
 3. Email/mailer pipeline is manual one-shot; no auto-trigger cron/systemd timer yet.
 4. Raw IQ archival is 64-sample preview; full 262k-sample buffers are not persisted.

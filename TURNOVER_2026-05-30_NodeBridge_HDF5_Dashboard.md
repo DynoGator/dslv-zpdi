@@ -8,12 +8,12 @@
 
 ## Summary of Work Completed
 
-### Phase 1 — Networking & HackRF Boot
+### Phase 1 — Networking & PlutoSDRplus Boot
 
 | File | Purpose |
 |------|---------|
 | `config/PiRepo.nmconnection` | NetworkManager AP keyfile — SSID `PiRepo`, WPA2, Pi IP `10.42.0.1/24` |
-| `config/dslv-zpdi-hackrf-init.service` | Runs `hackrf_info` once after udev settle; wakes HackRF before preflight |
+| `config/dslv-zpdi-PlutoSDRplus-init.service` | Runs `PlutoSDRplus_info` once after udev settle; wakes PlutoSDRplus before preflight |
 
 **To activate the hotspot:**
 ```bash
@@ -23,11 +23,11 @@ sudo nmcli connection reload
 sudo nmcli connection up PiRepo
 ```
 
-**To enable HackRF boot service:**
+**To enable PlutoSDRplus boot service:**
 ```bash
-sudo cp config/dslv-zpdi-hackrf-init.service /etc/systemd/system/
+sudo cp config/dslv-zpdi-PlutoSDRplus-init.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now dslv-zpdi-hackrf-init
+sudo systemctl enable --now dslv-zpdi-PlutoSDRplus-init
 ```
 
 The Pixel 9 Pro XL (GrapheneOS) connects to `PiRepo` using password `2444666667`.  
@@ -78,7 +78,7 @@ Promote to primary stream once SPEC-015 calibration baseline is ratified.
 
 ### Phase 3 — Dashboard Finalisation
 
-**HackRF ON by default:**  
+**PlutoSDRplus ON by default:**  
 Dashboard now sets `DSLV_DASHBOARD_REAL_SDR=1` at launch.  
 Use `--no-real-sdr` to start in simulated mode.
 
@@ -98,7 +98,7 @@ sudo systemctl enable --now dslv-zpdi-webdash
 ### Phase 4 — Testing
 
 - **47/47 tests passing** (previously 46/47 — `test_no_devices_found_raises_driver_unavailable` was failing).
-- Fixed `HardwareHAL` fallback: SoapySDR error + no pyhackrf now re-raises the original exception.
+- Fixed `HardwareHAL` fallback: SoapySDR error + no pyPlutoSDRplus now re-raises the original exception.
 
 ---
 
@@ -117,7 +117,7 @@ sudo systemctl enable --now dslv-zpdi-webdash
 
 ```
 dslv-zpdi-tuning
-    └─ dslv-zpdi-hackrf-init   [NEW]
+    └─ dslv-zpdi-PlutoSDRplus-init   [NEW]
         └─ dslv-zpdi-preflight
             └─ dslv-zpdi (pipeline)
                 └─ dslv-zpdi-node-receiver  [NEW]
@@ -130,7 +130,7 @@ dslv-zpdi-tuning
 
 ```
 config/PiRepo.nmconnection                              [NEW]
-config/dslv-zpdi-hackrf-init.service                    [NEW]
+config/dslv-zpdi-PlutoSDRplus-init.service                    [NEW]
 config/dslv-zpdi-node-receiver.service                  [NEW]
 config/dslv-zpdi-webdash.service                        [NEW]
 src/dslv_zpdi/layer1_ingestion/hal_hardware.py          [FIXED — fallback re-raise]
@@ -138,6 +138,6 @@ src/dslv_zpdi/layer3_telemetry/hdf5_writer.py           [CHANGED — threading.L
 src/dslv_zpdi/layer3_telemetry/node_receiver.py         [NEW]
 tools/dashboard/app.py                                  [CHANGED — real_sdr default ON]
 tools/dashboard/web_server.py                           [NEW]
-CHANGELOG.md                                            [UPDATED — v4.7.0]
+CHANGELOG.md                                            [UPDATED — v5.0.0]
 README.md                                               [REVISED — hardware prereqs, network config]
 ```

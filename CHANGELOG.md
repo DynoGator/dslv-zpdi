@@ -45,12 +45,12 @@
 - HDF5 event hash chain and atomic `.partial` → `.h5` finalization (`src/dslv_zpdi/layer3_telemetry/hdf5_writer.py`, SPEC-007).
 - YAML node profiles under `config/node_profiles/` with safe env-variable expansion (`src/dslv_zpdi/config_models.py`, SPEC-004A.CONFIG).
 - New CLIs: `dslv-zpdi-probe`, `dslv-zpdi-preflight`, `dslv-zpdi-verify` (`src/dslv_zpdi/cli/`, SPEC-011.CLI).
-- Optional dependency groups `[pluto]`, `[hackrf]`, `[hardware]` in `pyproject.toml`.
+- Optional dependency groups `[pluto]`, `[PlutoSDRplus]`, `[hardware]` in `pyproject.toml`.
 
 ### Changed
-- Tier-1 canonical RF instrument is now a capability-qualified PlutoSDR+ class device; HackRF One is the legacy minimum reference floor.
+- Tier-1 canonical RF instrument is now a capability-qualified PlutoSDR+ class device; PlutoSDRplus is the legacy minimum reference floor.
 - Timing claims are no longer collapsed into a single `phase_lock_verified` Boolean; each evidence dimension is represented separately.
-- `pyhackrf` moved from mandatory to optional `[hackrf]` dependency group.
+- `pyPlutoSDRplus` moved from mandatory to optional `[PlutoSDRplus]` dependency group.
 
 ### Security
 - Production HMAC key absence now blocks primary output when `allow_development_key=False`.
@@ -63,14 +63,14 @@
 ## [4.8.1] — Grok autonomous Pixel simulator session (2026-06-11)
 
 ### Fixed
-- **Task A (critical)**: `hal_hardware.py` SoapySDR and pyhackrf top-level guards changed from bare `except ImportError:` to `except (ImportError, OSError):`. The `hackrf` package (and Soapy) execute `CDLL('libhackrf.so.0')` (and equiv) at *import time*, raising `OSError` (not `ImportError`) when the native shared object is absent (this proot Pixel / GrapheneOS simulator-only host has no libhackrf). This previously caused 0 tests collected (test_hardware_failure_paths + test_timing_monitor via lock_monitor). Now 113 tests collected + passing on no-hw host. Added Rev 4.8.x explanatory comments referencing governing `SPEC-005A.HAL-HW`.
+- **Task A (critical)**: `hal_hardware.py` SoapySDR and pyPlutoSDRplus top-level guards changed from bare `except ImportError:` to `except (ImportError, OSError):`. The `PlutoSDRplus` package (and Soapy) execute `CDLL('libPlutoSDRplus.so.0')` (and equiv) at *import time*, raising `OSError` (not `ImportError`) when the native shared object is absent (this proot Pixel / GrapheneOS simulator-only host has no libPlutoSDRplus). This previously caused 0 tests collected (test_hardware_failure_paths + test_timing_monitor via lock_monitor). Now 113 tests collected + passing on no-hw host. Added Rev 5.0.x explanatory comments referencing governing `SPEC-005A.HAL-HW`.
 - Audit of sibling native guards: broadened h5py guards in `hdf5_writer.py` (SPEC-007) and `radon_session_writer.py` (SPEC-018); broadened bleak/dbus guards (existing + bare `from bleak` sites) in `radoneye_ingestor.py` (SPEC-015). Pure-Python guards (flask in node_receiver.py, pyserial inside funcs in hal_hardware.py:827 and nmea_stream.py:92) left as `ImportError`-only — they never load .so at import time; their OSErrors are runtime port/serial conditions already handled separately. Justified in work report.
-- **Task B**: stray hardcoded "Rev 4.7.1" in `tests/test_pipeline.py:145` replaced by `from dslv_zpdi import __version__` (now prints Rev 4.8.1 and can never desync). `check_version_sync.py` remains clean. Cosmetic banner appends in hal_*.py docstrings (no orphan noise).
+- **Task B**: stray hardcoded "Rev 5.0.1" in `tests/test_pipeline.py:145` replaced by `from dslv_zpdi import __version__` (now prints Rev 5.0.1 and can never desync). `check_version_sync.py` remains clean. Cosmetic banner appends in hal_*.py docstrings (no orphan noise).
 - **Task C** (per NEXT_STEPS P2): added 10 new contract tests in `tests/test_node_receiver.py` (SPEC-014.8) covering `/api/v1/ingest`, `/api/v1/ingest/radoneye`, `/api/v1/health` for malformed JSON, missing required, writer-failure (500), and concurrent POSTs. Uses Flask test client + injected writers for isolation. Node receiver coverage lifted from 0%. Extended `specs/SPEC-014.md` with test section. No new public contracts; RadonEye remains secondary-only. No Tier-1 promotion, no metrology changes.
 - All per `AGENTS.md` / `CONTRIBUTING.md` / orphan_checker / repo_guard. Full §2 contract green before/after each commit. 113 passed / ruff clean / version-sync clean / coverage ~53%+ (node_receiver now exercised).
 
 ### Changed
-- Version bump 4.8.0 → 4.8.1 (behavior change for simulator hosts + new test surface coverage). All authorities synchronized: pyproject.toml, __init__.py, README revision line, CHANGELOG.md, new RELEASE_NOTES_v4.8.1.md.
+- Version bump 4.8.0 → 4.8.1 (behavior change for simulator hosts + new test surface coverage). All authorities synchronized: pyproject.toml, __init__.py, README revision line, CHANGELOG.md, new RELEASE_NOTES_v5.0.0.md.
 
 ## [Unreleased] · Repository Hardening (2026-06-10)
 
@@ -84,8 +84,8 @@ was changed.
   never executed. Added the dev dependency and `asyncio_mode=auto`; full suite now
   103 passed.
 - **Version desync** — `pyproject.toml` / `__init__.py` / README declared 4.7.2
-  while the `v4.8.0` tag and CHANGELOG already named 4.8.0. Reconciled all version
-  authorities to 4.8.0 and added `RELEASE_NOTES_v4.8.0.md`. `check_version_sync`
+  while the `v5.0.0` tag and CHANGELOG already named 4.8.0. Reconciled all version
+  authorities to 4.8.0 and added `RELEASE_NOTES_v5.0.0.md`. `check_version_sync`
   clean.
 - Removed two dead local assignments; logged Pixel poll latency at debug instead
   of discarding it; dropped an unused `psutil` import.
@@ -140,7 +140,7 @@ was changed.
 ### Fixed
 - **27 pre-existing SPEC-ID orphan gaps** — `node_receiver.py` (7), `pps_listener.py` (8), `nmea_stream.py` (8), `hal_hardware.py` (1), plus creation of real `specs/SPEC-014.md`. `orphan_checker.py` now green.
 - **LBE-1420→LBE-1421 typos** in `V3_DSLV-ZPDI_LIVING_MASTER.md` — two instances where dual-output GPSDO was misidentified as single-output.
-- **Dual-output architecture clarity** in `PHASE_2A_TIER_1_BUILD_SHEET.md` — new section documenting LBE-1421 Out1 (1 PPS → GPIO 18) and Out2 (10 MHz → HackRF CLKIN) independence.
+- **Dual-output architecture clarity** in `PHASE_2A_TIER_1_BUILD_SHEET.md` — new section documenting LBE-1421 Out1 (1 PPS → GPIO 18) and Out2 (10 MHz → PlutoSDRplus CLKIN) independence.
 
 ### Changed
 - `tools/dashboard/app.py` — imports + instantiates 3 new panels; layout builder and render loop updated. Toggle keys `4` (RADON), `5` (MOBILE), `6` (BCI) added.
@@ -150,7 +150,7 @@ was changed.
 
 ### Tests
 - 56 new tests added across 6 modules (SPEC-015 through SPEC-020). All green.
-- Total suite: 94 passing (excluding 2 pre-existing flaky hardware tests tied to real HackRF state).
+- Total suite: 94 passing (excluding 2 pre-existing flaky hardware tests tied to real PlutoSDRplus state).
 - `orphan_checker.py` green before every commit.
 
 
@@ -198,11 +198,11 @@ shutdown safety, the swarm receiver's attack surface, and overall code health.
 ## [4.7.1] - 2026-05-30 · Tier 1 / Tier 2 Node Optimization & Communication Refinement
 
 ### Fixed
-- **pyhackrf LNA/VGA Gain Log Spam** — removed redundant print statements in `pyhackrf` site-package that caused severe stdout spam during rapid SDR capture cycles.
-- **ComplexWarning in hal_hardware.py** — corrected the pyhackrf ingestion flow which was redundantly converting complex data from `read_samples` into interleaved structures, discarding the imaginary parts and raising a `ComplexWarning`.
+- **pyPlutoSDRplus LNA/VGA Gain Log Spam** — removed redundant print statements in `pyPlutoSDRplus` site-package that caused severe stdout spam during rapid SDR capture cycles.
+- **ComplexWarning in hal_hardware.py** — corrected the pyPlutoSDRplus ingestion flow which was redundantly converting complex data from `read_samples` into interleaved structures, discarding the imaginary parts and raising a `ComplexWarning`.
 - **NMEA Stream Serial Exception** — implemented exception handling for the `pyserial` bug where the device reports readiness to read but returns no data, avoiding pipeline restarts and silent drops on `/dev/ttyACM0`.
 - **Chronyc Jitter Monitor Stability** — resolved large PPS jitter reporting by forcing chronyc to step the system clock (`chronyc makestep`), aligning the system time with the GPSDO time.
-- **Validation Compliance Repair** — restored clean version-sync and orphan-checker results by adding v4.7.1 release notes, synchronizing the README revision, and adding missing SPEC-ID coverage in new ingestion and node receiver paths.
+- **Validation Compliance Repair** — restored clean version-sync and orphan-checker results by adding v5.0.0 release notes, synchronizing the README revision, and adding missing SPEC-ID coverage in new ingestion and node receiver paths.
 
 ### Added
 - **Shared Collaboration Workspace** — added `docs/collaboration/` as the common operating layer for Gemini CLI, Claude Code, Kimi Code, and Codex CLI with setup, validation, turnover, asset, and next-step guidance.
@@ -213,8 +213,8 @@ shutdown safety, the swarm receiver's attack surface, and overall code health.
 - **PiRepo hotspot configuration** (`config/PiRepo.nmconnection`) — NetworkManager keyfile
   to create a 2.4 GHz AP (SSID `PiRepo`) on `wlan0`. The Pi 5 holds static IP
   `10.42.0.1/24`. Pixel 9 Pro XL (GrapheneOS) and additional swarm nodes connect here.
-- **HackRF boot initialisation service** (`config/dslv-zpdi-hackrf-init.service`) — runs
-  `hackrf_info` once after udev settles USB, waking the device out of cold-start before
+- **PlutoSDRplus boot initialisation service** (`config/dslv-zpdi-PlutoSDRplus-init.service`) — runs
+  `PlutoSDRplus_info` once after udev settles USB, waking the device out of cold-start before
   the pipeline preflight. Failure is non-fatal (pipeline falls back to SimulatedHAL).
 - **Mobile node telemetry receiver** (`src/dslv_zpdi/layer3_telemetry/node_receiver.py`,
   `config/dslv-zpdi-node-receiver.service`) — Flask micro-service on port 5775 that
@@ -232,8 +232,8 @@ shutdown safety, the swarm receiver's attack surface, and overall code health.
   packet, enabling per-node provenance tracing in aggregated files.
 
 ### Fixed
-- **HardwareHAL SoapySDR/pyhackrf fallback** — when SoapySDR raises `DriverUnavailableError`
-  and `PYHACKRF_AVAILABLE` is False (no fallback driver), the original exception is now
+- **HardwareHAL SoapySDR/pyPlutoSDRplus fallback** — when SoapySDR raises `DriverUnavailableError`
+  and `PYPlutoSDRplus_AVAILABLE` is False (no fallback driver), the original exception is now
   re-raised instead of being silently swallowed. Previously the constructor succeeded with
   no SDR initialised, masking the configuration error. Fixes
   `test_no_devices_found_raises_driver_unavailable`.
@@ -242,9 +242,9 @@ shutdown safety, the swarm receiver's attack surface, and overall code health.
   the pipeline and the node-receiver HTTP server write to the same file concurrently.
 
 ### Changed
-- **HackRF / real-SDR ON by default** — dashboard now sets
+- **PlutoSDRplus / real-SDR ON by default** — dashboard now sets
   `DSLV_DASHBOARD_REAL_SDR=1` at startup. Use `--no-real-sdr` CLI flag to start in
-  simulated mode. Waterfall panel and footer SDR indicator reflect live HackRF data
+  simulated mode. Waterfall panel and footer SDR indicator reflect live PlutoSDRplus data
   immediately on launch.
 - **HDF5 file version bumped** to `3.3` (reflects `source_node` field addition and
   concurrent-write safety).
@@ -259,7 +259,7 @@ shutdown safety, the swarm receiver's attack surface, and overall code health.
 ### Investigated
 - **Chrony NMEA driver unavailable** — chrony 4.6.1 on this system was compiled without
   the NMEA refclock driver. `refclock NMEA ...` fails with "unknown refclock driver NMEA".
-  The recommended NMEA + `lock GPS` configuration from the v4.6.1 session report cannot
+  The recommended NMEA + `lock GPS` configuration from the v5.0.0 session report cannot
   be applied without recompiling chrony or installing gpsd.
 - **`prefer` without `trust` oscillates** — removing `trust` causes 30-second NTP/PPS
   toggle cycles as chrony alternately selects PPS and NTP pool sources. Worse than the
@@ -294,18 +294,18 @@ shutdown safety, the swarm receiver's attack surface, and overall code health.
   (`dslv-zpdi.desktop` + `dslv-zpdi-dashboard.desktop`) both called `launch_project.sh`,
   producing duplicate windows and a second pipeline restart loop.
   `dslv-zpdi-dashboard.desktop` disabled (`X-GNOME-Autostart-enabled=false`).
-- **HackRF device contention (pipeline vs. dashboard)** — `launch.sh` was exporting
-  `DSLV_DASHBOARD_REAL_SDR=1`, causing `hackrf_sweep` to start immediately and hold the
-  HackRF exclusively, forcing the pipeline into SimulatedHAL on every service restart.
+- **PlutoSDRplus device contention (pipeline vs. dashboard)** — `launch.sh` was exporting
+  `DSLV_DASHBOARD_REAL_SDR=1`, causing `PlutoSDRplus_sweep` to start immediately and hold the
+  PlutoSDRplus exclusively, forcing the pipeline into SimulatedHAL on every service restart.
   Removed the auto-export; waterfall defaults to SIM, users toggle real-SDR with `r`.
-- **HackRF probe retry** — `_verify_pyhackrf_clock()` now retries 3× with 2 s delay
+- **PlutoSDRplus probe retry** — `_verify_pyPlutoSDRplus_clock()` now retries 3× with 2 s delay
   before falling back to SimulatedHAL, surviving brief contention windows at startup.
 
 ### Security / Hardware
-- **HackRF amplifier hard lockout** — `WaterfallPanel.toggle_amp()` is now a permanent
-  no-op; `_ingest_pyhackrf()` explicitly calls `set_amp_enable(0)` before every SDR
+- **PlutoSDRplus amplifier hard lockout** — `WaterfallPanel.toggle_amp()` is now a permanent
+  no-op; `_ingest_pyPlutoSDRplus()` explicitly calls `set_amp_enable(0)` before every SDR
   capture; dashboard `a` key shows a hardware-fault warning instead of toggling.
-  HackRF 1 front-end amp is blown — parts on order.
+  PlutoSDRplus 1 front-end amp is blown — parts on order.
 
 ### System
 - **GNOME Keyring auto-unlock** — Added `~/.config/autostart/keyring-unlock.desktop` to
@@ -408,7 +408,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 - `wiring.py` — baseline state path resolution with env override.
 - `hal_simulated.py` — simulator fidelity aligned to SPEC-005A.HAL-SIM.
 - `.gitignore` — expanded agent-workspace and artefact coverage.
-- README bumped to Rev 4.5.0 — LBE-1421 Hardened Operations Stack.
+- README bumped to Rev 5.0.0 — LBE-1421 Hardened Operations Stack.
 
 ### Fixed
 - Launcher race conditions on clean-boot dual-window startup.
@@ -422,14 +422,14 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 - Canonical HAL factory `get_hal(tier, simulator)` per SPEC-005A.4.
 - Hilbert phase extraction in `HardwareHAL` and `SimulatedHAL` (Layer 1, 64-item preview).
 - Thermal/acoustic ingest hooks in `HardwareHAL` (Layer 1 modality expansion).
-- udev rules (`99-pps.rules`, `52-hackrf.rules`) and `systemctl enable chrony` in installer.
+- udev rules (`99-pps.rules`, `52-PlutoSDRplus.rules`) and `systemctl enable chrony` in installer.
 - CI matrix expansion for Python 3.10–3.13 and Pi 5 self-hosted hardware runners.
 - RP1 3.3V hard enforcement guard in `provision_tier1.py` and build sheet.
 
 ### Changed
 - `hal_hardware.py` — NMEA telemetry integrated into `ingest_gps_pps()`, IQ serialization aligned to 64-item preview.
 - Schema bumped to 3.2 in `payload.py`, `tier1_policy.py`, and `hdf5_writer.py`.
-- Version alignment to Rev 4.4.0 across README, installer, tests, and release notes.
+- Version alignment to Rev 5.0.0 across README, installer, tests, and release notes.
 
 ## [4.3.1] - 2026-04-15
 
@@ -438,7 +438,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 - Tier 1 policy contract module (`contracts/tier1_policy.py`) centralizing clock, baseline, and routing constants (SPEC-009).
 - Event deduplication/cooldown in `CoherenceScorer` to prevent duplicate global-event flooding.
 - Real HDF5 rotation tests verifying file close/open/reset behavior.
-- Hardware failure-path mock tests covering SoapySDR, pyhackrf, serial/NMEA, and HDF5 unavailability.
+- Hardware failure-path mock tests covering SoapySDR, pyPlutoSDRplus, serial/NMEA, and HDF5 unavailability.
 - `mypy` and `ruff` to dev dependencies and `pyproject.toml` config.
 - CI matrix expansion (local) for Python 3.10/3.11/3.12 and Debian bookworm/trixie.
 
@@ -455,7 +455,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 
 ### Fixed
 - Potential runtime JSON serialization break on 512-length complex IQ sample lists.
-- False-positive clock verification in pyhackrf fallback path.
+- False-positive clock verification in pyPlutoSDRplus fallback path.
 - Missing live-gate enforcement for packet checksum verification.
 
 ## [4.3.0] - 2026-04-15
@@ -467,13 +467,13 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 
 ### Changed
 - **Installer:** Hardened `install_dslv_zpdi.sh` for multi-OS firmware path compliance.
-- **Version Alignment:** Synchronized to Rev 4.3.0.
+- **Version Alignment:** Synchronized to Rev 5.0.0.
 
 ## [4.2.1] - 2026-04-15
 
 ### Fixed
-- **Dependencies:** Corrected `pyhackrf` version requirement from `>=1.0.0` (non-existent) to `>=0.2.0`.
-- **Installer:** Resolved installation failure in `install_dslv_zpdi.sh` due to invalid `pyhackrf` version.
+- **Dependencies:** Corrected `pyPlutoSDRplus` version requirement from `>=1.0.0` (non-existent) to `>=0.2.0`.
+- **Installer:** Resolved installation failure in `install_dslv_zpdi.sh` due to invalid `pyPlutoSDRplus` version.
 
 ## [4.2.0] - 2026-04-11
 
@@ -485,7 +485,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 - **Updated BOM:** Added ANT500 antenna, SMA cabling, and jumper wire specifications to Tier 1 mandatory BOM.
 
 ### Changed
-- **Dependencies:** Replaced `pyrtlsdr` with `pyhackrf` in core dependencies. RTL-SDR is Tier 2 only.
+- **Dependencies:** Replaced `pyrtlsdr` with `pyPlutoSDRplus` in core dependencies. RTL-SDR is Tier 2 only.
 - **Version Alignment:** Synchronized all version references to 4.2.0 across pyproject.toml, README, installer, tests, specs, tools, and MASTER_SPEC documents.
 - **RP1 Voltage Warning:** Updated to reflect LBE-1421 native 3.3V compatibility (no level-shifter needed).
 - **Physical Routing Protocol:** Updated wiring instructions for LBE-1421-specific connections (USB-C power/telemetry, 3.3V PPS).
@@ -552,7 +552,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 ### Changed
 - **Router Logic:** Integrated `SwarmIntegrityMonitor` into `DualStreamRouter` (SPEC-008).
 - **Core Optimization:** Migrated `coherence.py` to NumPy-based vector operations.
-- **Test Alignment:** Synchronized `test_pipeline.py` and auxiliary scripts with Rev 4.0.2.4/3.5 implementation.
+- **Test Alignment:** Synchronized `test_pipeline.py` and auxiliary scripts with Rev 5.0.2.4/3.5 implementation.
 
 ### Fixed
 - Resolved API mismatches in `HDF5Writer` constructor and method names.

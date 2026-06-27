@@ -13,9 +13,9 @@
 
 ## 1. Scope
 
-Complete the Tier-1 hardware pivot from HackRF One to a capability-based
+Complete the Tier-1 hardware pivot from PlutoSDRplus to a capability-based
 core that natively supports PlutoSDR-family devices (HamGeek/AD9363) with the
-Leo Bodnar LBE-1421 GPSDO reference, while keeping HackRF as an optional
+Leo Bodnar LBE-1421 GPSDO reference, while keeping PlutoSDRplus as an optional
 Tier-2/minimum-performance path.
 
 ---
@@ -52,7 +52,7 @@ Tier-2/minimum-performance path.
   - `dslv-zpdi-preflight`
   - `dslv-zpdi-verify`
 - New node profile: `config/node_profiles/tier1_pluto_lbe1421.yaml`
-- `pyhackrf` moved to optional `[hackrf]` dependency group
+- `pyPlutoSDRplus` moved to optional `[PlutoSDRplus]` dependency group
 - `pyproject.toml` updated with ruff excludes for owner WIP scripts
 
 ### 2.4 Documentation
@@ -60,7 +60,7 @@ Tier-2/minimum-performance path.
 - `docs/audits/PLUTOSDR_PIVOT_BASELINE_AUDIT.md`
 - `docs/hardware/PLUTO_PCB_PORT_MAP.md`
 - `docs/operations/TIER1_PREFLIGHT_CHECKLIST.md`
-- `docs/qualification/HACKRF_BASELINE_MATRIX.md`
+- `docs/qualification/PlutoSDRplus_BASELINE_MATRIX.md`
 - `docs/qualification/PLUTO_ACCEPTANCE_MATRIX.md`
 - `docs/security/HDF5_KEY_PROVIDER.md`
 - `specs/SPEC-004A.md`, `specs/SPEC-004A.5.md`

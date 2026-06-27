@@ -164,7 +164,7 @@ def startup_animation_frames(console):
         f"[{AMBER}]▶ INITIALIZING KCET-ATLAS RUNTIME...",
         f"[{AMBER}]▶ CALIBRATING THE AETHER...",
         f"[{AMBER}]▶ LOCKING ONTO GPS CONSTELLATION...",
-        f"[{NEON_CYAN}]▶ CHECKING HACKRF PERMISSIONS...",
+        f"[{NEON_CYAN}]▶ CHECKING PlutoSDRplus PERMISSIONS...",
         f"[{NEON_CYAN}]▶ ASKING THE PI 5 NICELY...",
         f"[{NEON_MAGENTA}]▶ IGNITING THE PIPELINE...",
         f"[{NEON_GREEN}]✔ DSLV-ZPDI OPERATIONAL",

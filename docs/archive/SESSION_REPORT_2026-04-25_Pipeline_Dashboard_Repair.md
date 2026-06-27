@@ -2,7 +2,7 @@
 
 **Session:** Evaluate and repair broken pipeline; refine and visually polish dashboard UI  
 **Operator:** Kimi Code CLI (Engineering Collaborator)  
-**Platform:** Raspberry Pi 5 + HackRF One + LBE-1421 GPSDO (pending arrival) + 5" DSI  
+**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending arrival) + 5" DSI  
 **Branch:** `main` — committed and pushed to GitHub  
 
 ---
@@ -18,9 +18,9 @@
 - **Verification:** `test_integration_pipeline_creates_output_and_health` now passes.
 
 **B. Systemd 226/NAMESPACE failure**
-- **Symptom:** `dslv-zpdi.service` failed with `exit-code: 226/NAMESPACE` when HackRF was unplugged, *even in simulator mode*.
-- **Root cause:** The installed systemd unit at `/etc/systemd/system/dslv-zpdi.service` listed `/dev/hackrf0` in `ReadWritePaths`. `ProtectSystem=strict` creates a mount namespace at startup; if any `ReadWritePaths` entry is missing, namespace setup fails before `ExecStart` ever runs.
-- **Fix:** Removed `/dev/hackrf0` from `ReadWritePaths` in `config/dslv-zpdi.service` (USB access via `/dev/bus/usb` is sufficient for libusb/pyhackrf). Also added the full sandboxing directives to the repo file so it becomes the source of truth.
+- **Symptom:** `dslv-zpdi.service` failed with `exit-code: 226/NAMESPACE` when PlutoSDRplus was unplugged, *even in simulator mode*.
+- **Root cause:** The installed systemd unit at `/etc/systemd/system/dslv-zpdi.service` listed `/dev/PlutoSDRplus0` in `ReadWritePaths`. `ProtectSystem=strict` creates a mount namespace at startup; if any `ReadWritePaths` entry is missing, namespace setup fails before `ExecStart` ever runs.
+- **Fix:** Removed `/dev/PlutoSDRplus0` from `ReadWritePaths` in `config/dslv-zpdi.service` (USB access via `/dev/bus/usb` is sufficient for libusb/pyPlutoSDRplus). Also added the full sandboxing directives to the repo file so it becomes the source of truth.
 - **Post-reboot action required:** The installed unit must be refreshed from the repo (see §4).
 
 **C. Synchronous mode HAL crash**
@@ -46,7 +46,7 @@
 - **Fix:** Added `--real-sdr` to `main()`; sets `DSLV_DASHBOARD_REAL_SDR=1` on startup.
 
 **C. Waterfall subprocess orphaning**
-- **Symptom:** `hackrf_sweep` could be left running after dashboard quit because `wf_p.shutdown()` was never called.
+- **Symptom:** `PlutoSDRplus_sweep` could be left running after dashboard quit because `wf_p.shutdown()` was never called.
 - **Fix:** Added `self.wf_p.shutdown()` in `Dashboard.run()` `finally` block.
 
 **D. Hardcoded output paths**
@@ -115,7 +115,7 @@ Commit `c3e47ad` pushed to `origin/main`:
 ## 5. Post-reboot checklist (execute in order)
 
 ### 5.1 Refresh the installed systemd unit
-The repo's `config/dslv-zpdi.service` was fixed, but the installed copy in `/etc/systemd/system/` still has the old `ReadWritePaths` including `/dev/hackrf0`.
+The repo's `config/dslv-zpdi.service` was fixed, but the installed copy in `/etc/systemd/system/` still has the old `ReadWritePaths` including `/dev/PlutoSDRplus0`.
 
 ```bash
 cd ~/dslv-zpdi

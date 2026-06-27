@@ -12,11 +12,11 @@
 
 | Device | USB ID | Status | Notes |
 |---|---|---|---|
-| HackRF One | 1d50:6089 | ✓ Online | Rev r9, fw v2.1.0, s/n …61dc2a7c5f4f |
+| PlutoSDRplus | 1d50:6089 | ✓ Online | Rev r9, fw v2.1.0, s/n …61dc2a7c5f4f |
 | Leo Bodnar LBE-1421 GPSDO | 1dd2:2444 | ✓ Locked | Stratum 1 · PPS0 · NMEA via /dev/ttyACM0 |
 | Raspberry Pi 5 | — | ✓ Running | PI5-ALPHA, Pi OS Bookworm |
 
-**HackRF amp status:** BLOWN — parts on order. Amp locked out in software (see fixes below).
+**PlutoSDRplus amp status:** BLOWN — parts on order. Amp locked out in software (see fixes below).
 
 ---
 
@@ -61,36 +61,36 @@ within 10–30 minutes of continuous lock.
 
 ---
 
-### 3. HackRF Amplifier — Hardware Fault, Parts on Order (LOCKED)
+### 3. PlutoSDRplus Amplifier — Hardware Fault, Parts on Order (LOCKED)
 
-**Situation:** HackRF 1 front-end RF amplifier is physically blown. User confirmed parts
+**Situation:** PlutoSDRplus 1 front-end RF amplifier is physically blown. User confirmed parts
 are on order to replace it.
 
 **Fixes applied (defense-in-depth):**
 1. **`waterfall.py`** — `toggle_amp()` is now a hard no-op. `amp_enabled` stays `False`
    regardless of key presses. Waterfall title now shows `AMP-LOCK` instead of `amp ON/off`.
-2. **`app.py`** — Pressing `a` shows `WARN: AMP LOCKED OUT — HackRF 1 amp blown, parts on order`
+2. **`app.py`** — Pressing `a` shows `WARN: AMP LOCKED OUT — PlutoSDRplus 1 amp blown, parts on order`
    in the notifications panel instead of toggling.
-3. **`hal_hardware.py`** — `_ingest_pyhackrf()` now calls `hackrf_device.set_amp_enable(0)`
+3. **`hal_hardware.py`** — `_ingest_pyPlutoSDRplus()` now calls `PlutoSDRplus_device.set_amp_enable(0)`
    (wrapped in try/except for API compatibility) before every SDR ingest, ensuring amp is
    never enabled even if the software lockout is somehow bypassed.
 
 ---
 
-### 4. HackRF Device Contention — Pipeline vs. Dashboard hackrf_sweep (FIXED)
+### 4. PlutoSDRplus Device Contention — Pipeline vs. Dashboard PlutoSDRplus_sweep (FIXED)
 
 **Root cause:** `tools/dashboard/launch.sh` exported `DSLV_DASHBOARD_REAL_SDR=1`, which
-caused the waterfall panel's `_sync_stream()` to immediately start a `hackrf_sweep`
-subprocess whenever the dashboard launched. `hackrf_sweep` holds the HackRF device
+caused the waterfall panel's `_sync_stream()` to immediately start a `PlutoSDRplus_sweep`
+subprocess whenever the dashboard launched. `PlutoSDRplus_sweep` holds the PlutoSDRplus device
 **exclusively and continuously**. When the pipeline service restarted, its
-`_probe_pyhackrf_subprocess()` call found the device locked → fell back to SimulatedHAL.
+`_probe_pyPlutoSDRplus_subprocess()` call found the device locked → fell back to SimulatedHAL.
 
 **Fix 1 (`launch.sh`):** Removed `export DSLV_DASHBOARD_REAL_SDR=1`. Waterfall now
 defaults to SIM mode. Users press `r` in either dashboard window to toggle real-SDR on
 demand. The tradeoff (real-SDR competes with pipeline ingest) is documented in the script.
 
 **Fix 2 (`hal_hardware.py`):** Added retry loop (3 attempts × 2 s) to
-`_verify_pyhackrf_clock()` to survive brief contention windows during pipeline startup.
+`_verify_pyPlutoSDRplus_clock()` to survive brief contention windows during pipeline startup.
 
 **Result:** Pipeline initializes in **HardwareHAL** mode (`node_id: PI5-ALPHA`) on every
 clean launch. Dashboard waterfalls default to SIM with the option to go live.
@@ -147,8 +147,8 @@ virtual serial, not exclusive access).
 | `timing_healthy: false` | Low | Transient — chrony slewing at ~19 ns/s; expect auto-resolve within 10–15 min |
 | `primary_written: 0` | Low | Consequence of timing health gate; will flip to primary once timing_healthy=true |
 | NMEA serial errors | Low | Intermittent USB CDC-ACM drops on /dev/ttyACM0; retry logic handles it; hardware-level |
-| SoapySDR module missing | Low | `soapysdr-module-hackrf` not installed; pipeline falls through to pyhackrf (expected) |
-| HackRF amp replacement | Blocking for amp use | Parts on order; software lockout active until parts arrive |
+| SoapySDR module missing | Low | `soapysdr-module-PlutoSDRplus` not installed; pipeline falls through to pyPlutoSDRplus (expected) |
+| PlutoSDRplus amp replacement | Blocking for amp use | Parts on order; software lockout active until parts arrive |
 | `baseline_state: NOT_STARTED` | Medium | Coherence baseline won't start until timing_healthy=true; see SPEC-009 |
 
 ---
@@ -180,7 +180,7 @@ dslv-zpdi-preflight.service active
 dslv-zpdi.service           active  (HardwareHAL, PI5-ALPHA, Stratum 1)
 
 Dashboard: 1 waterfall-only window + 1 main dashboard window (compact, 800×480)
-hackrf_sweep: 1 instance (user-enabled REAL SDR in main dashboard via 'r')
+PlutoSDRplus_sweep: 1 instance (user-enabled REAL SDR in main dashboard via 'r')
 ```
 
 ---

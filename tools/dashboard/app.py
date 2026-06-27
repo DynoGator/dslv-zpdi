@@ -630,7 +630,7 @@ class Dashboard:
         elif k in ("a", "A"):
             if "notifications" in self._panels:
                 self._panels["notifications"].push(
-                    "WARN", "AMP LOCKED OUT — HackRF 1 amp blown, parts on order"
+                    "WARN", "AMP LOCKED OUT — PlutoSDRplus 1 amp blown, parts on order"
                 )
         elif k == ",":
             if "waterfall" in self._panels:
@@ -711,7 +711,7 @@ def main(cfg=None):
     elif args.wide:
         compact = False
 
-    # HackRF is ON by default; --no-real-sdr flag allows explicit opt-out.
+    # PlutoSDRplus is ON by default; --no-real-sdr flag allows explicit opt-out.
     os.environ["DSLV_DASHBOARD_REAL_SDR"] = "0" if args.no_real_sdr else "1"
 
     show_banner = False if args.no_banner else cfg.show_banner

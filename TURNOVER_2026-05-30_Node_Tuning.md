@@ -9,15 +9,15 @@ This report details the troubleshooting, bug fixing, and operational refinement 
 
 ## Issues Addressed & Fixes Applied
 
-1. **HackRF Gain Logging Spam (`pyhackrf` site-package)**
+1. **PlutoSDRplus Gain Logging Spam (`pyPlutoSDRplus` site-package)**
    - **Symptom:** The `dslv-zpdi` systemd journal was overwhelmed with `VGA gain set to X dB.` and `LNA gain set to X dB.` messages.
-   - **Cause:** Unsuppressed print statements within the `__init__.py` file of the `pyhackrf` dependency.
-   - **Resolution:** Surgically commented out the print statements within the virtual environment's `pyhackrf` module. This entirely eliminated the journal spam, reducing CPU and I/O overhead.
+   - **Cause:** Unsuppressed print statements within the `__init__.py` file of the `pyPlutoSDRplus` dependency.
+   - **Resolution:** Surgically commented out the print statements within the virtual environment's `pyPlutoSDRplus` module. This entirely eliminated the journal spam, reducing CPU and I/O overhead.
 
 2. **ComplexWarning in `hal_hardware.py`**
    - **Symptom:** `ComplexWarning: Casting complex values to real discards the imaginary part` raised continuously during SDR ingestion.
-   - **Cause:** When falling back to `pyhackrf`, the data buffer returned by `hackrf_device.read_samples()` was already typed as complex float. The codebase incorrectly attempted to cast it to `np.float32` and then re-interleave it, destroying phase information.
-   - **Resolution:** Re-factored the `pyhackrf` fallback ingestion logic in `HardwareHAL` to pass the complex samples directly to `np.angle()` without arbitrary transformations.
+   - **Cause:** When falling back to `pyPlutoSDRplus`, the data buffer returned by `PlutoSDRplus_device.read_samples()` was already typed as complex float. The codebase incorrectly attempted to cast it to `np.float32` and then re-interleave it, destroying phase information.
+   - **Resolution:** Re-factored the `pyPlutoSDRplus` fallback ingestion logic in `HardwareHAL` to pass the complex samples directly to `np.angle()` without arbitrary transformations.
 
 3. **NMEA Serial Exceptions**
    - **Symptom:** The GPS ingestion thread repeatedly crashed with `serial error on /dev/ttyACM0: device reports readiness to read but returned no data`.

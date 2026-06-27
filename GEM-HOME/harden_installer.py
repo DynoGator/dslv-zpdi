@@ -17,13 +17,13 @@ if 'apt-get install -y "${HARDENING_PACKAGES[@]}"' not in content:
 harden_logic = """
     # 9. USBGuard allow-listing (SPEC-011.1)
     log_info "Configuring USBGuard allow-list"
-    # Generate a policy that allows the HackRF and LBE-1421
-    # HackRF: 1d50:6089
+    # Generate a policy that allows the PlutoSDRplus and LBE-1421
+    # PlutoSDRplus: 1d50:6089
     # LBE-1421: 1d50:604b (common Leo Bodnar) or check detected
     usbguard generate-policy > /etc/usbguard/rules.conf
-    # Ensure HackRF is always allowed
+    # Ensure PlutoSDRplus is always allowed
     if ! grep -q "1d50:6089" /etc/usbguard/rules.conf; then
-        echo "allow id 1d50:6089 serial \\"*\\" name \\"HackRF One\\" with-interface all" >> /etc/usbguard/rules.conf
+        echo "allow id 1d50:6089 serial \\"*\\" name \\"PlutoSDRplus\\" with-interface all" >> /etc/usbguard/rules.conf
     fi
     systemctl enable --now usbguard
     log_ok "USBGuard configured and active"

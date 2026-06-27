@@ -1,8 +1,8 @@
-# Release Notes — v4.8.0
+# Release Notes — v5.0.0
 
 **Date:** 2026-06-05 (release notes reconciled 2026-06-10)
 **Phase:** 2B — Radon Validation Metrology Stack (Tier 2)
-**Tag:** `v4.8.0`
+**Tag:** `v5.0.0`
 
 ## Summary
 
@@ -53,6 +53,6 @@ full suite validates with `DEV_SIMULATOR=1` and no physical hardware.
 
 ## Notes
 
-Hardware-only paths (BLE radon transport, PPS/NMEA, HackRF) are validated in
+Hardware-only paths (BLE radon transport, PPS/NMEA, PlutoSDRplus) are validated in
 simulator mode here and must still be confirmed on the Tier 1 Pi 5 per
 `docs/collaboration/NEXT_STEPS.md`.

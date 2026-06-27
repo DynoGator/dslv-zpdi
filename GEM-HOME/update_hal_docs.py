@@ -7,9 +7,9 @@ with open(path, 'r') as f:
 
 old_doc = """    Hardware Requirements (SPEC-004A.1, SPEC-004A.2):
     - Raspberry Pi 5 (16GB) or compatible compute platform
-    - HackRF One with CLKIN port for 10 MHz GPSDO reference
+    - PlutoSDRplus with CLKIN port for 10 MHz GPSDO reference
     - Leo Bodnar LBE-1421 GPSDO (10 MHz + 1 PPS output)
-    - GPSDO 10 MHz SMA \u2192 HackRF CLKIN (hardware ADC phase-lock)
+    - GPSDO 10 MHz SMA \u2192 PlutoSDRplus CLKIN (hardware ADC phase-lock)
     - GPSDO 1 PPS \u2192 Pi 5 GPIO 18 (UTC timestamp interrupt)
 
     CRITICAL WARNING (RP1 Southbridge):
@@ -19,9 +19,9 @@ old_doc = """    Hardware Requirements (SPEC-004A.1, SPEC-004A.2):
 
 new_doc = """    Hardware Requirements (SPEC-004A.1, SPEC-004A.2, SPEC-004A.4):
     - Raspberry Pi 5 (16GB) or compatible compute platform
-    - HackRF One with CLKIN port for 10 MHz GPSDO reference
+    - PlutoSDRplus with CLKIN port for 10 MHz GPSDO reference
     - Leo Bodnar LBE-1421 GPSDO (Out2=10 MHz reference, Out1=1 PPS)
-    - GPSDO Out2 (10 MHz) \u2192 HackRF CLKIN (hardware ADC phase-lock, 50 \u03a9)
+    - GPSDO Out2 (10 MHz) \u2192 PlutoSDRplus CLKIN (hardware ADC phase-lock, 50 \u03a9)
     - GPSDO Out1 (1 PPS) \u2192 Pi 5 GPIO 18 (UTC timestamp interrupt)
     - Power Budget: 250 mA \u00b110 % @ 5 V USB-C + 30 mA antenna port (active)
     - Stability: 1 \u00d7 10\u207b\u00b9\u00b2 @ 1000 s (no frequency/phase jumps on GPS loss)

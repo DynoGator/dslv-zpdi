@@ -1,7 +1,7 @@
 # LBE-1421 GPSDO Wiring Diagram (RF Metrology)
 
 **Revision:** 1.0 (Phase 2A Baseline)
-**Hardware:** Leo Bodnar LBE-1421 + HackRF One + Raspberry Pi 5
+**Hardware:** Leo Bodnar LBE-1421 + PlutoSDRplus + Raspberry Pi 5
 
 ## 1. Physical Connectivity Diagram
 
@@ -14,7 +14,7 @@ graph TD
         Out2[Out2: 10 MHz Ref]
     end
     
-    subgraph "SDR: HackRF One"
+    subgraph "SDR: PlutoSDRplus"
         CLKIN[CLKIN Port]
         ANT[RF Antenna]
     end
@@ -30,7 +30,7 @@ graph TD
     Out1 -- "SMA-to-Jumper / 3.3V" --> GPIO18
     LBE -- "GND Bridge" --> GND
     LBE -- "USB-C (Telemetry/Power)" --> USB3
-    HackRF -- "USB 3.0" --> USB3
+    PlutoSDRplus -- "USB 3.0" --> USB3
 ```
 
 ## 2. ASCII Wiring Map
@@ -48,7 +48,7 @@ LBE-1421 GPSDO                      Raspberry Pi 5 (GPIO Header)
 +-----------------------+           +------------------------------+
 | [USB 3.0] <-----------|-----------| [USB 3.0 Port]               |
 +-----------------------+           +------------------------------+
-HackRF One SDR
+PlutoSDRplus SDR
 
 +-----------------------+           +-----------------------+
 | [CLKIN] <-------------|-----------| [Out 2]  (10 MHz Ref) |
@@ -69,7 +69,7 @@ HackRF One SDR
     *   **Shield (Outer):** Connect to a Pi 5 Ground pin (e.g., Physical Pin 14).
 
 3.  **Termination:**
-    *   The HackRF CLKIN port is high-impedance. For cable runs >30cm, a 50 Ω SMA pass-through terminator at the HackRF end is recommended to ensure clean edges and 1.65V peak voltage.
+    *   The PlutoSDRplus CLKIN port is high-impedance. For cable runs >30cm, a 50 Ω SMA pass-through terminator at the PlutoSDRplus end is recommended to ensure clean edges and 1.65V peak voltage.
 
 4.  **Pulse Width:**
     *   The LBE-1421 outputs a **100 ms** pulse for 1 PPS.

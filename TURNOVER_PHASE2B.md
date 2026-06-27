@@ -3,7 +3,7 @@
 **Date:** 2026-06-05
 **Agent:** KIMI_CODE_CLI
 **Branch:** `phase-2b/radon-metrology-fusion`
-**Base:** `main` @ `5399333` (v4.7.1)
+**Base:** `main` @ `5399333` (v5.0.0)
 **Status:** Build complete, all modules tested, feature branch ready to push
 
 ---
@@ -15,7 +15,7 @@ Phase 2B adds a complete Tier 2 radon validation metrology stack alongside the e
 ### Architecture Overview
 
 ```
-Tier 1 (unchanged):  HackRF SDR → HardwareHAL → DualStreamRouter → HDF5Writer (event_* groups)
+Tier 1 (unchanged):  PlutoSDRplus SDR → HardwareHAL → DualStreamRouter → HDF5Writer (event_* groups)
                            ↑
                            │  GPSDO 1 PPS → PPS listener → TimingMonitor
                            │
@@ -106,7 +106,7 @@ The new HDF5 branches accumulate data indefinitely. There is no automated prunin
 | # | Issue | Severity | Mitigation | Owner |
 |---|-------|----------|------------|-------|
 | 1 | Coherence engine degenerate (r1.00/R1.00) | Medium | BCI engine works independently | PI / future phase |
-| 2 | 2 flaky hardware tests when real HackRF connected | Low | Pre-existing, not a regression; tests pass in CI/sim | N/A |
+| 2 | 2 flaky hardware tests when real PlutoSDRplus connected | Low | Pre-existing, not a regression; tests pass in CI/sim | N/A |
 | 3 | BLE GATT UUIDs are community-reverse-engineered | Medium | HTTP fallback always available; simulator for CI | Field ops |
 | 4 | Pixel trust scoring is primitive (binary threshold) | Low | Configurable threshold; flagged, not discarded | PI / future phase |
 | 5 | No automated HDF5 branch pruning | Low | Manual archiving; retention policy TBD | PI |
@@ -187,7 +187,7 @@ with RadonSessionWriter("./output/primary/session_20260605_120000.h5", "operator
 
 ```bash
 # Full suite (excluding flaky hardware tests)
-pytest tests/ -k "not test_pyhackrf"
+pytest tests/ -k "not test_pyPlutoSDRplus"
 
 # Phase 2B modules only
 pytest tests/test_radoneye_ingestor.py
@@ -249,7 +249,7 @@ dslv-zpdi/
 │   └── PIXEL_NODE_SETUP.md
 ├── SESSION_REPORT_2026-06-05_KIMI_PHASE2B.md
 ├── TURNOVER_PHASE2B.md
-└── CHANGELOG.md                      # (appended v4.8.0 entry)
+└── CHANGELOG.md                      # (appended v5.0.0 entry)
 ```
 
 ---

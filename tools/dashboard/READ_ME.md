@@ -2,9 +2,9 @@
 
 The customizable, real-time TUI for the DSLV-ZPDI anchor node. Runs in
 any ANSI terminal (≥ ~120 cols recommended) and shows system health,
-the systemd pipeline, HackRF/PPS/GPSDO hardware, a live journald tail,
+the systemd pipeline, PlutoSDRplus/PPS/GPSDO hardware, a live journald tail,
 a dark-humor notification ticker, and a rolling SDR spectrograph
-waterfall that can be driven from a live `hackrf_sweep` stream.
+waterfall that can be driven from a live `PlutoSDRplus_sweep` stream.
 
 ## Launching
 
@@ -45,26 +45,26 @@ All keys are remappable in `~/.config/dslv-zpdi/dashboard.toml` under
 | `←` / `→` | tune center frequency by ±10% of span |
 | `↑` / `↓` | zoom span in (×0.5) / out (×2) |
 | `g` | cycle LNA gain (0, 8, 16, 24, 32, 40 dB) |
-| `a` | toggle RF front-end amp (`hackrf_sweep -a 1`) |
+| `a` | toggle RF front-end amp (`PlutoSDRplus_sweep -a 1`) |
 
-Tune/zoom/gain/amp each restart the underlying `hackrf_sweep` so they
+Tune/zoom/gain/amp each restart the underlying `PlutoSDRplus_sweep` so they
 take effect within one sweep (~50–200 ms).
 
 ## The waterfall panel
 
 * **SIM mode** — default. A synthesized FFT with drifting carriers and
-  pulse injection. Useful for demos and when no HackRF is plugged in.
-* **HACKRF mode** — spawns `hackrf_sweep` in a background thread,
+  pulse injection. Useful for demos and when no PlutoSDRplus is plugged in.
+* **PlutoSDRplus mode** — spawns `PlutoSDRplus_sweep` in a background thread,
   accumulates each sweep, resamples it to the terminal width, and
   publishes a new row on every completed sweep. The title strip shows:
 
   ```
-  ▓ WATERFALL ▓ (SWEEP · HACKRF · 20.0 MHz span · lna 24dB vga 20dB amp off · sweeps 34)
+  ▓ WATERFALL ▓ (SWEEP · PlutoSDRplus · 20.0 MHz span · lna 24dB vga 20dB amp off · sweeps 34)
   ```
 
-  While the subprocess is warming up, the label reads `HACKRF…` and the
+  While the subprocess is warming up, the label reads `PlutoSDRplus…` and the
   simulator is rendered so the waterfall never goes blank. If
-  `hackrf_sweep` prints anything to stderr before exiting, the last line
+  `PlutoSDRplus_sweep` prints anything to stderr before exiting, the last line
   is appended to the title so you can see what went wrong.
 
 `r` flips between sources at any time.
@@ -128,16 +128,16 @@ top strip becomes two columns instead of three with no blank gap.
 | Var | Effect |
 |---|---|
 | `DSLV_DASHBOARD_CONFIG` | Path to an alternate TOML config. |
-| `DSLV_DASHBOARD_REAL_SDR` | `1` = use real `hackrf_sweep`, `0` (or unset) = simulator. The `r` key toggles this. |
+| `DSLV_DASHBOARD_REAL_SDR` | `1` = use real `PlutoSDRplus_sweep`, `0` (or unset) = simulator. The `r` key toggles this. |
 | `DSLV_DASHBOARD_COMPACT` | `1` forces the compact 5" DSI layout (2×2 status grid, no mega-banner). Auto-detected when terminal is narrower than 140 cols; also toggled live with the `c` key. |
 
 ## Requirements
 
 * Python 3.11+ (for `tomllib`)
 * `rich`, `pyfiglet` (installed by `bootstrap.sh` into the venv)
-* `hackrf-tools` (`apt install hackrf`) for real-SDR mode
-* User in the `plugdev` group for HackRF without sudo
-* `/lib/udev/rules.d/60-libhackrf0.rules` installed by `libhackrf0`
+* `PlutoSDRplus-tools` (`apt install PlutoSDRplus`) for real-SDR mode
+* User in the `plugdev` group for PlutoSDRplus without sudo
+* `/lib/udev/rules.d/60-libPlutoSDRplus0.rules` installed by `libPlutoSDRplus0`
 
 `tools/launch_project.sh` checks all of these on boot and prints warnings.
 
@@ -146,9 +146,9 @@ top strip becomes two columns instead of three with no blank gap.
 * **Banner looks cut off** — your terminal is under ~100 cols. Resize it;
   the banner is tuned to fit comfortably at ≥100 cols and the layout
   reserves `BANNER_HEIGHT` (11 rows) for it.
-* **"HACKRF…" never turns into "HACKRF"** — another process owns the
+* **"PlutoSDRplus…" never turns into "PlutoSDRplus"** — another process owns the
   device. `tools/launch_project.sh` kills gqrx / sdrangel / rtl_* /
-  hackrf_transfer before starting; re-run it. Or look at the error
+  PlutoSDRplus_transfer before starting; re-run it. Or look at the error
   shown in the waterfall title bar.
 * **Log panel says "waiting for journald…"** — the systemd unit named in
   `service_unit` has never logged. Either the unit name is wrong for
@@ -171,10 +171,10 @@ tools/dashboard/
 ├── __main__.py       `python -m dashboard` entry point
 ├── READ_ME.md        This file
 └── panels/
-    ├── hardware.py        HackRF, PPS, GPSDO, chrony
+    ├── hardware.py        PlutoSDRplus, PPS, GPSDO, chrony
     ├── logs.py            journalctl -fu <unit> tail
     ├── notifications.py   notification queue + humor ticker
     ├── pipeline.py        systemd state, PID, uptime, packet rate
     ├── system.py          CPU, mem, load, temp, throttling
-    └── waterfall.py       SIM + HackRF streaming waterfall
+    └── waterfall.py       SIM + PlutoSDRplus streaming waterfall
 ```

@@ -1,5 +1,5 @@
 """
-SPEC-004A.3 | GPSDOLockMonitor (Rev 4.6.0-LBE1421)
+SPEC-004A.3 | GPSDOLockMonitor (Rev 5.0.0-LBE1421)
 Robust timing verification for production SIGINT.
 """
 
@@ -20,7 +20,7 @@ class GPSDOLockMonitor:
     SPEC-004A.3 | Monitors LBE-1421 lock status using triple-validation:
     1. NMEA telemetry via virtual serial (Fix quality, Sats, HDOP)
     2. chronyc RMS offset (Kernel PPS discipline health)
-    3. hackrf_info (Silent Traitor check)
+    3. PlutoSDRplus_info (Silent Traitor check)
     """
 
     def __init__(
@@ -46,7 +46,7 @@ class GPSDOLockMonitor:
         metrics = {
             "nmea": hardware_hal.verify_nmea_telemetry(),
             "pps_jitter_ns": 0.0,
-            "hackrf_lock": False,
+            "PlutoSDRplus_lock": False,
             "timestamp": time.time(),
         }
 
@@ -56,15 +56,15 @@ class GPSDOLockMonitor:
         # 2. chronyc RMS offset (Kernel PPS jitter)
         metrics["pps_jitter_ns"] = self._get_chronyc_jitter()
 
-        # 3. HackRF Silent Traitor check
-        metrics["hackrf_lock"] = self._verify_hackrf_clock()
+        # 3. PlutoSDRplus Silent Traitor check
+        metrics["PlutoSDRplus_lock"] = self._verify_PlutoSDRplus_clock()
 
         now = time.time()
 
         # Stability Logic
         healthy_jitter = metrics["pps_jitter_ns"] < self.jitter_threshold
 
-        if gps_fix and metrics["hackrf_lock"] and healthy_jitter:
+        if gps_fix and metrics["PlutoSDRplus_lock"] and healthy_jitter:
             self.last_lock_time = now
             self.jitter_violation_start = None
             self.is_quarantined = False
@@ -99,11 +99,11 @@ class GPSDOLockMonitor:
             pass
         return float("inf")
 
-    def _verify_hackrf_clock(self) -> bool:
-        """SPEC-004A.3.HACKRF | Verify external clock source."""
+    def _verify_PlutoSDRplus_clock(self) -> bool:
+        """SPEC-004A.3.PlutoSDRplus | Verify external clock source."""
         try:
             result = subprocess.run(
-                ["hackrf_debug", "--clock_source"],
+                ["PlutoSDRplus_debug", "--clock_source"],
                 capture_output=True,
                 text=True,
                 timeout=1,

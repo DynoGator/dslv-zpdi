@@ -12,7 +12,7 @@ WARN(){ logger -t dslv-zpdi-preflight -p user.warning -- "$*"; echo "[preflight]
 LOG "===== DSLV-ZPDI preflight starting ====="
 
 # 1. Kill any known conflicting SDR tools
-for proc in gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx airspy_rx hackrf_transfer hackrf_sweep hackrf_spectrum; do
+for proc in gqrx SoapySDRUtil sdrangel rtl_tcp rtl_fm openwebrx airspy_rx PlutoSDRplus_transfer PlutoSDRplus_sweep PlutoSDRplus_spectrum; do
     if pgrep -x "$proc" >/dev/null 2>&1; then
         WARN "conflicting process detected: $proc — killing"
         pkill -TERM -x "$proc" 2>/dev/null || true
@@ -33,10 +33,10 @@ else
     WARN "iio_info not installed; cannot verify PlutoSDR+"
 fi
 
-# 3. Verify HackRF presence (legacy / optional)
-if command -v hackrf_info >/dev/null 2>&1; then
-    if hackrf_info 2>&1 | grep -q "Found HackRF"; then
-        LOG "HackRF detected (legacy)"
+# 3. Verify PlutoSDRplus presence (legacy / optional)
+if command -v PlutoSDRplus_info >/dev/null 2>&1; then
+    if PlutoSDRplus_info 2>&1 | grep -q "Found PlutoSDRplus"; then
+        LOG "PlutoSDRplus detected (legacy)"
     fi
 fi
 

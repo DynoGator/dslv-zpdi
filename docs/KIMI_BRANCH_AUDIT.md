@@ -9,7 +9,7 @@
 ## Branch Inventory
 
 ```
-* main                                      current trunk, v4.7.1
+* main                                      current trunk, v5.0.0
   remotes/origin/feat/mobile-architecture-compliance   18 ahead, 4 behind
   remotes/origin/feat/mobile-node-hardening-phase2     22 ahead, 4 behind
   remotes/origin/hotfix/rev-3.3-document-consolidation  0 ahead, 5 behind
@@ -24,10 +24,10 @@
 ### `feat/mobile-architecture-compliance` → **(d) AMBIGUOUS — PI decision required**
 
 - **Ahead of main:** 18 commits (real, unmerged work: dual-stream router, CoherenceScorer, IngestionPayload hardening, mobile ingestion driver, FastAPI skeleton, SQLite WAL cache, log rotation, health watchdog, pre-commit hooks, supervisor)
-- **Behind main:** 4 commits (v4.7.1 dashboard finalization, node bridging, Pixel integration, pyhackrf/chronyc fixes)
+- **Behind main:** 4 commits (v5.0.0 dashboard finalization, node bridging, Pixel integration, pyPlutoSDRplus/chronyc fixes)
 - **Structural problem:** This branch shares **ZERO common ancestors** with `main`. `git merge` fails with `fatal: refusing to merge unrelated histories`.
 - **Directory incompatibility:** The branch uses a **flat package structure** (`src/layer1_ingestion/`, `src/layer2_core/`, `src/layer3_telemetry/`) while `main` uses a **proper Python package** (`src/dslv_zpdi/layer1_ingestion/`, etc.).
-- **Supersession status:** Much of this branch's intent (node receiver, Tier-2 quarantine, mobile node bridging) has been **independently reimplemented** in `main` between v4.4.0 and v4.7.1 with a superior structure.
+- **Supersession status:** Much of this branch's intent (node receiver, Tier-2 quarantine, mobile node bridging) has been **independently reimplemented** in `main` between v5.0.0 and v5.0.0 with a superior structure.
 - **Unique code not in main:** `mobile_ingestion.py` (flat structure), `zpdi_mobile_node.py`, `zpdi_verifier.py`, `zpdi_web_server.py` (all at repo root).
 
 **Recommendation:** Do **NOT** mechanically merge. The branch is from a pre-v4 repo epoch. Any unique algorithms worth keeping should be manually ported into the modern `src/dslv_zpdi/` package during Phase 2B if needed.
@@ -96,7 +96,7 @@
 
 | Branch | Action | Reason |
 |--------|--------|--------|
-| `main` | Base trunk | v4.7.1, 47 tests green |
+| `main` | Base trunk | v5.0.0, 47 tests green |
 | `phase-2b/radon-metrology-fusion` | Active feature branch | Created from `main` |
 | `feat/mobile-architecture-compliance` | **Left untouched** | Unrelated history, flat package, superseded by main |
 | `feat/mobile-node-hardening-phase2` | **Left untouched** | Same as above |

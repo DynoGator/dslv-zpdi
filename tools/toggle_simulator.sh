@@ -51,7 +51,7 @@ current_mode() {
     echo "simulator (drop-in)"
     return
   fi
-  # Fall back to the baked-in service file (defaults to hardware since v4.5.1)
+  # Fall back to the baked-in service file (defaults to hardware since v5.0.0)
   if systemctl cat "$UNIT" 2>/dev/null | grep -q -- '--hardware'; then
     echo "hardware"
   else

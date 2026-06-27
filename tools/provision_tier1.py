@@ -3,7 +3,7 @@ SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 5.0.0)
 Automates hardware-readiness checks for Anchor Nodes (PlutoSDR+/LBE-1421 focus).
 
 Rev 5.0.0: Pivot to HamGeek PlutoSDR+ + Leo Bodnar LBE-1421 GPSDO.
-HackRF support is retained as a legacy/optional check only.
+PlutoSDRplus support is retained as a legacy/optional check only.
 """
 
 import argparse
@@ -60,43 +60,43 @@ def check_soapy_sdr():
         import SoapySDR
         results = SoapySDR.Device.enumerate()
 
-        hackrf_found = False
+        PlutoSDRplus_found = False
         for result in results:
-            if 'hackrf' in str(result).lower():
-                hackrf_found = True
+            if 'PlutoSDRplus' in str(result).lower():
+                PlutoSDRplus_found = True
                 break
 
-        if hackrf_found:
-            print("[*] SoapySDR installed with HackRF support.")
+        if PlutoSDRplus_found:
+            print("[*] SoapySDR installed with PlutoSDRplus support.")
             return True
         else:
-            print("[!] SoapySDR installed but HackRF not enumerated.")
-            print("    Ensure HackRF is connected: hackrf_info")
+            print("[!] SoapySDR installed but PlutoSDRplus not enumerated.")
+            print("    Ensure PlutoSDRplus is connected: PlutoSDRplus_info")
             return False
     except ImportError:
         print("[!] SoapySDR not installed.")
-        print("    Install: sudo apt install soapysdr-module-hackrf python3-soapysdr")
+        print("    Install: sudo apt install soapysdr-module-PlutoSDRplus python3-soapysdr")
         return False
 
 
-def check_hackrf_presence():
+def check_PlutoSDRplus_presence():
     """
-    SPEC-004A.1 — Ensure HackRF One is connected.
+    SPEC-004A.1 — Ensure PlutoSDRplus is connected.
     """
     try:
-        res = subprocess.run(["hackrf_info"], capture_output=True, text=True, check=False)
+        res = subprocess.run(["PlutoSDRplus_info"], capture_output=True, text=True, check=False)
         if res.returncode == 0:
-            print("[*] HackRF One detected via hackrf_info.")
+            print("[*] PlutoSDRplus detected via PlutoSDRplus_info.")
             for line in res.stdout.split('\n')[:5]:
                 if line.strip() and 'Serial' in line:
                     print(f"    {line.strip()}")
             return True
         else:
-            print("[!] HackRF One NOT found.")
-            print("    Ensure HackRF is connected via USB 3.0 and powered.")
+            print("[!] PlutoSDRplus NOT found.")
+            print("    Ensure PlutoSDRplus is connected via USB 3.0 and powered.")
             return False
     except FileNotFoundError:
-        print("[!] hackrf_info not found. Install: sudo apt install hackrf")
+        print("[!] PlutoSDRplus_info not found. Install: sudo apt install PlutoSDRplus")
         return False
 
 
@@ -138,51 +138,51 @@ def check_pluto_presence():
         return False
 
 
-def check_hackrf_clock_source():
+def check_PlutoSDRplus_clock_source():
     """
-    ARCH-PHASE-2A-PIVOT §5.1 — Verify HackRF is receiving external 10 MHz reference.
+    ARCH-PHASE-2A-PIVOT §5.1 — Verify PlutoSDRplus is receiving external 10 MHz reference.
 
     Critical: Without external clock, phase coherence is impossible.
-    Implements "Silent Traitor" detection - HackRF silently falls back to internal osc.
+    Implements "Silent Traitor" detection - PlutoSDRplus silently falls back to internal osc.
     """
     try:
         # Try SoapySDR first (preferred)
         try:
             import SoapySDR
-            device = SoapySDR.Device(dict(driver="hackrf"))
+            device = SoapySDR.Device(dict(driver="PlutoSDRplus"))
             clock_source = device.getClockSource()
 
             if clock_source == "external":
-                print("[*] HackRF clock source: EXTERNAL (GPSDO locked) ✅")
+                print("[*] PlutoSDRplus clock source: EXTERNAL (GPSDO locked) ✅")
                 print("    Phase-lock verified. SDR slaved to GPSDO 10MHz reference.")
                 return True
             else:
-                print(f"[!] HackRF clock source: {clock_source.upper()} (NOT GPSDO locked) ❌")
-                print("    Connect GPSDO 10 MHz SMA → HackRF CLKIN port.")
+                print(f"[!] PlutoSDRplus clock source: {clock_source.upper()} (NOT GPSDO locked) ❌")
+                print("    Connect GPSDO 10 MHz SMA → PlutoSDRplus CLKIN port.")
                 return False
         except ImportError:
             pass
 
-        # Fallback to hackrf_debug
+        # Fallback to PlutoSDRplus_debug
         res = subprocess.run(
-            ["hackrf_debug", "--clock_source"],
+            ["PlutoSDRplus_debug", "--clock_source"],
             capture_output=True, text=True, check=False, timeout=5
         )
         if res.returncode == 0:
             output = res.stdout.lower()
             if "external" in output or "clkin" in output:
-                print("[*] HackRF clock source: EXTERNAL (GPSDO locked) ✅")
+                print("[*] PlutoSDRplus clock source: EXTERNAL (GPSDO locked) ✅")
                 return True
             elif "internal" in output:
-                print("[!] HackRF clock source: INTERNAL (not GPSDO locked) ❌")
+                print("[!] PlutoSDRplus clock source: INTERNAL (not GPSDO locked) ❌")
                 print("    [SILENT TRAITOR DETECTED] Verify GPSDO 10 MHz → CLKIN")
                 return False
 
-        print("[WARN] Cannot verify HackRF clock source automatically.")
-        print("       Manually verify: GPSDO 10 MHz → HackRF CLKIN")
+        print("[WARN] Cannot verify PlutoSDRplus clock source automatically.")
+        print("       Manually verify: GPSDO 10 MHz → PlutoSDRplus CLKIN")
         return True  # Don't fail provisioning for this
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        print("[WARN] hackrf_debug not available for clock verification.")
+        print("[WARN] PlutoSDRplus_debug not available for clock verification.")
         return True
 
 
@@ -201,13 +201,13 @@ def check_pps_device():
 
 def check_udev_rules():
     """
-    Check for PPS and HackRF udev rules.
+    Check for PPS and PlutoSDRplus udev rules.
     """
     rules_found = []
     if os.path.exists("/etc/udev/rules.d/99-pps.rules"):
         rules_found.append("PPS")
-    if os.path.exists("/etc/udev/rules.d/52-hackrf.rules"):
-        rules_found.append("HackRF")
+    if os.path.exists("/etc/udev/rules.d/52-PlutoSDRplus.rules"):
+        rules_found.append("PlutoSDRplus")
 
     if rules_found:
         print(f"[*] udev rules found: {', '.join(rules_found)}")
@@ -231,11 +231,11 @@ def check_python_dependencies():
         print("    Install: sudo apt install python3-soapysdr")
         all_ok = False
 
-    # Check pyhackrf (fallback)
-    if importlib.util.find_spec("pyhackrf") is not None:
-        print("[*] pyhackrf Python library installed (fallback).")
+    # Check pyPlutoSDRplus (fallback)
+    if importlib.util.find_spec("pyPlutoSDRplus") is not None:
+        print("[*] pyPlutoSDRplus Python library installed (fallback).")
     else:
-        print("[WARN] pyhackrf not installed. SoapySDR will be used.")
+        print("[WARN] pyPlutoSDRplus not installed. SoapySDR will be used.")
 
     return all_ok
 
@@ -367,7 +367,7 @@ def main():
         ("Chrony PPS Config", check_chrony_pps_config()),
         ("PPS GPIO Overlay", check_pps_gpio_overlay()),
         ("Python Dependencies", check_python_dependencies()),
-        ("HackRF Presence (legacy)", check_hackrf_presence()),
+        ("PlutoSDRplus Presence (legacy)", check_PlutoSDRplus_presence()),
     ]
 
     # Run the check_timing utility

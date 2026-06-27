@@ -24,10 +24,10 @@ tests/test_ewma_and_routing.py::test_global_r_weighted_by_modality PASSED [ 13%]
 tests/test_ewma_and_routing.py::test_router_only_two_streams PASSED      [ 14%]
 tests/test_ewma_and_routing.py::test_structured_background_routes_to_secondary PASSED [ 15%]
 tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_no_devices_found_raises_driver_unavailable PASSED [ 16%]
-tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_hackrf_not_found_raises_hardware_initialization PASSED [ 17%]
+tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_PlutoSDRplus_not_found_raises_hardware_initialization PASSED [ 17%]
 tests/test_hardware_failure_paths.py::TestSoapySDRFailurePaths::test_clock_mismatch_raises_clock_verification PASSED [ 18%]
-tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_internal_clock_raises_clock_verification PASSED [ 19%]
-tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification FAILED [ 20%]
+tests/test_hardware_failure_paths.py::TestPyPlutoSDRplusFailurePaths::test_pyPlutoSDRplus_internal_clock_raises_clock_verification PASSED [ 19%]
+tests/test_hardware_failure_paths.py::TestPyPlutoSDRplusFailurePaths::test_pyPlutoSDRplus_unknown_clock_raises_clock_verification FAILED [ 20%]
 tests/test_hardware_failure_paths.py::TestIngestionFailurePaths::test_ingest_sdr_no_driver_returns_error_payload PASSED [ 21%]
 tests/test_hardware_failure_paths.py::TestIngestionFailurePaths::test_ingest_sdr_unverified_clock_raises PASSED [ 22%]
 tests/test_hardware_failure_paths.py::TestNMEAFailurePaths::test_no_nmea_sentences PASSED [ 23%]
@@ -112,19 +112,19 @@ tests/test_watchdog.py::test_watchdog_healthy PASSED                     [ 99%]
 tests/test_watchdog.py::test_watchdog_unhealthy PASSED                   [100%]
 
 =================================== FAILURES ===================================
-_ TestPyhackrfFailurePaths.test_pyhackrf_unknown_clock_raises_clock_verification _
+_ TestPyPlutoSDRplusFailurePaths.test_pyPlutoSDRplus_unknown_clock_raises_clock_verification _
 
-self = <tests.test_hardware_failure_paths.TestPyhackrfFailurePaths object at 0x7fffa15ffc50>
+self = <tests.test_hardware_failure_paths.TestPyPlutoSDRplusFailurePaths object at 0x7fffa15ffc50>
 
-    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+    def test_pyPlutoSDRplus_unknown_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "unknown"
-        mock_pyhackrf = mock.MagicMock()
-        mock_pyhackrf.HackRF.return_value = mock_device
+        mock_pyPlutoSDRplus = mock.MagicMock()
+        mock_pyPlutoSDRplus.PlutoSDRplus.return_value = mock_device
         patches = {
-            "pyhackrf": mock_pyhackrf,
+            "pyPlutoSDRplus": mock_pyPlutoSDRplus,
             "SOAPYSDR_AVAILABLE": False,
-            "PYHACKRF_AVAILABLE": True,
+            "PYPlutoSDRplus_AVAILABLE": True,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
 >           with pytest.raises(ClockVerificationError):
@@ -139,5 +139,5 @@ WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyA
 WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
 WARNING  dslv-zpdi.nmea:nmea_stream.py:106 NmeaStream: serial error on /dev/ttyACM0: [Errno 11] Could not exclusively lock port /dev/ttyACM0: [Errno 11] Resource temporarily unavailable — retry in 5 s
 =========================== short test summary info ============================
-FAILED tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths::test_pyhackrf_unknown_clock_raises_clock_verification
+FAILED tests/test_hardware_failure_paths.py::TestPyPlutoSDRplusFailurePaths::test_pyPlutoSDRplus_unknown_clock_raises_clock_verification
 =================== 1 failed, 102 passed in 98.82s (0:01:38) ===================

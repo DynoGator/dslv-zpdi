@@ -1,16 +1,16 @@
 # GROK WORK REPORT — 2026-06-11
 
-**Session:** Autonomous execution of dslv-zpdi work order (Rev 4.8.0 → 4.8.1)
+**Session:** Autonomous execution of dslv-zpdi work order (Rev 5.0.0 → 4.8.1)
 **Executor:** Grok 4.3 (xAI) under full autonomy per work order
 **Authority:** Joseph R. Fross (DynoGator Labs / Resonant Genesis LLC)
 **Host:** Pixel 9 Pro XL · GrapheneOS · proot-distro Debian Trixie (aarch64)
-**Baseline at start of session:** HEAD 9462a2b (merge: Rev 4.8.0 real CI validation matrix), pyproject 4.8.0,  simulator suite collected 90 / 2 collection errors on this host (no libhackrf)
+**Baseline at start of session:** HEAD 9462a2b (merge: Rev 5.0.0 real CI validation matrix), pyproject 4.8.0,  simulator suite collected 90 / 2 collection errors on this host (no libPlutoSDRplus)
 
 ## Executive Summary
 
-Executed the full work order §1–§10 on a simulator-only proot host (explicitly no HackRF/PPS/NMEA/GPSDO hardware attached; `DEV_SIMULATOR=1` only; no writes to `docs/validation-logs/`).
+Executed the full work order §1–§10 on a simulator-only proot host (explicitly no PlutoSDRplus/PPS/NMEA/GPSDO hardware attached; `DEV_SIMULATOR=1` only; no writes to `docs/validation-logs/`).
 
-**Critical path unblocked:** Task A root cause was bare `except ImportError:` around imports that trigger `CDLL('libhackrf.so.0')` (and Soapy/h5py/bleak native loads) at *import time* inside the third-party packages. On hosts without the .so this raises `OSError`, which escaped the guard, blew up `import hal_hardware`, and prevented collection of `tests/test_hardware_failure_paths.py` and `tests/test_timing_monitor.py` (the latter via `lock_monitor`). Baseline: 90 collected, 2 errors, suite hard-failed to even start.
+**Critical path unblocked:** Task A root cause was bare `except ImportError:` around imports that trigger `CDLL('libPlutoSDRplus.so.0')` (and Soapy/h5py/bleak native loads) at *import time* inside the third-party packages. On hosts without the .so this raises `OSError`, which escaped the guard, blew up `import hal_hardware`, and prevented collection of `tests/test_hardware_failure_paths.py` and `tests/test_timing_monitor.py` (the latter via `lock_monitor`). Baseline: 90 collected, 2 errors, suite hard-failed to even start.
 
 After the (ImportError, OSError) broadening (only on native-loading sites) + audit of siblings: full contract reaches **113 passed**, ruff/orphan/guard/version clean. `test_pipeline.py` 10/10 PASS (now dynamically versioned).
 
@@ -20,9 +20,9 @@ All work SPEC-tied, no metrology changes, RadonEye kept secondary, no Tier-1 pro
 
 - OS: Debian GNU/Linux 13 (trixie), Linux 6.17.0-PRoot-Distro aarch64
 - Shell: /bin/sh (proot)
-- No `libhackrf.so.0` (confirmed by the exact OSError during baseline collection)
+- No `libPlutoSDRplus.so.0` (confirmed by the exact OSError during baseline collection)
 - Toolchain: python 3.13.5, fresh .venv, editable `pip install -e ".[dev]"` (no --break-system-packages; used ensurepip + internal pip bootstrap to work around proot/venv launcher quirks)
-- Git start: switched from polluted feature branch (mobile-node-rev35) via hard reset + clean to origin/main @ 9462a2b (Rev 4.8.0), then performed all work on main.
+- Git start: switched from polluted feature branch (mobile-node-rev35) via hard reset + clean to origin/main @ 9462a2b (Rev 5.0.0), then performed all work on main.
 - Validation host reality respected: simulator-only; all evidence is synthetic/CI-style.
 
 ## Tasks Attempted / Completed
@@ -37,29 +37,29 @@ All work SPEC-tied, no metrology changes, RadonEye kept secondary, no Tier-1 pro
 
 ## Task A Root-Cause Write-up (OSError vs ImportError)
 
-**Defect location:** `src/dslv_zpdi/layer1_ingestion/hal_hardware.py:38-43` (Soapy) and `:46-75` (pyhackrf block containing `import hackrf as pyhackrf`).
+**Defect location:** `src/dslv_zpdi/layer1_ingestion/hal_hardware.py:38-43` (Soapy) and `:46-75` (pyPlutoSDRplus block containing `import PlutoSDRplus as pyPlutoSDRplus`).
 
-The third-party `hackrf` package (0.2.0) does at module import:
+The third-party `PlutoSDRplus` package (0.2.0) does at module import:
 ```python
 from ctypes import CDLL
-libhackrf = CDLL('libhackrf.so.0')
+libPlutoSDRplus = CDLL('libPlutoSDRplus.so.0')
 ```
-This is executed at `import time` (top level of `hackrf/__init__.py`), *before* any user code. When the .so is absent the `CDLL` constructor raises `OSError: libhackrf.so.0: cannot open shared object file: No such file or directory` (from dlopen).
+This is executed at `import time` (top level of `PlutoSDRplus/__init__.py`), *before* any user code. When the .so is absent the `CDLL` constructor raises `OSError: libPlutoSDRplus.so.0: cannot open shared object file: No such file or directory` (from dlopen).
 
 The guard was:
 ```python
 try:
-    import hackrf as pyhackrf
+    import PlutoSDRplus as pyPlutoSDRplus
     ...
-    PYHACKRF_AVAILABLE = True
+    PYPlutoSDRplus_AVAILABLE = True
 except ImportError:
-    PYHACKRF_AVAILABLE = False
+    PYPlutoSDRplus_AVAILABLE = False
 ```
 `OSError` is not a subclass of `ImportError`, so it propagated, the module failed to import, any test that did `from ... import hal_hardware` (or transitive via `lock_monitor`) caused collection abort.
 
 **Blast radius on this host:** exactly the two files named in the work order. `test_hardware_failure_paths.py:14` and `test_timing_monitor.py:4` (via `from .hal_hardware import HardwareHAL`). 90 items collected, 2 errors during collection, suite "hard-fails".
 
-**Fix:** change both to `except (ImportError, OSError):` + one-line Rev 4.8.x comment + SPEC-005A.HAL-HW reference (verbatim, no new ID invented).
+**Fix:** change both to `except (ImportError, OSError):` + one-line Rev 5.0.x comment + SPEC-005A.HAL-HW reference (verbatim, no new ID invented).
 
 **Audit decisions (per work order):**
 - Broadened: h5py in hdf5_writer.py + radon_session_writer.py (h5py C extension + libhdf5 can surface OSError on some hosts; matches "h5py in .../node_receiver.py" via the import of HDF5Writer).
@@ -93,7 +93,7 @@ except ImportError:
 - src/dslv_zpdi/__init__.py
 - README.md (revision line)
 - CHANGELOG.md (prepended 4.8.1 section)
-- RELEASE_NOTES_v4.8.1.md (new)
+- RELEASE_NOTES_v5.0.0.md (new)
 
 **Deliverables (committed):**
 - docs/audits/GROK_WORK_REPORT_2026-06-11.md (this file)
@@ -119,13 +119,13 @@ After C tests: node_receiver exercised (ingest paths, error handlers, health, ra
 - Simulator-only host: no physical hardware validation performed or logged.
 - RadonEye `/ingest/radoneye` remains secondary-only (quarantine JSONL + SPEC-015-PENDING); SPEC-015.md scaffold exists but full calibration baseline ratification is P4 for a hardware session.
 - No changes to Kuramoto/coherence, amplifier lockout, Tier-1 admission policy, or any metrology math.
-- Next recommended: P1 Hardware Truth Path on the Pi 5 (LBE-1421 + HackRF + PPS + real NMEA). See TURNOVER for exact reproduction commands.
+- Next recommended: P1 Hardware Truth Path on the Pi 5 (LBE-1421 + PlutoSDRplus + PPS + real NMEA). See TURNOVER for exact reproduction commands.
 - Minor: some nmea_stream warnings appear in sim runs (expected when no /dev/ttyACM0); harmless.
 
 ## Validation Evidence (captured in session)
 
-- Baseline contract: 90 collected, 2 errors (exact OSError stack from hackrf CDLL).
-- Post-A / final: 113 passed, test_pipeline "Rev 4.8.1 Tests" + "ALL 10 TESTS PASSED".
+- Baseline contract: 90 collected, 2 errors (exact OSError stack from PlutoSDRplus CDLL).
+- Post-A / final: 113 passed, test_pipeline "Rev 5.0.1 Tests" + "ALL 10 TESTS PASSED".
 - Every pre-commit and post-push: full §2 sequence (pip check, check_version_sync 4.8.1, orphan OK, repo_guard OK, ruff clean, pytest 113, test_pipeline 10).
 - 3 commits on main, ahead of origin after push; post `git fetch && git pull --ff-only` + clean venv recreate + full contract = green on the pushed tree.
 - No force pushes, no history rewrite.

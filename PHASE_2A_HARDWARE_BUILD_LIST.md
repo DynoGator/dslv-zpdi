@@ -9,4 +9,4 @@ See the authoritative sources:
 - `specs/SPEC-004A.*` and `specs/SPEC-005*`
 
 For the mobile Tier-2 node (this branch), primary hardware is the Pixel 9 Pro XL + Termux/proot environment.
-Detailed parts list and pinouts for Tier-1 (Pi + HackRF + LBE-1421) live in the main anchor repo docs.
+Detailed parts list and pinouts for Tier-1 (Pi + PlutoSDRplus + LBE-1421) live in the main anchor repo docs.

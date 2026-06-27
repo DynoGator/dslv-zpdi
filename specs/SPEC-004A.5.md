@@ -73,9 +73,9 @@ def get_hal(
 ) -> HardwareHAL | PlutoHAL | SimulatedHAL
 ```
 
-* `sdr_type="auto"` detection order: HackRF → Pluto → simulator fallback.
+* `sdr_type="auto"` detection order: PlutoSDRplus → Pluto → simulator fallback.
 * `sdr_type="pluto"` forces `PlutoHAL`.
-* `sdr_type="hackrf"` forces `HardwareHAL`.
+* `sdr_type="PlutoSDRplus"` forces `HardwareHAL`.
 * `sdr_type="sim"` forces `SimulatedHAL`.
 
 ### 4.2 Config loader
@@ -84,7 +84,7 @@ def get_hal(
 
 ```yaml
 pipeline:
-  sdr_type: "auto"          # auto | hackrf | pluto | sim
+  sdr_type: "auto"          # auto | PlutoSDRplus | pluto | sim
   pluto_uri: "ip:192.168.3.80"
   pluto_external_clock: false
   pluto_gain: 62
@@ -99,24 +99,24 @@ Environment overrides:
 
 ### 4.3 Main pipeline
 
-`src/dslv_zpdi/main_pipeline.py` adds `--sdr-type {hackrf,pluto,sim}` and passes the resolved selection to `get_hal()`.
+`src/dslv_zpdi/main_pipeline.py` adds `--sdr-type {PlutoSDRplus,pluto,sim}` and passes the resolved selection to `get_hal()`.
 
 ## 5. Dashboard Integration
 
 `tools/dashboard/panels/waterfall.py` supports three live sources:
 
 * `SIM` — synthesized spectrum (default fallback)
-* `HACKRF` — `hackrf_sweep` subprocess
+* `PlutoSDRplus` — `PlutoSDRplus_sweep` subprocess
 * `PLUTO` — `PlutoSweepStream` libiio FFT thread
 
 Source selection:
 
-* Config key: `waterfall.sdr_source` (`hackrf`, `pluto`, `sim`).
+* Config key: `waterfall.sdr_source` (`PlutoSDRplus`, `pluto`, `sim`).
 * Env var: `DSLV_DASHBOARD_SDR_SOURCE`.
-* CLI flag: `--sdr-source {hackrf,pluto,sim}`.
-* Runtime key: `r` cycles through detected sources: HackRF → PlutoSDR → SIM.
+* CLI flag: `--sdr-source {PlutoSDRplus,pluto,sim}`.
+* Runtime key: `r` cycles through detected sources: PlutoSDRplus → PlutoSDR → SIM.
 
-The waterfall title and the RF anomaly panel indicate the active source (`HACKRF`, `PLUTO`, `SIM`, or `…-WAIT` while the stream starts). The hardware panel displays both HackRF and PlutoSDR detection status.
+The waterfall title and the RF anomaly panel indicate the active source (`PlutoSDRplus`, `PLUTO`, `SIM`, or `…-WAIT` while the stream starts). The hardware panel displays both PlutoSDRplus and PlutoSDR detection status.
 
 ## 6. Python Environment
 
@@ -139,10 +139,10 @@ This makes `iio` and `SoapySDR` importable from inside the venv without recreati
 * Internal-clock payloads are quarantined to the secondary stream.
 * GPSDO lock verification with a mocked context.
 
-Tests use the same module-dict patching pattern used for `SoapySDR`, `pyhackrf`, and `serial` mocks elsewhere in the suite.
+Tests use the same module-dict patching pattern used for `SoapySDR`, `pyPlutoSDRplus`, and `serial` mocks elsewhere in the suite.
 
 ## 8. Safety Notes
 
 * Do **not** set `pluto_external_clock: true` unless the GPSDO 10 MHz and 1 PPS wiring is physically verified.
 * The AD9363 front-end is not designed for strong nearby transmitters; use appropriate filtering/attenuation.
-* Do **not** enable the HackRF front-end amp (`a` key in the dashboard) until the blown amplifier is replaced.
+* Do **not** enable the PlutoSDRplus front-end amp (`a` key in the dashboard) until the blown amplifier is replaced.

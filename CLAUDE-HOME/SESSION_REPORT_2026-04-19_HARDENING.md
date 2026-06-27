@@ -30,7 +30,7 @@ custom operations dashboard build.
   nfs-blkmap.  Kept: Bluetooth, WiFi, Desktop, SSH, accessibility,
   chrony, Bluez, NetworkManager, LightDM.
 - **Kernel frozen:** 20 packages `apt-mark hold` — kernel images,
-  headers, firmware (brcm/atheros/mediatek), bluez, hackrf stack, chrony,
+  headers, firmware (brcm/atheros/mediatek), bluez, PlutoSDRplus stack, chrony,
   pps-tools.  Automatic security updates will not touch timing-critical
   code.
 - **Realtime tuning:** CPU governor=performance across all cores, USB
@@ -46,7 +46,7 @@ custom operations dashboard build.
 | Domain | Status | Evidence |
 |--------|--------|----------|
 | Pi 5 16 GB | Healthy | temp=47°C idle, 13 GB free of 16 GB, no current throttling (historical under-voltage bit still latched in `vcgencmd get_throttled 0x50000` — pre-Dewalt-battery artifact, ignorable) |
-| HackRF One r9 | Live | `hackrf_info` enumerates, FW v2.1.0, S/N …a7c5f4f |
+| PlutoSDRplus r9 | Live | `PlutoSDRplus_info` enumerates, FW v2.1.0, S/N …a7c5f4f |
 | PPS GPIO | Present | `/dev/pps0` present, `pps_gpio` kernel module loaded |
 | GPSDO LBE-1421 | **AWAITING DELIVERY** | no `/dev/ttyACM*`; pipeline in `DEV_SIMULATOR=1` |
 | chrony | Active | stratum 2 (NTP fallback), PPS refclock configured for activation-on-arrival |
@@ -63,7 +63,7 @@ custom operations dashboard build.
 - 20 GB free space (of 128 GB SD)
 - Historical throttling bits set (past under-voltage) — no current symptom
 - No conflicting SDR processes running (clean)
-- HackRF detected, PPS present, chrony running
+- PlutoSDRplus detected, PPS present, chrony running
 
 ### 2. Bloatware & service cull (Task #2)
 
@@ -117,7 +117,7 @@ break timing:
 - **Firmware**: `firmware-brcm80211`, `firmware-atheros`,
   `firmware-mediatek`
 - **Timing stack**: `chrony`, `pps-tools`
-- **SDR stack**: `hackrf`, `libhackrf0`, `libhackrf-dev`
+- **SDR stack**: `PlutoSDRplus`, `libPlutoSDRplus0`, `libPlutoSDRplus-dev`
 - **Bluetooth stack**: `bluez`, `bluez-firmware`
 
 Verification: `apt-mark showhold | wc -l → 20`.
@@ -127,7 +127,7 @@ Verification: `apt-mark showhold | wc -l → 20`.
 **Persistent systemd oneshot** `/etc/systemd/system/dslv-zpdi-tuning.service`:
 - sets all CPUs' scaling_governor to `performance` on every boot
 - forces USB `power/control = on` + `power/autosuspend = -1` for every
-  USB device (keeps HackRF from randomly suspending)
+  USB device (keeps PlutoSDRplus from randomly suspending)
 
 **Sysctl drop-in** `/etc/sysctl.d/99-dslv-zpdi.conf`:
 - `vm.swappiness = 10` (was 60 — less aggressive swap on 16 GB host)
@@ -171,7 +171,7 @@ tools/dashboard/
     ├── __init__.py
     ├── system.py                # CPU/mem/load/temp/throttle/governor
     ├── pipeline.py              # systemctl state, PID, rate, quarantine
-    ├── hardware.py              # HackRF, PPS, GPSDO, chrony
+    ├── hardware.py              # PlutoSDRplus, PPS, GPSDO, chrony
     ├── waterfall.py             # truecolor rolling FFT (sim + real)
     ├── logs.py                  # threaded journalctl -f tail
     └── notifications.py         # scan ticker + rare glitch events
@@ -189,7 +189,7 @@ tools/dashboard/
 - `q` / `Q` — quit (pipeline keeps running)
 - `space` — pause / resume rendering
 - `m` — cycle waterfall mode (SWEEP → NARROW → SCOPE)
-- `r` — toggle real SDR data (hackrf_sweep wiring — simulator default)
+- `r` — toggle real SDR data (PlutoSDRplus_sweep wiring — simulator default)
 - `h` — toggle banner
 
 **Dark-humor scan messages** (rotating every 4 s):
@@ -199,7 +199,7 @@ CETACEAN WHISPERS AT 1420 MHz · CROSS-CORRELATING DREAM FRAGMENTS ·
 QUARANTINING ROGUE PHOTONS · CHECKING CLOSET FOR GPSDO-SHAPED HOLES ·
 COUNTING ADC BITS BACKWARDS · UNFOLDING THE KURAMOTO MANIFOLD ·
 NEGOTIATING WITH THE UPS CAPACITORS · FLIRTING WITH 50-OHM IMPEDANCE ·
-INVOKING SCHOTTKY BARRIER PRIESTS · ASKING THE HACKRF POLITELY ·
+INVOKING SCHOTTKY BARRIER PRIESTS · ASKING THE PlutoSDRplus POLITELY ·
 SHOUTING AT THE 1 PPS LINE · OFFERING COFFEE TO THE RP1 SOUTHBRIDGE ·
 BRIBING CHRONY WITH SUB-MICROSECOND NONSENSE · BACKSCATTER-TRANSMUTING
 COSMIC RAYS · APOLOGIZING TO THE 10 MHz REFERENCE · BAYESIAN-FLAVORED
@@ -213,7 +213,7 @@ WITH CESIUM · MILDLY HARASSING NEUTRINOS · DIAGONALIZING THE
 COHERENCE TENSOR · DETECTING DARK HUMOR AT -110 dBm · REMINDING
 ENTROPY WHO'S IN CHARGE · RATIONALIZING THE IRRATIONAL
 (FLOATING-POINT) · TIMESTAMP JITTER IS JUST EMOTIONAL RANGE · LET HIM
-COOK (THE HackRF) · DOWNSAMPLING YOUR EXPECTATIONS · CHECKING THE
+COOK (THE PlutoSDRplus) · DOWNSAMPLING YOUR EXPECTATIONS · CHECKING THE
 CLOSET FOR GPSDO-SHAPED HOLES.
 
 Occasional rare-event "glitch" flavor text every ~37 s.
@@ -223,7 +223,7 @@ Occasional rare-event "glitch" flavor text every ~37 s.
   1/f noise floor + periodic pulse artifacts → the visual pattern is
   obviously non-trivial and makes setup/tuning diagnostics visible.
 - In real mode (`DSLV_DASHBOARD_REAL_SDR=1` or `r` key), has a stub
-  that will shell out to `hackrf_sweep` — leave it stubbed until GPSDO
+  that will shell out to `PlutoSDRplus_sweep` — leave it stubbed until GPSDO
   is connected so that no partial data enters the visual feed.
 - 9-stop truecolor palette (black → deep blue → teal → green → amber
   → hot-white).
@@ -240,10 +240,10 @@ start.  Checks performed:
 
 1. **Kill conflicting processes** (TERM then KILL):
    `gqrx`, `SoapySDRUtil`, `sdrangel`, `rtl_tcp`, `rtl_fm`,
-   `openwebrx`, `airspy_rx`, `hackrf_transfer`, `hackrf_sweep`,
-   `hackrf_spectrum`.  If any are running they are logged as WARN,
+   `openwebrx`, `airspy_rx`, `PlutoSDRplus_transfer`, `PlutoSDRplus_sweep`,
+   `PlutoSDRplus_spectrum`.  If any are running they are logged as WARN,
    killed, and preflight continues (non-fatal).
-2. `hackrf_info` enumerated
+2. `PlutoSDRplus_info` enumerated
 3. `/dev/pps0` present (WARN if absent — GPSDO not connected)
 4. chrony active
 5. Output directories exist, owned by `dynogator`, root-owned files
@@ -337,7 +337,7 @@ runs.
 - `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf`    — DVB driver blacklist
 - `/var/lib/dslv_zpdi/`                             — state dir *(earlier session)*
 - `/home/dynogator/.config/autostart/dslv-zpdi-dashboard.desktop` — TUI autostart
-- 20 × `apt-mark hold`                              — kernel/firmware/hackrf freeze
+- 20 × `apt-mark hold`                              — kernel/firmware/PlutoSDRplus freeze
 
 ---
 
@@ -374,7 +374,7 @@ apt-mark showhold
 ### When the LBE-1421 GPSDO arrives
 
 1. **Physical hookup** (all 3.3 V native — no level shifter needed):
-   - SMA: LBE-1421 `Output` → HackRF `CLKIN` (hardware 10 MHz phase lock)
+   - SMA: LBE-1421 `Output` → PlutoSDRplus `CLKIN` (hardware 10 MHz phase lock)
    - Jumper: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
      **Bridge ground between GPSDO and Pi.**
    - USB-C: LBE-1421 → Pi 5 (power + NMEA serial for GPS fix verification)

@@ -186,5 +186,5 @@ def ingest_sdr(**kwargs):
 
 
 def verify_hardware_lock(device_index: int = 0) -> dict:
-    """SPEC-004A.3 — Legacy GPSDO/HackRF lock check."""
+    """SPEC-004A.3 — Legacy GPSDO/PlutoSDRplus lock check."""
     return get_hal().verify_gpsdo_lock(device_index)

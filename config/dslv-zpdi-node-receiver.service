@@ -3,7 +3,7 @@ Description=DSLV-ZPDI Mobile Node Telemetry Receiver (SPEC-014)
 # Accepts JSON telemetry POSTs from Pixel 9 Pro XL / GrapheneOS and other
 # swarm nodes over the PiRepo hotspot (10.42.0.x).  Also hosts the RadonEye
 # Pro SPEC-015 staging endpoint.
-After=network.target dslv-zpdi-hackrf-init.service dslv-zpdi-preflight.service
+After=network.target dslv-zpdi-PlutoSDRplus-init.service dslv-zpdi-preflight.service
 Wants=dslv-zpdi-preflight.service
 
 [Service]

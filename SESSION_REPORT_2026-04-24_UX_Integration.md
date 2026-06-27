@@ -2,9 +2,9 @@
 
 **Session:** UX integration & polish
 **Operator:** Joseph R. Fross
-**Platform:** Raspberry Pi 5 + HackRF + LBE-1421 GPSDO (pending) + 5" DSI
+**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending) + 5" DSI
 **Branch:** `main` (uncommitted — see "Change log" below)
-**Version:** v4.5.0 (unchanged) → working toward v4.6.0-ux
+**Version:** v5.0.0 (unchanged) → working toward v5.0.0-ux
 
 ## 1. Executive summary
 
@@ -14,7 +14,7 @@ Scope delivered:
    auto-detection, a live `c` toggle, and launcher-aware geometry.
 2. HDF5 inspection tools installed (`hdf5-tools` apt, `h5py` +
    `h5glance` pip). `vitables` was removed because it forced a numpy 2
-   upgrade that breaks `pyhackrf`; the downgrade back to numpy 1.26.4
+   upgrade that breaks `pyPlutoSDRplus`; the downgrade back to numpy 1.26.4
    was restored and verified.
 3. Interactive satellite map generator built from scratch
    (`tools/mapping/`) — aggregates primary HDF5 + secondary JSONL,
@@ -66,11 +66,11 @@ Details:
   reliable fallback).
 - `pip install pandas folium` for map rendering.
 - **Regression averted:** `vitables` install pulled in `numpy==2.4.4`,
-  which breaks the `pyhackrf 0.2.0` (`numpy<2`) pin. Reverted to
+  which breaks the `pyPlutoSDRplus 0.2.0` (`numpy<2`) pin. Reverted to
   `numpy==1.26.4` and uninstalled ViTables. Runtime stack verified:
-  `hackrf`, `h5py`, `folium`, `pandas`, `dslv_zpdi` all import
+  `PlutoSDRplus`, `h5py`, `folium`, `pandas`, `dslv_zpdi` all import
   cleanly. **Do not reinstall ViTables** without first upgrading
-  `pyhackrf` to a numpy-2-compatible release.
+  `pyPlutoSDRplus` to a numpy-2-compatible release.
 
 ### 2.3 Map generator (`tools/mapping/`)
 
@@ -176,7 +176,7 @@ pip:   h5glance, folium, pandas, tables  installed (ViTables removed — see §2
 | `tools/mapping/aggregate.py` | PASS — 4000 events emitted (2000 primary / 2000 secondary) |
 | `tools/mapping/render_map.py` | PASS — 2.6 MB HTML; ESRI + OSM + clusters present |
 | `tools/mailer/send_data.py --dry-run` | PASS — bundle 0.34 MB, subject / recipients formatted |
-| `numpy` / `pyhackrf` compatibility | PASS — numpy 1.26.4, `import hackrf` OK |
+| `numpy` / `pyPlutoSDRplus` compatibility | PASS — numpy 1.26.4, `import PlutoSDRplus` OK |
 | `dslv_zpdi` package | PASS — imports after the numpy rollback |
 
 ## 5. Turnover
@@ -214,7 +214,7 @@ pip:   h5glance, folium, pandas, tables  installed (ViTables removed — see §2
   the bundle manifest. A future "chunked send" backend or a small
   S3/Drive upload shim would handle the big ones.
 - **ViTables disabled.** See §2.2. Use `h5glance` / `h5ls -r` /
-  `h5dump` instead. Once `pyhackrf` upgrades past numpy 2, reinstall
+  `h5dump` instead. Once `pyPlutoSDRplus` upgrades past numpy 2, reinstall
   with `pip install vitables`.
 - **Compact dashboard is terminal-based.** At 800×480 with a 9-pt
   monospace font, we fit ≈ 92×24 cells — enough for the stacked

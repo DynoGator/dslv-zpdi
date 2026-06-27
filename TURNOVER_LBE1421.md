@@ -1,11 +1,11 @@
-# Turnover Report: LBE-1421 Production Hardening (v4.6.0)
+# Turnover Report: LBE-1421 Production Hardening (v5.0.0)
 
 **Project:** DSLV-ZPDI Tier-1 SIGINT Baseline
 **Date:** 2026-04-26
 **Status:** PRODUCTION READY (Simulator Verified)
 
 ## Executive Summary
-This update finalizes the transition from the deprecated single-output LBE-1420 to the dual-output **Leo Bodnar LBE-1421 GPSDO**. The platform now supports simultaneous 10 MHz hardware ADC locking (via HackRF CLKIN) and 1 PPS epoch anchoring (via Pi 5 GPIO 18). All SPEC-IDs for timing integrity and multi-node coherence are implemented and verified against the LBE-1421 Datasheet V1.0.
+This update finalizes the transition from the deprecated single-output LBE-1420 to the dual-output **Leo Bodnar LBE-1421 GPSDO**. The platform now supports simultaneous 10 MHz hardware ADC locking (via PlutoSDRplus CLKIN) and 1 PPS epoch anchoring (via Pi 5 GPIO 18). All SPEC-IDs for timing integrity and multi-node coherence are implemented and verified against the LBE-1421 Datasheet V1.0.
 
 ## Key Technical Achievements
 - **Phase Coherence:** Implemented `wait_for_pps_edge()` in `HardwareHAL` to align capture windows across distributed nodes (<1 µs cross-node jitter goal).
@@ -25,7 +25,7 @@ This update finalizes the transition from the deprecated single-output LBE-1420 
 ## Next Hardware Steps (Real Pi 5 Deployment)
 1. **LBE-1421 Config:** Connect LBE-1421 to PC and use Leo Bodnar tool to set `Out1 = 1 PPS` and `Out2 = 10,000,000 Hz`.
 2. **Wiring:** 
-   - `Out2` -> HackRF `CLKIN` (SMA)
+   - `Out2` -> PlutoSDRplus `CLKIN` (SMA)
    - `Out1` -> Pi 5 `GPIO 18` (Physical Pin 12)
    - Bridge Ground between LBE-1421 and Pi 5.
 3. **Execution:**

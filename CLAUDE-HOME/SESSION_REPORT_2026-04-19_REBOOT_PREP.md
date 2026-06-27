@@ -4,7 +4,7 @@
 **Session:** 4 of 4 on 2026-04-19 (Verification / Cleanup / Reboot Prep)
 **Operator:** Joseph R. Fross
 **Host:** Pi 5 (Trixie, 16GB) — Uptime 6h 43min
-**Revision:** v4.5.0-LBE-1421-HARDENED (from Session 3)
+**Revision:** v5.0.0-LBE-1421-HARDENED (from Session 3)
 
 ---
 
@@ -16,7 +16,7 @@ Every persisted configuration surface was inspected for reboot-survivability:
 | Surface | Status | Evidence |
 |---------|--------|----------|
 | Systemd chain | **enabled + active** | `dslv-zpdi-tuning`, `dslv-zpdi-preflight`, `dslv-zpdi` all `enabled`, all `active` |
-| Kernel freeze | **20 holds** | `linux-image/-headers-6.12.75+rpt-rpi-v8/-2712`, `linux-kbuild-*`, `firmware-brcm/atheros/mediatek`, `hackrf`, `libhackrf0/-dev`, `chrony`, `pps-tools`, `bluez`, `bluez-firmware` |
+| Kernel freeze | **20 holds** | `linux-image/-headers-6.12.75+rpt-rpi-v8/-2712`, `linux-kbuild-*`, `firmware-brcm/atheros/mediatek`, `PlutoSDRplus`, `libPlutoSDRplus0/-dev`, `chrony`, `pps-tools`, `bluez`, `bluez-firmware` |
 | sysctl | **applied + persistent** | `/etc/sysctl.d/99-dslv-zpdi.conf`: swappiness=10, rmem/wmem=26214400, printk=4 4 1 7, fs.protected_hardlinks=1 |
 | Modprobe blacklist | **applied + persistent** | `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf`: DVB drivers blocked; `lsmod \| grep dvb` empty |
 | PPS boot persistence | **OK** | `/boot/firmware/config.txt`: `dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0`; `/dev/pps0` present; `pps_gpio` loaded |
@@ -25,7 +25,7 @@ Every persisted configuration surface was inspected for reboot-survivability:
 | Passwordless sudo | **working** | `/etc/sudoers.d/dynogator` (from Session 1), validated with `sudo -n` test |
 | Dashboard autostart | **persistent** | `~/.config/autostart/dslv-zpdi-dashboard.desktop` present, Exec line points to `tools/dashboard/launch.sh` |
 | State dir | **present** | `/var/lib/dslv_zpdi/baseline.json` LOCKED, ready=true, schema 3.1 |
-| HackRF | **detected** | One r9, FW v2.1.0, API 1.08, serial `010961dc2a7c5f4f` |
+| PlutoSDRplus | **detected** | One r9, FW v2.1.0, API 1.08, serial `010961dc2a7c5f4f` |
 | CPU governor | **performance** | cpu0..cpu3 all pinned |
 | Thermal | **49.4°C** | throttled=0x50000 (boot-time UV flag, benign on cold-boot) |
 | Memory | **1.1Gi/15Gi used**, 0 swap | Healthy headroom |
@@ -90,7 +90,7 @@ After reboot the boot chain will execute in order:
 2. systemd-sysctl applies `/etc/sysctl.d/99-dslv-zpdi.conf`
 3. `chrony.service` starts → stratum-3 NTP sync
 4. `dslv-zpdi-tuning.service` oneshot — pins CPU governor=performance
-5. `dslv-zpdi-preflight.service` oneshot — kills SDR conflicts, verifies HackRF/PPS, re-pins governor, snapshots thermal
+5. `dslv-zpdi-preflight.service` oneshot — kills SDR conflicts, verifies PlutoSDRplus/PPS, re-pins governor, snapshots thermal
 6. `dslv-zpdi.service` — pipeline daemon (`Nice=-5`, realtime I/O)
 7. Desktop login → dashboard auto-launches in lxterminal (180×50)
 
@@ -110,11 +110,11 @@ sudo reboot
 systemctl is-active dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi && \
   systemctl is-enabled dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi && \
   chronyc tracking | head -3 && \
-  hackrf_info | head -3 && \
+  PlutoSDRplus_info | head -3 && \
   echo "POST-REBOOT STATE: GREEN"
 ```
 
-Expected output: three `active` lines, three `enabled` lines, chrony tracking info, hackrf_info header, and `POST-REBOOT STATE: GREEN`.
+Expected output: three `active` lines, three `enabled` lines, chrony tracking info, PlutoSDRplus_info header, and `POST-REBOOT STATE: GREEN`.
 
 ### Dashboard (post-reboot)
 Launches automatically at desktop login. Manual invocation:
@@ -123,7 +123,7 @@ Launches automatically at desktop login. Manual invocation:
 ```
 
 ### When LBE-1421 GPSDO Arrives
-1. Wire SMA: LBE-1421 `Output` → HackRF `CLKIN`
+1. Wire SMA: LBE-1421 `Output` → PlutoSDRplus `CLKIN`
 2. Wire 1PPS: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12); bridge grounds
 3. Connect USB-C (power + NMEA on `/dev/ttyACM0`)
 4. Verify GPS fix: `python -c "import serial; s=serial.Serial('/dev/ttyACM0',9600,timeout=2); print(s.readline())"`
@@ -144,9 +144,9 @@ sudo reboot
 
 | Session | Focus | Primary Output |
 |---------|-------|----------------|
-| 1 — DEPLOYMENT | Nuke + reinstall, passwordless sudo, initial report | v4.4.0 deployed, services running |
+| 1 — DEPLOYMENT | Nuke + reinstall, passwordless sudo, initial report | v5.0.0 deployed, services running |
 | 2 — HARDENING | Audit, optimize, bloatware cull, dashboard, kernel freeze, sysctl, preflight | Dashboard + preflight + systemd chain shipped |
-| 3 — GITHUB | Installer rewrite (v4.5.0), bootstrap, validation evidence, README, push to GitHub | 6 commits pushed, integrity verified |
+| 3 — GITHUB | Installer rewrite (v5.0.0), bootstrap, validation evidence, README, push to GitHub | 6 commits pushed, integrity verified |
 | 4 — REBOOT PREP | State verification, runtime cleanup, reboot-safety audit | Orphan killed, quarantine truncated, reboot-safe |
 
 **The machine is ready for reboot.** Everything critical persists; nothing dangling.

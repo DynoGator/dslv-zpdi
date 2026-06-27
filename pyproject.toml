@@ -45,8 +45,8 @@ pluto = [
     # libiio Python binding is normally a system package (python3-libiio).
     # This group reserves the namespace for any future PyPI-hosted bindings.
 ]
-hackrf = [
-    "pyhackrf>=0.2.0",
+PlutoSDRplus = [
+    "pyPlutoSDRplus>=0.2.0",
 ]
 hardware = [
     # System libiio / python3-libiio must be installed via apt.
@@ -82,7 +82,7 @@ markers = [
     "soak: long-duration test",
     "slow: slow test",
     "pluto: PlutoSDR-specific",
-    "hackrf: HackRF-specific",
+    "PlutoSDRplus: PlutoSDRplus-specific",
 ]
 
 [tool.mypy]

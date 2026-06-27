@@ -15,7 +15,7 @@
 |-----------|----------|-------|
 | Compute | Raspberry Pi 5 Model B Rev 1.1, 16 GB RAM | 104 GB free on 128 GB SD |
 | OS | Raspberry Pi OS Trixie (Debian 13) 64-bit | kernel 6.12.75-rpi-2712 |
-| SDR | HackRF One r9, S/N 010961dc2a7c5f4f, FW v2.1.0 | USB 3.0 connected, fully enumerated |
+| SDR | PlutoSDRplus r9, S/N 010961dc2a7c5f4f, FW v2.1.0 | USB 3.0 connected, fully enumerated |
 | GPSDO | Leo Bodnar LBE-1421 | **PENDING DELIVERY** — simulator mode active |
 | PPS GPIO | pps-gpio kernel module loaded, GPIO 18 configured | dtoverlay in /boot/firmware/config.txt |
 | Chrony | active (running), PPS /dev/pps0 configured | NTP fallback active pending GPSDO |
@@ -24,7 +24,7 @@
 | Input | Rii wireless touchpad | Working |
 | Cooling | Neo Argon PWM active cooler | Pi 5 header |
 
-**Tier 1 Compliance Status:** PARTIAL — HackRF hardware phase-lock requires GPSDO CLKIN. System operating in `DEV_SIMULATOR=1` mode pending LBE-1421 delivery.
+**Tier 1 Compliance Status:** PARTIAL — PlutoSDRplus hardware phase-lock requires GPSDO CLKIN. System operating in `DEV_SIMULATOR=1` mode pending LBE-1421 delivery.
 
 ---
 
@@ -88,7 +88,7 @@ Removed `main_pipeline.py.bak` and `timing_monitor.py.bak` from working tree.
 
 ## Changelog
 
-### v4.4.0 → v4.4.0+3 (this session)
+### v5.0.0 → v5.0.0+3 (this session)
 
 ```
 33d9fea feat(deploy): Add corrected systemd service for Pi 5 home-dir install
@@ -121,7 +121,7 @@ Removed `main_pipeline.py.bak` and `timing_monitor.py.bak` from working tree.
 
 ### Immediate (awaiting GPSDO delivery)
 1. **GPSDO Hardware Arrival (LBE-1421):** When the Leo Bodnar LBE-1421 arrives:
-   - Connect SMA cable: LBE-1421 `Output` → HackRF `CLKIN` (10 MHz phase lock)
+   - Connect SMA cable: LBE-1421 `Output` → PlutoSDRplus `CLKIN` (10 MHz phase lock)
    - Connect jumper: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (verify 3.3V — see RP1 warning in provision_tier1.py)
    - Connect USB-C: LBE-1421 → Pi 5 (power + NMEA serial)
    - Verify: `lsmod | grep pps && ppstest /dev/pps0`
@@ -153,7 +153,7 @@ Removed `main_pipeline.py.bak` and `timing_monitor.py.bak` from working tree.
 ### Hardware Platform Assessment — Tier 1 Compliance
 This hardware **meets Tier 1 spec** for Phase 2A:
 - ✅ Raspberry Pi 5 (16 GB) — compute verified, 104 GB storage available
-- ✅ HackRF One r9 — hardware detected, USB 3.0, FW v2.1.0
+- ✅ PlutoSDRplus r9 — hardware detected, USB 3.0, FW v2.1.0
 - ✅ pps-gpio kernel module — loaded, GPIO 18 configured
 - ✅ Chrony — running, PPS /dev/pps0 configured
 - ✅ Power — 20V Dewalt → 5.1V/10A buck, UPS capacitor bank, Schottky isolation

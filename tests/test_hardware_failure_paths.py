@@ -15,22 +15,22 @@ from dslv_zpdi.layer1_ingestion import hal_hardware as hal_hw_module
 from dslv_zpdi.layer1_ingestion.hal_hardware import HardwareHAL
 
 
-def _hackrf_hardware_accessible() -> bool:
-    """Probe whether a real HackRF is accessible via pyhackrf.
+def _PlutoSDRplus_hardware_accessible() -> bool:
+    """Probe whether a real PlutoSDRplus is accessible via pyPlutoSDRplus.
 
-    The pyhackrf clock-source tests patch hal_hardware's module dict with
-    mocks, but HardwareHAL._verify_pyhackrf_clock spawns a subprocess that
-    imports the real `hackrf` module. If real hardware is present, the probe
+    The pyPlutoSDRplus clock-source tests patch hal_hardware's module dict with
+    mocks, but HardwareHAL._verify_pyPlutoSDRplus_clock spawns a subprocess that
+    imports the real `PlutoSDRplus` module. If real hardware is present, the probe
     succeeds and the mocks are bypassed, causing the tests to flap. Skipping
     when hardware is present keeps CI honest while avoiding false failures on
-    nodes with a HackRF attached.
+    nodes with a PlutoSDRplus attached.
     """
     try:
         result = subprocess.run(
             [
                 sys.executable,
                 "-c",
-                "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); d.close()",
+                "import PlutoSDRplus; PlutoSDRplus.libPlutoSDRplus.PlutoSDRplus_init(); d = PlutoSDRplus.PlutoSDRplus(); d.close()",
             ],
             capture_output=True,
             timeout=10,
@@ -41,7 +41,7 @@ def _hackrf_hardware_accessible() -> bool:
         return False
 
 
-_HACKRF_HARDWARE_ACCESSIBLE = _hackrf_hardware_accessible()
+_PlutoSDRplus_HARDWARE_ACCESSIBLE = _PlutoSDRplus_hardware_accessible()
 
 
 class TestSoapySDRFailurePaths:
@@ -51,19 +51,19 @@ class TestSoapySDRFailurePaths:
         patches = {
             "SoapySDR": mock_soapy,
             "SOAPYSDR_AVAILABLE": True,
-            "PYHACKRF_AVAILABLE": False,
+            "PYPlutoSDRplus_AVAILABLE": False,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             with pytest.raises(DriverUnavailableError):
                 HardwareHAL()
 
-    def test_hackrf_not_found_raises_hardware_initialization(self):
+    def test_PlutoSDRplus_not_found_raises_hardware_initialization(self):
         mock_soapy = mock.MagicMock()
         mock_soapy.Device.enumerate.return_value = [{"driver": "rtlsdr"}]
         patches = {
             "SoapySDR": mock_soapy,
             "SOAPYSDR_AVAILABLE": True,
-            "PYHACKRF_AVAILABLE": False,
+            "PYPlutoSDRplus_AVAILABLE": False,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             with pytest.raises(HardwareInitializationError):
@@ -73,50 +73,50 @@ class TestSoapySDRFailurePaths:
         mock_device = mock.MagicMock()
         mock_device.getClockSource.return_value = "internal"
         mock_soapy = mock.MagicMock()
-        mock_soapy.Device.enumerate.return_value = [{"driver": "hackrf"}]
+        mock_soapy.Device.enumerate.return_value = [{"driver": "PlutoSDRplus"}]
         mock_soapy.Device.return_value = mock_device
         patches = {
             "SoapySDR": mock_soapy,
             "SOAPYSDR_AVAILABLE": True,
-            "PYHACKRF_AVAILABLE": False,
+            "PYPlutoSDRplus_AVAILABLE": False,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             with pytest.raises(ClockVerificationError):
                 HardwareHAL()
 
 
-class TestPyhackrfFailurePaths:
+class TestPyPlutoSDRplusFailurePaths:
     @pytest.mark.skipif(
-        _HACKRF_HARDWARE_ACCESSIBLE,
-        reason="Subprocess probe uses real hackrf module; real hardware bypasses mocks",
+        _PlutoSDRplus_HARDWARE_ACCESSIBLE,
+        reason="Subprocess probe uses real PlutoSDRplus module; real hardware bypasses mocks",
     )
-    def test_pyhackrf_internal_clock_raises_clock_verification(self):
+    def test_pyPlutoSDRplus_internal_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "internal"
-        mock_pyhackrf = mock.MagicMock()
-        mock_pyhackrf.HackRF.return_value = mock_device
+        mock_pyPlutoSDRplus = mock.MagicMock()
+        mock_pyPlutoSDRplus.PlutoSDRplus.return_value = mock_device
         patches = {
-            "pyhackrf": mock_pyhackrf,
+            "pyPlutoSDRplus": mock_pyPlutoSDRplus,
             "SOAPYSDR_AVAILABLE": False,
-            "PYHACKRF_AVAILABLE": True,
+            "PYPlutoSDRplus_AVAILABLE": True,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             with pytest.raises(ClockVerificationError):
                 HardwareHAL()
 
     @pytest.mark.skipif(
-        _HACKRF_HARDWARE_ACCESSIBLE,
-        reason="Subprocess probe uses real hackrf module; real hardware bypasses mocks",
+        _PlutoSDRplus_HARDWARE_ACCESSIBLE,
+        reason="Subprocess probe uses real PlutoSDRplus module; real hardware bypasses mocks",
     )
-    def test_pyhackrf_unknown_clock_raises_clock_verification(self):
+    def test_pyPlutoSDRplus_unknown_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "unknown"
-        mock_pyhackrf = mock.MagicMock()
-        mock_pyhackrf.HackRF.return_value = mock_device
+        mock_pyPlutoSDRplus = mock.MagicMock()
+        mock_pyPlutoSDRplus.PlutoSDRplus.return_value = mock_device
         patches = {
-            "pyhackrf": mock_pyhackrf,
+            "pyPlutoSDRplus": mock_pyPlutoSDRplus,
             "SOAPYSDR_AVAILABLE": False,
-            "PYHACKRF_AVAILABLE": True,
+            "PYPlutoSDRplus_AVAILABLE": True,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             with pytest.raises(ClockVerificationError):
@@ -127,7 +127,7 @@ class TestIngestionFailurePaths:
     def test_ingest_sdr_no_driver_returns_error_payload(self):
         patches = {
             "SOAPYSDR_AVAILABLE": False,
-            "PYHACKRF_AVAILABLE": False,
+            "PYPlutoSDRplus_AVAILABLE": False,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             hal = HardwareHAL()
@@ -141,7 +141,7 @@ class TestIngestionFailurePaths:
         hal._clock_verified = False
         patches = {
             "SOAPYSDR_AVAILABLE": True,
-            "PYHACKRF_AVAILABLE": False,
+            "PYPlutoSDRplus_AVAILABLE": False,
         }
         with mock.patch.dict(hal_hw_module.__dict__, patches):
             with mock.patch.object(

@@ -3,7 +3,7 @@
 **Session Type:** Architecture Review Implementation — Priority 0–2 Corrections  
 **AI Agent:** Kimi Code CLI (root agent)  
 **Operator:** Joseph R. Fross — Resonant Genesis LLC / DynoGator Labs  
-**Base Revision:** Rev 4.3.0  
+**Base Revision:** Rev 5.0.0  
 **Git Commit:** `8c7010b`  
 **Push Status:** VERIFIED — `DynoGator/dslv-zpdi` main branch updated  
 
@@ -25,7 +25,7 @@ One file — the updated GitHub Actions CI matrix — remains locally modified a
 **Problem:** `hal_hardware.py` returned `iq_samples` as Python complex numbers (`np.complex64`), which survive into `json.dumps()` when the list length is exactly 512 (the digestion threshold in `payload.py` was `> 512`).
 
 **Fix:**
-- `hal_hardware.py` (`_ingest_soapy` and `_ingest_pyhackrf`) now emits `[[float(i), float(q)], …]` pairs.
+- `hal_hardware.py` (`_ingest_soapy` and `_ingest_pyPlutoSDRplus`) now emits `[[float(i), float(q)], …]` pairs.
 - `hal_simulated.py` updated to match the serializable format.
 - `payload.py` `to_json()` now **unconditionally** digests `iq_samples` whenever present, replacing them with `iq_digest` + `iq_preview` (64 items).
 
@@ -45,10 +45,10 @@ One file — the updated GitHub Actions CI matrix — remains locally modified a
 **Files:** `src/dslv_zpdi/core/exceptions.py`, `hal_hardware.py`
 
 #### 2.1.3 Harden Clock Verification (“Silent Traitor” Mitigation)
-**Problem:** The `pyhackrf` fallback path could set `_clock_verified = True` even when the clock source was only warned about (not explicitly external).
+**Problem:** The `pyPlutoSDRplus` fallback path could set `_clock_verified = True` even when the clock source was only warned about (not explicitly external).
 
 **Fix:**
-- `_verify_pyhackrf_clock()` now **raises `ClockVerificationError`** if `clock_source != "external"`.
+- `_verify_pyPlutoSDRplus_clock()` now **raises `ClockVerificationError`** if `clock_source != "external"`.
 - Unknown or internal clock = **fail closed**.
 - `_clock_verified` is only set to `True` after explicit external confirmation.
 
@@ -115,10 +115,10 @@ One file — the updated GitHub Actions CI matrix — remains locally modified a
 **Fix:**
 - Created `tests/test_hardware_failure_paths.py` with coverage for:
   - SoapySDR enumeration failure → `DriverUnavailableError`
-  - HackRF not found → `HardwareInitializationError`
+  - PlutoSDRplus not found → `HardwareInitializationError`
   - Soapy clock mismatch → `ClockVerificationError`
-  - `pyhackrf` internal clock → `ClockVerificationError`
-  - `pyhackrf` unknown clock → `ClockVerificationError`
+  - `pyPlutoSDRplus` internal clock → `ClockVerificationError`
+  - `pyPlutoSDRplus` unknown clock → `ClockVerificationError`
   - No driver installed → error payload (no exception)
   - Unverified clock on ingest → `ClockVerificationError`
   - NMEA no sentences / serial timeout
@@ -204,7 +204,7 @@ One file — the updated GitHub Actions CI matrix — remains locally modified a
 - Tier 1 policy contract module (`contracts/tier1_policy.py`) centralizing clock, baseline, and routing constants (SPEC-009).
 - Event deduplication/cooldown in `CoherenceScorer` to prevent duplicate global-event flooding.
 - Real HDF5 rotation tests verifying file close/open/reset behavior.
-- Hardware failure-path mock tests covering SoapySDR, pyhackrf, serial/NMEA, and HDF5 unavailability.
+- Hardware failure-path mock tests covering SoapySDR, pyPlutoSDRplus, serial/NMEA, and HDF5 unavailability.
 - `mypy` and `ruff` to dev dependencies and pyproject.toml config.
 - CI matrix expansion (local) for Python 3.10/3.11/3.12 and Debian bookworm/trixie.
 
@@ -221,7 +221,7 @@ One file — the updated GitHub Actions CI matrix — remains locally modified a
 
 ### Fixed
 - Potential runtime JSON serialization break on 512-length complex IQ sample lists.
-- False-positive clock verification in pyhackrf fallback path.
+- False-positive clock verification in pyPlutoSDRplus fallback path.
 - Missing live-gate enforcement for packet checksum verification.
 ```
 
@@ -233,7 +233,7 @@ One file — the updated GitHub Actions CI matrix — remains locally modified a
 |-------|--------|
 | `pytest tests/` | **43/43 PASSED** |
 | `python tools/orphan_checker.py` | **CLEAN** — no rogue nodes, no orphaned SPEC claims |
-| `python tools/check_version_sync.py` | **CLEAN** — version 4.3.0 aligned |
+| `python tools/check_version_sync.py` | **CLEAN** — version 5.0.0 aligned |
 | `python tools/repo_guard.py` | **CLEAN** — no sys.path mutations, namespace imports correct |
 | `pylint` (modified modules) | **~9.5/10** |
 | `black` formatting | **All modified files reformatted** |

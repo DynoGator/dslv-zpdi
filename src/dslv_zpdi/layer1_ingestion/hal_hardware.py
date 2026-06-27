@@ -1,17 +1,17 @@
 """
-SPEC-005A.HAL-HW | Hardware Implementation (Rev 4.4.0)
+SPEC-005A.HAL-HW | Hardware Implementation (Rev 5.0.0)
 Concrete implementation of the HAL for RF Metrology hardware:
-Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO.
+Raspberry Pi 5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO.
 
 This implementation achieves hardware-level ADC phase coherence by:
-1. 10 MHz reference from GPSDO → HackRF CLKIN (hardware ADC lock)
+1. 10 MHz reference from GPSDO → PlutoSDRplus CLKIN (hardware ADC lock)
 2. 1 PPS from GPSDO → GPIO 18 (UTC epoch anchoring)
 
-Rev 4.1-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
+Rev 5.0-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
 Added "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
-Rev 4.4.0: Migrated to LBE-1421 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
+Rev 5.0.0: Migrated to LBE-1421 GPSDO (USB-C, NMEA telemetry, 3.3V CMOS native).
 Added NMEA serial verification for GPS fix confirmation.
-Rev 4.8.x: Broadened native import guards (ImportError, OSError) for simulator hosts (libhackrf etc).
+Rev 5.0.x: Broadened native import guards (ImportError, OSError) for simulator hosts (libPlutoSDRplus etc).
 """
 
 # pylint: disable=duplicate-code
@@ -35,10 +35,10 @@ from .payload import IngestionPayload, SensorModality
 from .pps_listener import PpsListener
 
 # SoapySDR support - hardware-agnostic SDR driver layer
-# Install: sudo apt install soapysdr-module-hackrf python3-soapysdr
-# Rev 4.8.x: SoapySDR (and downstream native libs) can raise OSError at import
+# Install: sudo apt install soapysdr-module-PlutoSDRplus python3-soapysdr
+# Rev 5.0.x: SoapySDR (and downstream native libs) can raise OSError at import
 # time on hosts without the .so (e.g. simulator-only proot Pixel with no
-# libhackrf). Broaden guard so missing native degrades to simulator path.
+# libPlutoSDRplus). Broaden guard so missing native degrades to simulator path.
 # Governed by SPEC-005A.HAL-HW (do not invent new SPEC-ID).
 try:
     import SoapySDR
@@ -47,8 +47,8 @@ try:
 except (ImportError, OSError):
     SOAPYSDR_AVAILABLE = False
 
-# Fallback to pyhackrf if SoapySDR not available
-# Rev 4.8.x: pyhackrf package does CDLL('libhackrf.so.0') at *import time* (not
+# Fallback to pyPlutoSDRplus if SoapySDR not available
+# Rev 5.0.x: pyPlutoSDRplus package does CDLL('libPlutoSDRplus.so.0') at *import time* (not
 # inside a function), raising OSError (not ImportError) when .so absent on this
 # host. The bare except ImportError let it escape and block test collection for
 # any test importing hal_hardware (directly or via lock_monitor). Broaden to
@@ -56,35 +56,35 @@ except (ImportError, OSError):
 try:
     from ctypes import POINTER, c_int
 
-    import hackrf as pyhackrf
+    import PlutoSDRplus as pyPlutoSDRplus
 
-    # pyhackrf 0.2.0 bug: hackrf_device_list_open uses 'arg_types' (ignored by
+    # pyPlutoSDRplus 0.2.0 bug: PlutoSDRplus_device_list_open uses 'arg_types' (ignored by
     # ctypes) instead of 'argtypes'. Without argtypes, ctypes doesn't marshal
     # the pointer arguments, causing SEGV when libusb state has been touched by
     # SoapySDR or other libraries. Fix it at import time.
-    pyhackrf.libhackrf.hackrf_device_list_open.argtypes = [
-        POINTER(pyhackrf.hackrf_device_list_t),
+    pyPlutoSDRplus.libPlutoSDRplus.PlutoSDRplus_device_list_open.argtypes = [
+        POINTER(pyPlutoSDRplus.PlutoSDRplus_device_list_t),
         c_int,
-        POINTER(pyhackrf.p_hackrf_device),
+        POINTER(pyPlutoSDRplus.p_PlutoSDRplus_device),
     ]
-    # Also wrap hackrf_device_list() to call hackrf_init() first — pyhackrf
-    # skips this, which can leave libhackrf's libusb context uninitialised.
-    _pyhackrf_orig_device_list = pyhackrf.hackrf_device_list
+    # Also wrap PlutoSDRplus_device_list() to call PlutoSDRplus_init() first — pyPlutoSDRplus
+    # skips this, which can leave libPlutoSDRplus's libusb context uninitialised.
+    _pyPlutoSDRplus_orig_device_list = pyPlutoSDRplus.PlutoSDRplus_device_list
 
-    # SPEC-005A.4b — Safe pyhackrf device list wrapper (handles missing init)
-    def _pyhackrf_device_list_safe():
-        """SPEC-005A.HAL-HW — Initialize libhackrf before enumerating devices."""
-        pyhackrf.libhackrf.hackrf_init()
-        return _pyhackrf_orig_device_list()
+    # SPEC-005A.4b — Safe pyPlutoSDRplus device list wrapper (handles missing init)
+    def _pyPlutoSDRplus_device_list_safe():
+        """SPEC-005A.HAL-HW — Initialize libPlutoSDRplus before enumerating devices."""
+        pyPlutoSDRplus.libPlutoSDRplus.PlutoSDRplus_init()
+        return _pyPlutoSDRplus_orig_device_list()
 
-    pyhackrf.hackrf_device_list = _pyhackrf_device_list_safe
+    pyPlutoSDRplus.PlutoSDRplus_device_list = _pyPlutoSDRplus_device_list_safe
 
-    # Silence pyhackrf's debug print in __del__ (emitted on every GC cycle)
-    pyhackrf.HackRF.__del__ = lambda self: self.close()
+    # Silence pyPlutoSDRplus's debug print in __del__ (emitted on every GC cycle)
+    pyPlutoSDRplus.PlutoSDRplus.__del__ = lambda self: self.close()
 
-    PYHACKRF_AVAILABLE = True
+    PYPlutoSDRplus_AVAILABLE = True
 except (ImportError, OSError):
-    PYHACKRF_AVAILABLE = False
+    PYPlutoSDRplus_AVAILABLE = False
 
 
 class HardwareHAL(BaseHAL):
@@ -93,9 +93,9 @@ class HardwareHAL(BaseHAL):
 
     Hardware Requirements (SPEC-004A.1, SPEC-004A.2, SPEC-004A.4):
     - Raspberry Pi 5 (16GB) or compatible compute platform
-    - HackRF One with CLKIN port for 10 MHz GPSDO reference
+    - PlutoSDRplus with CLKIN port for 10 MHz GPSDO reference
     - Leo Bodnar LBE-1421 GPSDO (Out2=10 MHz reference, Out1=1 PPS)
-    - GPSDO Out2 (10 MHz) → HackRF CLKIN (hardware ADC phase-lock, 50 Ω)
+    - GPSDO Out2 (10 MHz) → PlutoSDRplus CLKIN (hardware ADC phase-lock, 50 Ω)
     - GPSDO Out1 (1 PPS) → Pi 5 GPIO 18 (UTC timestamp interrupt)
     - Power Budget: 250 mA ±10 % @ 5 V USB-C + 30 mA antenna port (active)
     - Stability: 1 × 10⁻¹² @ 1000 s (no frequency/phase jumps on GPS loss)
@@ -115,7 +115,7 @@ class HardwareHAL(BaseHAL):
         SPEC-005A.HAL-HW.INIT — Initialize HAL with mandatory clock verification.
 
         Implements "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
-        The HackRF will silently fail back to internal oscillator if GPSDO
+        The PlutoSDRplus will silently fail back to internal oscillator if GPSDO
         reference is lost. We must verify external clock before any ingestion.
 
         Args:
@@ -128,7 +128,7 @@ class HardwareHAL(BaseHAL):
         self._clock_verified = False
 
         # Background listeners — start before SDR init so PPS data accumulates
-        # while the potentially slow HackRF probe runs.
+        # while the potentially slow PlutoSDRplus probe runs.
         self._pps = PpsListener(device=pps_device)
         self._pps.start()
         self._nmea = NmeaStream(port=nmea_port)
@@ -142,19 +142,19 @@ class HardwareHAL(BaseHAL):
                 initialized = True
             except (DriverUnavailableError, HardwareInitializationError) as e:
                 _soapy_exc = e
-                print(f"[!] SoapySDR initialization failed: {e}. Falling back to pyhackrf...")
+                print(f"[!] SoapySDR initialization failed: {e}. Falling back to pyPlutoSDRplus...")
             except Exception as e:
                 _soapy_exc = e
                 print(
-                    f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyhackrf..."
+                    f"[!] Unexpected error during SoapySDR init: {e}. Falling back to pyPlutoSDRplus..."
                 )
 
         if not initialized:
-            if PYHACKRF_AVAILABLE:
-                self._verify_pyhackrf_clock()
+            if PYPlutoSDRplus_AVAILABLE:
+                self._verify_pyPlutoSDRplus_clock()
             elif _soapy_exc is not None:
                 # SoapySDR was available but found no usable device, and there
-                # is no pyhackrf fallback — surface the original error so the
+                # is no pyPlutoSDRplus fallback — surface the original error so the
                 # caller knows which driver path failed.
                 raise _soapy_exc
             # If neither driver is installed at all (both flags False from env),
@@ -174,21 +174,21 @@ class HardwareHAL(BaseHAL):
             if not results:
                 raise DriverUnavailableError("No SoapySDR devices found.")
 
-            # Find HackRF device
-            hackrf_found = False
+            # Find PlutoSDRplus device
+            PlutoSDRplus_found = False
             for result in results:
-                if "hackrf" in str(result).lower():
-                    hackrf_found = True
+                if "plutosdrplus" in str(result).lower():
+                    PlutoSDRplus_found = True
                     break
 
-            if not hackrf_found:
+            if not PlutoSDRplus_found:
                 raise HardwareInitializationError(
-                    "HackRF not found in SoapySDR enumeration. "
-                    "Verify HackRF is connected and driver installed."
+                    "PlutoSDRplus not found in SoapySDR enumeration. "
+                    "Verify PlutoSDRplus is connected and driver installed."
                 )
 
             # Initialize device
-            self.sdr_device = SoapySDR.Device({"driver": "hackrf"})
+            self.sdr_device = SoapySDR.Device({"driver": "PlutoSDRplus"})
 
             # FORCE external clock (GPSDO reference) - "Silent Traitor" mitigation
             self._force_external_clock_soapy()
@@ -210,7 +210,7 @@ class HardwareHAL(BaseHAL):
         """
         ARCH-PHASE-2A-PIVOT §5.1 — Force and validate external clock source.
 
-        The "Silent Traitor" mitigation: HackRF silently fails to internal
+        The "Silent Traitor" mitigation: PlutoSDRplus silently fails to internal
         oscillator if GPSDO reference is lost. This method forces external
         clock and validates the hardware state before any data ingestion.
         """
@@ -232,14 +232,14 @@ class HardwareHAL(BaseHAL):
         except Exception as e:
             raise ClockVerificationError(
                 f"Failed to assert external clock: {e}. "
-                "Verify GPSDO 10 MHz SMA → HackRF CLKIN connection."
+                "Verify GPSDO 10 MHz SMA → PlutoSDRplus CLKIN connection."
             ) from e
 
     @staticmethod
-    def _probe_pyhackrf_subprocess() -> bool:
+    def _probe_pyPlutoSDRplus_subprocess() -> bool:
         """
-        Run pyhackrf init in a subprocess to detect SEGV risk without killing the main process.
-        Returns True only if HackRF opens, sets up, and closes cleanly.
+        Run pyPlutoSDRplus init in a subprocess to detect SEGV risk without killing the main process.
+        Returns True only if PlutoSDRplus opens, sets up, and closes cleanly.
         """
         import subprocess
         import sys
@@ -249,7 +249,7 @@ class HardwareHAL(BaseHAL):
                 [
                     sys.executable,
                     "-c",
-                    "import hackrf; hackrf.libhackrf.hackrf_init(); d = hackrf.HackRF(); assert d.device_opened; d.close(); print('ok')",
+                    "import PlutoSDRplus; PlutoSDRplus.libPlutoSDRplus.PlutoSDRplus_init(); d = PlutoSDRplus.PlutoSDRplus(); assert d.device_opened; d.close(); print('ok')",
                 ],
                 capture_output=True,
                 timeout=10,
@@ -260,48 +260,48 @@ class HardwareHAL(BaseHAL):
         except (subprocess.TimeoutExpired, OSError, ValueError):
             return False
 
-    def _verify_pyhackrf_clock(self):
+    def _verify_pyPlutoSDRplus_clock(self):
         """
-        Fallback clock verification for pyhackrf (non-SoapySDR) installations.
+        Fallback clock verification for pyPlutoSDRplus (non-SoapySDR) installations.
 
-        pyhackrf does not expose a clock_source attribute — HackRF has no
+        pyPlutoSDRplus does not expose a clock_source attribute — PlutoSDRplus has no
         software-readable register to confirm external vs. internal lock.
         External clock lock is established by hardware wiring (GPSDO 10 MHz
-        SMA → HackRF CLKIN); GPS lock is verified at ingest time via NMEA.
+        SMA → PlutoSDRplus CLKIN); GPS lock is verified at ingest time via NMEA.
         This method only confirms the device is accessible and initialises
         cleanly without SEGV risk.
 
-        Retries up to 3 times with 2 s delay to handle brief hackrf_sweep
+        Retries up to 3 times with 2 s delay to handle brief PlutoSDRplus_sweep
         windows that may hold the device at pipeline startup.
         """
         _max_retries = 3
         for attempt in range(_max_retries):
-            if self._probe_pyhackrf_subprocess():
+            if self._probe_pyPlutoSDRplus_subprocess():
                 break
             if attempt < _max_retries - 1:
                 print(
-                    f"[!] HackRF probe attempt {attempt + 1}/{_max_retries} failed (device busy?) — retrying in 2 s"
+                    f"[!] PlutoSDRplus probe attempt {attempt + 1}/{_max_retries} failed (device busy?) — retrying in 2 s"
                 )
                 time.sleep(2)
         else:
             raise ClockVerificationError(
-                "HackRF not accessible via pyhackrf after 3 attempts (device unavailable, in use, or permissions). "
-                "Verify HackRF is connected and udev rules are applied. "
+                "PlutoSDRplus not accessible via pyPlutoSDRplus after 3 attempts (device unavailable, in use, or permissions). "
+                "Verify PlutoSDRplus is connected and udev rules are applied. "
                 "Subprocess probe blocked to prevent SEGV in main process."
             )
         try:
-            device = pyhackrf.HackRF()
+            device = pyPlutoSDRplus.PlutoSDRplus()
             device.close()
             self._clock_verified = True
         except Exception as e:
-            raise ClockVerificationError(f"Could not initialize HackRF via pyhackrf: {e}") from e
+            raise ClockVerificationError(f"Could not initialize PlutoSDRplus via pyPlutoSDRplus: {e}") from e
 
     def verify_tier1_phase_lock(self) -> dict:
         """
         ARCH-PHASE-2A-PIVOT §5.1 — Explicit phase-lock verification.
 
-        Replaces the removed pyhackrf clock_source attribute check (that
-        attribute does not exist in the pyhackrf API and always returned
+        Replaces the removed pyPlutoSDRplus clock_source attribute check (that
+        attribute does not exist in the pyPlutoSDRplus API and always returned
         "unknown", unconditionally blocking hardware mode).
 
         Phase lock is verified by correlating two independent signals:
@@ -310,8 +310,8 @@ class HardwareHAL(BaseHAL):
           2. NMEA GPS fix — GGA sentence from the LBE-1421 USB-C serial port
              confirms the GPSDO has satellite lock and is not in holdover.
 
-        The 10 MHz CLKIN → HackRF connection cannot be verified in software
-        (HackRF has no readable register for external-vs-internal clock state);
+        The 10 MHz CLKIN → PlutoSDRplus connection cannot be verified in software
+        (PlutoSDRplus has no readable register for external-vs-internal clock state);
         it is a hardware wiring assertion documented in SPEC-004A.2.
         With SoapySDR, setClockSource("external") is called as a best-effort
         assertion of the desired state, not a confirmation of lock.
@@ -366,10 +366,10 @@ class HardwareHAL(BaseHAL):
                 result["driver"] = "SoapySDR"
             except Exception as exc:
                 result["warnings"].append(f"SoapySDR clock assertion failed: {exc}")
-        elif PYHACKRF_AVAILABLE:
-            result["driver"] = "pyhackrf"
-            # pyhackrf exposes no clock_source attribute. External clock is
-            # the GPSDO 10 MHz SMA → HackRF CLKIN wiring; verified indirectly
+        elif PYPlutoSDRplus_AVAILABLE:
+            result["driver"] = "pyPlutoSDRplus"
+            # pyPlutoSDRplus exposes no clock_source attribute. External clock is
+            # the GPSDO 10 MHz SMA → PlutoSDRplus CLKIN wiring; verified indirectly
             # by GPS fix and PPS presence above.
 
         # ── 4. Decision ──────────────────────────────────────────────────── #
@@ -390,7 +390,7 @@ class HardwareHAL(BaseHAL):
         pps_jitter_threshold_ns: float = 10_000.0,
     ) -> IngestionPayload:
         """
-        SPEC-005A.4a — GPS/PPS Live Ingestion (RF Metrology, Rev 4.1)
+        SPEC-005A.4a — GPS/PPS Live Ingestion (RF Metrology, Rev 5.0)
 
         Reads 1 PPS hardware interrupt from GPSDO via pps-gpio kernel module.
         The PPS signal provides UTC epoch anchoring for the GPS-locked ADC samples.
@@ -488,19 +488,19 @@ class HardwareHAL(BaseHAL):
     def ingest_sdr(
         self,
         center_freq: float = 100e6,
-        sample_rate: float = 20e6,  # HackRF supports up to 20 MHz
+        sample_rate: float = 20e6,  # PlutoSDRplus supports up to 20 MHz
         num_samples: int = 262144,  # Increased for 20 MHz bandwidth
         node_id: str = "PI5-ALPHA",
-        sensor_id: str = "HACKRF-01",
+        sensor_id: str = "PlutoSDRplus-01",
         gps_locked: bool = True,
         pps_jitter_ns: float = 500.0,
         calibration_valid: bool = True,
         clock_source: str = "external",  # 'external' = GPSDO CLKIN
     ) -> IngestionPayload:
         """
-        SPEC-005A.4b — SDR IQ Live Ingestion (RF Metrology, Rev 4.1-FORGE)
+        SPEC-005A.4b — SDR IQ Live Ingestion (RF Metrology, Rev 5.0-FORGE)
 
-        Captures IQ samples using SoapySDR (hardware-agnostic) or pyhackrf fallback.
+        Captures IQ samples using SoapySDR (hardware-agnostic) or pyPlutoSDRplus fallback.
         The SDR MUST be hardware-locked to the GPSDO via 10 MHz CLKIN input.
 
         Pre-ingestion, this method enforces "Silent Traitor" mitigation:
@@ -514,11 +514,11 @@ class HardwareHAL(BaseHAL):
         3. UTC timestamps align samples via PPS + sample counting
 
         Args:
-            center_freq: Center frequency in Hz (1 MHz - 6 GHz for HackRF)
-            sample_rate: Sample rate in Hz (max 20 MHz for HackRF)
+            center_freq: Center frequency in Hz (1 MHz - 6 GHz for PlutoSDRplus)
+            sample_rate: Sample rate in Hz (max 20 MHz for PlutoSDRplus)
             num_samples: Number of IQ samples to capture
             node_id: Unique identifier for this anchor node
-            sensor_id: Sensor identifier for the HackRF unit
+            sensor_id: Sensor identifier for the PlutoSDRplus unit
             gps_locked: Whether GPSDO is providing valid reference
             pps_jitter_ns: Measured PPS jitter in nanoseconds
             calibration_valid: Whether calibration is within thresholds
@@ -531,10 +531,10 @@ class HardwareHAL(BaseHAL):
         phases: list[float] = []
         raw_val = {}
 
-        if not SOAPYSDR_AVAILABLE and not PYHACKRF_AVAILABLE:
+        if not SOAPYSDR_AVAILABLE and not PYPlutoSDRplus_AVAILABLE:
             # No driver available — bypass clock verification and return error payload
             raw_val = {
-                "error": "No SDR driver available. Install: sudo apt install soapysdr-module-hackrf",
+                "error": "No SDR driver available. Install: sudo apt install soapysdr-module-PlutoSDRplus",
                 "clock_source": clock_source,
                 "center_freq": center_freq,
                 "sample_rate": sample_rate,
@@ -554,14 +554,14 @@ class HardwareHAL(BaseHAL):
                 # SoapySDR hardware-agnostic implementation
                 raw_val = self._ingest_soapy(center_freq, sample_rate, num_samples)
                 phases = raw_val.get("phases", [])
-            elif PYHACKRF_AVAILABLE:
-                # Fallback pyhackrf implementation
-                raw_val = self._ingest_pyhackrf(center_freq, sample_rate, num_samples)
+            elif PYPlutoSDRplus_AVAILABLE:
+                # Fallback pyPlutoSDRplus implementation
+                raw_val = self._ingest_pyPlutoSDRplus(center_freq, sample_rate, num_samples)
                 phases = raw_val.get("phases", [])
             else:
                 # Defensive fallback — should not reach here
                 raw_val = {
-                    "error": "No SDR driver available. Install: sudo apt install soapysdr-module-hackrf",
+                    "error": "No SDR driver available. Install: sudo apt install soapysdr-module-PlutoSDRplus",
                     "clock_source": clock_source,
                     "center_freq": center_freq,
                     "sample_rate": sample_rate,
@@ -583,7 +583,7 @@ class HardwareHAL(BaseHAL):
             calibration_age_s=0.0,
             drift_percent=0.0,
             source_path=(
-                "/dev/hackrf0" if (SOAPYSDR_AVAILABLE or PYHACKRF_AVAILABLE) else "sdr_unavailable"
+                "/dev/PlutoSDRplus0" if (SOAPYSDR_AVAILABLE or PYPlutoSDRplus_AVAILABLE) else "sdr_unavailable"
             ),
             trust_state="ASSEMBLED",
             hardware_tier=1,
@@ -649,30 +649,30 @@ class HardwareHAL(BaseHAL):
                 "driver": "SoapySDR",
             }
 
-    def _ingest_pyhackrf(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
+    def _ingest_pyPlutoSDRplus(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
         """
-        pyhackrf fallback ingestion.
+        pyPlutoSDRplus fallback ingestion.
         """
         try:
-            hackrf_device = pyhackrf.HackRF()
+            PlutoSDRplus_device = pyPlutoSDRplus.PlutoSDRplus()
 
-            # AMP LOCKOUT — HackRF 1 front-end amp is blown; parts on order.
+            # AMP LOCKOUT — PlutoSDRplus 1 front-end amp is blown; parts on order.
             try:
-                hackrf_device.set_amp_enable(0)
+                PlutoSDRplus_device.set_amp_enable(0)
             except Exception:
                 pass
 
             # Configure frequency and sample rate
-            hackrf_device.set_freq(int(center_freq))
-            hackrf_device.set_sample_rate(int(sample_rate))
+            PlutoSDRplus_device.set_freq(int(center_freq))
+            PlutoSDRplus_device.set_sample_rate(int(sample_rate))
 
             # Set moderate gain for wideband capture
-            hackrf_device.set_lna_gain(32)
-            hackrf_device.set_vga_gain(20)
+            PlutoSDRplus_device.set_lna_gain(32)
+            PlutoSDRplus_device.set_vga_gain(20)
 
             # Capture samples
-            iq_complex = hackrf_device.read_samples(num_samples)
-            hackrf_device.close()
+            iq_complex = PlutoSDRplus_device.read_samples(num_samples)
+            PlutoSDRplus_device.close()
 
             # Phase extraction from complex baseband IQ (already analytic)
             phases = np.angle(iq_complex).tolist()[:64]
@@ -685,14 +685,14 @@ class HardwareHAL(BaseHAL):
                 "clock_locked_to_gpsdo": True,
                 "bandwidth_mhz": sample_rate / 1e6,
                 "phases": phases,
-                "driver": "pyhackrf",
+                "driver": "pyPlutoSDRplus",
             }
 
         except Exception as e:
             return {
-                "error": f"pyhackrf acquisition failed: {str(e)}",
+                "error": f"pyPlutoSDRplus acquisition failed: {str(e)}",
                 "clock_source": "external",
-                "driver": "pyhackrf",
+                "driver": "pyPlutoSDRplus",
             }
 
     def ingest_thermal(
@@ -739,20 +739,20 @@ class HardwareHAL(BaseHAL):
 
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict:
         """
-        SPEC-004A.3 — Verify GPSDO/HackRF hardware lock status.
+        SPEC-004A.3 — Verify GPSDO/PlutoSDRplus hardware lock status.
 
         Returns diagnostic information about the RF Metrology chain.
         Includes "Silent Traitor" clock source verification.
 
         Args:
-            device_index: HackRF device index (default 0)
+            device_index: PlutoSDRplus device index (default 0)
 
         Returns:
             Dict with lock status and diagnostic information
         """
         info = {
             "soapy_available": SOAPYSDR_AVAILABLE,
-            "pyhackrf_available": PYHACKRF_AVAILABLE,
+            "pyPlutoSDRplus_available": PYPlutoSDRplus_AVAILABLE,
             "driver_used": "none",
             "phase_lock_verified": False,
             "clock_source": "unknown",
@@ -773,27 +773,27 @@ class HardwareHAL(BaseHAL):
             except Exception as e:
                 info["error"] = str(e)
 
-        elif PYHACKRF_AVAILABLE:
+        elif PYPlutoSDRplus_AVAILABLE:
             try:
-                device = pyhackrf.HackRF(device_index=device_index)
+                device = pyPlutoSDRplus.PlutoSDRplus(device_index=device_index)
                 device.setup()
 
-                info["hackrf_detected"] = True
+                info["PlutoSDRplus_detected"] = True
                 info["serial_number"] = getattr(device, "serial_number", "unknown")
                 info["board_id"] = getattr(device, "board_id", "unknown")
                 info["clock_source"] = getattr(device, "clock_source", "unknown")
                 info["phase_lock_verified"] = info["clock_source"] == "external"
-                info["driver_used"] = "pyhackrf"
+                info["driver_used"] = "pyPlutoSDRplus"
                 info["sample_rate_range"] = "2.5 MHz - 20 MHz"
                 info["frequency_range"] = "1 MHz - 6 GHz"
 
                 device.close()
 
             except Exception as e:
-                info["hackrf_detected"] = False
+                info["PlutoSDRplus_detected"] = False
                 info["error"] = str(e)
         else:
-            info["error"] = "No SDR driver available. Install SoapySDR or pyhackrf."
+            info["error"] = "No SDR driver available. Install SoapySDR or pyPlutoSDRplus."
 
         return info
 

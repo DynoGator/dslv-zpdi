@@ -3,7 +3,7 @@
 **Session Type:** Hardware Migration + Repo Hardening
 **AI Agent:** Claude Opus 4.6 (Claude Code)
 **Operator:** Joseph R. Fross — Resonant Genesis LLC / DynoGator Labs
-**Revision:** Rev 4.0.2.4 → Rev 4.2.0
+**Revision:** Rev 5.0.2.4 → Rev 5.0.0
 **Git Commit:** `33b17da`
 **Push Status:** VERIFIED — Both repos pushed to GitHub
 **Repos Updated:** `DynoGator/dslv-zpdi` + `DynoGator/DynoGator` (profile)
@@ -42,7 +42,7 @@ Added to Tier 1 mandatory BOM:
 
 | File | Change |
 |------|--------|
-| `hal_hardware.py` | Added `verify_nmea_telemetry()` method, updated source strings, added Rev 4.2 header |
+| `hal_hardware.py` | Added `verify_nmea_telemetry()` method, updated source strings, added Rev 5.0 header |
 | `hal_simulated.py` | Updated model references and source strings |
 | `cm5_ingestion.py` | Updated GPSDO references |
 | `hal_base.py` | Version bump to 4.2.0 |
@@ -54,7 +54,7 @@ Added to Tier 1 mandatory BOM:
 | Action | Detail |
 |--------|--------|
 | **Removed** `pyrtlsdr>=0.2.9` | From `pyproject.toml` and `requirements.txt` (Tier 2 only, not on critical build path) |
-| **Added** `pyhackrf>=1.0.0` | To core dependencies |
+| **Added** `pyPlutoSDRplus>=1.0.0` | To core dependencies |
 | **Removed** `rtl-sdr`, `librtlsdr0` | From installer base packages |
 | **Added** Python 3.12, 3.13 classifiers | To `pyproject.toml` |
 
@@ -65,14 +65,14 @@ Added to Tier 1 mandatory BOM:
 | Location | Was | Now |
 |----------|-----|-----|
 | `pyproject.toml` | 4.0.2.4 | **4.2.0** |
-| `README.md` | Rev 4.1-PIVOT | **Rev 4.2.0** |
-| `install_dslv_zpdi.sh` | Rev 4.0.2.4 | **Rev 4.2.0** |
-| `CONTRIBUTING.md` | Rev 4.0.2 | **Rev 4.2.0** |
-| `MASTER_SPEC.md` | Rev 4.0.2 | **Rev 4.2.0** |
-| `V3_DSLV-ZPDI_LIVING_MASTER.md` | Rev 4.0.2 | **Rev 4.2.0** |
-| `test_pipeline.py` | Rev 4.0.2.4 | **Rev 4.2.0** |
-| HAL modules | Rev 4.1-FORGE/4.1-PIVOT | **Rev 4.2-LBE-1421** |
-| `SPEC-004A.1.md` | Rev 4.1-PIVOT | **Rev 4.2-LBE-1421** |
+| `README.md` | Rev 5.0-PIVOT | **Rev 5.0.0** |
+| `install_dslv_zpdi.sh` | Rev 5.0.2.4 | **Rev 5.0.0** |
+| `CONTRIBUTING.md` | Rev 5.0.2 | **Rev 5.0.0** |
+| `MASTER_SPEC.md` | Rev 5.0.2 | **Rev 5.0.0** |
+| `V3_DSLV-ZPDI_LIVING_MASTER.md` | Rev 5.0.2 | **Rev 5.0.0** |
+| `test_pipeline.py` | Rev 5.0.2.4 | **Rev 5.0.0** |
+| HAL modules | Rev 5.0-FORGE/4.1-PIVOT | **Rev 5.0-LBE-1421** |
+| `SPEC-004A.1.md` | Rev 5.0-PIVOT | **Rev 5.0-LBE-1421** |
 
 ### 2.6 New Documentation Created
 
@@ -80,13 +80,13 @@ Added to Tier 1 mandatory BOM:
 |------|---------|
 | `docs/RF_MAGNETIC_SHIELDING.md` | Cyberdeck chassis shielding design — conduction cooling, aluminum/Mu-Metal compartmentalization, galvanic USB isolation, pass-through security, materials reference |
 | `docs/HARDWARE_CHANGE_JUSTIFICATION.md` | SPEC-UPDATE-PHASE-2A-LBE-1421 — formal rationale, updated BOM, physical routing protocol, software integration requirements |
-| `RELEASE_NOTES_v4.2.0.md` | Full release notes for v4.2.0 |
+| `RELEASE_NOTES_v5.0.0.md` | Full release notes for v5.0.0 |
 
 ### 2.7 GitHub Profile Update
 
 Updated `DynoGator/DynoGator` README.md:
 - Replaced deprecated Intel i210-T1 / CM5 references
-- Updated DSLV-ZPDI status to Rev 4.2.0
+- Updated DSLV-ZPDI status to Rev 5.0.0
 - Updated Hardware & Metrology toolkit listing
 - Resolved merge conflict with concurrent remote update (preserved updated certifications and location from remote)
 
@@ -105,7 +105,7 @@ Updated `DynoGator/DynoGator` README.md:
 - ANT500 antenna, SMA cabling, jumper wire specs to Tier 1 BOM
 
 ### Changed
-- Dependencies: pyrtlsdr → pyhackrf in core deps
+- Dependencies: pyrtlsdr → pyPlutoSDRplus in core deps
 - Version alignment to 4.2.0 across all files
 - RP1 voltage warning updated for LBE-1421 native 3.3V
 - Physical routing protocol for LBE-1421 connections
@@ -123,7 +123,7 @@ Updated `DynoGator/DynoGator` README.md:
 |-------|--------|
 | `pytest tests/` | **31/31 PASSED** |
 | `tools/orphan_checker.py` | **CLEAN** — no rogue nodes, no orphaned SPEC claims |
-| `tools/check_version_sync.py` | **CLEAN** — version 4.2.0 aligned |
+| `tools/check_version_sync.py` | **CLEAN** — version 5.0.0 aligned |
 | `tools/repo_guard.py` | **CLEAN** — no sys.path mutations, imports correct |
 | `git push dslv-zpdi` | **SUCCESS** — `88c5ada..33b17da main → main` |
 | `git push DynoGator` | **SUCCESS** — `36b81e2..0336416 main → main` (conflict resolved) |
@@ -155,7 +155,7 @@ Updated `DynoGator/DynoGator` README.md:
 20. `tools/provision_tier1.py`
 
 ### Created (3)
-21. `RELEASE_NOTES_v4.2.0.md`
+21. `RELEASE_NOTES_v5.0.0.md`
 22. `docs/HARDWARE_CHANGE_JUSTIFICATION.md`
 23. `docs/RF_MAGNETIC_SHIELDING.md`
 
@@ -170,7 +170,7 @@ Updated `DynoGator/DynoGator` README.md:
    - Refer to: `PHASE_2A_TIER_1_BUILD_SHEET.md` for full BOM with pricing
 
 2. **Physical Assembly:**
-   - LBE-1421 SMA Output → HackRF CLKIN (RF phase lock)
+   - LBE-1421 SMA Output → PlutoSDRplus CLKIN (RF phase lock)
    - LBE-1421 1 PPS → Pi 5 GPIO 18 (no level-shifter needed)
    - LBE-1421 USB-C → Pi 5 (power + NMEA telemetry)
    - Run: `python tools/provision_tier1.py` to validate

@@ -2,7 +2,7 @@
 
 **Session:** UX integration final sweep + reboot prep
 **Operator:** Joseph R. Fross
-**Platform:** Raspberry Pi 5 + HackRF + LBE-1421 GPSDO (pending) + 5" DSI
+**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending) + 5" DSI
 **Branch:** `main` — clean working tree, 4 commits ahead of `origin/main`
 
 ## 1. Work performed (this session)
@@ -17,7 +17,7 @@ Two working phases rolled into one commit:
 - Gmail-backed auto-email with pluggable backend abstraction
 - Four new desktop icons (Map / Send Data / Email Setup / HDF5)
 - Sensor location + email config surfaced under `config/`
-- Regression rollback: numpy 2.x → 1.26.4 to keep `pyhackrf` happy
+- Regression rollback: numpy 2.x → 1.26.4 to keep `pyPlutoSDRplus` happy
 
 **Phase B — Inspection pass & polish**:
 - Added `compact_banner()` so the DSI banner slot no longer truncates
@@ -33,7 +33,7 @@ Two working phases rolled into one commit:
 - Escaped HTML on every operator-controlled string in the map legend
   and pin popups
 - End-to-end smoke test confirmed all 4 layout permutations build,
-  numpy 1.26 + hackrf still importable, map renders, email bundles
+  numpy 1.26 + PlutoSDRplus still importable, map renders, email bundles
 - Everything committed as `53693c1 feat(ux): 5" DSI polish +
   interactive map + auto-email pipeline` (23 files, +2665 / -54)
 
@@ -112,7 +112,7 @@ f4dc821 Robustness update: Improved dashboard, added project launcher,
 | `output/secondary/quarantine.jsonl` | 27 MB |
 | `output/state/` | created (empty — sim mode doesn't persist baseline) |
 | Disk free (`/`) | 103 GB of 117 GB available |
-| numpy version (venv) | 1.26.4 (pyhackrf-compatible) |
+| numpy version (venv) | 1.26.4 (pyPlutoSDRplus-compatible) |
 | Running pipeline | PID 2336 (simulator mode) — will be killed by reboot |
 
 ## 4. Turnover — pre-reboot
@@ -121,7 +121,7 @@ Nothing else required before the reboot. You can power-cycle safely now:
 - All captured data is already on disk under `output/primary/` and
   `output/secondary/` and has been synced.
 - Git history is intact locally; commits survive reboot.
-- Runtime processes (dashboard windows, `main_pipeline`, `hackrf_sweep`)
+- Runtime processes (dashboard windows, `main_pipeline`, `PlutoSDRplus_sweep`)
   will be stopped by systemd/session teardown — the launcher
   (`tools/launch_project.sh`) is specifically designed to "nuke and
   pave" on next startup so a hard power-off is safe.
@@ -166,7 +166,7 @@ After the Pi comes back up, walk through this in order:
   - `gh auth login` + `git push`
   - Switch to SSH remote: `git remote set-url origin git@github.com:DynoGator/dslv-zpdi.git`
   - Temporary PAT via `git push https://<user>:<token>@github.com/...`
-- **ViTables disabled.** Upstream `pyhackrf 0.2.0` pins `numpy<2`,
+- **ViTables disabled.** Upstream `pyPlutoSDRplus 0.2.0` pins `numpy<2`,
   which blocks ViTables 3.1 (requires numpy>=2). `h5glance`, `h5ls`,
   `h5dump`, `h5stat`, and the custom HDF5 browser cover the gap.
 - **No per-event GPS in HDF5.** Map pins are deterministic scatter

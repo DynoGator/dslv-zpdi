@@ -2,7 +2,7 @@
 
 **Document ID:** `SHIELD-DESIGN-001`
 **Status:** IN DEVELOPMENT — Expanding as build progresses
-**Target Baseline:** Rev 4.2-LBE-1421
+**Target Baseline:** Rev 5.0-LBE-1421
 **Author:** J.R. Fross (@DynoGator) / Resonant Genesis LLC
 
 ---
@@ -23,7 +23,7 @@ Instead of circulating air, we use **conduction cooling**:
 
 - Build the core chassis out of **thick aluminum plate** (at least 1/8" to 1/4" thick). Aluminum is an excellent thermal conductor and serves as the primary Faraday cage.
 - Inside the Pi 5 compartment, mount the Pi so that the CPU (RP1 and Broadcom chips) presses directly against the *inside* of the outer aluminum hull using **thick, high-performance thermal silicone pads**.
-- Do the same for the HackRF's main processors.
+- Do the same for the PlutoSDRplus's main processors.
 - The entire external casing of the cyberdeck becomes the heat sink. Heat transfers directly from the chips into the hull and dissipates externally.
 
 **Result:** Zero signal drift from heat, and zero holes in the armor.
@@ -32,14 +32,14 @@ Instead of circulating air, we use **conduction cooling**:
 
 ## 3. Compartmentalization: The Bulkheads
 
-The noisy digital brain (Pi 5) must be separated from the sensitive metrology gear (HackRF + LBE-1421 GPSDO), and all of it shielded from the outside.
+The noisy digital brain (Pi 5) must be separated from the sensitive metrology gear (PlutoSDRplus + LBE-1421 GPSDO), and all of it shielded from the outside.
 
 ### Chamber Layout
 
 | Chamber | Contents | Purpose |
 |---------|----------|---------|
 | **Chamber A** | Raspberry Pi 5 | Digital compute — noisy |
-| **Chamber B** | HackRF One + LBE-1421 GPSDO | RF metrology — sensitive |
+| **Chamber B** | PlutoSDRplus + LBE-1421 GPSDO | RF metrology — sensitive |
 
 ### Construction
 
@@ -132,7 +132,7 @@ If running an external battery:
 
 ## 8. Development Notes
 
-- [ ] Finalize internal chamber dimensions based on Pi 5 + HackRF + LBE-1421 footprints
+- [ ] Finalize internal chamber dimensions based on Pi 5 + PlutoSDRplus + LBE-1421 footprints
 - [ ] Source and test specific Mu-Metal tape products
 - [ ] Validate thermal pad compression for optimal CPU-to-hull contact
 - [ ] Design SMA bulkhead layout for antenna and GPSDO connections

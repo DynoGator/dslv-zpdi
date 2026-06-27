@@ -3,7 +3,7 @@
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
 **Revision:** Rev 5.0.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
 **Date:** 2026-06-15
-**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
+**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, PlutoSDRplus moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
 
 ---
 
@@ -11,7 +11,7 @@
 
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
 
-**Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/HackRF). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
+**Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/PlutoSDRplus). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
 
 ---
 
@@ -73,7 +73,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 | Mobile Node         | Pixel 9 Pro XL (GrapheneOS)   | Remote swarm telemetry over PiRepo Wi-Fi (10.42.0.x)            |
 | Display             | 7" DSI (800×480)              | On-device Rich TUI dashboard                                     |
 | SDR                 | HamGeek PlutoSDR+ (AD9361)    | RF ingestion, 70 MHz – 6 GHz, dual TRX, external CLKIN     |
-| Legacy SDR          | HackRF One                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, optional) |
+| Legacy SDR          | PlutoSDRplus                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, optional) |
 | Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
 | Antenna             | Great Scott Gadgets ANT500    | 75 MHz – 1 GHz coverage                                         |
 | RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → PlutoSDR+ EXT_REF_CLK (≤ 1 ft)                  |
@@ -266,7 +266,7 @@ max_lines = 10            # Max lines in wide mode (compact mode always caps to 
 **Env override:** `DSLV_DASHBOARD_CONFIG=/path/to/custom.toml` overrides the default config path.
 
 **Env flags:**
-- `DSLV_DASHBOARD_REAL_SDR=1` — start with live HackRF input (same as `--real-sdr` flag)
+- `DSLV_DASHBOARD_REAL_SDR=1` — start with live PlutoSDRplus input (same as `--real-sdr` flag)
 - `DSLV_DASHBOARD_COMPACT=1` — force compact layout (same as `--compact` flag)
 
 ---
@@ -291,16 +291,16 @@ python -m dashboard --wide             # Force wide layout
 python -m dashboard --no-banner        # Hide ASCII banner
 python -m dashboard --no-boot          # Skip boot animation
 python -m dashboard --waterfall-only   # Render only the waterfall (no panels)
-python -m dashboard --no-real-sdr      # Start with SDR in SIM mode (default is REAL/HackRF ON)
+python -m dashboard --no-real-sdr      # Start with SDR in SIM mode (default is REAL/PlutoSDRplus ON)
 python -m dashboard --refresh 0.25     # Set refresh rate (seconds)
 python -m dashboard --config /path/to/dashboard.toml
 python -m dashboard --print-config     # Dump resolved config and exit
 python -m dashboard --headless         # Run without TUI (logging only)
 ```
 
-> **Note (v4.7.0):** HackRF real-SDR mode is **ON by default**. The dashboard sets
+> **Note (v5.0.0):** PlutoSDRplus real-SDR mode is **ON by default**. The dashboard sets
 > `DSLV_DASHBOARD_REAL_SDR=1` at startup. Use `--no-real-sdr` to start in simulated mode.
-> The amp (`a` key) is locked out — HackRF One amp is blown, parts on order.
+> The amp (`a` key) is locked out — PlutoSDRplus amp is blown, parts on order.
 
 **Web dashboard** (read-only, auto-refresh, accessible from any device on the PiRepo LAN):
 ```
@@ -343,7 +343,7 @@ Throttle flags light up if the Pi is voltage-clamping or thermally throttling.
 `systemctl` service state for `dslv-zpdi`, HAL mode (HARDWARE / SIMULATOR), HDF5 packet counters (primary and secondary stream), ingest packet rate.
 
 #### Hardware
-HackRF firmware version and USB status, PPS tick age and jitter (from `/dev/pps0`), GPSDO GPS fix status (from NMEA over `/dev/ttyACM0`), chrony stratum and RMS offset.
+PlutoSDRplus firmware version and USB status, PPS tick age and jitter (from `/dev/pps0`), GPSDO GPS fix status (from NMEA over `/dev/ttyACM0`), chrony stratum and RMS offset.
 
 #### RF Anomaly
 Feeds off the waterfall's last spectrum row. Reports peak dBm, peak frequency, estimated noise floor (median), SNR, and count of bins exceeding floor + 10 dB (candidate anomaly bins). Updates every render tick.
@@ -397,11 +397,11 @@ The waterfall is a rolling 2D frequency-power display and the primary real-time 
 
 | Source         | How it works                                                      |
 |----------------|-------------------------------------------------------------------|
-| `SIM`          | Synthesized spectrum with 3 drifting Gaussian carriers + noise. Runs always when HACKRF is off. |
-| `HACKRF` / `PLUTO` | Live SDR subprocess or IIO context. Streams data, accumulates a full sweep, publishes via background thread. |
+| `SIM`          | Synthesized spectrum with 3 drifting Gaussian carriers + noise. Runs always when PlutoSDRplus is off. |
+| `PlutoSDRplus` / `PLUTO` | Live SDR subprocess or IIO context. Streams data, accumulates a full sweep, publishes via background thread. |
 | `SDR-WAIT`         | Transitional state — SDR initialized but no sweep received yet. Shows SIM data while waiting. |
 
-Toggle between SIM and HACKRF with `r`. The dashboard auto-detects HackRF at startup via `hackrf_info`; if not present, `r` has no effect.
+Toggle between SIM and PlutoSDRplus with `r`. The dashboard auto-detects PlutoSDRplus at startup via `PlutoSDRplus_info`; if not present, `r` has no effect.
 
 ### Frequency Modes
 
@@ -439,13 +439,13 @@ Adjust with `[`/`]` (floor) and `{`/`}` (ceil) in 5 dBm steps. The floor is clam
 
 ### Gain Controls (SDR backend)
 
-The active SDR backend (PlutoSDR+ / HackRF legacy) applies its own gain model.
+The active SDR backend (PlutoSDR+ / PlutoSDRplus legacy) applies its own gain model.
 
 | Control | Range        | Steps                        | Effect                             |
 |---------|-------------|------------------------------|------------------------------------|
-| LNA     | 0–40 dB     | 0, 8, 16, 24, 32, 40        | RF front-end amplification (HackRF legacy) |
-| VGA     | 0–62 dB     | 0, 8, 16, 24, 32, 40, 48, 56, 62 | Baseband (IF) gain (HackRF legacy) |
-| AMP     | on/off      | —                            | HackRF internal +14 dB pre-amp (use with care — can saturate) |
+| LNA     | 0–40 dB     | 0, 8, 16, 24, 32, 40        | RF front-end amplification (PlutoSDRplus legacy) |
+| VGA     | 0–62 dB     | 0, 8, 16, 24, 32, 40, 48, 56, 62 | Baseband (IF) gain (PlutoSDRplus legacy) |
+| AMP     | on/off      | —                            | PlutoSDRplus internal +14 dB pre-amp (use with care — can saturate) |
 
 Changing any gain value immediately restarts the underlying sweep subprocess. There is a brief `SDR-WAIT` transition (~1–2 rows) while the new sweep starts.
 
@@ -500,7 +500,7 @@ All keys are case-insensitive unless noted.
 | `v`    | Cycle VGA (baseband) gain (0–62 dB steps)                 |
 | `+`    | LNA gain up one step                                      |
 | `-`    | LNA gain down one step                                    |
-| `a`    | Toggle HackRF internal amp (±14 dB, use carefully)        |
+| `a`    | Toggle PlutoSDRplus internal amp (±14 dB, use carefully)        |
 | `d`    | Cycle demodulation mode (RAW-SWEEP / AM / NFM / WFM / LSB / USB / CW) |
 
 ---
@@ -609,7 +609,7 @@ In simulator mode:
 - Full Layer 2 coherence scoring and Layer 3 HDF5 output still operate
 - Dashboard waterfall shows `SIM` source label
 
-If hardware initialization fails (HackRF not detected, PPS device missing), the pipeline **automatically falls back to simulator** and logs a warning. Check `journalctl -u dslv-zpdi` if you suspect an unintended fallback.
+If hardware initialization fails (PlutoSDRplus not detected, PPS device missing), the pipeline **automatically falls back to simulator** and logs a warning. Check `journalctl -u dslv-zpdi` if you suspect an unintended fallback.
 
 ### Baseline Learning FSM (SPEC-009)
 
@@ -671,19 +671,19 @@ python -m dashboard
 
 ### Dashboard crashes when I press a key
 
-**Fixed in Rev 4.6.0.** Update to latest and relaunch. Specific fixes applied:
+**Fixed in Rev 5.0.0.** Update to latest and relaunch. Specific fixes applied:
 - `Space` (pause) no longer crashes if the Notifications panel is disabled.
 - `c` (compact toggle) no longer crashes if the Waterfall panel is disabled.
 - Layout rebuilds (`c`, `h`) now correctly propagate to the Rich Live context.
 
 ### Dashboard renders blank after pressing `c` or `h`
 
-**Fixed in Rev 4.6.0.** The layout rebuild now calls `live.update()` so the new structure is visible immediately.
+**Fixed in Rev 5.0.0.** The layout rebuild now calls `live.update()` so the new structure is visible immediately.
 
 ### Waterfall is stuck on `SIM` even after pressing `r`
 
 - PlutoSDR+ is not reachable at `ip:192.168.3.80`. Verify the network link and run `iio_info -u ip:192.168.3.80`.
-- Legacy HackRF only: run `hackrf_info` — if it fails, check USB connection.
+- Legacy PlutoSDRplus only: run `PlutoSDRplus_info` — if it fails, check USB connection.
 - If the SDR is detected but sweep fails, check the error label in the waterfall title bar.
 
 ### Pipeline running in SIMULATOR when I expect HARDWARE
@@ -787,7 +787,7 @@ The RTL-SDR (v3/v4) is relegated to Tier 2 / Testbed only. It lacks external clo
 
 ---
 
-## LBE-1421 GPSDO Advantages (Rev 4.2)
+## LBE-1421 GPSDO Advantages (Rev 5.0)
 
 The Leo Bodnar LBE-1421 supersedes the previously specified Mini GPSDO:
 

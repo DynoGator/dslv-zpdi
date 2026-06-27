@@ -1,4 +1,4 @@
-# TURNOVER 2026-06-10 — Repository Hardening (Rev 4.8.0)
+# TURNOVER 2026-06-10 — Repository Hardening (Rev 5.0.0)
 
 ## Purpose
 
@@ -13,7 +13,7 @@ or metrology behavior was changed.**
 - **Checkout:** `/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi`
 - **Remote:** `https://github.com/DynoGator/dslv-zpdi.git` (no token in remote URL).
 - **Starting commit (origin/main):** `985d8ca` — local checkout was stale at
-  `d8a4f89` and was fast-forwarded to `985d8ca` (v4.8.0 / Phase 2B) at session start.
+  `d8a4f89` and was fast-forwarded to `985d8ca` (v5.0.0 / Phase 2B) at session start.
 - **Branch:** `chore/repository-hardening` (PR #1, merged as `4b8a2be`); CI workflow
   landed via follow-up branch `ci/real-validation-matrix` (PR #2) once the `workflow`
   token scope was granted.
@@ -28,7 +28,7 @@ The weak on-main workflow (`dslv_zpdi_ci.yml`) ran only the orphan checker + a
 - `pytest`: **4 failed**, 99 passed (async tests never executed — `pytest-asyncio`
   missing).
 - `ruff`: **117 errors**.
-- **Version desync:** code declared 4.7.2 but tag `v4.8.0` + CHANGELOG said 4.8.0.
+- **Version desync:** code declared 4.7.2 but tag `v5.0.0` + CHANGELOG said 4.8.0.
 - `pip check`, `orphan_checker`, `repo_guard`, pipeline smoke: clean.
 
 ## Major Changes (one logical commit each)
@@ -36,7 +36,7 @@ The weak on-main workflow (`dslv_zpdi_ci.yml`) ran only the orphan checker + a
 1. `style(lint)` — cleared 117 ruff findings (annotation modernization, import
    hygiene, 2 dead vars). Unit-encoded schema names kept via scoped `# noqa`.
 2. `chore(release)` — reconciled version to 4.8.0 (pyproject, `__init__.py`,
-   README, new `RELEASE_NOTES_v4.8.0.md`) + added `pytest-asyncio` / `asyncio_mode`.
+   README, new `RELEASE_NOTES_v5.0.0.md`) + added `pytest-asyncio` / `asyncio_mode`.
 3. `security(repo)` — `SECURITY.md` + `.github/dependabot.yml`.
 4. `docs(github)` — YAML issue forms (bug/feature/hardware_incident) + config +
    `CODEOWNERS`.

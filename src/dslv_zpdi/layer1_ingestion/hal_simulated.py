@@ -1,10 +1,10 @@
 """
-SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 4.4.0)
+SPEC-005A.HAL-SIM | Simulated Hardware Implementation (Rev 5.0.0)
 Deterministic simulation of RF Metrology Tier 1 hardware for CI/CD and virtual validation.
 
-Simulates: Raspberry Pi 5 + HackRF One + Leo Bodnar LBE-1421 GPSDO
-Rev 4.1: Updated to match HackRF + GPSDO RF Metrology architecture.
-Rev 4.8.x: Paired with hal_hardware OSError guard hardening for simulator-only hosts.
+Simulates: Raspberry Pi 5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO
+Rev 5.0: Updated to match PlutoSDRplus + GPSDO RF Metrology architecture.
+Rev 5.0.x: Paired with hal_hardware OSError guard hardening for simulator-only hosts.
 """
 
 # pylint: disable=duplicate-code
@@ -24,7 +24,7 @@ class SimulatedHAL(BaseHAL):
 
     Simulates the RF Metrology stack:
     - GPSDO providing 10 MHz reference and 1 PPS
-    - HackRF One with external clock lock
+    - PlutoSDRplus with external clock lock
     - GPS-locked IQ samples with coherent phase
     """
 
@@ -86,7 +86,7 @@ class SimulatedHAL(BaseHAL):
         SPEC-005A.4b — Mock SDR IQ Ingestion with LBE-1421 phase-noise curve.
         """
         node_id = kwargs.get("node_id", "SIM-ALPHA")
-        sensor_id = kwargs.get("sensor_id", "SIM-HACKRF-1421")
+        sensor_id = kwargs.get("sensor_id", "SIM-PlutoSDRplus-1421")
         sample_rate = kwargs.get("sample_rate", 20e6)
         center_freq = kwargs.get("center_freq", 100e6)
         clock_source = kwargs.get("clock_source", "external")
@@ -135,14 +135,14 @@ class SimulatedHAL(BaseHAL):
 
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict:
         """
-        SPEC-004A.3 — Simulated GPSDO/HackRF verification.
+        SPEC-004A.3 — Simulated GPSDO/PlutoSDRplus verification.
 
         Returns simulated lock status for CI/CD testing.
         """
         return {
-            "hackrf_detected": True,
+            "PlutoSDRplus_detected": True,
             "serial_number": "SIM-0000000000000000",
-            "board_id": "HackRF One",
+            "board_id": "PlutoSDRplus",
             "clock_source": "external",
             "external_clock_detected": True,
             "sample_rate_range": "2.5 MHz - 20 MHz",

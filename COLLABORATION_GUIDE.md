@@ -22,7 +22,7 @@ ruff check zpdi_*.py src/ tests/
 
 ## Key Conventions
 
-- **SPEC-IDs** in every class/function docstring (enforced on `main` v4.7.2)
+- **SPEC-IDs** in every class/function docstring (enforced on `main` v5.0.0)
 - **Conventional commits:** `feat(scope): Rev X.X — description`
 - **APPEND-ONLY:** `CHANGELOG.md`, `TURNOVER.md`
 - **Never commit:** `.env`, `data/*.h5`, `logs/*.jsonl`, `*.pid`

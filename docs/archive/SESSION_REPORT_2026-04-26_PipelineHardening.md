@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-26
 **Operator:** Joseph R. Fross
-**Build target:** Pi 5 — DSLV-ZPDI Tier 1 Anchor (post-v4.5.1 fixpack)
+**Build target:** Pi 5 — DSLV-ZPDI Tier 1 Anchor (post-v5.0.0 fixpack)
 **Branch:** `main`
 **Scope:** integrity audit → forensic-completeness fix → dashboard rebuild → full regression
 
@@ -256,7 +256,7 @@ exposes that.
   `4.5.0` — matching the pre-existing pattern (`4.5.1` was also a
   changelog-only patch). If the next release wants a real version
   bump, also update `README.md` revision line and add a
-  `RELEASE_NOTES_v4.5.2.md`. `tools/check_version_sync.py` will
+  `RELEASE_NOTES_v5.0.0.md`. `tools/check_version_sync.py` will
   enforce the trio.
 - `test_integration.py` writes to `/tmp/dslv-zpdi-integration-test`
   and isn't cleaned up. Manual `rm -rf` if needed.

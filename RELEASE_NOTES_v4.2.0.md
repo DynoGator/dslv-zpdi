@@ -1,6 +1,6 @@
-# DSLV-ZPDI Release Notes — v4.2.0
+# DSLV-ZPDI Release Notes — v5.0.0
 
-**Revision:** Rev 4.2.0 (LBE-1421 Hardware Pivot)
+**Revision:** Rev 5.0.0 (LBE-1421 Hardware Pivot)
 **Date:** 2026-04-11
 **Codename:** LBE-1421
 
@@ -13,7 +13,7 @@ Additionally, this release introduces the RF & Magnetic Shielding design documen
 ## Breaking Changes
 
 - **GPSDO Model:** Leo Bodnar Mini GPSDO is formally **deprecated**. All Tier 1 deployments must use the LBE-1421.
-- **Dependencies:** `pyrtlsdr` removed from core dependencies (Tier 2 only). Replaced with `pyhackrf` as core SDR dependency.
+- **Dependencies:** `pyrtlsdr` removed from core dependencies (Tier 2 only). Replaced with `pyPlutoSDRplus` as core SDR dependency.
 - **BOM Updated:** ANT500 antenna, SMA cabling, and jumper wires added to mandatory Tier 1 BOM.
 
 ## Changes
@@ -31,9 +31,9 @@ Additionally, this release introduces the RF & Magnetic Shielding design documen
 - Added NMEA check to `provision_tier1.py` validation suite
 - Updated `hal_hardware.py` source strings from `gpsdo_leo_bodnar_mini` to `gpsdo_leo_bodnar_lbe1420`
 - Removed `pyrtlsdr` from core dependencies (moved to optional/Tier 2)
-- Added `pyhackrf>=1.0.0` to core dependencies
+- Added `pyPlutoSDRplus>=1.0.0` to core dependencies
 - Added Python 3.12/3.13 classifiers to pyproject.toml
-- Updated installer script to Rev 4.2.0, removed `rtl-sdr`/`librtlsdr0` from base packages
+- Updated installer script to Rev 5.0.0, removed `rtl-sdr`/`librtlsdr0` from base packages
 
 ### Documentation
 - Created `docs/HARDWARE_CHANGE_JUSTIFICATION.md` (SPEC-UPDATE-PHASE-2A-LBE-1421)
@@ -44,11 +44,11 @@ Additionally, this release introduces the RF & Magnetic Shielding design documen
 
 ### Version Alignment
 - `pyproject.toml`: 4.0.2.4 → 4.2.0
-- `README.md`: Rev 4.1-PIVOT → Rev 4.2.0
-- `install_dslv_zpdi.sh`: Rev 4.0.2.4 → Rev 4.2.0
-- `CONTRIBUTING.md`: Rev 4.0.2 → Rev 4.2.0
-- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 4.0.2 → Rev 4.2.0
-- All HAL modules: Rev 4.1-FORGE/4.1-PIVOT → Rev 4.2-LBE-1421
+- `README.md`: Rev 5.0-PIVOT → Rev 5.0.0
+- `install_dslv_zpdi.sh`: Rev 5.0.2.4 → Rev 5.0.0
+- `CONTRIBUTING.md`: Rev 5.0.2 → Rev 5.0.0
+- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 5.0.2 → Rev 5.0.0
+- All HAL modules: Rev 5.0-FORGE/4.1-PIVOT → Rev 5.0-LBE-1421
 
 ## Validation
 

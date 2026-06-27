@@ -160,8 +160,8 @@ class RFAnomalyPanel:
 
             # Source + sweeps
             src_line = Text()
-            src_sty = "bright_green" if source == "HACKRF" else "yellow" if source == "HACKRF-WAIT" else "magenta"
-            src_glyph = "◉" if source == "HACKRF" else "◌"
+            src_sty = "bright_green" if source == "PlutoSDRplus" else "yellow" if source == "PlutoSDRplus-WAIT" else "magenta"
+            src_glyph = "◉" if source == "PlutoSDRplus" else "◌"
             src_line.append(f"{src_glyph} {source}", style=src_sty)
             if m["sweeps"]:
                 src_line.append(f"  · {m['sweeps']} sweeps", style="dim")

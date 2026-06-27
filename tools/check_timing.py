@@ -1,5 +1,5 @@
 """
-SPEC-004A.1-CHECK | Timing Verification Utility (Rev 4.1)
+SPEC-004A.1-CHECK | Timing Verification Utility (Rev 5.0)
 Validates GPSDO/PPS lock and sub-microsecond jitter.
 """
 

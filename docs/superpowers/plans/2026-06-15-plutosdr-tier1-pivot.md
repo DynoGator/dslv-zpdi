@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Promote the HamGeek AD9363 PlutoSDR+ class device to the canonical Tier-1 RF metrology backend while moving HackRF to optional legacy status, decoupling timing/SDR/frequency-translation, hardening cryptographic provenance, and preserving all existing validation gates.
+**Goal:** Promote the HamGeek AD9363 PlutoSDR+ class device to the canonical Tier-1 RF metrology backend while moving PlutoSDRplus to optional legacy status, decoupling timing/SDR/frequency-translation, hardening cryptographic provenance, and preserving all existing validation gates.
 
 **Architecture:** Layer 1 becomes a composed `HardwareHAL(timing_authority, sdr_backend, frequency_translation, qualification_policy)`. New `layer1_ingestion/timing/`, `sdr/`, and `frequency_translation/` subpackages provide typed, testable units. A capability-based `qualification/` engine replaces vendor-specific Tier-1 eligibility. Security hardening closes the dev-HMAC loophole, adds event hash chaining, and makes HDF5 finalization atomic. Configuration moves to YAML profiles under `config/` with environment-variable expansion.
 
-**Tech Stack:** Python 3.10+, libiio (`iio`), h5py, numpy, pydantic, pytest, ruff. Optional hardware groups in `pyproject.toml` for `pluto`, `hackrf`, `hardware`.
+**Tech Stack:** Python 3.10+, libiio (`iio`), h5py, numpy, pydantic, pytest, ruff. Optional hardware groups in `pyproject.toml` for `pluto`, `PlutoSDRplus`, `hardware`.
 
 ---
 
@@ -28,7 +28,7 @@
 | `src/dslv_zpdi/layer1_ingestion/sdr/capabilities.py` | `SdrCapabilities`, `CaptureProfile`, `AppliedConfiguration` |
 | `src/dslv_zpdi/layer1_ingestion/sdr/capture_result.py` | `CaptureResult`, `SdrHealth` |
 | `src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py` | `PlutoIioBackend` (libiio) |
-| `src/dslv_zpdi/layer1_ingestion/sdr/hackrf_legacy.py` | `HackrfLegacyBackend` (optional) |
+| `src/dslv_zpdi/layer1_ingestion/sdr/PlutoSDRplus_legacy.py` | `PlutoSDRplusLegacyBackend` (optional) |
 | `src/dslv_zpdi/layer1_ingestion/sdr/simulated.py` | `SimulatedSdrBackend` |
 | `src/dslv_zpdi/layer1_ingestion/sdr/qualification.py` | `Tier1QualificationPolicy`, `QualificationResult` |
 | `src/dslv_zpdi/layer1_ingestion/frequency_translation/__init__.py` | Package exports |
@@ -42,7 +42,7 @@
 | `src/dslv_zpdi/cli/verify.py` | `dslv-zpdi-verify` |
 | `src/dslv_zpdi/cli/qualify.py` | `dslv-zpdi-qualify` |
 | `config/hardware/plutosdr_plus_ad9363.yaml` | Pluto device profile |
-| `config/hardware/hackrf_legacy.yaml` | HackRF legacy profile |
+| `config/hardware/PlutoSDRplus_legacy.yaml` | PlutoSDRplus legacy profile |
 | `config/timing/lbe1421.yaml` | LBE-1421 timing profile |
 | `config/converters/direct_rf.yaml` | Direct-RF (no converter) profile |
 | `config/converters/example_frequency_translator.yaml` | Example converter profile |
@@ -55,7 +55,7 @@
 | `docs/hardware/HAMGEEK_AD9363_TIMING_PORT_VERIFICATION.md` | Physical verification gate doc |
 | `docs/hardware/UPDOWNCONVERTER_INTEGRATION.md` | Converter integration doc |
 | `docs/qualification/TIER1_HARDWARE_QUALIFICATION_STANDARD.md` | Capability-based qualification spec |
-| `docs/qualification/HACKRF_BASELINE_MATRIX.md` | HackRF baseline matrix |
+| `docs/qualification/PlutoSDRplus_BASELINE_MATRIX.md` | PlutoSDRplus baseline matrix |
 | `docs/qualification/PLUTO_ACCEPTANCE_MATRIX.md` | Pluto acceptance matrix |
 | `docs/security/HDF5_TAMPER_EVIDENCE_AND_KEY_MANAGEMENT.md` | Security doc |
 | `docs/operations/PLUTO_TIER1_DEPLOYMENT.md` | Deployment doc |
@@ -67,7 +67,7 @@
 | Path | Change |
 |------|--------|
 | `src/dslv_zpdi/__init__.py` | Bump to `5.0.0` |
-| `pyproject.toml` | Version 5.0.0; optional deps `pluto`, `hackrf`, `hardware`; new console scripts; pytest markers |
+| `pyproject.toml` | Version 5.0.0; optional deps `pluto`, `PlutoSDRplus`, `hardware`; new console scripts; pytest markers |
 | `src/dslv_zpdi/layer1_ingestion/hal_base.py` | Expand BaseHAL or keep minimal composition contract |
 | `src/dslv_zpdi/layer1_ingestion/hal_factory.py` | Rewrite to use composed HAL + qualification |
 | `src/dslv_zpdi/layer1_ingestion/hardware_hal.py` | New composed `HardwareHAL` (renames `hal_hardware.py`) |
@@ -78,8 +78,8 @@
 | `src/dslv_zpdi/config_loader.py` | Profile validation with env expansion |
 | `src/dslv_zpdi/main_pipeline.py` | Use composed HAL, fail-closed simulator logic |
 | `src/dslv_zpdi/watchdog/timing_monitor.py` | Use `TimingAttestation` |
-| `install_dslv_zpdi.sh` | Add `--tier1-pluto`, `--hackrf-legacy`, `--simulator`; libiio group |
-| `Dockerfile` | Use optional `pluto` group; drop mandatory HackRF packages |
+| `install_dslv_zpdi.sh` | Add `--tier1-pluto`, `--PlutoSDRplus-legacy`, `--simulator`; libiio group |
+| `Dockerfile` | Use optional `pluto` group; drop mandatory PlutoSDRplus packages |
 | `README.md` | Version bump, capability-based Tier-1 language |
 | `CHANGELOG.md` | 5.0.0 entry |
 | `RELEASE_NOTES_v5.0.0.md` | New release notes |
@@ -91,7 +91,7 @@
 
 ### Removed / deprecated
 
-- `src/dslv_zpdi/layer1_ingestion/hal_hardware.py` → replaced by `hardware_hal.py` + `sdr/hackrf_legacy.py`.
+- `src/dslv_zpdi/layer1_ingestion/hal_hardware.py` → replaced by `hardware_hal.py` + `sdr/PlutoSDRplus_legacy.py`.
 - `src/dslv_zpdi/layer1_ingestion/hal_pluto.py` (untracked WIP) → replaced by `sdr/pluto_iio.py`.
 - `src/dslv_zpdi/layer1_ingestion/lock_monitor.py` → remove or merge into `timing/`.
 - Hardcoded dev HMAC literals → removed from source.
@@ -165,14 +165,14 @@ Define `SdrBackend` ABC with `discover`, `configure`, `verify_clocking`, `captur
 
 Use lazy `iio` import. Support `local:`, `usb:`, `ip:` URIs from `DSLV_SDR_URI`. Validate settings by reading them back. Detect short reads, lost contexts, overruns. Track expected vs received samples. Do not enable TX. Produce `ClockAttestation` with `external_reference_configured` (from profile) and `external_reference_detected` (`None` until hardware proves it).
 
-### Task 2.3: Implement `HackrfLegacyBackend` (optional)
+### Task 2.3: Implement `PlutoSDRplusLegacyBackend` (optional)
 
 **Files:**
-- Create: `src/dslv_zpdi/layer1_ingestion/sdr/hackrf_legacy.py`
+- Create: `src/dslv_zpdi/layer1_ingestion/sdr/PlutoSDRplus_legacy.py`
 - Modify: `pyproject.toml` optional deps
-- Test: `tests/sdr/test_hackrf_legacy.py`
+- Test: `tests/sdr/test_PlutoSDRplus_legacy.py`
 
-Move HackRF-specific behavior from `hal_hardware.py`. Lazy `SoapySDR`/`pyhackrf` imports. Mark backend as `legacy`, `not_canonical_tier1`.
+Move PlutoSDRplus-specific behavior from `hal_hardware.py`. Lazy `SoapySDR`/`pyPlutoSDRplus` imports. Mark backend as `legacy`, `not_canonical_tier1`.
 
 ### Task 2.4: Implement `SimulatedSdrBackend`
 
@@ -304,7 +304,7 @@ Include explicit `direction_verified: false`, `electrical_level_verified: false`
 - Modify: `install_dslv_zpdi.sh`
 - Test: manual smoke test in Docker
 
-Add `--tier1-pluto`, `--hackrf-legacy`, `--simulator`. Package groups: `BASE_PACKAGES`, `TIMING_PACKAGES`, `PLUTO_PACKAGES`, `HACKRF_LEGACY_PACKAGES`, `HARDENING_PACKAGES`. Detect Trixie package availability.
+Add `--tier1-pluto`, `--PlutoSDRplus-legacy`, `--simulator`. Package groups: `BASE_PACKAGES`, `TIMING_PACKAGES`, `PLUTO_PACKAGES`, `PlutoSDRplus_LEGACY_PACKAGES`, `HARDENING_PACKAGES`. Detect Trixie package availability.
 
 ### Task 5.4: Create hardware probe utility
 
@@ -331,7 +331,7 @@ Runs sustained captures, transport tests, sample accounting. Does not invent ENO
 **Files:**
 - Modify: `pyproject.toml`
 
-Register markers: `hardware`, `soak`, `slow`, `pluto`, `hackrf`.
+Register markers: `hardware`, `soak`, `slow`, `pluto`, `PlutoSDRplus`.
 
 ### Task 6.2: Add unit tests for new components
 
@@ -358,7 +358,7 @@ Deterministic tests for no SDR, multiple SDRs, context loss, short read, overflo
 - Modify: `MASTER_SPEC.md`
 - Modify/create `specs/SPEC-004A.5.md` and `specs/SPEC-018.md`
 
-Replace "Tier-1 means HackRF" with capability-based language. Declare Pluto as Phase 2A canonical pending verification. Separate synchronization claims.
+Replace "Tier-1 means PlutoSDRplus" with capability-based language. Declare Pluto as Phase 2A canonical pending verification. Separate synchronization claims.
 
 ### Task 7.2: Write hardware documentation
 
@@ -390,7 +390,7 @@ Include UNVERIFIED_PHYSICAL_PROPERTY markers, prohibited wiring assumptions, exa
 **Files:**
 - Modify: `.github/workflows/dslv_zpdi_ci.yml`
 
-Test optional dependency installs (`[pluto]`, `[hackrf]`), marker-based test runs, manifest round-trip, simulator-only import.
+Test optional dependency installs (`[pluto]`, `[PlutoSDRplus]`), marker-based test runs, manifest round-trip, simulator-only import.
 
 ### Task 8.2: Bump version everywhere
 

@@ -1,6 +1,6 @@
 """Hardware status panel: PlutoSDR+/SDR, PPS, GPSDO, chrony.
 
-Expensive probes (iio_info, hackrf_info, chronyc) are cached for a few seconds so
+Expensive probes (iio_info, PlutoSDRplus_info, chronyc) are cached for a few seconds so
 they don't dominate the dashboard refresh loop.
 """
 
@@ -14,7 +14,7 @@ from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.table import Table
 
-_HACKRF_TTL = 3.0   # seconds
+_PlutoSDRplus_TTL = 3.0   # seconds
 _CHRONY_TTL = 1.5   # seconds
 _GPSDO_TTL = 5.0    # seconds
 
@@ -33,25 +33,25 @@ class _Cache:
         return self.val
 
 
-def _hackrf_info() -> dict:
+def _PlutoSDRplus_info() -> dict:
     try:
         out = subprocess.check_output(
-            ["hackrf_info"], text=True, timeout=3, stderr=subprocess.STDOUT
+            ["PlutoSDRplus_info"], text=True, timeout=3, stderr=subprocess.STDOUT
         )
         serial = re.search(r"Serial number:\s+(\S+)", out)
         fw = re.search(r"Firmware Version:\s+(\S+)", out)
         rev = re.search(r"Hardware Revision:\s+(\S+)", out)
         board = re.search(r"Board ID Number:\s+\d+\s+\((.+)\)", out)
         return {
-            "detected": "Found HackRF" in out,
+            "detected": "Found PlutoSDRplus" in out,
             "serial": serial.group(1) if serial else "?",
             "fw": fw.group(1) if fw else "?",
             "rev": rev.group(1) if rev else "?",
-            "board": board.group(1) if board else "HackRF",
-            "source": "hackrf",
+            "board": board.group(1) if board else "PlutoSDRplus",
+            "source": "PlutoSDRplus",
         }
     except Exception:
-        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "hackrf"}
+        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "PlutoSDRplus"}
 
 
 def _pluto_info() -> dict:
@@ -85,9 +85,9 @@ def _sdr_info() -> dict:
     pluto = _pluto_info()
     if pluto["detected"]:
         return pluto
-    hackrf = _hackrf_info()
-    if hackrf["detected"]:
-        return hackrf
+    PlutoSDRplus = _PlutoSDRplus_info()
+    if PlutoSDRplus["detected"]:
+        return PlutoSDRplus
     # Default to Pluto so the panel shows the expected target even when absent.
     return pluto
 
@@ -172,7 +172,7 @@ def _chrony_stats() -> dict:
 class HardwarePanel:
     def __init__(self, border_style: str = "yellow"):
         self.border_style = border_style
-        self._sdr = _Cache(_HACKRF_TTL)
+        self._sdr = _Cache(_PlutoSDRplus_TTL)
         self._chrony = _Cache(_CHRONY_TTL)
         self._gpsdo = _Cache(_GPSDO_TTL)
 

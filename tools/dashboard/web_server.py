@@ -106,7 +106,7 @@ _HTML = """<!DOCTYPE html>
   <div class="card" id="c-system"><h2>System</h2><p class="val cyan">Loading…</p></div>
   <div class="card" id="c-pipeline"><h2>Pipeline</h2><p class="val cyan">Loading…</p></div>
   <div class="card node-card" id="c-nodes"><h2>Swarm Nodes</h2><p class="val cyan">Loading…</p></div>
-  <div class="card" id="c-sdr"><h2>SDR / HackRF</h2><p class="val cyan">Loading…</p></div>
+  <div class="card" id="c-sdr"><h2>SDR / PlutoSDRplus</h2><p class="val cyan">Loading…</p></div>
 </div>
 <div id="ts">Last update: —</div>
 <script>
@@ -186,7 +186,7 @@ async function refresh(){
     document.getElementById('c-nodes').innerHTML=nodeHtml;
 
     document.getElementById('c-sdr').innerHTML=
-      '<h2>SDR / HackRF</h2>'+
+      '<h2>SDR / PlutoSDRplus</h2>'+
       row('Mode',badge(sdr.mode||'SIM',sdr.mode==='REAL',false))+
       row('Center',sdr.center_hz!=null?(sdr.center_hz/1e6).toFixed(3)+' MHz':'?','cyan')+
       row('Amp','LOCKED OUT (blown — parts on order)','bad')+

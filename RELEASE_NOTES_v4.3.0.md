@@ -1,6 +1,6 @@
-# DSLV-ZPDI Release Notes — v4.3.0
+# DSLV-ZPDI Release Notes — v5.0.0
 
-**Revision:** Rev 4.3.0 (Multi-OS Compliance & Installer Hardening)
+**Revision:** Rev 5.0.0 (Multi-OS Compliance & Installer Hardening)
 **Date:** 2026-04-15
 **Codename:** MULTI-OS-PIVOT
 
@@ -21,9 +21,9 @@ Version 4.3.0 introduces a hardened, multi-OS compatible deployment architecture
 
 ## Version Alignment
 - `pyproject.toml`: 4.2.1 → 4.3.0
-- `README.md`: Rev 4.2.1 → Rev 4.3.0
-- `install_dslv_zpdi.sh`: Rev 4.2.1 → Rev 4.3.0
-- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 4.2.1 → Rev 4.3.0
+- `README.md`: Rev 5.0.1 → Rev 5.0.0
+- `install_dslv_zpdi.sh`: Rev 5.0.1 → Rev 5.0.0
+- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 5.0.1 → Rev 5.0.0
 
 ## Validation
 - 31/31 tests passing on Trixie (Python 3.13)

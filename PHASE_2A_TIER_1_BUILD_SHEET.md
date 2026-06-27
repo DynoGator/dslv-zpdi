@@ -26,7 +26,7 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 | :--- | :--- | :--- | :--- | :--- |
 | Compute | Raspberry Pi 5 | PI5-16GB | 1 | Primary Logic & I/O |
 | SDR (RF Eye) | HamGeek PlutoSDR+ | AD9361 / 1 GB | 1 | RF Ingestion (External 10 MHz CLKIN) |
-| Legacy SDR | HackRF One | Great Scott Gadgets | 0-1 | Optional / legacy reference floor |
+| Legacy SDR | PlutoSDRplus | Great Scott Gadgets | 0-1 | Optional / legacy reference floor |
 | Clock Authority | GPSDO | Leo Bodnar LBE-1421 | 1 | 10 MHz + 1 PPS (Out2/Out1) |
 | SDR Antenna | Wideband Antenna | ANT500 | 1 | 75 MHz - 1 GHz Coverage |
 | GNSS Antenna | Active GPS Antenna | 3-5V Active Patch | 1 | Required for LBE-1421 Lock |

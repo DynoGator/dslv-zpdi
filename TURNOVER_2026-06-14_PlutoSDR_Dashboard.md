@@ -8,7 +8,7 @@
 
 1. **HAL layer**
    * New `src/dslv_zpdi/layer1_ingestion/hal_pluto.py` — native `libiio` HAL.
-   * `src/dslv_zpdi/layer1_ingestion/hal_factory.py` — `sdr_type` routing (`auto`/`hackrf`/`pluto`/`sim`) + auto-detection helpers.
+   * `src/dslv_zpdi/layer1_ingestion/hal_factory.py` — `sdr_type` routing (`auto`/`PlutoSDRplus`/`pluto`/`sim`) + auto-detection helpers.
 2. **Config / pipeline**
    * `src/dslv_zpdi/config_loader.py` — Pluto fields + env overrides; `nodes.registered` list now normalized to a dict so the current YAML validates.
    * `src/dslv_zpdi/main_pipeline.py` — `--sdr-type` CLI arg.
@@ -16,8 +16,8 @@
 3. **Tests**
    * `tests/test_pluto_hal.py` — mock-based coverage.
 4. **Dashboard**
-   * `tools/dashboard/panels/waterfall.py` — `PlutoSweepStream`, source enum (`SIM`/`HACKRF`/`PLUTO`/`…-WAIT`), source cycling, config/env/CLI selection.
-   * `tools/dashboard/panels/hardware.py` — shows both HackRF and PlutoSDR detection.
+   * `tools/dashboard/panels/waterfall.py` — `PlutoSweepStream`, source enum (`SIM`/`PlutoSDRplus`/`PLUTO`/`…-WAIT`), source cycling, config/env/CLI selection.
+   * `tools/dashboard/panels/hardware.py` — shows both PlutoSDRplus and PlutoSDR detection.
    * `tools/dashboard/panels/anomaly.py` — source styling for PLUTO.
    * `tools/dashboard/app.py` — `--sdr-source` CLI flag, `r` key cycles sources, footer shows source label.
    * `tools/dashboard/config.py` — `waterfall.sdr_source`, `pluto_uri`, `pluto_gain`.

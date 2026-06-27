@@ -1,5 +1,5 @@
 """
-SPEC-004A.5 | PlutoSDR+ HAL (Rev 4.8.1)
+SPEC-004A.5 | PlutoSDR+ HAL (Rev 5.0.1)
 Hardware Abstraction Layer for Analog Devices PlutoSDR / PlutoSDR+ clones.
 
 The PlutoSDR+ integrates an AD936x transceiver and a Zynq-7000 SoC. It can

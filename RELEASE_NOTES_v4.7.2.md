@@ -1,8 +1,8 @@
-# Release Notes — v4.7.2
+# Release Notes — v5.0.0
 
 **Date:** 2026-06-01
 **Theme:** Robustness, Reliability & Security Hardening
-**Baseline:** Rev 4.7.1 → Rev 4.7.2
+**Baseline:** Rev 5.0.1 → Rev 5.0.2
 
 This is a quality-and-hardening release. The trust pipeline's behaviour is
 unchanged; the work makes shutdown safe for the data on disk, shrinks the swarm

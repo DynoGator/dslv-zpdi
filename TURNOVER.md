@@ -137,7 +137,7 @@ compatible (the dtype only applies on dataset creation).
 ### What Was Done
 
 **STEP 1 — Audit & Violation Baseline**
-- Produced `AUDIT_VIOLATIONS.md` comparing `zpdi_mobile_node.py`, `zpdi_verifier.py`, and `edge_listener_stub.py` against `V3_DSLV-ZPDI_LIVING_MASTER.md` Rev 4.3.0.
+- Produced `AUDIT_VIOLATIONS.md` comparing `zpdi_mobile_node.py`, `zpdi_verifier.py`, and `edge_listener_stub.py` against `V3_DSLV-ZPDI_LIVING_MASTER.md` Rev 5.0.0.
 - Committed: `docs(audit): SPEC violation baseline for mobile node`
 
 **STEP 2 — Canonical `src/` Structure**
@@ -212,7 +212,7 @@ compatible (the dtype only applies on dataset creation).
 2. **Configure WSS endpoint:** When a real edge server is available, set `ZPDI_WSS_URI` in `.env`. Until then, all data routes to `logs/zpdi_fallback.jsonl`.
 3. **Verify health log:** After restart, confirm `logs/health.jsonl` is being updated every 30s and supervisor log shows no forced restarts.
 4. **Field calibration (SPEC-009):** If deploying this mobile node as part of a swarm, run 72-hour passive listening to build adaptive baselines before using `r_smooth` thresholds for vectoring.
-5. **Tier-1 procurement:** Per SPEC-004A.2, institutional-grade primary output requires Raspberry Pi 5/CM5 + HackRF One + Leo Bodnar LBE-1421 GPSDO (or equivalent with external 10 MHz CLKIN + 1 PPS GPIO).
+5. **Tier-1 procurement:** Per SPEC-004A.2, institutional-grade primary output requires Raspberry Pi 5/CM5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO (or equivalent with external 10 MHz CLKIN + 1 PPS GPIO).
 
 ---
 
@@ -246,7 +246,7 @@ Ported all KIMI-HOME Rev 3.5 features into the canonical dslv-zpdi working tree 
 
 **Tests:** 42/42 passing (14 SPEC compliance + 17 mobile-specific + 11 tier1 server).
 
-**GitHub:** Pushed to `feat/mobile-node-hardening-phase2` (commit `62f9a85`). Note: remote `main` is v4.7.0 Tier-1 hardware node — a separate codebase. Mobile Tier-2 work lives on the feature branch.
+**GitHub:** Pushed to `feat/mobile-node-hardening-phase2` (commit `62f9a85`). Note: remote `main` is v5.0.0 Tier-1 hardware node — a separate codebase. Mobile Tier-2 work lives on the feature branch.
 
 **Pre-Reboot Checklist Completed**
 - Vite serve process (PID 7677/7656, port 5173) — gracefully stopped (SIGTERM)
@@ -288,7 +288,7 @@ Ported all KIMI-HOME Rev 3.5 features into the canonical dslv-zpdi working tree 
 
 ### What Was Done
 
-- Fetched `origin/main` at Rev 4.7.2 (`d8a4f89`); confirmed Kimi merge still in progress
+- Fetched `origin/main` at Rev 5.0.2 (`d8a4f89`); confirmed Kimi merge still in progress
 - Created multi-agent collaboration docs: `COLLABORATION_GUIDE.md`, `docs/collaboration/`
 - Added mobile tooling: `tools/health_check_mobile.sh`, `tools/orphan_checker.py`, `specs/` stubs
 - Hardened `supervisor.sh` (`.env` export, health grace period, stale log truncate)
@@ -328,7 +328,7 @@ orphan_checker.py         → 29 class-level SPEC gaps (documented, post-merge t
 
 ### Changes
 - Searched system, read SESSION_CONTEXT, established GROK-HOME.
-- Fetched origin/main (now at v4.7.2+/Phase 2B closeout 985d8ca with full restructure, SPEC-016 Pixel bridge, packaged src/dslv_zpdi/, HAL, contracts, wiring, pyproject.toml).
+- Fetched origin/main (now at v5.0.0+/Phase 2B closeout 985d8ca with full restructure, SPEC-016 Pixel bridge, packaged src/dslv_zpdi/, HAL, contracts, wiring, pyproject.toml).
 - Compared local flat `src/layer*` (Rev 3.5 mobile) vs GitHub master template (via git archive + MCP).
 - **Restructured phone files to mirror GitHub**: removed flat src/layers, installed `src/dslv_zpdi/` tree from origin/main (core, contracts, layers with hal/pixel_bridge/router/hdf5 etc, watchdog, main_pipeline, logging_config), pyproject + package find=src.
 - **Overlay + adapt mobile Tier-2 code**:

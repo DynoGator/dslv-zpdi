@@ -26,7 +26,7 @@ Effective immediately, the following stack is classified as the Tier 1 hardware 
 | Component | Model | Specification |
 |-----------|-------|---------------|
 | **Compute/Buffering** | Raspberry Pi 5 (16GB) | High-bandwidth FFT processing |
-| **SDR Array (The Eye)** | HackRF One | 20MHz bandwidth, native `CLKIN` capability |
+| **SDR Array (The Eye)** | PlutoSDRplus | 20MHz bandwidth, native `CLKIN` capability |
 | **Clock Authority** | Leo Bodnar LBE-1421 GPSDO | 10 MHz + 1 PPS from GPS constellation |
 
 ### 2.1 Hardware-Agnostic Requisites
@@ -44,7 +44,7 @@ Any future alternative compute/SDR hardware (e.g., Nvidia Jetson AGX, USRP) must
 Development environments must be configured to mirror the exact physical routing of the production hardware:
 
 ### 3.1 RF Phase Lock
-The Leo Bodnar GPSDO provides a **10 MHz reference signal** connected via SMA coax directly into the HackRF `CLKIN` port, locking the ADC directly to the GPS constellation.
+The Leo Bodnar GPSDO provides a **10 MHz reference signal** connected via SMA coax directly into the PlutoSDRplus `CLKIN` port, locking the ADC directly to the GPS constellation.
 
 ### 3.2 OS Timestamping
 The GPSDO outputs a **1 Pulse-Per-Second (PPS)** signal via jumper to the Raspberry Pi 5.
@@ -71,7 +71,7 @@ Ensure the local OS (Bookworm/Trixie) is primed with the necessary metrology and
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y pps-tools chrony hackrf libhackrf-dev soapysdr-module-hackrf python3-soapysdr
+sudo apt install -y pps-tools chrony PlutoSDRplus libPlutoSDRplus-dev soapysdr-module-PlutoSDRplus python3-soapysdr
 ```
 
 ### 4.2 Kernel Interrupt Configuration (RP1 Southbridge)
@@ -81,7 +81,7 @@ To map the PPS signal to the OS kernel on the Pi 5 architecture, the `/boot/firm
 1. **Append the device tree overlay:**
 
 ```text
-# Map PPS signal to GPIO 18 (Rev 4.1)
+# Map PPS signal to GPIO 18 (Rev 5.0)
 # WARNING: Pi 5 RP1 uses 3.3V logic. Verify GPSDO output voltage before connecting.
 dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
 ```
@@ -101,7 +101,7 @@ echo "pps-gpio" | sudo tee -a /etc/modules
 **Add the following to the top of `/etc/chrony/chrony.conf`:**
 
 ```text
-# DSLV-ZPDI RF Metrology Configuration (Rev 4.1)
+# DSLV-ZPDI RF Metrology Configuration (Rev 5.0)
 # Absolute UTC via Hardware PPS - prioritizes GPSDO over network
 refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
 ```
@@ -110,11 +110,11 @@ refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust
 
 ## 5. Driver Implementation & Software Safety Nets
 
-All interactions with the HackRF **must** be routed through **SoapySDR** to maintain the hardware-agnostic rule of the architecture.
+All interactions with the PlutoSDRplus **must** be routed through **SoapySDR** to maintain the hardware-agnostic rule of the architecture.
 
 ### 5.1 The "Silent Traitor" Clock Failure Mitigation
 
-**CRITICAL:** The HackRF One will **silently fail back to its internal oscillator** if the 10 MHz `CLKIN` signal drops below the required amplitude or loses physical connection. The software stack must not blindly assume phase-lock.
+**CRITICAL:** The PlutoSDRplus will **silently fail back to its internal oscillator** if the 10 MHz `CLKIN` signal drops below the required amplitude or loses physical connection. The software stack must not blindly assume phase-lock.
 
 Any script interacting with the SDR (specifically within `DualStreamRouter`) must explicitly assert and verify the external clock prior to data ingestion:
 
@@ -177,13 +177,13 @@ print(f"Clock source: {status['clock_source']}")
 
 2. **Ensure the pre-commit** `orphan_checker.py` recognizes the new Python driver dependencies:
    - SoapySDR (preferred)
-   - pyhackrf (fallback)
+   - pyPlutoSDRplus (fallback)
 
 3. **Acknowledge** the Pi 5 RP1 southbridge architecture introduces a deterministic PCIe-transit latency for the GPIO interrupt. Offset calibration will be required post-assembly.
 
 4. **Hardware Procurement** (if not already complete):
    - Raspberry Pi 5 (16GB)
-   - HackRF One
+   - PlutoSDRplus
    - Leo Bodnar LBE-1421 GPSDO
    - Active GPS antenna
    - SMA cables (10 MHz reference)
@@ -192,10 +192,10 @@ print(f"Clock source: {status['clock_source']}")
 5. **Physical Assembly Checklist:**
    - [ ] Verify GPSDO 10 MHz output level (~1Vpp into 50Ω)
    - [ ] Verify GPSDO 1 PPS output level (3.3V or level-shifted)
-   - [ ] Connect 10 MHz SMA → HackRF CLKIN
+   - [ ] Connect 10 MHz SMA → PlutoSDRplus CLKIN
    - [ ] Connect 1 PPS → GPIO 18 (via level shifter if needed)
    - [ ] Connect GPS antenna to GPSDO
-   - [ ] Connect HackRF to Pi 5 USB 3.0
+   - [ ] Connect PlutoSDRplus to Pi 5 USB 3.0
    - [ ] Apply power to GPSDO (wait for GPS lock)
    - [ ] Apply power to Pi 5
    - [ ] Run `python tools/provision_tier1.py`
@@ -211,13 +211,13 @@ print(f"Clock source: {status['clock_source']}")
 lsmod | grep pps
 ppstest /dev/pps0
 
-# 2. Check HackRF detection
-hackrf_info
+# 2. Check PlutoSDRplus detection
+PlutoSDRplus_info
 
 # 3. Check clock source (via SoapySDR)
 python3 -c "
 import SoapySDR
-dev = SoapySDR.Device(dict(driver='hackrf'))
+dev = SoapySDR.Device(dict(driver='PlutoSDRplus'))
 print(f'Clock source: {dev.getClockSource()}')
 "
 
@@ -247,7 +247,7 @@ The following hardware configurations are **formally deprecated** for Tier 1 ins
 | Deprecated Component | Replacement | Status |
 |---------------------|-------------|--------|
 | Intel i210-T1 NIC | GPSDO 10 MHz reference | **REMOVED** |
-| RTL-SDR (v3/v4) | HackRF One with CLKIN | **TIER 2 ONLY** |
+| RTL-SDR (v3/v4) | PlutoSDRplus with CLKIN | **TIER 2 ONLY** |
 | CM5 as primary | Pi 5 (16GB) as primary | **DEPRECATED** |
 | PTP/IEEE 1588 | GPSDO direct clock injection | **REMOVED** |
 

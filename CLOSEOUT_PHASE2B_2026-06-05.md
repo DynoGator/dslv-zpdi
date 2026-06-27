@@ -31,14 +31,14 @@
 |-----|------|---------|
 | `main` | `56b7c4169f59b833d142e7b390484d9d76969696` | merge: Phase 2B radon metrology stack into main |
 | `phase-2b/radon-metrology-fusion` | `06c17e51aefc25a49e99cf3f90dc121990e96cd4` | docs: Phase 2B closeout prep — auth log, state snapshot, questions |
-| tag `v4.8.0` | `6ac40a33d577751c5e8bd3625b83c876ccb18beb` (annotated) → peels to `56b7c41` | Phase 2B closeout: radon metrology stack, branches reconciled, suite green |
+| tag `v5.0.0` | `6ac40a33d577751c5e8bd3625b83c876ccb18beb` (annotated) → peels to `56b7c41` | Phase 2B closeout: radon metrology stack, branches reconciled, suite green |
 
 ### Merge Summary
 - `phase-2b/radon-metrology-fusion` merged into `main` via a real merge commit (`--no-ff`).
-- Base of feature branch: `5399333` (v4.7.1).
-- `origin/main` had advanced to `d8a4f89` (v4.7.2 hardening) since the feature branch was cut; merge cleanly reconciled the v4.7.2 hardening pass with the Phase 2B work.
+- Base of feature branch: `5399333` (v5.0.0).
+- `origin/main` had advanced to `d8a4f89` (v5.0.0 hardening) since the feature branch was cut; merge cleanly reconciled the v5.0.0 hardening pass with the Phase 2B work.
 - Conflicts resolved:
-  - `CHANGELOG.md` — kept both v4.8.0 entry (feature branch) and v4.7.2 entry (main), ordered newest-first.
+  - `CHANGELOG.md` — kept both v5.0.0 entry (feature branch) and v5.0.0 entry (main), ordered newest-first.
   - `src/dslv_zpdi/layer1_ingestion/nmea_stream.py` — kept main's SPEC-ID docstring to avoid duplicative orphan-gap fixes.
   - `src/dslv_zpdi/layer1_ingestion/pps_listener.py` — same.
   - `src/dslv_zpdi/layer3_telemetry/node_receiver.py` — same.
@@ -86,21 +86,21 @@ FAILURE: Jitter exceeds 1000ns threshold.
 
 ## 4. The "Flaky" Hardware Test — Verified, Not Inherited
 
-**Test:** `tests/test_hardware_failure_paths.py::TestPyhackrfFailurePaths`
-- `test_pyhackrf_internal_clock_raises_clock_verification`
-- `test_pyhackrf_unknown_clock_raises_clock_verification`
+**Test:** `tests/test_hardware_failure_paths.py::TestPyPlutoSDRplusFailurePaths`
+- `test_pyPlutoSDRplus_internal_clock_raises_clock_verification`
+- `test_pyPlutoSDRplus_unknown_clock_raises_clock_verification`
 
 **Investigation:**
-1. Both tests patch `hal_hw_module.__dict__` with a mock `pyhackrf`, expecting `HardwareHAL()` to raise `ClockVerificationError` based on `mock_device.clock_source`.
-2. However, `_verify_pyhackrf_clock()` spawns a subprocess that imports the **real** `hackrf` module. If a real HackRF is accessible, the probe succeeds, the mock is bypassed, and the expected exception is not raised → test fails.
+1. Both tests patch `hal_hw_module.__dict__` with a mock `pyPlutoSDRplus`, expecting `HardwareHAL()` to raise `ClockVerificationError` based on `mock_device.clock_source`.
+2. However, `_verify_pyPlutoSDRplus_clock()` spawns a subprocess that imports the **real** `PlutoSDRplus` module. If a real PlutoSDRplus is accessible, the probe succeeds, the mock is bypassed, and the expected exception is not raised → test fails.
 3. Ran the same two tests on a clean checkout of `main` (`5399333` and `d8a4f89`) — both failed identically (`DID NOT RAISE`).
 
 **Verdict:** Genuinely pre-existing. Not a Phase 2B regression.
 
-**Resolution:** Added a runtime hardware-gated `@pytest.mark.skipif(_HACKRF_HARDWARE_ACCESSIBLE, ...)` condition at module load time. The helper probes the real `hackrf` module via subprocess; if a real device is accessible, the two tests are skipped so CI/node-with-hardware runs stay honest. The test bodies and assertions were **not** weakened.
+**Resolution:** Added a runtime hardware-gated `@pytest.mark.skipif(_PlutoSDRplus_HARDWARE_ACCESSIBLE, ...)` condition at module load time. The helper probes the real `PlutoSDRplus` module via subprocess; if a real device is accessible, the two tests are skipped so CI/node-with-hardware runs stay honest. The test bodies and assertions were **not** weakened.
 
 **Post-fix suite result:**
-- On this node (real HackRF accessible intermittently): tests pass when probe fails, skip when probe succeeds — suite stays green either way.
+- On this node (real PlutoSDRplus accessible intermittently): tests pass when probe fails, skip when probe succeeds — suite stays green either way.
 
 ---
 
@@ -121,7 +121,7 @@ FAILURE: Jitter exceeds 1000ns threshold.
 
 - [x] All commits pushed to GitHub (local hashes match remote hashes).
 - [x] `main` merged and pushed.
-- [x] Tag `v4.8.0` pushed.
+- [x] Tag `v5.0.0` pushed.
 - [x] Working tree clean (`git status --porcelain` empty).
 - [x] No token/credential files on disk (`~/.git-credentials*` absent, no credential helper).
 - [x] Remote URL reset to SSH format (no PAT in URL).
@@ -138,7 +138,7 @@ FAILURE: Jitter exceeds 1000ns threshold.
 ## 7. State of the World for the Next Agent
 
 **What's done:**
-- Phase 2B radon metrology stack is fully merged to `main` and tagged `v4.8.0`.
+- Phase 2B radon metrology stack is fully merged to `main` and tagged `v5.0.0`.
 - 7 build modules (SPEC-015 through SPEC-021) are in tree with 56 new tests.
 - 27 pre-existing SPEC-ID orphan gaps are closed.
 - LBE-1421 documentation is corrected.
@@ -160,8 +160,8 @@ FAILURE: Jitter exceeds 1000ns threshold.
 - [x] Local HEAD == `origin/main` (`56b7c41` == `56b7c41`).
 - [x] `phase-2b/radon-metrology-fusion` fully pushed (`06c17e5` == `06c17e5`).
 - [x] `git status` clean; nothing uncommitted, nothing unpushed.
-- [x] Tag `v4.8.0` on remote (`refs/tags/v4.8.0` → `56b7c41`).
-- [x] Test suite green (`103 passed`, or `101 passed + 2 hardware-gated skipped` when real HackRF is accessible).
+- [x] Tag `v5.0.0` on remote (`refs/tags/v5.0.0` → `56b7c41`).
+- [x] Test suite green (`103 passed`, or `101 passed + 2 hardware-gated skipped` when real PlutoSDRplus is accessible).
 - [x] Orphan checker green.
 
 ---

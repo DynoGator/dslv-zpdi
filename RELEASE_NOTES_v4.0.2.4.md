@@ -1,9 +1,9 @@
-# DSLV-ZPDI Release Notes: v4.0.2
+# DSLV-ZPDI Release Notes: v5.0.0
 **Date:** 2026-04-09  
-**Revision:** Rev 4.0.2 (Airtight Baseline)
+**Revision:** Rev 5.0.2 (Airtight Baseline)
 
 ## 🚀 Overview
-Version 4.0.2 introduces a robust, unified installer script (`install_dslv_zpdi.sh`) that automates the deployment, dependency management, and hardware audit protocols for Tier 1 Anchor Nodes. This release also synchronizes the entire repository with the Rev 4.0.2 baseline, ensuring 100% compliance with SPEC-004A.1 timing mandates.
+Version 4.0.2 introduces a robust, unified installer script (`install_dslv_zpdi.sh`) that automates the deployment, dependency management, and hardware audit protocols for Tier 1 Anchor Nodes. This release also synchronizes the entire repository with the Rev 5.0.2 baseline, ensuring 100% compliance with SPEC-004A.1 timing mandates.
 
 ## 🛠️ Key Changes
 1. **Unified Installer Deployed:**

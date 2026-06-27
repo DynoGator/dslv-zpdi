@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SPEC-009.1 — Field baseline capture script (Rev 4.4.0).
+SPEC-009.1 — Field baseline capture script (Rev 5.0.0).
 72 h passive ingest; scorer.finalize_baseline() on exit.
 Logs to secondary only until baseline LOCKED.
 """

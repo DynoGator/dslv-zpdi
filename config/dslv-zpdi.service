@@ -42,10 +42,10 @@ RestrictRealtime=false
 RestrictNamespaces=false
 
 # Read-write paths needed for pipeline operation.
-# NOTE: /dev/hackrf0 is intentionally omitted; it is a device node that may
-# be absent when the HackRF is unplugged, and systemd mount-namespace setup
+# NOTE: /dev/PlutoSDRplus0 is intentionally omitted; it is a device node that may
+# be absent when the PlutoSDRplus is unplugged, and systemd mount-namespace setup
 # fails (226/NAMESPACE) if any ReadWritePaths entry is missing. USB access
-# via /dev/bus/usb is sufficient for libusb/pyhackrf.
+# via /dev/bus/usb is sufficient for libusb/pyPlutoSDRplus.
 ReadWritePaths=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
 
 StandardOutput=journal

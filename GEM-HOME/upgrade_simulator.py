@@ -61,7 +61,7 @@ new_sim_methods = """    def ingest_gps_pps(self, **kwargs) -> IngestionPayload:
         SPEC-005A.4b — Mock SDR IQ Ingestion with LBE-1421 phase-noise curve.
         \"\"\"
         node_id = kwargs.get(\"node_id\", \"SIM-ALPHA\")
-        sensor_id = kwargs.get(\"sensor_id\", \"SIM-HACKRF-1421\")
+        sensor_id = kwargs.get(\"sensor_id\", \"SIM-PlutoSDRplus-1421\")
         sample_rate = kwargs.get(\"sample_rate\", 20e6)
         center_freq = kwargs.get(\"center_freq\", 100e6)
         clock_source = kwargs.get(\"clock_source\", \"external\")

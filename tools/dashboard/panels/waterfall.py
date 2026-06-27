@@ -2,7 +2,7 @@
 
 Supports two data sources:
     * SIM      — synthesized spectrum with drifting carriers (default)
-    * HACKRF   — live hackrf_sweep subprocess streamed in a thread
+    * PlutoSDRplus   — live PlutoSDRplus_sweep subprocess streamed in a thread
 
 Toggle the source at runtime with the "real-sdr" keybinding (default 'r')
 which flips the DSLV_DASHBOARD_REAL_SDR environment variable. The panel
@@ -80,9 +80,9 @@ def _heat(v: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
-class HackrfSweepStream:
+class PlutoSDRplusSweepStream:
     """
-    Background thread wrapping `hackrf_sweep` stdout.
+    Background thread wrapping `PlutoSDRplus_sweep` stdout.
     """
 
     def __init__(self):
@@ -129,7 +129,7 @@ class HackrfSweepStream:
             "bin_width_hz": bin_width_hz,
         }
         cmd = [
-            "hackrf_sweep",
+            "PlutoSDRplus_sweep",
             "-f", f"{freq_min_mhz}:{freq_max_mhz}",
             "-w", str(bin_width_hz),
             "-l", str(lna),
@@ -237,10 +237,10 @@ class HackrfSweepStream:
         return row
 
 
-def hackrf_present() -> bool:
+def PlutoSDRplus_present() -> bool:
     try:
         subprocess.check_output(
-            ["hackrf_info"], stderr=subprocess.STDOUT, timeout=2, text=True
+            ["PlutoSDRplus_info"], stderr=subprocess.STDOUT, timeout=2, text=True
         )
         return True
     except Exception:
@@ -289,8 +289,8 @@ class WaterfallPanel:
             (0.55, 0.60, 0.00070),
             (0.78, 0.40, 0.00110),
         ]
-        self._have_hackrf = hackrf_present()
-        self._stream = HackrfSweepStream()
+        self._have_PlutoSDRplus = PlutoSDRplus_present()
+        self._stream = PlutoSDRplusSweepStream()
         self._want_real = False
         self._last_source = "SIM"
         # Raw dBm view of the latest row (real or simulated). Consumed by the
@@ -373,7 +373,7 @@ class WaterfallPanel:
         self.modulation = mods[(i + 1) % len(mods)]
 
     def toggle_amp(self):
-        # AMP LOCKOUT — HackRF 1 front-end amp is blown; parts on order.
+        # AMP LOCKOUT — PlutoSDRplus 1 front-end amp is blown; parts on order.
         # Do not enable under any circumstances until the amp is replaced.
         pass
 
@@ -390,7 +390,7 @@ class WaterfallPanel:
 
     def _sync_stream(self):
         want_real = (
-            self._have_hackrf
+            self._have_PlutoSDRplus
             and os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
         )
         if want_real and not self._stream.is_running():
@@ -446,7 +446,7 @@ class WaterfallPanel:
         if self._want_real:
             raw_row = self._stream.pop_row()
             if raw_row is not None:
-                source = "HACKRF"
+                source = "PlutoSDRplus"
                 raw_dbm = raw_row
                 row = self._normalize(raw_row)
         if row is None:
@@ -455,7 +455,7 @@ class WaterfallPanel:
             # the anomaly panel still has something meaningful to display.
             raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
             if self._want_real:
-                source = "HACKRF-WAIT"
+                source = "PlutoSDRplus-WAIT"
         self._last_source = source
         self.last_dbm_row = raw_dbm
         if raw_dbm:
@@ -604,12 +604,12 @@ class WaterfallPanel:
         lines.append_text(axis)
 
         src_label = {
-            "HACKRF": "HRF",
-            "HACKRF-WAIT": "HRF…",
+            "PlutoSDRplus": "HRF",
+            "PlutoSDRplus-WAIT": "HRF…",
             "SIM": "SIM",
         }.get(self._last_source, "SIM") if self.compact else {
-            "HACKRF": "HACKRF",
-            "HACKRF-WAIT": "HACKRF…",
+            "PlutoSDRplus": "PlutoSDRplus",
+            "PlutoSDRplus-WAIT": "PlutoSDRplus…",
             "SIM": "SIM",
         }.get(self._last_source, "SIM")
 

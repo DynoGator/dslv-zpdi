@@ -7,16 +7,16 @@
 - Remote: `https://github.com/DynoGator/dslv-zpdi.git`
 - Starting central commit before update: `9fa6dad`
 - GitHub main fetched and fast-forwarded to: `5399333`
-- Active revision after repair: Rev 4.7.1
+- Active revision after repair: Rev 5.0.1
 
 ## Work Completed
 
 - Fast-forwarded the central `dslv-zpdi` checkout from `9fa6dad` to GitHub `5399333`.
 - Built a local editable development environment at `.venv/` and installed `.[dev]`.
 - Corrected current upstream validation failures:
-  - Added missing SPEC-ID docstrings for NMEA, PPS, node receiver, and pyhackrf wrapper paths.
-  - Added missing `RELEASE_NOTES_v4.7.1.md`.
-  - Updated README revision to Rev 4.7.1.
+  - Added missing SPEC-ID docstrings for NMEA, PPS, node receiver, and pyPlutoSDRplus wrapper paths.
+  - Added missing `RELEASE_NOTES_v5.0.0.md`.
+  - Updated README revision to Rev 5.0.1.
 - Added shared collaboration documentation for Gemini CLI, Claude Code, Kimi Code, and Codex CLI under `docs/collaboration/`.
 - Added `.venv/` to `.gitignore`.
 - Normalized the Gemini checkout remote URL to remove embedded credentials.

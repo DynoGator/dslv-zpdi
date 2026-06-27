@@ -57,4 +57,4 @@ The device cannot be declared canonical Tier-1 until:
 - External reference consumption is demonstrated
 - No unaccounted sample loss occurs during sustained capture
 - Integrity verification passes
-- Performance equals or exceeds the HackRF baseline
+- Performance equals or exceeds the PlutoSDRplus baseline

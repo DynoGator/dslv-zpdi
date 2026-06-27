@@ -48,17 +48,17 @@ fi
 
 echo ""
 
-# 3. Hardware (HackRF)
+# 3. Hardware (PlutoSDRplus)
 echo "[3/8] RF hardware"
-if command -v hackrf_info >/dev/null 2>&1; then
-  if hackrf_info 2>&1 | grep -q "Found HackRF"; then
-    SERIAL=$(hackrf_info 2>&1 | awk -F': *' '/Serial number/{print $2; exit}')
-    log_ok "HackRF detected (s/n ${SERIAL: -12})"
+if command -v PlutoSDRplus_info >/dev/null 2>&1; then
+  if PlutoSDRplus_info 2>&1 | grep -q "Found PlutoSDRplus"; then
+    SERIAL=$(PlutoSDRplus_info 2>&1 | awk -F': *' '/Serial number/{print $2; exit}')
+    log_ok "PlutoSDRplus detected (s/n ${SERIAL: -12})"
   else
-    log_warn "hackrf_info installed but no device found"
+    log_warn "PlutoSDRplus_info installed but no device found"
   fi
 else
-  log_warn "hackrf_info not installed"
+  log_warn "PlutoSDRplus_info not installed"
 fi
 
 echo ""

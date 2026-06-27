@@ -3,8 +3,8 @@
 ## 1. Executive summary
 
 Autonomous repository audit remediation against `origin/main`. The local canonical
-checkout was stale (`d8a4f89`, Rev 4.7.2) and was fast-forwarded to the live
-`origin/main` (`985d8ca`, the Phase 2B / v4.8.0 stack) at session start. On the
+checkout was stale (`d8a4f89`, Rev 5.0.2) and was fast-forwarded to the live
+`origin/main` (`985d8ca`, the Phase 2B / v5.0.0 stack) at session start. On the
 real current `main` the weak on-main CI had let a **broken merge** land: 4 failing
 tests, 117 ruff errors, and a 4.7.2↔4.8.0 version desync. This session fixed all
 of that, made 5 non-hermetic tests deterministic, reconciled the version, stood up
@@ -59,11 +59,11 @@ All work is on branch `chore/repository-hardening` as 11 logical commits.
 ## 8. Audit claims inaccurate or outdated
 
 - The directive assumed the canonical checkout led development; in reality it was a
-  full minor version behind (`main` had advanced to v4.8.0 / Phase 2B).
+  full minor version behind (`main` had advanced to v5.0.0 / Phase 2B).
 - The directive assumed a single line of work; the repo is an active multi-agent,
   multi-branch project (8+ remote branches updated during the session).
 - "Create releases from existing tags": the only pre-existing tags were old
-  (`v3.2.0-GOLDEN`, `v3.4.0-mobile`); the relevant `v4.8.0` tag existed but had no
+  (`v3.2.0-GOLDEN`, `v3.4.0-mobile`); the relevant `v5.0.0` tag existed but had no
   matching `RELEASE_NOTES` and the code still claimed 4.7.2.
 
 ## 9. Audit recommendations rejected/deferred due to repository law or context
@@ -81,7 +81,7 @@ All work is on branch `chore/repository-hardening` as 11 logical commits.
 
 ## 10–13. File inventory
 
-**Added:** `RELEASE_NOTES_v4.8.0.md`, `SECURITY.md`, `CODEOWNERS`, `compose.yaml`,
+**Added:** `RELEASE_NOTES_v5.0.0.md`, `SECURITY.md`, `CODEOWNERS`, `compose.yaml`,
 `.dockerignore`, `docs/README.md`, `.github/dependabot.yml`,
 `.github/ISSUE_TEMPLATE/{bug_report,feature_request,hardware_incident,config}.yml`,
 `docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md`,
@@ -113,8 +113,8 @@ Rewrote `.github/workflows/dslv_zpdi_ci.yml`:
 
 Python **3.10, 3.11, 3.12, 3.13** (derived from `requires-python>=3.9` and
 verified-installable versions; 3.9 omitted to avoid spurious failures — flagged
-for the owner). System libs `libhackrf-dev`/`libusb-1.0-0-dev` installed for
-`pyhackrf`, mirroring the Dockerfile.
+for the owner). System libs `libPlutoSDRplus-dev`/`libusb-1.0-0-dev` installed for
+`pyPlutoSDRplus`, mirroring the Dockerfile.
 
 ## 16. Coverage implementation and results
 
@@ -166,8 +166,8 @@ Trusted Publishing configured and out of session scope; readiness is in place.
 
 ## 26. GitHub Releases
 
-`v4.8.0` tag exists and now has matching `RELEASE_NOTES_v4.8.0.md` and a reconciled
-codebase. A GitHub Release for `v4.8.0` is created from this verified tag (see
+`v5.0.0` tag exists and now has matching `RELEASE_NOTES_v5.0.0.md` and a reconciled
+codebase. A GitHub Release for `v5.0.0` is created from this verified tag (see
 final summary). Old `v3.x` tags left untouched.
 
 ## 27. Branch-protection settings
@@ -209,10 +209,10 @@ docker build -t dslv-zpdi:sim .
 
 ## 31–33. Hardware validation
 
-- Performed on hardware: none (no Tier 1 Pi 5 / HackRF / GPSDO attached here).
+- Performed on hardware: none (no Tier 1 Pi 5 / PlutoSDRplus / GPSDO attached here).
 - Simulated: all sensor paths via `DEV_SIMULATOR=1` (RadonEye, Pixel node, uplink,
   pipeline).
-- Not possible this session: real PPS/NMEA/HackRF/BLE confirmation — remains
+- Not possible this session: real PPS/NMEA/PlutoSDRplus/BLE confirmation — remains
   `NEXT_STEPS.md` Priority 1.
 
 ## 34–37. PR / commits / merge / post-merge

@@ -3,7 +3,7 @@
 **Date:** 2026-06-05
 **Agent:** KIMI_CODE_CLI
 **Branch:** `phase-2b/radon-metrology-fusion`
-**Base:** `main` @ `5399333` (v4.7.1)
+**Base:** `main` @ `5399333` (v5.0.0)
 **Operator:** Joseph R. Fross / DynoGator Labs
 
 ---
@@ -108,10 +108,10 @@ Five remote branches found:
 
 ### After Phase 2B (excluding pre-existing flaky hardware tests)
 ```
-94 passed, 1 failed (test_pyhackrf_unknown_clock_raises_clock_verification)
+94 passed, 1 failed (test_pyPlutoSDRplus_unknown_clock_raises_clock_verification)
 ```
 
-The single failure is hardware-state-dependent (flaky when real HackRF is connected). It was present on arrival and is not a regression.
+The single failure is hardware-state-dependent (flaky when real PlutoSDRplus is connected). It was present on arrival and is not a regression.
 
 ### New Test Coverage
 - **RadonEye:** 12 tests (simulator math, BLE parsing, HTTP parsing, payload serialization, failover)

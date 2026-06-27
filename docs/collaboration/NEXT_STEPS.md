@@ -1,12 +1,12 @@
 # DSLV-ZPDI Continued Development Plan
 
 **Status date:** 2026-06-17
-**Baseline:** Rev 5.0.0 with PlutoSDR+ / LBE-1421 Tier-1 pivot, simulator-first CI, and Python 3.10 through 3.14 support. Historical Rev 4.8.1 simulator notes remain below for context.
+**Baseline:** Rev 5.0.0 with PlutoSDR+ / LBE-1421 Tier-1 pivot, simulator-first CI, and Python 3.10 through 3.14 support. Historical Rev 5.0.1 simulator notes remain below for context.
 
 ## Done In The 2026-06-10 Repository Hardening Session
 
 - Fixed 4 failing async tests on `main` (added `pytest-asyncio`).
-- Reconciled the 4.7.2→4.8.0 version desync across all authorities; added `RELEASE_NOTES_v4.8.0.md`.
+- Reconciled the 4.7.2→4.8.0 version desync across all authorities; added `RELEASE_NOTES_v5.0.0.md`.
 - Cleared 117 ruff findings in the Phase 2B modules (no metrology semantics changed).
 - Replaced the weak CI with a full Python validation + package-build matrix; the current matrix is 3.10 through 3.14.
 - Added `SECURITY.md`, Dependabot, YAML issue forms, `CODEOWNERS`, `compose.yaml`, `.dockerignore`, `docs/README.md`, coverage config.
@@ -15,10 +15,10 @@
 See `docs/audits/REPOSITORY_HARDENING_REPORT_2026-06-10.md` for full detail.
 
 ## Done In The 2026-06-11 Grok Autonomous Simulator Session (Pixel proot, no hardware)
-- Task A (critical): broadened native (ImportError, OSError) guards for libhackrf/Soapy (hal_hardware), h5py (writers), bleak (radoneye). Audit + justification for pure-Python guards left alone. Collection blast radius fixed; 113 passed on this host.
+- Task A (critical): broadened native (ImportError, OSError) guards for libPlutoSDRplus/Soapy (hal_hardware), h5py (writers), bleak (radoneye). Audit + justification for pure-Python guards left alone. Collection blast radius fixed; 113 passed on this host.
 - Task B: test_pipeline.py now reads __version__ dynamically; banners conservatively appended.
 - Task C (P2 Node Bridge Hardening): 10 new SPEC-014.8 contract tests for the three HTTP endpoints (malformed, missing, writer-fail, concurrent POSTs). specs/SPEC-014.md extended. Coverage lift on node_receiver from 0%. RadonEye kept secondary-only.
-- Version 4.8.0→4.8.1 bump + full authority sync (pyproject, __init__, README, CHANGELOG, new RELEASE_NOTES_v4.8.1.md). 3 atomic commits, full §2 green before/after each and post-push.
+- Version 4.8.0→4.8.1 bump + full authority sync (pyproject, __init__, README, CHANGELOG, new RELEASE_NOTES_v5.0.0.md). 3 atomic commits, full §2 green before/after each and post-push.
 - Deliverables: GROK_WORK_REPORT_2026-06-11.md, TURNOVER_2026-06-11_..., updated NEXT_STEPS.
 - P2 items above now complete. P1 (hardware truth on Pi 5) is next priority.
 
@@ -44,7 +44,7 @@ See the turnover file for exact reproduction commands, GitHub status, and remain
 
 ## Priority 1 - Hardware Truth Path
 
-- Run a Tier 1 hardware validation session on the Pi 5 with LBE-1421, PPS, NMEA, and HackRF attached.
+- Run a Tier 1 hardware validation session on the Pi 5 with LBE-1421, PPS, NMEA, and PlutoSDRplus attached.
 - Capture fresh validation evidence into `docs/validation-logs/` only after confirming it contains no secrets or machine-local noise.
 - Confirm chrony PPS second-boundary behavior and decide whether gpsd SOCK integration should replace direct serial NMEA access.
 
@@ -60,7 +60,7 @@ See "Done In The 2026-06-11..." block + TURNOVER for details. Next work here onl
 
 - Validate the 7 inch DSI layout on real hardware and capture screenshots or validation logs.
 - Exercise `tools/launch_project.sh`, `tools/preflight.sh`, and systemd units after a cold boot.
-- Confirm HackRF amplifier lockout remains enforced in both pipeline and dashboard paths.
+- Confirm PlutoSDRplus amplifier lockout remains enforced in both pipeline and dashboard paths.
 
 ## Priority 4 - SPEC-015 RadonEye Promotion
 

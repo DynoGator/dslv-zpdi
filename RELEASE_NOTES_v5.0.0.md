@@ -6,9 +6,9 @@
 
 ## Summary
 
-Rev 5.0.0 replaces the HackRF One as the canonical Tier-1 RF metrology target
+Rev 5.0.0 replaces the PlutoSDRplus as the canonical Tier-1 RF metrology target
 with a capability-based qualification model centered on the HamGeek AD9363
-PlutoSDR+ class device and the Leo Bodnar LBE-1421 GPSDO. The HackRF One
+PlutoSDR+ class device and the Leo Bodnar LBE-1421 GPSDO. The PlutoSDRplus
 remains supported as an optional legacy backend and historical performance
 floor.
 

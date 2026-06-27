@@ -36,4 +36,4 @@ This session focused on transforming the DSLV-ZPDI dashboard into a professional
 - **Telemetry Loop:** Verified `main_pipeline.py` correctly updates the `health.json` endpoint with coherence data.
 
 ---
-**DSLV-ZPDI v4.6.0-DSI is now field-ready.**
+**DSLV-ZPDI v5.0.0-DSI is now field-ready.**

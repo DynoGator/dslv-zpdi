@@ -3,20 +3,20 @@
 **Date:** 2026-04-19
 **Session:** 3 of 3 (Publication / Turnover)
 **Operator:** Joseph R. Fross (jrfross@gmail.com)
-**Host:** Pi 5 (Trixie, 16GB) — HackRF One r9 — PPS /dev/pps0 — chrony NTP stratum 3 (awaiting LBE-1421)
-**Revision Bumped:** v4.4.0 → **v4.5.0-LBE-1421-HARDENED**
+**Host:** Pi 5 (Trixie, 16GB) — PlutoSDRplus r9 — PPS /dev/pps0 — chrony NTP stratum 3 (awaiting LBE-1421)
+**Revision Bumped:** v5.0.0 → **v5.0.0-LBE-1421-HARDENED**
 
 ---
 
 ## 1. Work Performed
 
 ### A. Installer Rewrite (`install_dslv_zpdi.sh`)
-Upgraded to **Rev 4.5.0** — a single drop-into-terminal script that mirrors every
+Upgraded to **Rev 5.0.0** — a single drop-into-terminal script that mirrors every
 change applied by hand in Sessions 1 & 2. New flags:
 
 | Flag | Behavior |
 |------|----------|
-| `--harden` | `apt-mark hold` kernel/firmware/HackRF/timing-stack; install `dslv-zpdi-tuning.service`, `dslv-zpdi-preflight.service`, `dslv-zpdi.service` (Nice=-5, IOSchedulingClass=realtime); write `/etc/sysctl.d/99-dslv-zpdi.conf`; write `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf`; create `/var/lib/dslv_zpdi/`; daemon-reload + enable + start chain |
+| `--harden` | `apt-mark hold` kernel/firmware/PlutoSDRplus/timing-stack; install `dslv-zpdi-tuning.service`, `dslv-zpdi-preflight.service`, `dslv-zpdi.service` (Nice=-5, IOSchedulingClass=realtime); write `/etc/sysctl.d/99-dslv-zpdi.conf`; write `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf`; create `/var/lib/dslv_zpdi/`; daemon-reload + enable + start chain |
 | `--dashboard` | pip-install `rich textual pyfiglet`; write XDG autostart `.desktop` (lxterminal 180×50) |
 | `--bloatware` | Remove 24 packages (LibreOffice core/common/base/impress/writer/calc/draw/math, Firefox, NodeJS, Wolfram, Sonic-Pi, Scratch3, Thonny, RPi-Connect, Mkvtoolnix, Pocketsphinx, VLC-L10N, RealVNC, RPi-Imager, Claws-Mail, etc.) + disable 14 services (cloud-init×6, cups×3, wayvnc-control, nfs-blkmap, rpcbind×2, etc.) |
 | `--passwordless-sudo` | Write `/etc/sudoers.d/dslv-zpdi`, validate with `visudo -c` |
@@ -40,7 +40,7 @@ Live evidence committed into the repo (overrides `*.log` ignore rule via `.gitig
 
 - **`pytest.log`** — `43 passed, 2 warnings in 1.16s` (SwigPy deprecations, non-functional)
 - **`validators.log`** — `orphan_checker OK`, `version_sync 4.4.0`, `repo_guard OK`, `check_timing` jitter=6.5ms (NTP-only, expected pre-GPSDO), `provision_tier1` simulator mode pass
-- **`hardware.log`** — HackRF One r9, FW v2.1.0 (API 1.08), `pps_gpio` kernel module loaded, `/dev/pps0` present, chrony stratum 3 (ntp.maxhost.io, offset 4.9ms), vcgencmd temp=48.8°C throttled=0x50000 (boot-time undervoltage flag, expected on fresh cold-boot), CPU governor=performance on all 4 cores, device-tree model = Raspberry Pi 5 Model B Rev 1.1, OS = Trixie
+- **`hardware.log`** — PlutoSDRplus r9, FW v2.1.0 (API 1.08), `pps_gpio` kernel module loaded, `/dev/pps0` present, chrony stratum 3 (ntp.maxhost.io, offset 4.9ms), vcgencmd temp=48.8°C throttled=0x50000 (boot-time undervoltage flag, expected on fresh cold-boot), CPU governor=performance on all 4 cores, device-tree model = Raspberry Pi 5 Model B Rev 1.1, OS = Trixie
 - **`system.log`** — `dslv-zpdi-tuning.service`, `dslv-zpdi-preflight.service`, `dslv-zpdi.service` all active/running; preflight log output; pipeline recent logs; 20 `apt-mark hold` entries; 5 disabled legacy services; sysctl tuning contents; modprobe DVB blacklist contents
 
 ### D. README Overhaul
@@ -58,7 +58,7 @@ Live evidence committed into the repo (overrides `*.log` ignore rule via `.gitig
 
 ---
 
-## 2. Change Log (v4.4.0 → v4.5.0)
+## 2. Change Log (v5.0.0 → v5.0.0)
 
 | Component | Before | After |
 |-----------|--------|-------|
@@ -71,7 +71,7 @@ Live evidence committed into the repo (overrides `*.log` ignore rule via `.gitig
 | Modprobe | default | `/etc/modprobe.d/dslv-zpdi-rtl-blacklist.conf` (DVB off for SoapySDR) |
 | Bloatware | Pi OS full | 24 pkgs removed, 14 services disabled, desktop/wifi/bt/a11y retained |
 | Dashboard | — | **NEW** `tools/dashboard/` (Rich Live TUI, 6 panels, waterfall, keyboard interactive) |
-| Preflight | — | **NEW** `tools/preflight.sh` (SDR conflict killer, HackRF/PPS/chrony verify, governor pin) |
+| Preflight | — | **NEW** `tools/preflight.sh` (SDR conflict killer, PlutoSDRplus/PPS/chrony verify, governor pin) |
 | Validation logs | — | **NEW** `docs/validation-logs/` (4 live evidence files) |
 | Session reports | Sessions 1–2 committed | Session 3 **NEW** (`SESSION_REPORT_2026-04-19_GITHUB.md`) |
 | README | 166 lines | ~200 lines (bootstrap, flags table, dashboard, live services) |
@@ -98,7 +98,7 @@ provision_tier1   simulator mode OK
 
 ### Hardware (Pi 5)
 ```
-HackRF One r9, FW v2.1.0 (API 1.08), serial 010961dc2a7c5f4f
+PlutoSDRplus r9, FW v2.1.0 (API 1.08), serial 010961dc2a7c5f4f
 pps_gpio module loaded  →  /dev/pps0 present
 chrony stratum 3 (ntp.maxhost.io) offset 4.9 ms  [GPSDO upgrade pending]
 vcgencmd: temp 48.8°C, volt 0.8906V, throttled 0x50000 (cold-boot UV flag, clears)
@@ -117,7 +117,7 @@ dslv-zpdi.service              active (running) — pipeline daemon
 ### Hardening Evidence
 ```
 apt-mark hold:  20 packages (kernel-*, linux-image-rpi*, firmware-brcm/atheros/mediatek,
-                hackrf, libhackrf0, chrony, pps-tools, bluez, ...)
+                PlutoSDRplus, libPlutoSDRplus0, chrony, pps-tools, bluez, ...)
 disabled:       cloud-init×6, cups×3, wayvnc-control, nfs-blkmap, rpcbind×2
 sysctl.d/99-dslv-zpdi.conf:  swappiness=10, rmem/wmem=26MB, fs.protected_* on
 modprobe blacklist:          dvb_usb_rtl28xxu, rtl2832, rtl2830
@@ -136,7 +136,7 @@ modprobe blacklist:          dvb_usb_rtl28xxu, rtl2832, rtl2830
 
 ### Waiting on Hardware
 **Leo Bodnar LBE-1421 GPSDO** — blocks Tier-1 baseline capture. When it lands:
-1. Wire SMA: LBE-1421 `Output` → HackRF `CLKIN`
+1. Wire SMA: LBE-1421 `Output` → PlutoSDRplus `CLKIN`
 2. Wire PPS: LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12), bridge grounds
 3. Wire USB-C for power + NMEA telemetry on `/dev/ttyACM0`
 4. Wait for GPS fix (verify via `python -c "import serial; s=serial.Serial('/dev/ttyACM0',9600,timeout=2); print(s.readline())"`)
@@ -161,7 +161,7 @@ sudo reboot
 ## 5. Files Modified / Created This Session
 
 ### Modified
-- `install_dslv_zpdi.sh` — +290/-14 (bumped to Rev 4.5.0, four new feature blocks)
+- `install_dslv_zpdi.sh` — +290/-14 (bumped to Rev 5.0.0, four new feature blocks)
 - `README.md` — +60 (bootstrap, flags table, dashboard section, live services)
 - `.gitignore` — +1 (validation-logs exception)
 
@@ -191,7 +191,7 @@ Commits ahead of origin/main at start of session: **5**
 - `33d9fea` feat(deploy): Add corrected systemd service for Pi 5 home-dir install
 - `3a7a6ac` fix(pipeline): simulator jitter threshold + math.isfinite cold-start guard
 
-**New commit (this session):** `feat(installer+bootstrap+docs): v4.5.0 LBE-1421-hardened drop-in installer, curl-pipe bootstrap, validation evidence, README overhaul`
+**New commit (this session):** `feat(installer+bootstrap+docs): v5.0.0 LBE-1421-hardened drop-in installer, curl-pipe bootstrap, validation evidence, README overhaul`
 
 **Push target:** `https://github.com/DynoGator/dslv-zpdi.git` (main)
 **Push auth:** Ephemeral PAT via token-in-URL, scrubbed from `.git/config` immediately after.

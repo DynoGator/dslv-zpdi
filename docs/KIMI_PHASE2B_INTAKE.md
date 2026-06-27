@@ -12,13 +12,13 @@
 |----------|---------------|
 | `MASTER_SPEC.md` | Canonical SPEC-ID law layer. Every module must carry a valid SPEC-ID docstring. `tools/orphan_checker.py` enforces. |
 | `V3_DSLV-ZPDI_LIVING_MASTER.md` | Full system spec. LBE-1421 dual-output is the clock authority. Tier 1 = GPS-disciplined phase-locked RF only. Tier 2 = context/tamper-evidence, never primary stream. Packet state machine: RAW_CAPTURED → ASSEMBLED → TIME_TRUSTED → CAL_TRUSTED → CORE_PROCESSED → PRIMARY_CANDIDATE/ACCEPTED or SECONDARY_QUARANTINED. |
-| `README.md` | v4.7.0 architecture: Layer 1 Ingestion → Layer 2 Core (Kuramoto) → Layer 3 Telemetry (HDF5 dual-stream). HackRF + LBE-1421 GPSDO. Pixel 9 Pro XL already bridged as Tier 2 node via PiRepo hotspot (10.42.0.x). Dashboard is Rich TUI with glitch/plasma aesthetic. |
+| `README.md` | v5.0.0 architecture: Layer 1 Ingestion → Layer 2 Core (Kuramoto) → Layer 3 Telemetry (HDF5 dual-stream). PlutoSDRplus + LBE-1421 GPSDO. Pixel 9 Pro XL already bridged as Tier 2 node via PiRepo hotspot (10.42.0.x). Dashboard is Rich TUI with glitch/plasma aesthetic. |
 | `CONTRIBUTING.md` | Conventional commits: `<type>(<scope>): <Active_Revision> — <description>`. Run orphan_checker + test_pipeline before push. Hardware abstraction via BaseHAL; simulator for CI/CD. |
 | `repo_manifest.yaml` | Canonical validation: editable_install, pip_check, pytest, orphan_checker, version_sync, repo_guard. Source roots: `src/`, `tests/`, `tools/`, `specs/`. |
-| `pyproject.toml` | v4.7.1. Dependencies: numpy, scipy, h5py, pyserial, pyhackrf, pydantic, pyyaml, rich, pyfiglet, flask, psutil. Dev: pytest, black, pylint, mypy, ruff. |
+| `pyproject.toml` | v5.0.0. Dependencies: numpy, scipy, h5py, pyserial, pyPlutoSDRplus, pydantic, pyyaml, rich, pyfiglet, flask, psutil. Dev: pytest, black, pylint, mypy, ruff. |
 | `src/dslv_zpdi/layer3_telemetry/hdf5_writer.py` | Current HDF5 schema: event groups with `r_local`, `r_smooth`, `r_global`, `payload_uuid`, `timestamp_utc`, plus attestation attrs (HMAC, SHA-256, chronyc state). File rotation at 500 MB. |
 | `tools/orphan_checker.py` | AST-based checker. Scans `src/` for functions/classes missing SPEC-ID docstrings/comments. Scans `specs/` for defined SPEC-IDs. Fails if any rogue nodes or orphaned claims. |
-| `RELEASE_NOTES_v4.3.0.md` | Last reference release before current v4.7.1. 31 tests passing. Trixie/Bookworm compatible. |
+| `RELEASE_NOTES_v5.0.0.md` | Last reference release before current v5.0.0. 31 tests passing. Trixie/Bookworm compatible. |
 | `TURNOVER_2026-05-30_NodeBridge_HDF5_Dashboard.md` | Most recent turnover. Node bridging + HDF5 multi-node aggregation + dashboard finalisation completed. Pixel 9 Pro XL integrated at 10.128.24.165 (note: README says 10.42.0.x PiRepo subnet). |
 
 ---
@@ -38,7 +38,7 @@ Nodes missing SPEC-ID: 27 total
   -> node_receiver.py: 7 functions (create_app, ingest_node, ingest_radoneye, health, _update_node_registry, _get_writer, main)
   -> pps_listener.py: 8 functions/class (PpsListener, __init__, start, stop, wait_for_edge, snapshot, _run, _fetch_kernel_ts, _recompute_jitter)
   -> nmea_stream.py: 8 functions/class (NmeaStream, __init__, start, stop, latest, _run, _reader_loop, _empty_fix, parse_gga)
-  -> hal_hardware.py: 1 function (_pyhackrf_device_list_safe)
+  -> hal_hardware.py: 1 function (_pyPlutoSDRplus_device_list_safe)
 ```
 **Status:** RED (pre-existing). These 27 gaps must be fixed before any Phase 2B commit can pass orphan_checker.
 

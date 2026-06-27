@@ -2,8 +2,8 @@
 
 **Agent:** Claude Code (continuing the Codex CLI local-update session)
 **Repository:** `https://github.com/DynoGator/dslv-zpdi`
-**Baseline in:** Rev 4.7.1 (`4e58c6c`)
-**Baseline out:** Rev 4.7.2
+**Baseline in:** Rev 5.0.1 (`4e58c6c`)
+**Baseline out:** Rev 5.0.2
 **Objective:** Audit the whole project, make an improvement pass, raise the code
 rating to ≥ 90%, and optimize every component for robustness, reliability, and
 security — with **system stability** and **quality data output** as the primary

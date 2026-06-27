@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-21
 **Auditor:** Kimi Code CLI (k2.6)
-**Canonical Law:** `V3_DSLV-ZPDI_LIVING_MASTER.md` Rev 4.3.0
+**Canonical Law:** `V3_DSLV-ZPDI_LIVING_MASTER.md` Rev 5.0.0
 **Scope:** `zpdi_mobile_node.py`, `zpdi_verifier.py`, `edge_listener_stub.py`
 
 ---

@@ -9,7 +9,7 @@ RF observation parameters, optional frequency-converter stage, and trust policy.
 
 ## 2. Scope
 
-- Device-specific hardware profiles (PlutoSDR+, HackRF legacy, future SDRs)
+- Device-specific hardware profiles (PlutoSDR+, PlutoSDRplus legacy, future SDRs)
 - Timing authority profiles (LBE-1421 and successors)
 - Frequency-converter profiles (direct RF and external translators)
 - Combined node profiles
@@ -41,7 +41,7 @@ hardware:
     canonical_host_path: <string>
     sdr_pps_support: <string>
 sdr:
-  backend: <simulated|pluto_iio|hackrf_legacy|auto>
+  backend: <simulated|pluto_iio|PlutoSDRplus_legacy|auto>
   uri: <string>
   expected_iio_phy: <string>
   receive_channels: [<int>]

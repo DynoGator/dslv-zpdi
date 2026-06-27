@@ -26,9 +26,9 @@ try:
 
     HDF5_AVAILABLE = True
 except (ImportError, OSError):
-    # Rev 4.8.x: broaden for hosts where h5py C extension or libhdf5.so load
+    # Rev 5.0.x: broaden for hosts where h5py C extension or libhdf5.so load
     # raises OSError instead of (or in addition to) ImportError. Matches
-    # pattern for native libs (cf. libhackrf in hal_hardware). SPEC-007.
+    # pattern for native libs (cf. libPlutoSDRplus in hal_hardware). SPEC-007.
     HDF5_AVAILABLE = False
 
 logger = logging.getLogger("dslv-zpdi.hdf5")

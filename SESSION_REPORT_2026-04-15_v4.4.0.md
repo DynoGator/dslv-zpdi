@@ -1,4 +1,4 @@
-# DSLV-ZPDI Session Report — v4.4.0 Deployment
+# DSLV-ZPDI Session Report — v5.0.0 Deployment
 **Date:** 2026-04-15  
 **Operator:** Kimi Code CLI (Engineering Collaborator)  
 **Repo:** https://github.com/DynoGator/dslv-zpdi  
@@ -18,8 +18,8 @@
    - Retained backward-compat wrapper functions (`ingest_gps_pps`, `ingest_sdr`, `verify_hardware_lock`).
 
 2. **SPEC-005A.HAL-HW — Live HardwareHAL Wiring**
-   - `hal_hardware.py` updated to Rev 4.4.0.
-   - Implemented **Hilbert phase extraction** via `scipy.signal.hilbert(np.real(...))` in both `_ingest_soapy()` and `_ingest_pyhackrf()`; phases truncated to 64 items.
+   - `hal_hardware.py` updated to Rev 5.0.0.
+   - Implemented **Hilbert phase extraction** via `scipy.signal.hilbert(np.real(...))` in both `_ingest_soapy()` and `_ingest_pyPlutoSDRplus()`; phases truncated to 64 items.
    - IQ serialization aligned to 64-item `[[I,Q],…]` pairs; `payload.to_json()` handles SHA-256 digest and preview.
    - External-clock enforcement remains strict: `_clock_verified = True` only on `external`; `ClockVerificationError` raised otherwise.
    - Integrated `verify_nmea_telemetry()` into `ingest_gps_pps()`: GPS lock now gated on both valid PPS **and** NMEA fix.
@@ -44,8 +44,8 @@
    - Persists atomically to `/var/lib/dslv_zpdi/baseline.json`.
 
 3. **Installer + udev/chrony Hardening**
-   - `install_dslv_zpdi.sh` bumped to Rev 4.4.0.
-   - Deploys `99-pps.rules` and `52-hackrf.rules` on Tier 1 installs.
+   - `install_dslv_zpdi.sh` bumped to Rev 5.0.0.
+   - Deploys `99-pps.rules` and `52-PlutoSDRplus.rules` on Tier 1 installs.
    - Appends chrony `refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust`.
    - Added `systemctl enable chrony`.
 
@@ -61,7 +61,7 @@
 ### Version Alignment
 - Bumped project version to **4.4.0** in `pyproject.toml`.
 - Updated all canonical source banners: `hal_hardware.py`, `hal_simulated.py`, `hal_factory.py`, `provision_tier1.py`, `test_pipeline.py`, `README.md`, `CHANGELOG.md`.
-- Created `RELEASE_NOTES_v4.4.0.md`.
+- Created `RELEASE_NOTES_v5.0.0.md`.
 
 ---
 
@@ -72,7 +72,7 @@
 | `pytest tests/ -q` | **43 passed** |
 | `tests/test_pipeline.py` (smoke) | **10/10 passed** |
 | `tools/orphan_checker.py` | **OK** — no rogue nodes, no orphaned specs |
-| `tools/check_version_sync.py` | **OK** — version 4.4.0 synchronized |
+| `tools/check_version_sync.py` | **OK** — version 5.0.0 synchronized |
 
 ---
 
@@ -97,7 +97,7 @@
    - Execute `python tools/provision_tier1.py --tier1` on the Pi 5 target to verify RP1 guard, SoapySDR linkage, and NMEA telemetry.
 
 4. **Tag Release**
-   - After 72 h baseline validation succeeds, tag repo `v4.4.0`.
+   - After 72 h baseline validation succeeds, tag repo `v5.0.0`.
 
 ---
 
@@ -105,7 +105,7 @@
 
 **Created:**
 - `AGENTS.md`
-- `RELEASE_NOTES_v4.4.0.md`
+- `RELEASE_NOTES_v5.0.0.md`
 - `src/dslv_zpdi/main_pipeline.py`
 - `tools/capture_baseline.py`
 
