@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """
 SPEC-005A.4 — Mobile Layer 1 Ingestion Driver (Rev 3.5)
 

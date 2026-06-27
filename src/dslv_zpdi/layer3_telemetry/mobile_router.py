@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """
 SPEC-007 | Trust Tier: Routed (Layer 3) — Mobile Variant
 Dual-Stream Protocol enforcer for Tier-2 Swarm nodes.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """SPEC-006.6 — Orientation-Weighted Coherence Fusion Engine (Rev 1.0)
 
 Fuses Hilbert-phase coherence scores from the motion-sensor suite with spatial

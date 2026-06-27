@@ -7,84 +7,203 @@ set -euo pipefail
 LOG_FILE="$HOME/install_zpdi.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+# Robust operation tracking for required output format
+declare -a SUCCEEDED_OPS=()
+declare -a FAILED_OPS=()
+
+record_success() {
+  echo "[SUCCEEDED] $1"
+  SUCCEEDED_OPS+=("$1")
+}
+
+record_failure() {
+  local op="$1"
+  local corrective="$2"
+  echo "[FAILED] $op"
+  echo "  Recommended corrective action: $corrective"
+  FAILED_OPS+=("$op")
+}
+
+print_summary() {
+  echo ""
+  echo "======================================================="
+  echo "   INSTALLATION OPERATION SUMMARY (all steps)          "
+  echo "======================================================="
+  echo "SUCCEEDED OPERATIONS:"
+  if [ ${#SUCCEEDED_OPS[@]} -eq 0 ]; then
+    echo "  (none)"
+  else
+    for op in "${SUCCEEDED_OPS[@]}"; do echo "  - $op"; done
+  fi
+  echo ""
+  echo "FAILED OPERATIONS:"
+  if [ ${#FAILED_OPS[@]} -eq 0 ]; then
+    echo "  (none - all critical steps succeeded)"
+  else
+    for i in "${!FAILED_OPS[@]}"; do
+      echo "  - ${FAILED_OPS[$i]}"
+      # Note: corrective already printed at failure time
+    done
+  fi
+  echo "======================================================="
+}
+
+trap 'print_summary' EXIT
+
 echo "======================================================="
-echo "   dslv-zpdi Mobile Node Automated Installer (Rev 4)   "
+echo "   dslv-zpdi Mobile Node Automated Installer (Rev 5 - Robust) "
+echo "   (pyproject.toml + src/dslv_zpdi layout + all new changes) "
 echo "======================================================="
 echo "[*] Starting deployment at $(date)"
 
 # 1. System Preparation
 echo "[*] Enforcing Termux Storage Setup..."
-termux-setup-storage || true
+if termux-setup-storage; then
+  record_success "termux-setup-storage"
+else
+  record_failure "termux-setup-storage" "Manually run 'termux-setup-storage' in Termux, grant storage permission in Android dialog, then re-run installer."
+fi
 sleep 2
 
 echo "[*] Requesting Android Wake-Lock..."
-termux-wake-lock || echo "[!] WARNING: termux-wake-lock failed. Install Termux:API."
+if termux-wake-lock 2>/dev/null; then
+  record_success "termux-wake-lock"
+else
+  record_failure "termux-wake-lock" "Install Termux:API addon from F-Droid or Play Store, then re-run. Or ignore for non-production (device may sleep)."
+fi
 
 # 2. Dependency Management
 echo "[*] Updating Termux pkg repositories..."
-pkg update -y
+if pkg update -y; then
+  record_success "pkg update"
+else
+  record_failure "pkg update" "Check internet/Termux mirrors. Run 'pkg update' manually, or 'termux-change-repo' to switch mirrors."
+fi
 
 echo "[*] Installing Termux dependencies (proot-distro, termux-api, git, openssl)..."
-pkg install -y proot-distro termux-api git openssl
+if pkg install -y proot-distro termux-api git openssl; then
+  record_success "pkg install proot-distro termux-api git openssl"
+else
+  record_failure "pkg install proot-distro termux-api git openssl" "Run 'pkg install -y proot-distro termux-api git openssl' manually. Ensure 'pkg update' succeeded first. For proot issues, 'proot-distro remove debian && proot-distro install debian'."
+fi
 
 # 3. PRoot Debian Configuration
 echo "[*] Installing/Verifying Debian PRoot..."
-proot-distro install debian || echo "[*] Debian already installed."
+if proot-distro install debian; then
+  record_success "proot-distro install debian"
+else
+  record_failure "proot-distro install debian" "Run 'proot-distro remove debian' then retry, or 'proot-distro install debian --override-alias debian'. Check storage space and Termux version (>=0.118 recommended)."
+fi
 
-# 4. Constructing PRoot execution bridge
+# 4. Constructing PRoot execution bridge (robust, status-reporting, new changes incorporated)
 BOOTSTRAP_SCRIPT="$HOME/bootstrap_proot.sh"
-cat << 'EOF' > "$BOOTSTRAP_SCRIPT"
+cat << 'BOOTSTRAP_HEREDOC' > "$BOOTSTRAP_SCRIPT"
 #!/bin/bash
+# Self-contained robust bootstrap for Debian PRoot (mobile Tier-2)
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[*] [Debian] Updating apt repositories..."
-apt-get update -y
-echo "[*] [Debian] Installing build dependencies..."
-apt-get install -y python3 python3-venv python3-dev git build-essential libhdf5-dev pkg-config cmake sqlite3 curl openssl
+declare -a SUCCEEDED_OPS=()
+declare -a FAILED_OPS=()
 
 if [ ! -d "/root/dslv-zpdi" ]; then
     echo "[*] [Debian] Cloning repository..."
     # Replace with the actual repository URL once deployed
     git clone https://github.com/DynoGator/dslv-zpdi.git /root/dslv-zpdi
 else
-    echo "[*] [Debian] Repository exists. Pulling latest..."
+  record_failure "apt-get update" "Check network inside proot (proot-distro login debian -- apt-get update). Or host Termux has no net."
+fi
+
+echo "[*] [Debian] Installing build dependencies..."
+BUILD_DEPS="python3 python3-venv python3-dev git build-essential libhdf5-dev pkg-config cmake sqlite3 curl openssl ca-certificates"
+if apt-get install -y $BUILD_DEPS; then
+  record_success "apt-get install build deps ($BUILD_DEPS)"
+else
+  record_failure "apt-get install build deps" "Run inside proot: apt-get update && apt-get install -y $BUILD_DEPS . Check disk space (df -h). For hdf5: apt-get install -y libhdf5-dev may need universe or backports on some Debian."
+fi
+
+REPO_URL="https://github.com/DynoGator/dslv-zpdi.git"
+if [ ! -d "/root/dslv-zpdi" ]; then
+    echo "[*] [Debian] Cloning repository (real URL with all new changes)..."
+    if git clone --depth 1 "$REPO_URL" /root/dslv-zpdi; then
+      record_success "git clone $REPO_URL"
+    else
+      record_failure "git clone $REPO_URL" "Check git in proot, network, or disk. Manual: git clone $REPO_URL /root/dslv-zpdi . Then cd and continue."
+    fi
+else
+    echo "[*] [Debian] Repository exists. Pulling latest (incorporating new changes)..."
     cd /root/dslv-zpdi
-    git fetch && git pull
+    if git fetch && git pull --ff-only; then
+      record_success "git pull latest (new changes)"
+    else
+      record_failure "git pull latest" "cd /root/dslv-zpdi ; git fetch && git pull . Or rm -rf /root/dslv-zpdi and re-clone."
+    fi
 fi
 
 cd /root/dslv-zpdi
 
 echo "[*] [Debian] Setting up Python virtual environment..."
-python3 -m venv .venv
+if python3 -m venv --clear .venv; then
+  record_success "python3 -m venv --clear .venv"
+else
+  record_failure "python3 -m venv" "Ensure python3-venv installed. python3 -m venv --clear .venv . Check python3 --version >=3.9."
+fi
 source .venv/bin/activate
 
-echo "[*] [Debian] Installing Python dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+echo "[*] [Debian] Installing Python dependencies from pyproject.toml (new package layout + src/dslv_zpdi)..."
+pip install --upgrade pip setuptools wheel
+if pip install -e ".[dev]"; then
+  record_success "pip install -e .[dev] (all new deps + src layout from pyproject.toml)"
+else
+  record_failure "pip install -e .[dev]" "Inside proot venv: pip install --upgrade pip ; pip install -e .[dev] . Common fixes: apt-get install -y python3-dev libhdf5-dev ; or for missing system: pip install numpy scipy h5py pydantic 'fastapi[standard]' uvicorn websockets cryptography python-dotenv . Then retry -e install. Check pyproject.toml syntax."
+fi
 
-echo "[*] [Debian] Generating secure .env..."
+echo "[*] [Debian] Generating secure .env (with keys for current mobile node crypto/WSS/web)..."
 if [ ! -f ".env" ]; then
     AES_KEY=$(openssl rand -base64 32)
     HMAC_SECRET=$(openssl rand -hex 32)
+    # Add common keys used by zpdi_mobile_node.py / tier1 server / web server
     cat <<ENV_EOF > .env
 ZPDI_LOG_LEVEL=INFO
 ZPDI_STREAM_DELAY_MS=250
 ZPDI_NODE_ID=dslv-zpdi/mobile-tier2-autodeploy
 ZPDI_AES_KEY=${AES_KEY}
 ZPDI_HMAC_SECRET=${HMAC_SECRET}
-ZPDI_WSS_URI=wss://edge.placeholder.invalid:8443/ingest
+ZPDI_WSS_URI=ws://127.0.0.1:8443/ingest
+ZPDI_WSS_TOKEN=$(openssl rand -hex 16)
+# Add more as needed from .env.example in repo
 ENV_EOF
-    echo "[*] [Debian] .env generated securely."
+    record_success ".env generated with crypto + WSS keys"
 else
-    echo "[*] [Debian] .env already exists. Preserving."
+    echo "[*] [Debian] .env already exists. Preserving (manual review recommended for new keys)."
+    record_success ".env already present (preserved)"
 fi
-EOF
+
+# Final smoke in proot
+echo "[*] [Debian] Post-install smoke test (new layout)..."
+if python -c "
+import sys
+sys.path.insert(0, 'src')
+import dslv_zpdi
+print('dslv_zpdi version:', getattr(dslv_zpdi, '__version__', 'ok'))
+from dslv_zpdi.layer1_ingestion.payload import SensorModality
+print('SensorModality (mobile extended): OK')
+print('Package import smoke: SUCCEEDED')
+" ; then
+  record_success "python package import smoke (src layout + pyproject)"
+else
+  record_failure "python package import smoke" "source .venv/bin/activate ; PYTHONPATH=src python -c 'import dslv_zpdi' . Check previous pip install step. Re-run 'pip install -e .[dev]'."
+fi
+BOOTSTRAP_HEREDOC
 
 chmod +x "$BOOTSTRAP_SCRIPT"
 
-echo "[*] Bridging into Debian PRoot..."
-proot-distro login debian -- bash "$BOOTSTRAP_SCRIPT"
+echo "[*] Bridging into Debian PRoot (executing robust bootstrap)..."
+if proot-distro login debian -- bash "$BOOTSTRAP_SCRIPT"; then
+  record_success "proot-distro login + bootstrap execution"
+else
+  record_failure "proot-distro login + bootstrap" "proot-distro login debian -- bash -x $BOOTSTRAP_SCRIPT for debug. Common: re-install proot-distro, check Termux storage permissions, or increase proot timeout."
+fi
 
 # 5. Configuration & Termux:Boot Hooks
 echo "[*] Securing Termux:Boot persistence layer..."

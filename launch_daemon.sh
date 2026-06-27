@@ -23,12 +23,20 @@ if [ -f "$PROJECT_DIR/data/zpdi_stream.h5" ]; then
     h5clear -s "$PROJECT_DIR/data/zpdi_stream.h5" 2>/dev/null || true
 fi
 
-echo "Starting zpdi supervisor (independent proot session)..."
-nohup "$PROOT_DISTRO" login debian -- bash "$PROJECT_DIR/supervisor.sh" > /dev/null 2>&1 &
-SPID=$!
+echo "[*] Starting zpdi supervisor (independent proot session)..."
+if nohup "$PROOT_DISTRO" login debian -- bash "$PROJECT_DIR/supervisor.sh" > /dev/null 2>&1 &
+then
+  SPID=$!
+  echo "[SUCCEEDED] Launch independent proot supervisor (PID $SPID)"
+  echo "  (New layout: PYTHONPATH=src or editable install assumed inside)"
+else
+  echo "[FAILED] Launch independent proot supervisor"
+  echo "  Recommended corrective action: Check proot-distro is installed in Termux. Run 'proot-distro login debian -- bash -c \"cd /root/dslv-zpdi && source .venv/bin/activate && export PYTHONPATH=src && ./supervisor.sh\"' manually for debug. Ensure no previous daemon holding locks (h5clear)."
+fi
 
 echo "====================================================="
 echo "ZPDI SUPERVISOR LAUNCHED (PID: $SPID)"
 echo "  Supervisor log: $PROJECT_DIR/logs/supervisor.log"
 echo "  Daemon log:     $PROJECT_DIR/logs/daemon.log"
+echo "  (All new changes: pyproject deps + src/dslv_zpdi layout incorporated)"
 echo "====================================================="

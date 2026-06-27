@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Joseph R. Fross
+
 """dslv-zpdi Tier-1 WSS Ingestion Server — SPEC-008 crypto pipeline.
 
 Receives, authenticates, decrypts, and verifies payloads from Tier-2 mobile
