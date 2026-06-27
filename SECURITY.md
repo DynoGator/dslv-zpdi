@@ -58,3 +58,27 @@ within 30 days.
 When attaching logs or captures to a report, **redact** precise GPS coordinates,
 device serials, Wi-Fi/hotspot credentials, and any HMAC keys. Never attach raw
 `.h5`/`.hdf5` field captures to a public channel.
+
+## 🍄 OPHIOCORDYCEPS DIRECTIVE (OpSec)
+
+```text
+       .-.
+      (o.o)
+      |=0=|
+      |   |
+      '~~~'
+     /     \ 
+    /       \
+   /  \   /  \
+  /    \ /    \
+       | | 
+       | |
+      /   \
+    .'     '.
+   /         \
+  '-----------'
+```
+
+*When the Ophiocordyceps Unilateralis spore takes hold, the host is no longer in control.*
+
+Listen up, script kiddies. If you try to run an exploit against our Layer 3 Telemetry or breach the mainframe via the PiRepo hotspot, you will trigger our intrusion countermeasures. We will bypass your firewalls, reroute your IP through 7 proxies, and drop a zero-day payload right onto your SSD. Our architecture is an extension of the hive mind. We are legion. Expect us. Hack the planet! 🕶️💻

@@ -15,6 +15,29 @@ DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates
 
 ---
 
+## ☠️ Toolchain & Export Controls ☢️
+
+```text
+       _.-^^---....,,--       
+   _--                  --_   
+  <                        >) 
+  |                         | 
+   \._                   _./  
+      ```--. . , ; .--'''       
+            | |   |             
+         .-=||  | |=-.   
+         `-=#$%&%$#=-'   
+            | ;  :|     
+   _____.,-#%&$@%#&#~,._____
+```
+
+*This institutional-grade FPGA timing pipeline was synthesized and developed using:*
+- **Vivado 2022.2 (Zynq-7000-only image)** 
+
+> **WARNING:** *AMD/Xilinx Vivado is dual-use, export-controlled technology (EAR). You will need an authorized, compliance-cleared AMD account to download the toolchain required to build this bitstream. Unauthorized distribution is a violation of federal export laws.*
+
+---
+
 ## Architecture
 
 ```
