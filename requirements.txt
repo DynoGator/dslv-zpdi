@@ -12,7 +12,7 @@ blinker==1.9.0
     # via flask
 branca==0.8.2
     # via folium
-certifi==2026.5.20
+certifi==2026.6.17
     # via requests
 cffi==2.0.0
     # via cryptography
