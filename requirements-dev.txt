@@ -202,7 +202,7 @@ smbus2==0.6.1
     #   dslv-zpdi (pyproject.toml)
 tomlkit==0.15.0
     # via pylint
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -c requirements.txt
     #   mypy
