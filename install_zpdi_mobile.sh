@@ -187,11 +187,6 @@ echo "[4/7] Installing Termux:Boot auto-start..."
 
 mkdir -p "$HOME/.termux/boot"
 
-# Copy the canonical boot script from the repo (stays in sync with updates).
-"$PROOT_DISTRO" login debian -- cp \
-    "$PROJECT_DIR/termux-boot/99-start-zpdi.sh" \
-    /dev/null   # placeholder — actual copy done below via bind path
-
 # The boot script lives inside proot at /root/dslv-zpdi/termux-boot/
 # but Termux:Boot runs outside proot, so we copy it to the Termux home.
 BOOT_SRC_INSIDE_PROOT="$PROJECT_DIR/termux-boot/99-start-zpdi.sh"

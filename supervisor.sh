@@ -72,7 +72,8 @@ _start_webdash() {
     DSLV_WEBDASH_PORT="${DSLV_WEBDASH_PORT:-8080}" \
     DSLV_PRIMARY_OUTPUT_DIR="${DSLV_PRIMARY_OUTPUT_DIR:-./output/primary}" \
     DSLV_SECONDARY_OUTPUT_DIR="${DSLV_SECONDARY_OUTPUT_DIR:-./output/secondary}" \
-    python3 -m tools.dashboard.web_server >> logs/web_server.log 2>&1 &
+    PYTHONPATH="$SCRIPT_DIR/tools" \
+    python3 -m dashboard.web_server >> logs/web_server.log 2>&1 &
     local pid=$!
     echo "$pid" > "$WEBDASHPID"
     _log "web dashboard started (pid=$pid) on :${DSLV_WEBDASH_PORT:-8080}"

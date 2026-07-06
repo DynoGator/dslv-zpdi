@@ -530,7 +530,7 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
         firmware-brcm80211 firmware-atheros firmware-mediatek
         bluez bluez-firmware
         libiio0 libiio-dev python3-libiio
-        libiio-dev libad9361-dev python3-libiio
+        libad9361-dev
         pps-tools chrony
     )
     # Discover any versioned kernel/header packages installed and hold those too
@@ -589,8 +589,7 @@ UNIT
     log_info "Installing dslv-zpdi.service (main pipeline)"
     PIPE_EXEC="${INSTALL_DIR}/.venv/bin/python -m dslv_zpdi.main_pipeline"
     PIPE_ENV=""
-    if [[ "$SIMULATOR_MODE" -eq 1 ]] || [[ -z "${GPSDO_PRESENT:-}" ]]; then
-        # Default to simulator mode until GPSDO delivery is confirmed
+    if [[ "$SIMULATOR_MODE" -eq 1 ]]; then
         PIPE_EXEC="${PIPE_EXEC} --simulator"
         PIPE_ENV="Environment=DEV_SIMULATOR=1"
     fi
@@ -691,7 +690,7 @@ BLK
         log_info "Configuring USBGuard allow-list"
         mkdir -p /etc/usbguard
         if usbguard generate-policy > /etc/usbguard/rules.conf 2>/dev/null; then
-            grep -q "1d50:6089" /etc/usbguard/rules.conf || \
+            grep -q "0456:b673" /etc/usbguard/rules.conf || \
                 echo "allow id 0456:b673 serial \"*\" name \"PlutoSDR\" with-interface all" \
                     >> /etc/usbguard/rules.conf
             soft "USBGuard service enabled" systemctl enable --now usbguard
