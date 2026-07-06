@@ -60,7 +60,7 @@ pycparser==3.0
     # via cffi
 pydantic==2.13.4
     # via dslv-zpdi (pyproject.toml)
-pydantic-core==2.47.0
+pydantic-core==2.46.4
     # via pydantic
 pyfiglet==1.0.4
     # via dslv-zpdi (pyproject.toml)
@@ -77,6 +77,8 @@ requests==2.34.2
 rich==15.0.0
     # via dslv-zpdi (pyproject.toml)
 scipy==1.17.1
+    # via dslv-zpdi (pyproject.toml)
+smbus2==0.6.1
     # via dslv-zpdi (pyproject.toml)
 typing-extensions==4.15.0
     # via
