@@ -30,6 +30,12 @@ def _load_baseline_config() -> dict:
         )
     except ValueError:
         cfg["min_baseline_samples"] = 240
+    try:
+        cfg["min_confirming_nodes"] = int(
+            os.getenv("DSLV_MIN_CONFIRMING_NODES", "4")
+        )
+    except ValueError:
+        cfg["min_confirming_nodes"] = 4
     cfg["baseline_state_path"] = os.getenv(
         "DSLV_BASELINE_STATE_PATH", "/var/lib/dslv_zpdi/baseline.json"
     )
@@ -40,6 +46,7 @@ _baseline_cfg = _load_baseline_config()
 coherence_engine = CoherenceScorer(
     baseline_duration_hours=_baseline_cfg["baseline_duration_hours"],
     min_baseline_samples=_baseline_cfg["min_baseline_samples"],
+    min_nodes=_baseline_cfg["min_confirming_nodes"],
     baseline_state_path=_baseline_cfg["baseline_state_path"],
 )
 

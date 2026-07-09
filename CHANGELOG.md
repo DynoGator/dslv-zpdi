@@ -1,5 +1,53 @@
 # Changelog
 
+## [Unreleased] — Mono-node dev mode and automatic baseline lock (2026-07-09)
+
+### Added
+- **`DSLV_MIN_CONFIRMING_NODES`** environment variable support in
+  `src/dslv_zpdi/layer2_core/wiring.py`; defaults to `4` for backward
+  compatibility but is set to `1` on this node for standalone development.
+- **Automatic baseline finalization**: `main_pipeline.py` now calls
+  `coherence_engine.finalize_baseline()` every 60 seconds so the baseline FSM
+  can transition `LEARNING → LOCKED` without manual intervention.
+- **Optional fixed event threshold**: `DSLV_BASELINE_FIXED_THRESHOLD` in
+  `src/dslv_zpdi/layer2_core/coherence.py` overrides the 3-sigma calculation
+  for development environments.
+- **Real `specs/SPEC-009.md`** documenting the baseline-learning FSM, state
+  transitions, persistence, and environment parameters (was a placeholder stub).
+
+### Changed
+- **Mono-node configuration** in `.env`:
+  - `DSLV_MIN_CONFIRMING_NODES=1`
+  - `DSLV_BASELINE_HOURS=0.02`
+  - `DSLV_MIN_BASELINE_SAMPLES=30`
+  - `DSLV_BASELINE_FIXED_THRESHOLD=0.30`
+- **`CoherenceScorer.start_baseline()`** is now idempotent for the `LEARNING`
+  state, preserving accumulated samples and start time across pipeline restarts.
+- **Service file cleanup**: corrected stale `/home/dynogator/Desktop/KIMI/...`
+  paths in `config/dslv-zpdi-webdash.service`,
+  `config/dslv-zpdi-preflight.service`, and
+  `config/dslv-zpdi-tuning.service`; added resource/restart limits to webdash
+  and UPS services.
+- **Main pipeline unit hardening**: added `ProtectClock=true`,
+  `ProtectHostname=true`, `RestrictAddressFamilies`, `SystemCallFilter=@system-service`,
+  and timeout settings.
+
+### Verified
+- Full test suite: 184 passed, 1 skipped, 2 SWIG deprecation warnings.
+- `tools/orphan_checker.py`, `tools/check_version_sync.py`, and
+  `tools/repo_guard.py` all report clean.
+- All systemd services active after service-file sync and restart.
+- Web dashboard `/api/status` reports `baseline_state: LOCKED` and
+  `pipeline.primary_written` > 0.
+- Primary HDF5 file created in `output/primary/`.
+
+### Caveats
+- This is **development mono-node mode**. PRIMARY events are confirmed with a
+  single node and a fixed low threshold. Revert to multi-node settings before
+  production deployment.
+
+---
+
 ## [Unreleased] — Tier-1 Pi 5 optimization & boot orchestrator (2026-07-09)
 
 ### Added

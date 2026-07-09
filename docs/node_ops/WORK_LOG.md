@@ -98,12 +98,21 @@ All enabled and active:
 Hardened the main pipeline systemd unit (`config/os-hardening/dslv-zpdi.service`):
 
 - `ProtectSystem=strict` with explicit `ReadWritePaths` for output, baseline state, runtime health socket, and USB device access.
-- `ProtectHome=read-only`.
+- `ProtectHome=read-only`, `ProtectClock=true`, `ProtectHostname=true`.
+- `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX`, `SystemCallFilter=@system-service`.
 - `CPUAffinity=2 3` pins pipeline work away from the GUI/compositor cores.
 - `MemoryMax=2G`, `MemorySwapMax=0`, `LimitNOFILE=65536`.
 - `StartLimitIntervalSec=120` / `StartLimitBurst=3` in `[Unit]` to contain restart loops.
+- `TimeoutStartSec=60`, `TimeoutStopSec=30`.
 - `Nice=-5`, `IOSchedulingClass=realtime`, `IOSchedulingPriority=4` retained.
 - The installed `/etc/systemd/system/dslv-zpdi.service` was synced from the repo file and `systemctl daemon-reload` run.
+
+Also corrected stale paths in repo service files:
+
+- `config/dslv-zpdi-webdash.service` now points to `/home/dynogator/dslv-zpdi` and includes `ProtectSystem=strict`, `MemoryMax=512M`, `CPUAffinity=1`, and restart limits.
+- `config/dslv-zpdi-preflight.service` path corrected.
+- `config/dslv-zpdi-tuning.service` aligned with installed unit.
+- `config/dslv-zpdi-ups.service` added `MemoryMax=128M`, `CPUAffinity=1`, restart limits, and journal output.
 
 ### 3.9 Toolchain Audit & Dashboard Telemetry Optimization
 
@@ -120,6 +129,41 @@ Hardened the main pipeline systemd unit (`config/os-hardening/dslv-zpdi.service`
   - `git-credentials` — git credential-store line for `https://DynoGator:<PAT>@github.com` (mode `0600`).
 - `./configure_git_auth.sh` sources `GITHUB_PAT` from `.env` and installs the credential helper scoped to the repo.
 - `.secrets/` is ignored by `.gitignore`; credentials are never committed.
+
+### 3.11 Mono-Node Dev Mode & SPEC-009 Baseline Unlock
+
+Motivation: the current field deployment has only the Tier-1 anchor node (no
+swarm of 4+ nodes). Requiring a 4-node confirmation gate blocked all PRIMARY
+HDF5 output, which defeats hardware/pipeline validation.
+
+Changes:
+
+- Added `DSLV_MIN_CONFIRMING_NODES` environment variable support in
+  `src/dslv_zpdi/layer2_core/wiring.py` and set it to `1` in `.env`.
+- Added periodic `coherence_engine.finalize_baseline()` calls in
+  `main_pipeline.py` (every 60 s) so the baseline can lock automatically once
+  duration/sample gates are met.
+- Fixed `CoherenceScorer.start_baseline()` to be idempotent for the `LEARNING`
+  state; process restarts no longer wipe accumulated baseline samples.
+- Added optional `DSLV_BASELINE_FIXED_THRESHOLD` override in
+  `src/dslv_zpdi/layer2_core/coherence.py` for development environments where
+  the 3-sigma threshold would otherwise be too high to trigger events.
+- Wrote a real `specs/SPEC-009.md` documenting the baseline FSM, states,
+  transitions, parameters, and persistence (the file was previously a stub).
+
+Current dev settings in `.env`:
+
+```bash
+DSLV_BASELINE_HOURS=0.02
+DSLV_MIN_BASELINE_SAMPLES=30
+DSLV_MIN_CONFIRMING_NODES=1
+DSLV_BASELINE_FIXED_THRESHOLD=0.30
+```
+
+These values are intentionally aggressive for development and hardware
+validation. For a production multi-node deployment, raise `DSLV_MIN_CONFIRMING_NODES`
+to 4, remove `DSLV_BASELINE_FIXED_THRESHOLD`, and restore
+`DSLV_BASELINE_HOURS=72` / `DSLV_MIN_BASELINE_SAMPLES=240`.
 
 ## 4. Verification Results
 
@@ -150,9 +194,9 @@ PpsListener sysfs test
 
 - `timing_healthy: true`
 - `hal_mode: external`
-- `baseline_state: LEARNING`
+- `baseline_state: LOCKED`
 - `chrony_stratum: 1`
-- Secondary packets flowing; primary routing gated until baseline locks.
+- PRIMARY HDF5 output active.
 
 ### 4.4 Web Dashboard
 
@@ -160,16 +204,14 @@ PpsListener sysfs test
 
 ### 4.5 HDF5 + HMAC
 
-Synthetic primary-write commissioning test confirmed:
-
-- HDF5 primary file created.
-- Event group contains SHA-256 content hash and event-chain hash.
+- Primary HDF5 file created at `output/primary/dslv_zpdi_*.h5.partial`.
+- Event groups contain SHA-256 content hash and event-chain hash.
 - `hmac_sha256` attribute present and verifiable against the production key.
 - Detached `.sha256` and `.status.json` files produced on file finalization.
 
 ### 4.6 Dashboard Telemetry Optimization
 
-- `/api/status` returns `sdr.clock_src: external`, `sdr.reachable: true`, live UPS telemetry, and baseline sample count.
+- `/api/status` returns `sdr.clock_src: external`, `sdr.reachable: true`, live UPS telemetry, and baseline state `LOCKED`.
 - Health JSON is updated every ~10 payloads; dashboard panels no longer hammer the I2C bus or PlutoSDR context directly.
 - Web dashboard auto-refresh every 5 s shows current system, pipeline, SDR, UPS, and node registry data.
 
@@ -179,9 +221,28 @@ Synthetic primary-write commissioning test confirmed:
 - Autostart desktop entry points to the orchestrator and launches it in a terminal window on graphical login.
 - The orchestrator exits with code `1` if any required service fails to start, preventing a blind dashboard launch.
 
+### 4.8 Mono-Node PRIMARY Output
+
+After applying the dev baseline settings:
+
+```bash
+curl -s http://127.0.0.1:8080/api/status | python3 -m json.tool
+# baseline.ready: true
+# baseline.baseline_state: LOCKED
+# baseline.threshold: 0.3
+# pipeline.primary_written: >0
+# pipeline.secondary_logged: >0
+ls output/primary/
+# dslv_zpdi_YYYYMMDD_HHMMSS.h5.partial
+```
+
 ## 5. Known State / Caveats
 
-- The node is in **SPEC-009 baseline learning** for 72 hours (or 240 samples). During this period all packets route to `output/secondary/quarantine.jsonl` with reason `baseline_learning_active`. Primary HDF5 output begins after the baseline locks and a confirmed multi-node event occurs (`min_confirming_nodes: 4`).
+- The node is running in **mono-node development mode**. PRIMARY events are
+  confirmed with a single node (`DSLV_MIN_CONFIRMING_NODES=1`) and a fixed
+  low threshold (`DSLV_BASELINE_FIXED_THRESHOLD=0.30`). This is appropriate for
+  hardware/pipeline validation but must be hardened before any production or
+  multi-node deployment.
 - External 10 MHz reference lock is a physical property; software qualification reports `UNVERIFIED_PHYSICAL_PROPERTY`. Verify lock with external instrumentation or custom Pluto firmware if required.
 - The UPS `ac_present` reading can briefly toggle at boot; the monitor waits for continuous AC-loss before shutdown.
 - Git credentials are populated and available to collaborators in `.secrets/`; run `./configure_git_auth.sh` after cloning on a new machine to activate the credential helper.
@@ -219,12 +280,16 @@ Modified:
 - `config/deployment.yaml`
 - `config/node_profiles/tier1_pluto_lbe1421.yaml`
 - `config/dslv-zpdi-ups.service`
+- `config/dslv-zpdi-webdash.service`
+- `config/dslv-zpdi-preflight.service`
+- `config/dslv-zpdi-tuning.service`
 - `config/os-hardening/dslv-zpdi.service`
 - `src/dslv_zpdi/layer1_ingestion/timing/nmea_stream.py`
 - `src/dslv_zpdi/layer1_ingestion/timing/pps_listener.py`
 - `src/dslv_zpdi/layer1_ingestion/sdr/capture_result.py`
 - `src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py`
 - `src/dslv_zpdi/layer2_core/wiring.py`
+- `src/dslv_zpdi/layer2_core/coherence.py`
 - `src/dslv_zpdi/main_pipeline.py`
 - `src/dslv_zpdi/watchdog/timing_monitor.py`
 - `tools/check_timing.py`
@@ -243,12 +308,16 @@ Created:
 - `docs/node_ops/TOOLCHAIN_AUDIT.md`
 - `docs/node_ops/TURNOVER_NOTES.md`
 - `docs/node_ops/WORK_LOG.md` (this file)
+- `specs/SPEC-009.md` (rewritten from stub)
 
 ## 8. Next Actions for Collaborators
 
-1. Allow 72-hour baseline learning to complete; do not restart the pipeline unless necessary.
-2. Verify touchscreen calibration and rotate the display if the 1024×600 panel is mounted in portrait.
-3. Confirm the registered Tier-2 node `pixel-9-pro-xl` at `10.128.24.165` is on the same LAN and reachable.
-4. Monitor `output/primary/` for the first confirmed-event HDF5 after baseline lock.
-5. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future tool-chain improvements (TPM2, Grafana, nftables).
-6. After the next reboot, visually confirm the Rich TUI dashboard renders correctly through the boot orchestrator.
+1. Verify touchscreen calibration and rotate the display if the 1024×600 panel is mounted in portrait.
+2. Confirm the registered Tier-2 node `pixel-9-pro-xl` at `10.128.24.165` is on the same LAN and reachable if/when multi-node mode is re-enabled.
+3. Monitor `output/primary/` for finalized `.h5` files after the first rotation (default rotation is size- or time-based).
+4. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future tool-chain improvements (TPM2, Grafana, nftables).
+5. After the next reboot, visually confirm the Rich TUI dashboard renders correctly through the boot orchestrator.
+6. Before production deployment, revert to multi-node confirmation:
+   - remove or comment out `DSLV_BASELINE_FIXED_THRESHOLD`
+   - set `DSLV_MIN_CONFIRMING_NODES=4`
+   - set `DSLV_BASELINE_HOURS=72` and `DSLV_MIN_BASELINE_SAMPLES=240`.

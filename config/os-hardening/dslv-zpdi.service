@@ -17,6 +17,8 @@ EnvironmentFile=/home/dynogator/dslv-zpdi/.env
 Restart=on-failure
 RestartSec=30
 ExecStartPre=/bin/sleep 3
+TimeoutStartSec=60
+TimeoutStopSec=30
 Nice=-5
 IOSchedulingClass=realtime
 IOSchedulingPriority=4
@@ -29,6 +31,8 @@ LimitNOFILE=65536
 # Systemd Sandboxing
 ProtectSystem=strict
 ProtectHome=read-only
+ProtectClock=true
+ProtectHostname=true
 PrivateTmp=yes
 NoNewPrivileges=true
 RestrictSUIDSGID=true
@@ -39,6 +43,8 @@ LockPersonality=true
 MemoryDenyWriteExecute=false
 RestrictRealtime=false
 RestrictNamespaces=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
 
 # Read-write paths needed for pipeline operation
 ReadWritePaths=/home/dynogator/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb

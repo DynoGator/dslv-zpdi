@@ -66,7 +66,7 @@ systemctl status dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi \
 # Follow the main pipeline log
 sudo journalctl -u dslv-zpdi -f
 
-# Restart the pipeline (avoid unless necessary; it resets baseline learning)
+# Restart the pipeline (avoid unless necessary; baseline learning is now persistent)
 sudo systemctl restart dslv-zpdi
 
 # Check timing discipline
@@ -84,24 +84,33 @@ chronyc tracking
 - `chrony` reports **Stratum 1**, disciplined to `/dev/pps0`.
 - PlutoSDR+ is reachable at `ip:192.168.2.1` and reports `clock_src: external`.
 - UPS is healthy, battery ~97%, AC present.
-- Baseline is **LEARNING** (SPEC-009). PRIMARY HDF5 output is intentionally gated until:
-  - at least 72 hours or 240 baseline samples have been collected, and
-  - a confirmed multi-node event occurs with at least 4 confirming nodes.
-- Until then, all packets route to `output/secondary/quarantine.jsonl` with reason `baseline_learning_active`.
+- Baseline is **LOCKED** and PRIMARY HDF5 output is active.
+- The node is configured for **mono-node development mode**:
+  - `DSLV_MIN_CONFIRMING_NODES=1`
+  - `DSLV_BASELINE_FIXED_THRESHOLD=0.30`
+  - `DSLV_BASELINE_HOURS=0.02` and `DSLV_MIN_BASELINE_SAMPLES=30`
+
+This lets a single anchor node produce HDF5 files immediately for hardware and
+pipeline validation. It is **not** the production multi-node configuration.
 
 Check live state:
 
 ```bash
 cat /run/dslv-zpdi/health.json | python3 -m json.tool
 curl -s http://127.0.0.1:8080/api/status | python3 -m json.tool
+ls -lh /home/dynogator/dslv-zpdi/output/primary/
 ```
 
 ## 6. Known Caveats
 
+- **Mono-node mode is for development.** Before production, revert:
+  - remove `DSLV_BASELINE_FIXED_THRESHOLD`
+  - set `DSLV_MIN_CONFIRMING_NODES=4`
+  - set `DSLV_BASELINE_HOURS=72` and `DSLV_MIN_BASELINE_SAMPLES=240`
 - **10 MHz external reference lock** is a physical property. Stock Pluto firmware cannot report lock, so the pipeline reports `UNVERIFIED_PHYSICAL_PROPERTY`. Use external instrumentation or custom Pluto firmware if formal lock verification is required.
 - **TUI dashboard not visually confirmed** in this session. After the next reboot, verify that the retro boot screen and Rich TUI render correctly on the 1024×600 touchscreen.
 - **UPS `ac_present` may toggle briefly** at boot. The monitor waits for sustained AC loss before shutdown; a momentary flip is normal.
-- **Baseline learning restarts** if the pipeline is restarted. Avoid restarts during the 72-hour learning window unless absolutely necessary.
+- Baseline state persists across pipeline restarts in `/var/lib/dslv-zpdi/baseline.json`.
 
 ## 7. Quick Validation
 
@@ -117,15 +126,16 @@ Expected: 184 passed / 1 skipped, all guard tools clean.
 
 ## 8. Next Steps
 
-1. Let baseline learning run to completion (~72 h or 240 samples).
-2. Bring the Tier-2 mobile node `pixel-9-pro-xl` (`10.128.24.165`) online so confirmed events can form.
-3. Visually confirm the touchscreen dashboard after the next reboot.
+1. Confirm HDF5 primary files finalize and rotate correctly (`output/primary/*.h5`).
+2. Visually confirm the touchscreen dashboard after the next reboot.
+3. When multi-node hardware is available, revert to production baseline/confirmation settings.
 4. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future upgrades (TPM2 key storage, Grafana, nftables).
-5. Monitor `output/primary/` for the first confirmed-event HDF5 packet.
+5. If the Pixel 9 Pro XL node (`10.128.24.165`) joins the LAN, verify its dashboard and telemetry path.
 
 ## 9. References
 
 - `docs/node_ops/WORK_LOG.md` — detailed installation and commissioning log.
 - `docs/node_ops/TOOLCHAIN_AUDIT.md` — component evaluation and optimization notes.
 - `docs/hardware/GEEKWORM_X1202_UPS.md` — UPS operator reference.
+- `specs/SPEC-009.md` — baseline learning FSM specification.
 - `config/node_profiles/tier1_pluto_lbe1421.yaml` — active node profile.

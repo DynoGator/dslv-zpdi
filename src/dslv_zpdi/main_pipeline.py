@@ -198,9 +198,16 @@ def main():
     t_process.start()
 
     logger.info("Pipeline running. Mode=%s", args.mode)
+    last_baseline_check = time.time()
     try:
         while state.running:
             time.sleep(1)
+            # SPEC-009 | Periodically attempt to finalize baseline once duration
+            # and sample gates are satisfied. After lock, primary routing and
+            # event confirmation become possible.
+            if time.time() - last_baseline_check >= 60:
+                scorer.finalize_baseline()
+                last_baseline_check = time.time()
     except KeyboardInterrupt:
         state.running = False
 
