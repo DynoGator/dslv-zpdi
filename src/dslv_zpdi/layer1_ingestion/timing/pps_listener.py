@@ -16,11 +16,8 @@ PPS_FETCH ioctl constant derivation (aarch64, linux/pps.h):
 
 from __future__ import annotations
 
-import fcntl
 import logging
 import os
-import re
-import struct
 import threading
 import time
 

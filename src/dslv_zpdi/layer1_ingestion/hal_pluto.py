@@ -14,6 +14,7 @@ SPEC-005A.
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 
@@ -64,7 +65,7 @@ class PlutoHAL(BaseHAL):
 
     def __init__(
         self,
-        uri: str = "ip:192.168.2.1",
+        uri: str | None = None,
         pps_device: str = "/dev/pps0",
         nmea_port: str = "/dev/ttyACM0",
         external_clock: bool = False,
@@ -74,7 +75,8 @@ class PlutoHAL(BaseHAL):
         SPEC-004A.5.HAL.INIT — Initialize Pluto HAL.
 
         Args:
-            uri: libiio URI for the Pluto (e.g. ip:192.168.2.1, usb:3.15.5).
+            uri: libiio URI for the Pluto (e.g. ip:192.168.3.80, usb:3.15.5).
+                Defaults to DSLV_SDR_URI or ip:192.168.3.80.
             pps_device: Host PPS device for UTC epoch anchoring.
             nmea_port: GPSDO NMEA telemetry port (used when external_clock=True).
             external_clock: Assert that the Pluto is GPSDO-referenced.
@@ -87,7 +89,7 @@ class PlutoHAL(BaseHAL):
                 "No Pluto driver available. Install python3-libiio or SoapyPlutoSDR."
             )
 
-        self.uri = uri
+        self.uri = uri or os.getenv("DSLV_SDR_URI", "ip:192.168.3.80")
         self.external_clock = external_clock
         self.gain = gain
         self._ctx: iio.Context | None = None

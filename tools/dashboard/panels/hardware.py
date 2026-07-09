@@ -74,7 +74,7 @@ def _hackrf_info() -> dict:
 
 def _pluto_info() -> dict:
     """Probe PlutoSDR+ via libiio (non-fatal)."""
-    uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.2.1")
+    uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.3.80")
     try:
         import iio  # pylint: disable=import-outside-toplevel
 

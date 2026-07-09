@@ -44,6 +44,7 @@ class PanelsCfg:
     bci: bool = True
     logs: bool = True
     notifications: bool = True
+    settings: bool = True
 
 
 @dataclass

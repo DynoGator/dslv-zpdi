@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libhackrf-dev \
     soapysdr-module-hackrf \
+    soapysdr-module-plutosdr \
     libiio-dev \
     libad9361-dev \
     libusb-1.0-0-dev \
@@ -21,9 +22,11 @@ COPY . .
 # Simulator mode for non-hardware environments
 ENV DEV_SIMULATOR=1
 
-# Install the package the same way the installer validates it
+# Install the package the same way the installer validates it, then layer on
+# the Pluto/HackRF optional extras so the full SDR surface is linted in CI.
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -e '.[dev]'
+RUN pip install --no-cache-dir -e '.[pluto,hackrf]'
 RUN python -m pip check
 
 # Validation contract

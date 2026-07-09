@@ -18,9 +18,13 @@ import subprocess
 import threading
 import time
 
+import numpy as np
 from rich.markup import escape as _esc
 from rich.panel import Panel
 from rich.text import Text
+
+from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
+from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
 
 _PALETTES = [
     # Classic Heat
@@ -247,6 +251,162 @@ def hackrf_present() -> bool:
         return False
 
 
+class PlutoSweepStream:
+    """
+    Background capture thread for PlutoSDR+ devices using the native libiio
+    backend. Computes a power spectrum row suitable for the waterfall panel.
+
+    The values are approximate dBFS (dB relative to full-scale). A calibration
+    offset can be applied later once the receiver chain is characterised.
+    """
+
+    def __init__(self):
+        self._backend: PlutoIioBackend | None = None
+        self._thread: threading.Thread | None = None
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self._latest_row: list[float] | None = None
+        self._last_error: str | None = None
+        self._sweeps = 0
+        self._params: dict = {}
+
+    def is_running(self) -> bool:
+        return self._thread is not None and self._thread.is_alive()
+
+    def last_error(self) -> str | None:
+        return self._last_error
+
+    def sweeps(self) -> int:
+        return self._sweeps
+
+    def start(
+        self,
+        center_hz: int,
+        span_hz: int,
+        width: int,
+        lna: int = 24,
+        vga: int = 20,
+        amp: bool = False,
+    ) -> bool:
+        # vga/amp are HackRF-specific; ignore them for Pluto.
+        del vga, amp
+        self.stop()
+        self._last_error = None
+
+        uri = os.environ.get("DSLV_SDR_URI", "auto")
+        try:
+            backend = PlutoIioBackend(uri=uri)
+        except Exception as exc:
+            self._last_error = f"pluto open failed: {exc}"
+            return False
+
+        caps = backend.discover()
+        min_rate = caps.available_sample_rates_sps[0] if caps.available_sample_rates_sps else 2_083_333
+        max_rate = caps.max_sample_rate_sps or 61_440_000
+        sample_rate = max(min_rate, min(max_rate, span_hz))
+
+        # Request a few more FFT bins than display columns for smooth resampling.
+        num_samples = max(4096, width * 4)
+        # AD936x buffers prefer powers of two.
+        num_samples = 1 << (num_samples - 1).bit_length()
+
+        profile = CaptureProfile(
+            center_frequency_hz=center_hz,
+            sample_rate_sps=sample_rate,
+            bandwidth_hz=sample_rate,
+            gain_db=float(lna),
+            gain_mode="manual",
+            receive_channels=(0,),
+            transmit_enabled=False,
+            buffer_samples=num_samples,
+            num_samples=num_samples,
+            external_clock_configured=False,
+        )
+
+        self._params = {
+            "center_hz": center_hz,
+            "span_hz": span_hz,
+            "width": width,
+            "lna": lna,
+            "sample_rate": sample_rate,
+            "profile": profile,
+        }
+        self._backend = backend
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._reader, daemon=True)
+        self._thread.start()
+        return True
+
+    def stop(self):
+        self._stop.set()
+        thread = self._thread
+        self._thread = None
+        if thread is not None:
+            thread.join(timeout=2.0)
+        backend = self._backend
+        self._backend = None
+        if backend is not None:
+            try:
+                backend.close()
+            except Exception:
+                pass
+
+    def _reader(self):
+        while not self._stop.is_set():
+            try:
+                backend = self._backend
+                if backend is None:
+                    break
+                profile = self._params["profile"]
+                width = int(self._params["width"])
+                result = backend.capture(profile)
+                if result.samples_received < width:
+                    continue
+                row = self._spectrum_row(result.samples, result.center_frequency_hz, result.effective_sample_rate_sps or profile.sample_rate_sps, width)
+                self._publish(row)
+            except Exception as exc:
+                self._last_error = f"capture: {exc}"
+                # Back off briefly to avoid tight error loops.
+                time.sleep(0.5)
+
+    @staticmethod
+    def _spectrum_row(samples: np.ndarray, center_hz: float, sample_rate: float, width: int) -> list[float]:
+        # One-sided power spectrum via FFT; dBFS for now.
+        n = len(samples)
+        fft = np.fft.fftshift(np.fft.fft(samples))
+        # dBFS: 20*log10(|fft|/n). A full-scale tone would approach 0 dBFS.
+        power = 20.0 * np.log10(np.maximum(np.abs(fft) / max(1, n), 1e-12))
+
+        # Resample the FFT to `width` columns using max-hold.
+        if len(power) == width:
+            return power.tolist()
+        if len(power) < width:
+            # Stretch with linear interpolation.
+            indices = np.linspace(0, len(power) - 1, width)
+            return np.interp(indices, np.arange(len(power)), power).tolist()
+
+        row = []
+        scale = len(power) / width
+        for i in range(width):
+            start = int(i * scale)
+            end = max(start + 1, int((i + 1) * scale))
+            row.append(float(np.max(power[start:end])))
+        return row
+
+    def _publish(self, row: list[float]):
+        if not row:
+            return
+        with self._lock:
+            self._latest_row = row
+        self._sweeps += 1
+
+    def pop_row(self) -> list[float] | None:
+        with self._lock:
+            row = self._latest_row
+            self._latest_row = None
+        return row
+
+
 class WaterfallPanel:
     """
     Rolling FFT waterfall + Spectrum view.
@@ -290,8 +450,11 @@ class WaterfallPanel:
             (0.78, 0.40, 0.00110),
         ]
         self._have_hackrf = hackrf_present()
-        self._stream = HackrfSweepStream()
+        self._hackrf_stream = HackrfSweepStream()
+        self._pluto_stream = PlutoSweepStream()
+        self._active_real: str | None = None  # 'pluto' or 'hackrf' when live
         self._want_real = False
+        self._stream_retry_at = 0.0
         self._last_source = "SIM"
         # Raw dBm view of the latest row (real or simulated). Consumed by the
         # RF anomaly panel so it can report peak dBm, noise floor, etc.
@@ -386,15 +549,62 @@ class WaterfallPanel:
             self._restart_stream_if_running()
 
     def shutdown(self):
-        self._stream.stop()
+        self._hackrf_stream.stop()
+        self._pluto_stream.stop()
 
     def _sync_stream(self):
-        want_real = (
-            self._have_hackrf
-            and os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
-        )
-        if want_real and not self._stream.is_running():
-            self._stream.start(
+        want_real = os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
+        if not want_real:
+            if self._active_real is not None:
+                self._hackrf_stream.stop()
+                self._pluto_stream.stop()
+                self._active_real = None
+            self._want_real = False
+            return
+
+        # If a real stream is already running, leave it alone (user can toggle
+        # real mode off/on to force a re-scan).
+        if self._active_real == "pluto" and self._pluto_stream.is_running():
+            self._want_real = True
+            return
+        if self._active_real == "hackrf" and self._hackrf_stream.is_running():
+            self._want_real = True
+            return
+
+        now = time.time()
+        if now - self._stream_retry_at < 5.0:
+            self._want_real = True
+            return
+        self._stream_retry_at = now
+
+        # Prefer PlutoSDR+ (canonical Tier-1), fall back to HackRF (legacy).
+        self._hackrf_stream.stop()
+        self._pluto_stream.stop()
+        if self._pluto_stream.start(
+            center_hz=self.center_hz,
+            span_hz=self.span_hz,
+            width=self.width,
+            lna=self.lna_gain,
+            vga=self.vga_gain,
+            amp=self.amp_enabled,
+        ):
+            self._active_real = "pluto"
+        elif self._have_hackrf and self._hackrf_stream.start(
+            center_hz=self.center_hz,
+            span_hz=self.span_hz,
+            width=self.width,
+            lna=self.lna_gain,
+            vga=self.vga_gain,
+            amp=self.amp_enabled,
+        ):
+            self._active_real = "hackrf"
+        else:
+            self._active_real = None
+        self._want_real = want_real
+
+    def _restart_stream_if_running(self):
+        if self._active_real == "pluto" and self._pluto_stream.is_running():
+            self._pluto_stream.start(
                 center_hz=self.center_hz,
                 span_hz=self.span_hz,
                 width=self.width,
@@ -402,13 +612,8 @@ class WaterfallPanel:
                 vga=self.vga_gain,
                 amp=self.amp_enabled,
             )
-        elif not want_real and self._stream.is_running():
-            self._stream.stop()
-        self._want_real = want_real
-
-    def _restart_stream_if_running(self):
-        if self._stream.is_running():
-            self._stream.start(
+        elif self._active_real == "hackrf" and self._hackrf_stream.is_running():
+            self._hackrf_stream.start(
                 center_hz=self.center_hz,
                 span_hz=self.span_hz,
                 width=self.width,
@@ -444,18 +649,23 @@ class WaterfallPanel:
         raw_dbm: list[float] | None = None
         source = "SIM"
         if self._want_real:
-            raw_row = self._stream.pop_row()
-            if raw_row is not None:
-                source = "HACKRF"
-                raw_dbm = raw_row
-                row = self._normalize(raw_row)
+            if self._active_real == "pluto":
+                raw_row = self._pluto_stream.pop_row()
+                if raw_row is not None:
+                    source = "PLUTO"
+                    raw_dbm = raw_row
+                    row = self._normalize(raw_row)
+            elif self._active_real == "hackrf":
+                raw_row = self._hackrf_stream.pop_row()
+                if raw_row is not None:
+                    source = "HACKRF"
+                    raw_dbm = raw_row
+                    row = self._normalize(raw_row)
         if row is None:
             row = self._sim_row()
-            # Synthesize a plausible dBm trace from the normalized sim row so
-            # the anomaly panel still has something meaningful to display.
             raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
             if self._want_real:
-                source = "HACKRF-WAIT"
+                source = f"{self._active_real.upper()}-WAIT" if self._active_real else "WAIT"
         self._last_source = source
         self.last_dbm_row = raw_dbm
         if raw_dbm:
@@ -466,7 +676,6 @@ class WaterfallPanel:
             if len(self.peak_hold) != len(row):
                 self.peak_hold = list(row)
             else:
-                # Decay peak hold slowly, but update immediately if new peak
                 for i in range(len(row)):
                     self.peak_hold[i] = max(row[i], self.peak_hold[i] * 0.98)
 
@@ -494,7 +703,11 @@ class WaterfallPanel:
                 "source": self._last_source,
                 "span_hz": self.span_hz,
                 "center_hz": self.center_hz,
-                "sweeps": self._stream.sweeps(),
+                "sweeps": (
+                self._pluto_stream.sweeps() if self._active_real == "pluto"
+                else self._hackrf_stream.sweeps() if self._active_real == "hackrf"
+                else 0
+            ),
             }
         peak_idx = max(range(len(row)), key=lambda i: row[i])
         peak_v = row[peak_idx]
@@ -512,8 +725,19 @@ class WaterfallPanel:
             "source": self._last_source,
             "span_hz": self.span_hz,
             "center_hz": self.center_hz,
-            "sweeps": self._stream.sweeps(),
+            "sweeps": (
+                self._pluto_stream.sweeps() if self._active_real == "pluto"
+                else self._hackrf_stream.sweeps() if self._active_real == "hackrf"
+                else 0
+            ),
         }
+
+    def _active_stream(self):
+        if self._active_real == "pluto":
+            return self._pluto_stream
+        if self._active_real == "hackrf":
+            return self._hackrf_stream
+        return None
 
     def _spectrum_text(self, row: list[float], height: int = 5) -> Text:
         t = Text()
@@ -604,12 +828,18 @@ class WaterfallPanel:
         lines.append_text(axis)
 
         src_label = {
+            "PLUTO": "PLU",
+            "PLUTO-WAIT": "PLU…",
             "HACKRF": "HRF",
             "HACKRF-WAIT": "HRF…",
+            "WAIT": "WAIT",
             "SIM": "SIM",
         }.get(self._last_source, "SIM") if self.compact else {
+            "PLUTO": "PLUTO",
+            "PLUTO-WAIT": "PLUTO…",
             "HACKRF": "HACKRF",
             "HACKRF-WAIT": "HACKRF…",
+            "WAIT": "WAITING",
             "SIM": "SIM",
         }.get(self._last_source, "SIM")
 
@@ -618,19 +848,23 @@ class WaterfallPanel:
         if self.compact:
             title = f"[bold {self.border_style}]▓ WF ▓[/] [dim]({self.mode}·{src_label}·{span_mhz:.1f}M·{self.dbm_floor:.0f}/{self.dbm_ceil:.0f})[/]"
         else:
-            err = self._stream.last_error()
+            stream = self._active_stream()
+            err = stream.last_error() if stream else None
             err_suffix = f" · err: {_esc(err)}" if (self._want_real and err) else ""
             gain_info = f" · floor {self.dbm_floor:.0f} ceil {self.dbm_ceil:.0f}"
+            unit = "dBFS" if self._active_real == "pluto" else "dBm"
             gain_suffix = (
                 f" · lna {self.lna_gain}dB vga {self.vga_gain}dB AMP-LOCK"
-                if self._want_real
+                if self._active_real == "hackrf"
+                else f" · gain {self.lna_gain}dB"
+                if self._active_real == "pluto"
                 else ""
             )
-            sweeps = self._stream.sweeps()
+            sweeps = stream.sweeps() if stream else 0
             sweep_suffix = f" · sweeps {sweeps}" if self._want_real else ""
             title = (
                 f"[bold {self.border_style}]▓ WATERFALL + SPECTRUM ▓[/] "
                 f"[dim]({self.mode} · {src_label} · {mod_label} · "
-                f"{span_mhz:.1f}MHz BW{gain_info}{gain_suffix}{sweep_suffix}{err_suffix})[/]"
+                f"{span_mhz:.1f}MHz BW · {unit}{gain_info}{gain_suffix}{sweep_suffix}{err_suffix})[/]"
             )
         return Panel(lines, title=title, border_style=self.border_style, padding=(0, 1))

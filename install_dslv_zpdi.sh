@@ -243,6 +243,7 @@ TIER1_PACKAGES=(
     pciutils
     libiio-dev
     python3-soapysdr
+    soapysdr-module-plutosdr
 )
 
 log_info "Starting DSLV-ZPDI install (${SCRIPT_REV})"
@@ -402,8 +403,12 @@ run_as_real_user "'$VENV_DIR/bin/python' -m pip install --upgrade pip setuptools
     || log_fail "Failed to upgrade pip/setuptools/wheel"
 
 log_info "Installing package metadata and dev extras from pyproject.toml"
-if ! run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' -m pip install -e '.[dev]'"; then
-    log_warn "Editable install with dev extras failed; retrying runtime editable install"
+INSTALL_EXTRAS="dev"
+if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
+    INSTALL_EXTRAS="dev,pluto,hackrf"
+fi
+if ! run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' -m pip install -e '.[$INSTALL_EXTRAS]'"; then
+    log_warn "Editable install with extras failed; retrying runtime editable install"
     run_as_real_user "cd '$INSTALL_DIR' && '$VENV_DIR/bin/python' -m pip install -e ." \
         || log_fail "Editable install failed"
 fi
@@ -530,7 +535,8 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
         firmware-brcm80211 firmware-atheros firmware-mediatek
         bluez bluez-firmware
         libiio0 libiio-dev python3-libiio
-        libad9361-dev
+        libad9361-0 libad9361-dev
+        soapysdr-module-plutosdr python3-soapysdr
         pps-tools chrony
     )
     # Discover any versioned kernel/header packages installed and hold those too
