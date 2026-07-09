@@ -275,8 +275,16 @@ class HardwareHAL(BaseHAL):
         return payload
 
     def wait_for_pps_edge(self, pps_device: str = "/dev/pps0", timeout_s: float = 2.0) -> bool:
-        """SPEC-005A.SYNC — Block until next host PPS edge."""
-        return self.timing_authority._pps.wait_for_edge(timeout_s=timeout_s)  # type: ignore[attr-defined]
+        """SPEC-005A.SYNC — Block until next host PPS edge.
+
+        Falls back to a deterministic sleep for timing authorities that do not
+        expose a physical PPS listener (e.g., simulator).
+        """
+        pps_listener = getattr(self.timing_authority, "_pps", None)
+        if pps_listener is not None and hasattr(pps_listener, "wait_for_edge"):
+            return pps_listener.wait_for_edge(timeout_s=timeout_s)
+        time.sleep(min(timeout_s, 1.0))
+        return True
 
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict[str, Any]:
         """SPEC-005A.LOCK — Return GPSDO + SDR lock evidence."""

@@ -72,6 +72,10 @@ class SimulatedTimingAuthority(TimingAuthority):
             warnings=("Simulated timing authority: not field evidence",),
         )
 
+    def pps_jitter_ns(self) -> float:
+        """SPEC-005A.TIMING-SIM — Return configured simulated PPS jitter."""
+        return self.pps_rms_jitter_ns
+
     def healthy(self, degraded_ok: bool = False) -> bool:
         """SPEC-005A.TIMING-SIM — Simulator timing is healthy by explicit selection."""
         _ = degraded_ok

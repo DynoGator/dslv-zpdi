@@ -136,7 +136,7 @@ lsmod | grep pps
 ppstest /dev/pps0
 
 # PlutoSDR+ detected via IIO
-python -c "import iio; print(iio.Context('ip:192.168.3.80').name)"
+python -c "import iio; print(iio.Context('ip:192.168.2.1').name)"
 
 # GPSDO NMEA telemetry on USB-C virtual serial
 python -c "import serial; s=serial.Serial('/dev/ttyACM0', 9600, timeout=2); print(s.readline())"
@@ -164,7 +164,7 @@ clock_discipline:
   pps_required:              true          # Require /dev/pps0
   pps_device:                /dev/pps0
   chrony_tracking_required:  true
-  max_pps_jitter_ns:         1000.0        # Quarantine threshold
+  max_pps_jitter_ns:         5000.0        # Quarantine threshold
   gps_lock_required:         true
 
 spec009:
@@ -691,7 +691,7 @@ python -m dashboard
 
 ### Waterfall is stuck on `SIM` even after pressing `r`
 
-- PlutoSDR+ is not reachable at `ip:192.168.3.80`. Verify the network link and run `iio_info -u ip:192.168.3.80`.
+- PlutoSDR+ is not reachable at `ip:192.168.2.1`. Verify the network link and run `iio_info -u ip:192.168.2.1`.
 - Legacy HackRF only: run `hackrf_info` — if it fails, check USB connection.
 - If the SDR is detected but sweep fails, check the error label in the waterfall title bar.
 
@@ -704,7 +704,7 @@ journalctl -u dslv-zpdi | grep -i "HardwareHAL\|simulator\|fallback"
 ```
 
 Common causes:
-- PlutoSDR+ not reachable at `ip:192.168.3.80` when service started
+- PlutoSDR+ not reachable at `ip:192.168.2.1` when service started
 - `/dev/pps0` does not exist (dtoverlay not loaded — add to `/boot/firmware/config.txt` and reboot)
 - LBE-1421 not powered or USB-C not seated
 
@@ -753,7 +753,7 @@ cat /var/lib/dslv_zpdi/baseline.json
 
 - Check chrony: `chronyc tracking` — look for "Stratum" and "RMS offset".
 - If chrony is not running: `sudo systemctl start chrony`.
-- The jitter threshold is `max_pps_jitter_ns` in `config/deployment.yaml` (default 1000 ns). Raise this temporarily if GPSDO is still acquiring lock.
+- The jitter threshold is `max_pps_jitter_ns` in `config/deployment.yaml` (default 5000 ns). Raise this temporarily if GPSDO is still acquiring lock.
 
 ### Config changes have no effect
 

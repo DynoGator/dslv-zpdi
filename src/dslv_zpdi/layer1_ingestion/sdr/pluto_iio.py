@@ -177,6 +177,59 @@ class PlutoIioBackend(SdrBackend):
             raise HardwareInitializationError("Pluto backend not initialized")
         return self._caps
 
+    @staticmethod
+    def _read_attr_int(channel, name: str, default: int) -> int:
+        """SPEC-004A.PLUTO — Read an integer IIO attribute, falling back to default."""
+        try:
+            attr = channel.attrs.get(name)
+            if attr is None:
+                return default
+            raw = attr.value.strip()
+        except (AttributeError, KeyError):
+            return default
+        if not raw:
+            return default
+        # Strip unit suffix (e.g., "20000000 Hz")
+        raw = raw.split()[0]
+        try:
+            return int(raw)
+        except ValueError:
+            return default
+
+    @staticmethod
+    def _read_attr_float(channel, name: str, default: float) -> float:
+        """SPEC-004A.PLUTO — Read a float IIO attribute, falling back to default."""
+        try:
+            attr = channel.attrs.get(name)
+            if attr is None:
+                return default
+            raw = attr.value.strip()
+        except (AttributeError, KeyError):
+            return default
+        if not raw:
+            return default
+        # Strip unit suffix (e.g., "62.000000 dB" -> 62.0)
+        if raw.endswith(" dB"):
+            raw = raw[:-3].strip()
+        else:
+            raw = raw.split()[0]
+        try:
+            return float(raw)
+        except ValueError:
+            return default
+
+    @staticmethod
+    def _read_attr_str(channel, name: str, default: str) -> str:
+        """SPEC-004A.PLUTO — Read a string IIO attribute, falling back to default."""
+        try:
+            attr = channel.attrs.get(name)
+            if attr is None:
+                return default
+            raw = attr.value.strip()
+        except (AttributeError, KeyError):
+            return default
+        return raw if raw else default
+
     def configure(self, profile: CaptureProfile) -> AppliedConfiguration:
         """
         SPEC-004A.PLUTO — Apply capture profile and read settings back.
@@ -209,18 +262,30 @@ class PlutoIioBackend(SdrBackend):
         rx_chan.attrs["rf_bandwidth"].value = str(int(profile.bandwidth_hz))
         rx_chan.attrs["sampling_frequency"].value = str(int(profile.sample_rate_sps))
 
-        # Read back applied values
-        # Strip unit suffix (e.g., "62.000000 dB" -> 62.0)
-        gain_str = rx_chan.attrs["hardwaregain"].value.strip()
-        if gain_str.endswith(" dB"):
-            gain_str = gain_str[:-3].strip()
+        # Read back applied values. Some Pluto firmware/libiio revisions return
+        # empty strings immediately after a write; fall back to the requested
+        # profile so ingestion is not killed by a transient read-back gap.
+        applied_center = self._read_attr_int(rx_lo, "frequency", profile.center_frequency_hz)
+        applied_sample_rate = self._read_attr_int(
+            rx_chan, "sampling_frequency", profile.sample_rate_sps
+        )
+        applied_bandwidth = self._read_attr_int(rx_chan, "rf_bandwidth", profile.bandwidth_hz)
+        applied_gain = self._read_attr_float(rx_chan, "hardwaregain", profile.gain_db)
+        applied_gain_mode = self._read_attr_str(rx_chan, "gain_control_mode", profile.gain_mode)
+
+        if applied_center != profile.center_frequency_hz:
+            logger.debug(
+                "Pluto read-back for center_frequency_hz empty or divergent; using fallback"
+            )
+        if applied_sample_rate != profile.sample_rate_sps:
+            logger.debug("Pluto read-back for sampling_frequency empty or divergent; using fallback")
 
         applied = AppliedConfiguration(
-            center_frequency_hz=int(rx_lo.attrs["frequency"].value),
-            sample_rate_sps=int(rx_chan.attrs["sampling_frequency"].value),
-            bandwidth_hz=int(rx_chan.attrs["rf_bandwidth"].value),
-            gain_db=float(gain_str),
-            gain_mode=rx_chan.attrs["gain_control_mode"].value,
+            center_frequency_hz=applied_center,
+            sample_rate_sps=applied_sample_rate,
+            bandwidth_hz=applied_bandwidth,
+            gain_db=applied_gain,
+            gain_mode=applied_gain_mode,
             receive_channels=profile.receive_channels,
             transmit_enabled=False,
             external_clock_configured=profile.external_clock_configured,

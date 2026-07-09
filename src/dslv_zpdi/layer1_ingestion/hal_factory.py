@@ -148,9 +148,14 @@ def get_tier1_hal(
     frequency_translation = _build_frequency_translation(profile)
 
     # Qualification policy
+    # The AD936x/Pluto firmware cannot software-report external-reference
+    # detection, so requiring that evidence would permanently UNVERIFY the
+    # backend. For pluto_iio we rely on the profile/wiring assertion plus
+    # host-side PPS/NMEA evidence instead.
     ref_required = False
-    if isinstance(profile.hardware, dict) and "reference_clock" in profile.hardware:
-        ref_required = bool(profile.hardware["reference_clock"].get("required", False))
+    if backend_name != "pluto_iio":
+        if isinstance(profile.hardware, dict) and "reference_clock" in profile.hardware:
+            ref_required = bool(profile.hardware["reference_clock"].get("required", False))
 
     policy = Tier1QualificationPolicy(
         allow_simulator=simulator,

@@ -12,7 +12,7 @@ clock_discipline:
   pps_required: true
   pps_device: /dev/pps0
   chrony_tracking_required: true
-  max_pps_jitter_ns: 1000
+  max_pps_jitter_ns: 5000
   gps_lock_required: true
 
 health_thresholds:

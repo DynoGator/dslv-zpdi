@@ -164,7 +164,10 @@ def main():
         key_provider=key_provider,
         allow_development_key=not profile.trust.require_production_hmac_key,
     )
-    monitor = TimingMonitor(simulated=args.simulator)
+    monitor = TimingMonitor(
+        simulated=args.simulator,
+        jitter_source=lambda: hal.timing_authority.pps_jitter_ns(),
+    )
     monitor.start()
 
     # SPEC-009 | Begin baseline learning for trust-tier primary routing.

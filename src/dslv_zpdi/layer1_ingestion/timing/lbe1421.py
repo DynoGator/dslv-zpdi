@@ -124,6 +124,10 @@ class LBE1421TimingAuthority(TimingAuthority):
             warnings=tuple(warnings),
         )
 
+    def pps_jitter_ns(self) -> float:
+        """SPEC-005A.TIMING-LBE1421 — Return live PPS RMS jitter."""
+        return self._pps.snapshot()["rms_jitter_ns"]
+
     def healthy(self, degraded_ok: bool = False) -> bool:
         """
         SPEC-005A.TIMING-LBE1421 — Return True if timing meets configured threshold.
