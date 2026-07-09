@@ -1,5 +1,30 @@
 # Changelog
 
+## [Unreleased] — ZPDI_CONDITIONS standalone local dashboard (2026-07-09)
+
+### Added
+- New standalone dashboard package `tools/zpdi_conditions/`:
+  - Aggregates live space weather, surface weather, barometric, aerosol, and
+    ionizing-radiation metrics for the Penrose, CO tracking footprint.
+  - Sources: NOAA SWPC (Kp, RTSW wind/mag, scales), Open-Meteo (weather and
+    air quality), NMDB real-time neutron monitor, EPA RadNet Colorado Springs.
+  - Rich two-column TUI optimized for a 10" touchscreen with per-metric
+    refresh intervals and last-refresh timestamps.
+  - Manual refresh on spacebar; quit with `q` or `Ctrl+C`.
+  - Self-checking collectors display source-specific errors inside each metric
+    card instead of crashing the dashboard.
+  - Launch script `launch.sh` and desktop icon `ZPDI_CONDITIONS.desktop` with
+    `install_desktop_icon.sh` for one-click setup.
+- No SDR, GPSDO, or radio hardware access; designed to run in parallel with the
+  main `dslv-zpdi` stack without conflicts.
+
+### Verified
+- All 12 collectors return live data or clear errors.
+- `pytest` 184 passed, 1 skipped; ruff/orphan/repo-guard/version-sync clean.
+- Desktop icon installed and executable on the Tier-1 anchor node.
+
+---
+
 ## [Unreleased] — Reboot preparation and local validation lock-in (2026-07-09)
 
 ### Added
