@@ -1,5 +1,63 @@
 # Changelog
 
+## [Unreleased] — Tier-1 Pi 5 optimization & boot orchestrator (2026-07-09)
+
+### Added
+- **Retro ASCII boot orchestrator** (`tools/boot_orchestrator.py`) for the Tier-1
+  Pi 5 touchscreen autostart path. It verifies/starts the systemd service chain in
+  order, renders a Rich TUI with ASCII art, sequential stage list, rotating snark
+  messages, and a status footer, then execs the operations dashboard on success.
+- **Boot orchestrator desktop autostart** at
+  `~/.config/autostart/dslv-zpdi-dashboard.desktop`; launches the orchestrator in
+  a 120×40 `lxterminal` on Wayland login.
+- **`docs/node_ops/TOOLCHAIN_AUDIT.md`** — full component-by-component evaluation
+  of timing discipline, SDR ingestion, persistence/trust, UPS/power, dashboards,
+  and process supervision, with alternatives and future-tool recommendations.
+- **`docs/node_ops/TURNOVER_NOTES.md`** — concise collaborator hand-off covering
+  node state, credentials, service commands, dashboard URLs, and caveats.
+- **Live telemetry bridge through `/run/dslv-zpdi/health.json`**:
+  `main_pipeline.py` now publishes `sdr_health`, `pps`, and `ups` snapshots every
+  10 payloads; the web dashboard and TUI hardware panel consume them directly.
+- **`SdrHealth.external_reference_configured`** field; `PlutoIioBackend.health()`
+  populates it so the dashboard reports `clock_src: external` for GPSDO-disciplined
+  PlutoSDR+ operation.
+
+### Changed
+- **Main pipeline systemd unit hardening**
+  (`config/os-hardening/dslv-zpdi.service`): `ProtectSystem=strict`,
+  `ProtectHome=read-only`, explicit `ReadWritePaths`, `CPUAffinity=2 3`,
+  `MemoryMax=2G`, `LimitNOFILE=65536`, and `StartLimitIntervalSec=120` /
+  `StartLimitBurst=3`. Installed unit synced and `daemon-reload` run.
+- **PPS jitter metric stability**: `TimingMonitor` and `tools/check_timing.py`
+  now read `RMS offset` from `chronyc tracking` instead of `System time` for a
+  stable figure after chrony convergence.
+- **Dashboard telemetry decoupling**: `tools/dashboard/web_server.py` and
+  `tools/dashboard/panels/hardware.py` no longer re-probe hardware every refresh;
+  they read the shared health JSON written by the pipeline.
+
+### Security
+- Project GitHub credentials stored in `.secrets/` (`git-credentials` and
+  `github-account.txt`) with mode `0600`; `.gitignore` keeps them out of the repo.
+  `./configure_git_auth.sh` activates a repo-scoped credential helper.
+
+### Verified
+- Full test suite: 184 passed, 1 skipped, 2 SWIG deprecation warnings.
+- `tools/orphan_checker.py`, `tools/check_version_sync.py`, and
+  `tools/repo_guard.py` all report clean.
+- All systemd services active: `dslv-zpdi-tuning`, `dslv-zpdi-preflight`,
+  `dslv-zpdi`, `dslv-zpdi-ups`, `dslv-zpdi-webdash`, `chrony`, `gpsd`.
+- Web dashboard `/api/status` returns live system, pipeline, SDR (`clock_src:
+  external`), UPS, and node-registry data.
+- Boot orchestrator `--no-start` confirms the required service chain is active.
+
+### Caveats
+- The Rich TUI dashboard is configured to autostart via the orchestrator but has
+  not been visually verified on the touchscreen in this session.
+- Baseline remains in `LEARNING` state; PRIMARY HDF5 output is gated until SPEC-009
+  baseline locks and a 4-node confirmed event occurs.
+
+---
+
 ## [Unreleased] — Tier-1 Pi 5 node commissioning (2026-07-09)
 
 ### Added

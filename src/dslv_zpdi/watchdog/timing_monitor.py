@@ -108,11 +108,10 @@ class TimingMonitor:
             )
             if result.returncode == 0:
                 for line in result.stdout.splitlines():
-                    # Use current system clock offset, not the historical RMS.
-                    # "System time" reflects the live offset; "RMS offset" is a
-                    # running average that stays large for minutes after initial lock.
-                    # Example: System time     : 0.000051829 seconds fast of NTP time
-                    if "System time" in line:
+                    # Use RMS offset as the PPS stability figure. It converges
+                    # once chrony has been locked to PPS for a few minutes and
+                    # reflects the true 1 PPS discipline quality.
+                    if "RMS offset" in line:
                         parts = line.split(":")
                         if len(parts) > 1:
                             val_str = parts[1].strip().split()[0]

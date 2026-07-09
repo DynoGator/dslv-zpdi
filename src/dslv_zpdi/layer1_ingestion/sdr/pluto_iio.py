@@ -339,12 +339,18 @@ class PlutoIioBackend(SdrBackend):
     def health(self) -> SdrHealth:
         """SPEC-004A.PLUTO — Return current health snapshot."""
         reachable = self._ctx is not None
+        ext_ref = (
+            self._applied.external_clock_configured
+            if self._applied is not None
+            else False
+        )
         return SdrHealth(
             backend_name=self.backend_name,
             uri=self.uri,
             reachable=reachable,
             rx_enabled=self._rx_dev is not None,
             tx_enabled=False,
+            external_reference_configured=ext_ref,
             temperature_c=None,
             overflow_count=self._overflow_count,
             underflow_count=self._underflow_count,

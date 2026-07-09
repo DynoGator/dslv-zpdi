@@ -82,6 +82,45 @@ All enabled and active:
 - `dslv-zpdi-ups.service` — UPS monitor / graceful shutdown
 - `dslv-zpdi-webdash.service` — Flask dashboard on port 8080
 
+### 3.7 Boot Orchestrator & Dashboard Autostart
+
+- Created `tools/boot_orchestrator.py`, a retro ASCII-terminal startup wrapper.
+  - Verifies the systemd service chain in dependency order.
+  - Starts any managed service that is not already active (`TUNING`, `PREFLIGHT`, `SDR`, `UPS`, `WEBDASH`).
+  - Treats `chrony` and `gpsd` as externally managed but verifies them.
+  - Renders Rich Layout panels with DSLV-ZPDI ASCII logo, sequential stage list, rotating snark messages, and a footer status bar.
+  - On success, `exec`s the Rich TUI dashboard (`tools/dashboard/launch.sh --compact`).
+- Updated `~/.config/autostart/dslv-zpdi-dashboard.desktop` to launch the orchestrator in a 120×40 `lxterminal` window on Wayland login.
+- Added `PYTHONIOENCODING`, `LANG`, and `LC_ALL` exports in the orchestrator before execing the dashboard to keep Rich glyphs clean.
+
+### 3.8 Service Hardening
+
+Hardened the main pipeline systemd unit (`config/os-hardening/dslv-zpdi.service`):
+
+- `ProtectSystem=strict` with explicit `ReadWritePaths` for output, baseline state, runtime health socket, and USB device access.
+- `ProtectHome=read-only`.
+- `CPUAffinity=2 3` pins pipeline work away from the GUI/compositor cores.
+- `MemoryMax=2G`, `MemorySwapMax=0`, `LimitNOFILE=65536`.
+- `StartLimitIntervalSec=120` / `StartLimitBurst=3` in `[Unit]` to contain restart loops.
+- `Nice=-5`, `IOSchedulingClass=realtime`, `IOSchedulingPriority=4` retained.
+- The installed `/etc/systemd/system/dslv-zpdi.service` was synced from the repo file and `systemctl daemon-reload` run.
+
+### 3.9 Toolchain Audit & Dashboard Telemetry Optimization
+
+- Wrote `docs/node_ops/TOOLCHAIN_AUDIT.md` with a full component-by-component evaluation of timing, SDR ingestion, persistence/trust, UPS/power, dashboards, and process supervision, including alternatives and recommendations.
+- `main_pipeline.py` now publishes `sdr_health`, `pps`, and `ups` snapshots into `/run/dslv-zpdi/health.json` every 10 payloads.
+- `tools/dashboard/web_server.py` and `tools/dashboard/panels/hardware.py` consume the health JSON directly instead of re-probing hardware each cycle.
+- `SdrHealth` dataclass gained `external_reference_configured`; `PlutoIioBackend.health()` populates it so the web dashboard reports `clock_src: external`.
+- `TimingMonitor` and `tools/check_timing.py` switched from `System time` to `RMS offset` for a stable PPS-jitter figure once chrony has converged.
+
+### 3.10 Git Credentials & Collaborator Access
+
+- Project GitHub credentials stored in `/home/dynogator/dslv-zpdi/.secrets/`:
+  - `github-account.txt` — account, password, email, and token reference (mode `0600`).
+  - `git-credentials` — git credential-store line for `https://DynoGator:<PAT>@github.com` (mode `0600`).
+- `./configure_git_auth.sh` sources `GITHUB_PAT` from `.env` and installs the credential helper scoped to the repo.
+- `.secrets/` is ignored by `.gitignore`; credentials are never committed.
+
 ## 4. Verification Results
 
 ### 4.1 Test Suite
@@ -128,12 +167,25 @@ Synthetic primary-write commissioning test confirmed:
 - `hmac_sha256` attribute present and verifiable against the production key.
 - Detached `.sha256` and `.status.json` files produced on file finalization.
 
+### 4.6 Dashboard Telemetry Optimization
+
+- `/api/status` returns `sdr.clock_src: external`, `sdr.reachable: true`, live UPS telemetry, and baseline sample count.
+- Health JSON is updated every ~10 payloads; dashboard panels no longer hammer the I2C bus or PlutoSDR context directly.
+- Web dashboard auto-refresh every 5 s shows current system, pipeline, SDR, UPS, and node registry data.
+
+### 4.7 Boot Orchestrator
+
+- `tools/boot_orchestrator.py --no-start` reports all managed services active on this node.
+- Autostart desktop entry points to the orchestrator and launches it in a terminal window on graphical login.
+- The orchestrator exits with code `1` if any required service fails to start, preventing a blind dashboard launch.
+
 ## 5. Known State / Caveats
 
 - The node is in **SPEC-009 baseline learning** for 72 hours (or 240 samples). During this period all packets route to `output/secondary/quarantine.jsonl` with reason `baseline_learning_active`. Primary HDF5 output begins after the baseline locks and a confirmed multi-node event occurs (`min_confirming_nodes: 4`).
 - External 10 MHz reference lock is a physical property; software qualification reports `UNVERIFIED_PHYSICAL_PROPERTY`. Verify lock with external instrumentation or custom Pluto firmware if required.
 - The UPS `ac_present` reading can briefly toggle at boot; the monitor waits for continuous AC-loss before shutdown.
-- Git credentials are not yet populated. When a GitHub PAT is supplied, store it in `/home/dynogator/dslv-zpdi/.secrets/git-credentials` and run `git config --global credential.helper 'store --file <path>'`.
+- Git credentials are populated and available to collaborators in `.secrets/`; run `./configure_git_auth.sh` after cloning on a new machine to activate the credential helper.
+- The Rich TUI dashboard is configured to autostart via the boot orchestrator but has **not been visually verified on the touchscreen** in this session; confirm glyph rendering and geometry after the next reboot.
 
 ## 6. Useful Commands
 
@@ -153,9 +205,10 @@ cat /run/dslv-zpdi/health.json
 # Dashboards
 # Web: http://<pi-ip>:8080/
 # TUI: tools/dashboard/launch.sh --compact
+# Boot: tools/boot_orchestrator.py
 
-# Git credentials (when PAT available)
-# Edit /home/dynogator/dslv-zpdi/.secrets/git-credentials
+# Git credentials (already configured)
+# /home/dynogator/dslv-zpdi/.secrets/git-credentials
 # Format: https://<username>:<token>@github.com
 ```
 
@@ -165,12 +218,18 @@ Modified:
 
 - `config/deployment.yaml`
 - `config/node_profiles/tier1_pluto_lbe1421.yaml`
+- `config/dslv-zpdi-ups.service`
+- `config/os-hardening/dslv-zpdi.service`
 - `src/dslv_zpdi/layer1_ingestion/timing/nmea_stream.py`
 - `src/dslv_zpdi/layer1_ingestion/timing/pps_listener.py`
+- `src/dslv_zpdi/layer1_ingestion/sdr/capture_result.py`
+- `src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py`
 - `src/dslv_zpdi/layer2_core/wiring.py`
 - `src/dslv_zpdi/main_pipeline.py`
+- `src/dslv_zpdi/watchdog/timing_monitor.py`
 - `tools/check_timing.py`
 - `tools/dashboard/web_server.py`
+- `tools/dashboard/panels/hardware.py`
 - `tools/provision_tier1.py`
 - `~/.config/autostart/dslv-zpdi-dashboard.desktop`
 - `/etc/systemd/system/dslv-zpdi.service`
@@ -178,14 +237,18 @@ Modified:
 Created:
 
 - `tools/x1202_ups_monitor.py`
+- `tools/boot_orchestrator.py`
 - `config/dslv-zpdi-ups.service`
 - `docs/hardware/GEEKWORM_X1202_UPS.md`
+- `docs/node_ops/TOOLCHAIN_AUDIT.md`
+- `docs/node_ops/TURNOVER_NOTES.md`
 - `docs/node_ops/WORK_LOG.md` (this file)
 
 ## 8. Next Actions for Collaborators
 
-1. Provide GitHub PAT so changes can be pushed to `github.com/DynoGator/dslv-zpdi`.
-2. Allow 72-hour baseline learning to complete; do not restart the pipeline unless necessary.
-3. Verify touchscreen calibration and rotate the display if the 1024×600 panel is mounted in portrait.
-4. Confirm the registered Tier-2 node `pixel-9-pro-xl` at `10.128.24.165` is on the same LAN and reachable.
-5. Monitor `output/primary/` for the first confirmed-event HDF5 after baseline lock.
+1. Allow 72-hour baseline learning to complete; do not restart the pipeline unless necessary.
+2. Verify touchscreen calibration and rotate the display if the 1024×600 panel is mounted in portrait.
+3. Confirm the registered Tier-2 node `pixel-9-pro-xl` at `10.128.24.165` is on the same LAN and reachable.
+4. Monitor `output/primary/` for the first confirmed-event HDF5 after baseline lock.
+5. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future tool-chain improvements (TPM2, Grafana, nftables).
+6. After the next reboot, visually confirm the Rich TUI dashboard renders correctly through the boot orchestrator.

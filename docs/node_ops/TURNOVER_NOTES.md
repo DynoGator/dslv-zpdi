@@ -1,0 +1,131 @@
+# DSLV-ZPDI Tier-1 Node — Turnover Notes for Collaborators
+
+**Node hostname:** `raspberrypi`  
+**Hardware:** Raspberry Pi 5 16 GB, PWM active cooler  
+**Location:** `/home/dynogator/dslv-zpdi`  
+**Profile:** `config/node_profiles/tier1_pluto_lbe1421.yaml`  
+**Project version:** Rev 5.0.0  
+**Turnover date:** 2026-07-09  
+
+## 1. What This Node Does
+
+This is a Tier-1 RF-metrology anchor node for the DSLV-ZPDI project. It:
+
+- Disciplines its clock to a Leo Bodnar LBE-1421 GPSDO (1 PPS on GPIO 18).
+- Uses the GPSDO 10 MHz output to externally reference a PlutoSDR+ (AD9363 REV5).
+- Captures IQ data, runs a coherence scorer, and routes events to a SHA-256/HMAC-secured HDF5 pipeline.
+- Publishes live telemetry to a web dashboard on port 8080 and a Rich TUI dashboard on the touchscreen.
+- Monitors an X-1202 UPS HAT and gracefully shuts down on sustained battery loss.
+
+## 2. Access
+
+### Local login
+
+- User: `dynogator`
+- Home: `/home/dynogator`
+- The Pi auto-logs into the labwc Wayland session and starts the dashboard.
+
+### GitHub credentials (project use only)
+
+Stored in `.secrets/` (mode `0600`, ignored by git):
+
+```text
+/home/dynogator/dslv-zpdi/.secrets/github-account.txt
+/home/dynogator/dslv-zpdi/.secrets/git-credentials
+```
+
+To activate git authentication on a fresh clone, run:
+
+```bash
+./configure_git_auth.sh
+```
+
+This reads `GITHUB_PAT` from `.env` and configures a repo-scoped credential helper.
+
+## 3. Service Chain
+
+All services are enabled and managed by systemd:
+
+| Service | Purpose | Managed by boot orchestrator |
+|---------|---------|------------------------------|
+| `dslv-zpdi-tuning.service` | CPU governor `performance`, USB power tuning | yes |
+| `dslv-zpdi-preflight.service` | Hardware preflight checks | yes |
+| `chrony.service` | PPS clock discipline to Stratum 1 | no (verified) |
+| `gpsd.service` | LBE-1421 NMEA feed | no (verified) |
+| `dslv-zpdi.service` | Main production pipeline | yes |
+| `dslv-zpdi-ups.service` | X-1202 UPS monitor / shutdown | yes |
+| `dslv-zpdi-webdash.service` | Flask web dashboard on `:8080` | yes |
+
+Useful commands:
+
+```bash
+# Status of the whole chain
+systemctl status dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi \
+               dslv-zpdi-ups dslv-zpdi-webdash chrony gpsd
+
+# Follow the main pipeline log
+sudo journalctl -u dslv-zpdi -f
+
+# Restart the pipeline (avoid unless necessary; it resets baseline learning)
+sudo systemctl restart dslv-zpdi
+
+# Check timing discipline
+chronyc tracking
+```
+
+## 4. Dashboards
+
+- **Web dashboard:** `http://<pi-ip>:8080/` — system, pipeline, SDR, UPS, and node registry; auto-refreshes every 5 s.
+- **TUI dashboard:** launched by `tools/boot_orchestrator.py` on graphical login; manual run with `tools/dashboard/launch.sh --compact`.
+- **Boot orchestrator:** `tools/boot_orchestrator.py` (use `--no-start` for verify-only mode, `--no-dashboard` to skip TUI launch).
+
+## 5. Current Node State
+
+- `chrony` reports **Stratum 1**, disciplined to `/dev/pps0`.
+- PlutoSDR+ is reachable at `ip:192.168.2.1` and reports `clock_src: external`.
+- UPS is healthy, battery ~97%, AC present.
+- Baseline is **LEARNING** (SPEC-009). PRIMARY HDF5 output is intentionally gated until:
+  - at least 72 hours or 240 baseline samples have been collected, and
+  - a confirmed multi-node event occurs with at least 4 confirming nodes.
+- Until then, all packets route to `output/secondary/quarantine.jsonl` with reason `baseline_learning_active`.
+
+Check live state:
+
+```bash
+cat /run/dslv-zpdi/health.json | python3 -m json.tool
+curl -s http://127.0.0.1:8080/api/status | python3 -m json.tool
+```
+
+## 6. Known Caveats
+
+- **10 MHz external reference lock** is a physical property. Stock Pluto firmware cannot report lock, so the pipeline reports `UNVERIFIED_PHYSICAL_PROPERTY`. Use external instrumentation or custom Pluto firmware if formal lock verification is required.
+- **TUI dashboard not visually confirmed** in this session. After the next reboot, verify that the retro boot screen and Rich TUI render correctly on the 1024×600 touchscreen.
+- **UPS `ac_present` may toggle briefly** at boot. The monitor waits for sustained AC loss before shutdown; a momentary flip is normal.
+- **Baseline learning restarts** if the pipeline is restarted. Avoid restarts during the 72-hour learning window unless absolutely necessary.
+
+## 7. Quick Validation
+
+```bash
+cd /home/dynogator/dslv-zpdi
+.venv/bin/pytest tests/ -q
+.venv/bin/python tools/orphan_checker.py
+.venv/bin/python tools/check_version_sync.py
+.venv/bin/python tools/repo_guard.py
+```
+
+Expected: 184 passed / 1 skipped, all guard tools clean.
+
+## 8. Next Steps
+
+1. Let baseline learning run to completion (~72 h or 240 samples).
+2. Bring the Tier-2 mobile node `pixel-9-pro-xl` (`10.128.24.165`) online so confirmed events can form.
+3. Visually confirm the touchscreen dashboard after the next reboot.
+4. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future upgrades (TPM2 key storage, Grafana, nftables).
+5. Monitor `output/primary/` for the first confirmed-event HDF5 packet.
+
+## 9. References
+
+- `docs/node_ops/WORK_LOG.md` — detailed installation and commissioning log.
+- `docs/node_ops/TOOLCHAIN_AUDIT.md` — component evaluation and optimization notes.
+- `docs/hardware/GEEKWORM_X1202_UPS.md` — UPS operator reference.
+- `config/node_profiles/tier1_pluto_lbe1421.yaml` — active node profile.

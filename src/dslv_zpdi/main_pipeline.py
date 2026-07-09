@@ -60,8 +60,9 @@ def _ingest_loop(hal, args, state, ingest_q):
             time.sleep(0.1)
 
 
-def _process_loop(monitor, writer, ingest_q, state, health_reporter):
+def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter):
     """SPEC-011.2 | Processing consumer thread."""
+    hw_tick = 0
     while state.running:
         try:
             payload = ingest_q.get(timeout=1.0)
@@ -94,6 +95,30 @@ def _process_loop(monitor, writer, ingest_q, state, health_reporter):
                     "r_smooth": decision.packet.r_smooth,
                     "r_global": decision.packet.r_global,
                 }
+
+            # Publish hardware telemetry every ~10 payloads (~10 s) to keep
+            # dashboards current without hammering I2C or libiio every tick.
+            hw_tick += 1
+            if hw_tick % 10 == 0:
+                try:
+                    update_data["sdr_health"] = hal.sdr_backend.health().summary()
+                except Exception:
+                    pass
+                try:
+                    pps_snap = hal.timing_authority._pps.snapshot()
+                    update_data["pps"] = {
+                        "history_len": pps_snap.get("history_len", 0),
+                        "rms_jitter_ns": pps_snap.get("rms_jitter_ns", float("inf")),
+                    }
+                except Exception:
+                    pass
+                try:
+                    from dslv_zpdi.layer1_ingestion.x1202_ups import ups_telemetry
+
+                    update_data["ups"] = ups_telemetry()
+                except Exception:
+                    pass
+
             health_reporter.update(update_data)
 
         except queue.Empty:
@@ -153,7 +178,7 @@ def main():
 
     t_ingest = threading.Thread(target=_ingest_loop, args=(hal, args, state, ingest_q), daemon=True)
     t_process = threading.Thread(
-        target=_process_loop, args=(monitor, writer, ingest_q, state, health_reporter), daemon=True
+        target=_process_loop, args=(hal, monitor, writer, ingest_q, state, health_reporter), daemon=True
     )
 
     def _sig_handler(signum, _frame):

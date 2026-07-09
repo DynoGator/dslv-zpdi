@@ -1,14 +1,19 @@
-"""Hardware status panel: PlutoSDR+/SDR, PPS, GPSDO, chrony.
+"""Hardware status panel: PlutoSDR+/SDR, PPS, GPSDO, chrony, UPS.
 
 Expensive probes (iio_info, hackrf_info, chronyc) are cached for a few seconds so
-they don't dominate the dashboard refresh loop.
+they don't dominate the dashboard refresh loop. When the pipeline's health.json is
+available, the panel reads live telemetry from there first and falls back to
+direct probes only when needed.
 """
 
+from __future__ import annotations
+
+import json
 import os
 import re
-import select
 import subprocess
 import time
+from pathlib import Path
 
 from rich.markup import escape as _esc
 from rich.panel import Panel
@@ -17,6 +22,7 @@ from rich.table import Table
 _HACKRF_TTL = 3.0   # seconds
 _CHRONY_TTL = 1.5   # seconds
 _GPSDO_TTL = 5.0    # seconds
+_HEALTH_JSON_PATHS = (Path("/run/dslv-zpdi/health.json"), Path("/tmp/health.json"))
 
 
 class _Cache:
@@ -31,6 +37,18 @@ class _Cache:
             self.val = producer()
             self.t = now
         return self.val
+
+
+def _read_health_json() -> dict:
+    """Read the pipeline health endpoint if available."""
+    for path in _HEALTH_JSON_PATHS:
+        try:
+            if path.exists():
+                with open(path, encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+    return {}
 
 
 def _hackrf_info() -> dict:
@@ -64,7 +82,6 @@ def _pluto_info() -> dict:
         ad9361 = ctx.find_device("ad9361-phy")
         if ad9361 is None:
             return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "pluto"}
-        # Best-effort metadata
         board = ctx.attrs.get("hw_model", "PlutoSDR+")
         fw = ctx.attrs.get("fw_version", "?")
         serial = ctx.attrs.get("hw_serial", "?")
@@ -88,7 +105,6 @@ def _sdr_info() -> dict:
     hackrf = _hackrf_info()
     if hackrf["detected"]:
         return hackrf
-    # Default to Pluto so the panel shows the expected target even when absent.
     return pluto
 
 
@@ -102,45 +118,6 @@ def _pps_module_loaded() -> bool:
             return "pps_gpio" in f.read()
     except Exception:
         return False
-
-
-def _gpsdo_serial() -> str | None:
-    for p in ("/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyUSB0", "/dev/ttyUSB1"):
-        if os.path.exists(p):
-            return p
-    return None
-
-
-def _read_gga(port: str) -> dict:
-    """Read a single GGA sentence from a GPSDO serial port."""
-    try:
-        fd = os.open(port, os.O_RDONLY | os.O_NONBLOCK)
-        try:
-            ready, _, _ = select.select([fd], [], [], 1.0)
-            if not ready:
-                return {"fix": "?", "sats": "?"}
-            data = os.read(fd, 4096).decode("ascii", errors="ignore")
-            for line in data.splitlines():
-                if line.startswith("$GNGGA") or line.startswith("$GPGGA"):
-                    parts = line.split(",")
-                    if len(parts) >= 8:
-                        fix_raw = parts[6].strip()
-                        sats = parts[7].strip()
-                        fix_map = {
-                            "0": "None",
-                            "1": "GPS",
-                            "2": "DGPS",
-                            "4": "RTK",
-                            "5": "Float",
-                        }
-                        fix_val = fix_map.get(fix_raw, fix_raw) if fix_raw else "acq…"
-                        return {"fix": fix_val, "sats": sats or "?"}
-                    break
-        finally:
-            os.close(fd)
-    except Exception:
-        pass
-    return {"fix": "?", "sats": "?"}
 
 
 def _chrony_stats() -> dict:
@@ -169,79 +146,114 @@ def _chrony_stats() -> dict:
         return {"stratum": "?", "leap": "?", "ref": "?", "rms_ns": float("nan")}
 
 
+def _format_ns(val: float) -> str:
+    """Format a nanosecond value for human consumption."""
+    if val != val:  # NaN
+        return "--"
+    if val < 1_000:
+        return f"{val:.0f}ns"
+    if val < 1_000_000:
+        return f"{val/1000:.1f}µs"
+    return f"{val/1_000_000:.1f}ms"
+
+
 class HardwarePanel:
     def __init__(self, border_style: str = "yellow"):
         self.border_style = border_style
         self._sdr = _Cache(_HACKRF_TTL)
         self._chrony = _Cache(_CHRONY_TTL)
-        self._gpsdo = _Cache(_GPSDO_TTL)
+        self._health = _Cache(1.0)
 
     def render(self, compact: bool = False) -> Panel:
+        health = self._health.get(_read_health_json)
         sdr = self._sdr.get(_sdr_info)
         pps_dev = _pps_device()
         pps_mod = _pps_module_loaded()
-        gpsdo = _gpsdo_serial()
-        if gpsdo:
-            gpsdo_nmea = self._gpsdo.get(lambda p=gpsdo: _read_gga(p))
-        else:
-            gpsdo_nmea = {"fix": "-", "sats": "-"}
         chr_ = self._chrony.get(_chrony_stats)
+
+        # Prefer pipeline health.json for live telemetry.
+        sdr_health = health.get("sdr_health", {})
+        ups = health.get("ups", {})
+        pps = health.get("pps", {})
+        timing = health.get("timing_healthy", False)
+
+        # SDR status: use direct probe for metadata, health.json for reachability.
+        sdr_detected = sdr_health.get("reachable", sdr["detected"])
+        sdr_style = "bright_green" if sdr_detected else "bright_red"
+        sdr_glyph = "◉" if sdr_detected else "○"
+        sdr_board = sdr.get("board", "PlutoSDR+")
+        sdr_fw = sdr.get("fw", "?")
+        sdr_serial = sdr.get("serial", "?")
+
+        # PPS status from health.json when available.
+        pps_history = pps.get("history_len", 0)
+        pps_jitter = pps.get("rms_jitter_ns", float("nan"))
+        pps_ok = pps_dev and pps_mod and pps_history >= 2
+
+        # Chrony / timing.
+        rms = chr_["rms_ns"]
+        if timing and pps_history >= 2:
+            # Override with the live PPS jitter if health.json has it.
+            rms = pps_jitter if pps_jitter == pps_jitter else rms
+        rms_txt = _format_ns(rms)
+
+        # GPSDO / NMEA fix from health.json (pipeline reads it via gpsd).
+        nmea = health.get("nmea_fix", {})
+        if not nmea:
+            # Try to derive from timing evidence if present.
+            evidence = health.get("evidence", {})
+            nmea = evidence.get("nmea_fix", {})
+        fix = nmea.get("fix_quality", 0)
+        fix_map = {0: "None", 1: "GPS", 2: "DGPS", 4: "RTK", 5: "Float"}
+        fix_txt = fix_map.get(fix, str(fix)) if fix else "acq…"
+        sats = nmea.get("satellites_used", "?")
 
         t = Table.grid(padding=(0, 1 if compact else 2), expand=True)
         t.add_column(style="bright_cyan", justify="right")
         t.add_column()
 
-        sdr_style = "bright_green" if sdr["detected"] else "bright_red"
-        sdr_glyph = "◉" if sdr["detected"] else "○"
-
-        rms = chr_["rms_ns"]
-        if rms != rms:  # NaN
-            rms_txt = "--"
-        elif rms < 1_000:
-            rms_txt = f"{rms:.0f}ns"
-        elif rms < 1_000_000:
-            rms_txt = f"{rms/1000:.1f}µs"
-        else:
-            rms_txt = f"{rms/1_000_000:.1f}ms"
-
         if compact:
-            # Row 1: SDR + PPS + Clock
-            pps_ok = pps_dev and pps_mod
-            clk = "EXT" if sdr.get("clock_source") == "external" else "INT"
+            clk = "EXT" if sdr_health.get("external_reference_configured") else "INT"
             t.add_row("SDR", f"[{sdr_style}]{sdr_glyph}[/] {clk} [dim]•[/] PPS[{'G' if pps_ok else 'R'}]")
-            # Row 2: GPS Fix + Holdover
-            gps_sty = "bright_green" if gpsdo else "bright_red"
-            hold = " [yellow]HLD[/]" if sdr.get("holdover") else ""
-            t.add_row("Gps", f"[{gps_sty}]{'◉' if gpsdo else '○'}[/] fix={gpsdo_nmea['fix']}{hold}")
-            # Row 3: Chrony RMS + Stratum
+            t.add_row("Gps", f"[bright_green]◉[/] fix={fix_txt} sats={sats}")
             t.add_row("Chr", f"str={chr_['stratum']} [magenta]rms={rms_txt}[/]")
+            if ups:
+                ups_health = ups.get("health", "absent")
+                ups_ok = ups_health == "healthy"
+                ups_style = "bright_green" if ups_ok else "bright_red" if ups_health == "critical" else "bright_yellow"
+                t.add_row("UPS", f"[{ups_style}]{'◉' if ups_ok else '○'}[/] {ups.get('battery_percent', '?')}% AC={'Y' if ups.get('ac_present') else 'N'}")
         else:
             source_label = "Pluto" if sdr.get("source") == "pluto" else "SDR"
             t.add_row(
                 source_label,
-                f"[{sdr_style}]{sdr_glyph} {_esc(sdr['board'])} "
-                f"{_esc(sdr['rev'])} fw={_esc(sdr['fw'])}[/]",
+                f"[{sdr_style}]{sdr_glyph} {_esc(sdr_board)} "
+                f"fw={_esc(sdr_fw)}[/]",
             )
-            t.add_row("S/N", f"[dim]{_esc(sdr['serial'][-12:])}[/]")
+            t.add_row("S/N", f"[dim]{_esc(str(sdr_serial)[-12:])}[/]")
 
-            pps_ok = pps_dev and pps_mod
             pps_style = "bright_green" if pps_ok else "yellow"
-            pps_text = "/dev/pps0" if pps_dev else "absent"
+            pps_text = "/dev/pps0"
             if pps_dev and not pps_mod:
                 pps_text += " (pps_gpio not loaded)"
-            t.add_row("PPS GPIO", f"[{pps_style}]{'◉' if pps_ok else '○'} {pps_text}[/]")
-
-            gpsdo_style = "bright_green" if gpsdo else "bright_red"
-            gpsdo_text = gpsdo if gpsdo else "AWAITING LBE-1421"
-            if gpsdo:
-                gpsdo_text += f"  fix={gpsdo_nmea['fix']} sats={gpsdo_nmea['sats']}"
+            elif not pps_dev:
+                pps_text = "absent"
+            jitter_line = f" jitter={rms_txt}" if pps_history >= 2 else ""
             t.add_row(
-                "GPSDO",
-                f"[{gpsdo_style}]{'◉' if gpsdo else '○'} {_esc(gpsdo_text)}[/]",
+                "PPS GPIO",
+                f"[{pps_style}]{'◉' if pps_ok else '○'} {pps_text}{jitter_line}[/]",
             )
 
-            rms_styled = f"[bright_green]{rms_txt}[/]" if rms < 1000 else f"[yellow]{rms_txt}[/]" if rms < 1000000 else f"[bright_red]{rms_txt}[/]"
-            if rms != rms:  # NaN guard
+            t.add_row(
+                "GPSDO",
+                f"[bright_green]◉[/] fix={fix_txt}  sats={sats}",
+            )
+
+            rms_styled = (
+                f"[bright_green]{rms_txt}[/]" if (isinstance(rms, float) and rms < 1000)
+                else f"[yellow]{rms_txt}[/]" if (isinstance(rms, float) and rms < 1000000)
+                else f"[bright_red]{rms_txt}[/]"
+            )
+            if rms != rms:
                 rms_styled = "[dim]--[/]"
 
             t.add_row(
@@ -250,6 +262,21 @@ class HardwarePanel:
                 f"ref {_esc(chr_['ref'])}  rms {rms_styled}",
             )
             t.add_row("Leap", f"[dim]{_esc(chr_['leap'])}[/]")
+
+            if ups:
+                ups_health = ups.get("health", "absent")
+                ups_ok = ups_health == "healthy"
+                ups_style = "bright_green" if ups_ok else "bright_red" if ups_health == "critical" else "bright_yellow"
+                ac = "YES" if ups.get("ac_present") is True else "NO" if ups.get("ac_present") is False else "?"
+                charge = ups.get("charge_rate_percent_per_hour", 0.0)
+                charge_dir = "▲" if charge > 0 else "▼" if charge < 0 else "─"
+                t.add_row(
+                    "UPS",
+                    f"[{ups_style}]{'◉' if ups_ok else '○'}[/] "
+                    f"{ups.get('battery_percent', '?')}%  "
+                    f"{ups.get('battery_voltage_v', '?')}V  "
+                    f"AC={ac}  {charge_dir}{abs(charge):.2f}%/h",
+                )
 
         title = f"[bold {self.border_style}]▓ HW ▓[/]" if compact else f"[bold {self.border_style}]▓ HARDWARE ▓[/]"
         return Panel(

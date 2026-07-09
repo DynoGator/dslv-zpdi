@@ -19,18 +19,16 @@ def check_pps_device(device="/dev/pps0"):
 
 
 def check_chrony_sync():
-    """Validate <1000ns jitter via chronyc tracking System time."""
+    """Validate <1000ns jitter via chronyc tracking RMS offset."""
     try:
         output = subprocess.check_output(["chronyc", "tracking"], text=True)
-        # Use System time (instantaneous offset) rather than RMS offset,
-        # which can stay elevated for minutes after initial lock acquisition.
-        match = re.search(r"System time\s+:\s+([-+\.\d]+)\s+seconds\s+(\w+)\s+of", output)
+        # RMS offset converges once chrony is locked to PPS and reflects the
+        # true 1 PPS discipline quality better than the instantaneous System time.
+        match = re.search(r"RMS offset\s+:\s+([-+\.\d]+)\s+seconds", output)
         if match:
             val = float(match.group(1))
-            unit_match = re.search(r"System time\s+:\s+[-+\.\d]+\s+seconds\s+(\w+)\s+of", output)
-            unit = unit_match.group(1) if unit_match else "fast"
             ns = abs(val) * 1_000_000_000.0
-            print(f"[*] PPS Offset (System time): {ns:.2f}ns")
+            print(f"[*] PPS RMS Offset: {ns:.2f}ns")
             if ns <= 1000.0:
                 print("[SUCCESS] SPEC-004A.1 Met: Jitter < 1000ns")
                 return True

@@ -27,6 +27,7 @@ class SdrHealth:
     transport_errors: int = 0
     lost_context_count: int = 0
     short_read_count: int = 0
+    external_reference_configured: bool = False
     warnings: tuple[str, ...] = ()
 
     def summary(self) -> dict[str, Any]:
@@ -36,6 +37,7 @@ class SdrHealth:
             "reachable": self.reachable,
             "rx_enabled": self.rx_enabled,
             "tx_enabled": self.tx_enabled,
+            "external_reference_configured": self.external_reference_configured,
             "temperature_c": self.temperature_c,
             "overflow_count": self.overflow_count,
             "underflow_count": self.underflow_count,
