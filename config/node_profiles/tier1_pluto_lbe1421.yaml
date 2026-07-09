@@ -47,11 +47,11 @@ sdr:
   rf_bandwidth_hz: 10000000
   sample_rate_hz: 10000000
   transmit_enabled: false
-  uri: '${DSLV_SDR_URI:-usb:}'
+  uri: '${DSLV_SDR_URI:-ip:192.168.2.1}'
 timing:
   authority: lbe1421
   max_fix_age_s: 10.0
-  nmea_port: /dev/null
+  nmea_port: gpsd://localhost:2947
   pps_degraded_ns: 1000.0
   pps_device: /dev/pps0
   pps_kill_ns: 10000.0
@@ -61,4 +61,4 @@ trust:
   fail_closed: true
   require_calibration_manifest: false
   require_firmware_fingerprint: false
-  require_production_hmac_key: false
+  require_production_hmac_key: true

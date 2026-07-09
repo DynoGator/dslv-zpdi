@@ -5,6 +5,7 @@ venv/
 .venv/
 env/
 .env
+.secrets/
 .vscode/
 .idea/
 .DS_Store

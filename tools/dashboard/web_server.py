@@ -106,7 +106,8 @@ _HTML = """<!DOCTYPE html>
   <div class="card" id="c-system"><h2>System</h2><p class="val cyan">Loading…</p></div>
   <div class="card" id="c-pipeline"><h2>Pipeline</h2><p class="val cyan">Loading…</p></div>
   <div class="card node-card" id="c-nodes"><h2>Swarm Nodes</h2><p class="val cyan">Loading…</p></div>
-  <div class="card" id="c-sdr"><h2>SDR / HackRF</h2><p class="val cyan">Loading…</p></div>
+  <div class="card" id="c-sdr"><h2>SDR / PlutoSDR+</h2><p class="val cyan">Loading…</p></div>
+  <div class="card" id="c-ups"><h2>UPS / Power</h2><p class="val cyan">Loading…</p></div>
 </div>
 <div id="ts">Last update: —</div>
 <script>
@@ -186,11 +187,33 @@ async function refresh(){
     document.getElementById('c-nodes').innerHTML=nodeHtml;
 
     document.getElementById('c-sdr').innerHTML=
-      '<h2>SDR / HackRF</h2>'+
+      '<h2>SDR / PlutoSDR+</h2>'+
       row('Mode',badge(sdr.mode||'SIM',sdr.mode==='REAL',false))+
       row('Center',sdr.center_hz!=null?(sdr.center_hz/1e6).toFixed(3)+' MHz':'?','cyan')+
-      row('Amp','LOCKED OUT (blown — parts on order)','bad')+
-      row('Clock src',sdr.clock_src||'?',sdr.clock_src==='external'?'ok':'warn');
+      row('Clock src',sdr.clock_src||'?',sdr.clock_src==='external'?'ok':'warn')+
+      row('Amp','LOCKED OUT (blown — parts on order)','bad');
+
+    const u=d.ups||{};
+    let upsHtml='<h2>UPS / Power</h2>';
+    if(u.health==='absent'){
+      upsHtml+=row('Status','ABSENT','bad');
+      if(u.error) upsHtml+=row('Error',u.error,'bad');
+    }else{
+      const upsOk = u.health==='healthy';
+      const upsBad = u.health==='critical';
+      upsHtml+=row('Status',badge(u.health||'?',upsOk,!upsBad),'dim');
+      upsHtml+=row('Battery',u.battery_percent!=null?u.battery_percent.toFixed(2)+'%':'?',
+                    u.battery_percent<=15?'bad':u.battery_percent<=30?'warn':'ok');
+      upsHtml+=row('Voltage',u.battery_voltage_v!=null?u.battery_voltage_v.toFixed(3)+'V':'?',
+                    u.battery_voltage_v<=3.4?'bad':u.battery_voltage_v<=3.6?'warn':'ok');
+      upsHtml+=row('Charge rate',u.charge_rate_percent_per_hour!=null?u.charge_rate_percent_per_hour.toFixed(2)+'%/h':'?','dim');
+      upsHtml+=row('AC present',u.ac_present===true?'YES':u.ac_present===false?'NO':'?',
+                    u.ac_present===true?'ok':'warn');
+      upsHtml+=row('Charging',u.charging_enabled===true?'YES':u.charging_enabled===false?'NO':'?','dim');
+      if(u.alert_low_battery) upsHtml+=row('Alert','LOW BATTERY','bad');
+      if(u.alert_ac_lost) upsHtml+=row('Alert','AC LOST','warn');
+    }
+    document.getElementById('c-ups').innerHTML=upsHtml;
 
     document.getElementById('ts').textContent=
       'Last update: '+new Date().toUTCString();
@@ -363,6 +386,16 @@ def _get_status() -> dict:
     except Exception:
         pass
     status["sdr"] = sdr_state
+
+    # UPS state
+    ups_state: dict = {"health": "absent", "error": None}
+    try:
+        from dslv_zpdi.layer1_ingestion.x1202_ups import ups_telemetry
+
+        ups_state = ups_telemetry()
+    except Exception:
+        pass
+    status["ups"] = ups_state
 
     return status
 

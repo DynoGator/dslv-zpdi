@@ -1,5 +1,47 @@
 # Changelog
 
+## [Unreleased] — Tier-1 Pi 5 node commissioning (2026-07-09)
+
+### Added
+- **Geekworm X-1202 UPS integration** (SPEC-004A.8):
+  - `tools/x1202_ups_monitor.py` daemon polls fuel gauge and triggers graceful
+    shutdown on low battery or extended AC loss.
+  - `config/dslv-zpdi-ups.service` runs the monitor under systemd.
+  - `docs/hardware/GEEKWORM_X1202_UPS.md` operator reference.
+  - UPS telemetry now appears in the Flask web dashboard (`/api/status` + HTML
+    power card).
+- **Production HMAC key wiring**: `main_pipeline.py` supplies an explicit
+  `KeyProvider` to `HDF5Writer`; profile now requires the production key. Key
+  stored at `/etc/dslv-zpdi/hmac.key` with mode `0600`.
+- **Baseline learning start**: `main_pipeline.py` now calls
+  `coherence_engine.start_baseline()` so SPEC-009 learning actually begins.
+- **Environment-driven baseline config**: `src/dslv_zpdi/layer2_core/wiring.py`
+  reads `DSLV_BASELINE_HOURS`, `DSLV_MIN_BASELINE_SAMPLES`, and
+  `DSLV_BASELINE_STATE_PATH` instead of hard-coded defaults.
+
+### Fixed
+- `PpsListener` now reads `/sys/class/pps/pps0/assert` and computes jitter from
+  kernel timestamps. The `PPS_FETCH` ioctl failed on the Pi 5 kernel with
+  "Inappropriate ioctl for device".
+- `NmeaStream` now supports `gpsd://host:port` URLs, allowing `gpsd` to own the
+  LBE-1421 USB-C serial port while the pipeline still receives GGA sentences.
+- `dslv-zpdi.service` uses `RuntimeDirectory=dslv-zpdi` so
+  `/run/dslv-zpdi/health.json` is written at the expected path.
+- TUI dashboard autostart desktop entry points to the lightweight
+  `tools/dashboard/launch.sh --compact` for the 1024×600 touchscreen.
+
+### Verified
+- All 184 tests pass (1 skipped, 2 SWIG deprecation warnings).
+- `tools/orphan_checker.py`, `tools/check_version_sync.py`, and
+  `tools/repo_guard.py` all report clean.
+- `tools/provision_tier1.py` reports Tier-1 compliance.
+- Pipeline service active; health endpoint shows `timing_healthy: true`,
+  `chrony_stratum: 1`, `baseline_state: LEARNING`.
+- Synthetic primary-write test confirms HDF5 file creation, SHA-256 event-chain
+  hashing, and HMAC-SHA256 manifest attestation with the production key.
+
+---
+
 ## [Unreleased] — Dashboard node-registry wiring and reboot prep (2026-06-19)
 
 ### Fixed

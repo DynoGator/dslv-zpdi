@@ -11,6 +11,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+import time
 
 
 def print_rp1_warning():
@@ -81,7 +82,11 @@ def check_soapy_sdr():
 
 def check_hackrf_presence():
     """
-    SPEC-004A.1 — Ensure HackRF One is connected.
+    SPEC-004A.1 — Ensure HackRF One is connected (legacy / optional).
+
+    Rev 5.0.0: HackRF is the legacy minimum reference floor. Tier-1 nodes
+    using PlutoSDR+ do not require a HackRF. Missing tools/device is a
+    warning, not a hard failure.
     """
     try:
         res = subprocess.run(["hackrf_info"], capture_output=True, text=True, check=False)
@@ -92,12 +97,13 @@ def check_hackrf_presence():
                     print(f"    {line.strip()}")
             return True
         else:
-            print("[!] HackRF One NOT found.")
-            print("    Ensure HackRF is connected via USB 3.0 and powered.")
-            return False
+            print("[WARN] HackRF One NOT found (legacy optional device).")
+            print("    Ensure HackRF is connected via USB 3.0 and powered if in use.")
+            return True
     except FileNotFoundError:
-        print("[!] hackrf_info not found. Install: sudo apt install hackrf")
-        return False
+        print("[WARN] hackrf_info not found. HackRF support is optional/legacy.")
+        print("    Tier-1 PlutoSDR+ nodes do not require HackRF.")
+        return True
 
 
 def check_pluto_presence():
@@ -106,11 +112,11 @@ def check_pluto_presence():
     """
     try:
         import iio
-        uri = "ip:192.168.3.80"
+        uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.2.1")
         ctx = iio.Context(uri)
         ad9361 = ctx.find_device("ad9361-phy")
         if ad9361:
-            print(f"[*] PlutoSDR+ IIO context reachable at {uri} ✅")
+            print(f"[*] PlutoSDR+ / LibreSDR IIO context reachable at {uri} ✅")
             print("    AD9361 device enumerated.")
 
             # Check external clock
@@ -310,6 +316,9 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
 def check_hal_factory_lock() -> bool:
     """
     SPEC-005A.4 — Verify the composed Tier-1 HAL returns live clock evidence.
+
+    Allows a short warm-up window for the PPS listener and NMEA stream to
+    collect their first samples, which are required for discipline claims.
     """
     try:
         from dslv_zpdi.config_models import NodeProfile
@@ -317,14 +326,21 @@ def check_hal_factory_lock() -> bool:
 
         profile = NodeProfile.from_yaml("config/node_profiles/tier1_pluto_lbe1421.yaml")
         hal = get_tier1_hal(profile)
-        lock_info = hal.verify_gpsdo_lock()
-        timing = lock_info.get("timing_attestation", {})
-        if timing.get("frequency_disciplined") and timing.get("utc_epoch_disciplined"):
-            print("[*] Tier-1 HAL live — frequency/UTC discipline verified ✅")
-            return True
+
+        # Wait up to 10 s for PPS history and NMEA fix to populate.
+        for _ in range(20):
+            lock_info = hal.verify_gpsdo_lock()
+            timing = lock_info.get("timing_attestation", {})
+            if timing.get("frequency_disciplined") and timing.get("utc_epoch_disciplined"):
+                print("[*] Tier-1 HAL live — frequency/UTC discipline verified ✅")
+                hal.close()
+                return True
+            time.sleep(0.5)
+
         print("[!] Tier-1 HAL returned but GPSDO discipline NOT verified ❌")
         print(f"    Backend: {lock_info.get('backend_name', 'unknown')}")
         print(f"    Warnings: {lock_info.get('timing_attestation', {}).get('warnings', [])}")
+        hal.close()
         return False
     except Exception as e:
         print(f"[!] HAL factory verification failed: {e}")
@@ -350,7 +366,7 @@ def main():
     print("Required Wiring:")
     print("  - GPSDO Out2 (10 MHz) → PlutoSDR+ EXT_REF_CLK (hardware ADC lock)")
     print("  - GPSDO Out1 (1 PPS) → Pi 5 GPIO 18 (UTC timestamp)")
-    print("  - PlutoSDR+ data → Pi 5 USB 3.0 / Ethernet (192.168.3.80)")
+    print("  - PlutoSDR+ data → Pi 5 USB 3.0 / Ethernet (192.168.2.1)")
     print("  - ⚠️  VERIFY 3.3V LOGIC LEVEL BEFORE CONNECTING PPS!")
     print()
 
@@ -409,7 +425,7 @@ def main():
         print("Critical checks:")
         print("  1. Is GPSDO Out2 (10 MHz) connected to PlutoSDR+ EXT_REF_CLK?")
         print("  2. Is GPSDO Out1 (1 PPS) connected to Pi 5 GPIO 18 (with 3.3V logic)?")
-        print("  3. Is the PlutoSDR+ reachable at ip:192.168.3.80 from the Pi 5?")
+        print("  3. Is the PlutoSDR+ / LibreSDR reachable at ip:192.168.2.1 from the Pi 5?")
         print("  4. Has the system been rebooted after config.txt changes?")
         sys.exit(1)
 

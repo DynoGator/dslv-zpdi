@@ -13,6 +13,8 @@ so it recovers automatically when the GPSDO is reconnected.
 from __future__ import annotations
 
 import logging
+import re
+import socket
 import threading
 import time
 
@@ -44,6 +46,13 @@ class NmeaStream:
         self._port = port
         self._baud = baud
         self._retry_delay = retry_delay_s
+
+        # SPEC-005A.TIMING-NMEA-GPSD: support gpsd://host:port URLs so gpsd can
+        # own the USB-C virtual serial port while the pipeline still receives
+        # NMEA sentences over gpsd's TCP service.
+        self._gpsd_match = re.match(r"^gpsd://([^:/]+)(?::(\d+))?$", port)
+        self._gpsd_host = self._gpsd_match.group(1) if self._gpsd_match else None
+        self._gpsd_port = int(self._gpsd_match.group(2)) if self._gpsd_match and self._gpsd_match.group(2) else 2947
 
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -85,56 +94,118 @@ class NmeaStream:
 
     def _run(self) -> None:
         while not self._stop.is_set():
-            try:
-                import serial  # pylint: disable=import-outside-toplevel
-            except ImportError:
-                logger.error("NmeaStream: pyserial not installed — pip install pyserial")
-                self._stop.wait(60.0)
-                continue
+            if self._gpsd_host:
+                self._run_gpsd()
+            else:
+                self._run_serial()
 
-            try:
-                with serial.Serial(
-                    self._port,
-                    self._baud,
-                    timeout=1.0,  # readline() returns after 1 s with no data
-                    exclusive=True,  # prevent other processes from opening same port
-                ) as ser:
-                    logger.info("NmeaStream: port open")
-                    self._reader_loop(ser)
-            except serial.SerialException as exc:
-                logger.warning(
-                    "NmeaStream: serial error on %s: %s — retry in %.0f s",
-                    self._port,
-                    exc,
-                    self._retry_delay,
-                )
-                self._stop.wait(self._retry_delay)
-            except Exception as exc:  # pylint: disable=broad-except
-                logger.error("NmeaStream: unexpected error: %s", exc)
-                self._stop.wait(self._retry_delay)
+    def _run_gpsd(self) -> None:
+        """SPEC-005A.TIMING-NMEA-GPSD — Read NMEA from a gpsd TCP socket."""
+        import socket as _socket  # pylint: disable=import-outside-toplevel
 
-    def _reader_loop(self, ser) -> None:  # type: ignore[no-untyped-def]
+        host = self._gpsd_host or "localhost"
+        port = self._gpsd_port
+        logger.info("NmeaStream: connecting to gpsd at %s:%d", host, port)
+
+        try:
+            sock = _socket.create_connection((host, port), timeout=10.0)
+        except OSError as exc:
+            logger.warning(
+                "NmeaStream: gpsd connection to %s:%d failed: %s — retry in %.0f s",
+                host, port, exc, self._retry_delay,
+            )
+            self._stop.wait(self._retry_delay)
+            return
+
+        try:
+            # Request raw NMEA output. Gpsd speaks a line-oriented JSON command
+            # protocol; after this watch command it streams ?WATCH responses and
+            # then NMEA sentences as they arrive from the receiver.
+            sock.sendall(b'?WATCH={"enable":true,"nmea":true}\r\n')
+            # Wrap socket in a file-like line reader.
+            reader = sock.makefile("rb", buffering=0)
+            self._reader_loop(reader)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(
+                "NmeaStream: gpsd reader error: %s — retry in %.0f s",
+                exc, self._retry_delay,
+            )
+            self._stop.wait(self._retry_delay)
+        finally:
+            try:
+                sock.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    def _run_serial(self) -> None:
+        """SPEC-005A.TIMING-NMEA — Read NMEA from a serial port."""
+        try:
+            import serial  # pylint: disable=import-outside-toplevel
+        except ImportError:
+            logger.error("NmeaStream: pyserial not installed — pip install pyserial")
+            self._stop.wait(60.0)
+            return
+
+        try:
+            with serial.Serial(
+                self._port,
+                self._baud,
+                timeout=1.0,  # readline() returns after 1 s with no data
+                exclusive=True,  # prevent other processes from opening same port
+            ) as ser:
+                logger.info("NmeaStream: port open")
+                self._reader_loop(ser)
+        except serial.SerialException as exc:
+            logger.warning(
+                "NmeaStream: serial error on %s: %s — retry in %.0f s",
+                self._port,
+                exc,
+                self._retry_delay,
+            )
+            self._stop.wait(self._retry_delay)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error("NmeaStream: unexpected error: %s", exc)
+            self._stop.wait(self._retry_delay)
+
+    def _reader_loop(self, reader) -> None:  # type: ignore[no-untyped-def]
         import serial  # pylint: disable=import-outside-toplevel
+
+        # Buffer for gpsd socket reads which arrive in arbitrary chunks.
+        buffer = b""
 
         while not self._stop.is_set():
             try:
-                raw = ser.readline()
-            except serial.SerialException as exc:
+                if hasattr(reader, "readline"):
+                    raw = reader.readline()
+                else:
+                    raw = reader.read(1024)
+            except (serial.SerialException, OSError) as exc:
                 if "readiness to read but returned no data" in str(exc):
                     continue
                 raise  # propagate to _run for reconnect handling
             if not raw:
                 continue  # timeout with no data
-            try:
-                line = raw.decode("ascii", errors="ignore").strip()
-            except Exception:  # pylint: disable=broad-except
-                continue
-            if not (line.startswith("$GNGGA") or line.startswith("$GPGGA")):
-                continue
-            parsed = parse_gga(line)
-            if parsed is not None:
-                with self._lock:
-                    self._latest = parsed
+
+            # For buffered byte-stream readers (gpsd socket), accumulate until
+            # we have complete lines. For serial readline(), raw is one line.
+            if hasattr(reader, "readline"):
+                lines = [raw]
+            else:
+                buffer += raw
+                *complete, buffer = buffer.split(b"\n")
+                lines = [line + b"\n" for line in complete]
+
+            for raw_line in lines:
+                try:
+                    line = raw_line.decode("ascii", errors="ignore").strip()
+                except Exception:  # pylint: disable=broad-except
+                    continue
+                if not (line.startswith("$GNGGA") or line.startswith("$GPGGA")):
+                    continue
+                parsed = parse_gga(line)
+                if parsed is not None:
+                    with self._lock:
+                        self._latest = parsed
 
 
 # ------------------------------------------------------------------ #

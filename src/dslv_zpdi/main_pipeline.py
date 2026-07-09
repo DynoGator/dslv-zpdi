@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 from dslv_zpdi.config_models import NodeProfile
-from dslv_zpdi.layer1_ingestion.hal_factory import get_tier1_hal
+from dslv_zpdi.layer1_ingestion.hal_factory import get_tier1_hal, _build_key_provider
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
@@ -127,15 +127,23 @@ def main():
     state = PipelineState()
     hal = get_tier1_hal(profile, simulator=args.simulator)
 
-    writer_kwargs = {}
+    writer_kwargs: dict = {}
     if args.output:
         base_out = Path(args.output)
         writer_kwargs["output_path"] = str(base_out / "primary")
         writer_kwargs["secondary_path"] = str(base_out / "secondary")
 
-    writer = HDF5Writer(**writer_kwargs)
+    key_provider = _build_key_provider(profile, simulator=args.simulator)
+    writer = HDF5Writer(
+        **writer_kwargs,
+        key_provider=key_provider,
+        allow_development_key=not profile.trust.require_production_hmac_key,
+    )
     monitor = TimingMonitor(simulated=args.simulator)
     monitor.start()
+
+    # SPEC-009 | Begin baseline learning for trust-tier primary routing.
+    scorer.start_baseline()
 
     # SPEC-014 | Initialize dashboard health reporter
     health_reporter = HealthReporter(interval_sec=2.0)

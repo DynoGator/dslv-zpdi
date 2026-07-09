@@ -1,323 +1,133 @@
-# Shift Turnover — dslv-zpdi Tier-1 Mobile Node
-
-**APPEND-ONLY** — new entries added at bottom. Existing entries never modified.
-
----
-
-## TURNOVER — 2026-05-21 (Audit & Hardening: Auto-Start + Daemon Supervisor)
-
-**Date:** 2026-05-21
-**Performed by:** Claude Code (claude-sonnet-4-6) on behalf of J.R. Fross
-
-### What Was Found
-
-**1. Auto-start root cause (FIXED)**
-The `99-start-zpdi.sh` Termux:Boot script was running:
-```
-proot-distro login debian -- bash /root/dslv-zpdi/launch_daemon.sh
-```
-`launch_daemon.sh` backgrounded the daemon with `nohup` and exited. proot was compiled
-with `--kill-on-exit`, which sends SIGKILL to all ptrace'd children when the proot process
-exits. The daemon was killed the moment `launch_daemon.sh` completed.
-
-Confirmed via `/proc/8864/status` → `TracerPid: 7654` (current interactive proot session,
-NOT a boot proot). The running daemon was started manually from the interactive session.
-
-**2. No crash supervisor (FIXED)**
-If the daemon exited for any reason, nothing restarted it. `launch_daemon.sh` was a
-single-shot launcher with no restart logic.
-
-**3. Untracked launch scripts (FIXED)**
-`launch_daemon.sh` and `run_node.sh` were not committed to the repository. A fresh clone
-would not have them, and the boot script would fail silently.
-
-**4. Git hooks not implemented (FIXED)**
-`.githooks/README.md` reserved `pre-commit` and `pre-push` but both were empty.
-
-**5. `DynoGater` typo (FIXED)**
-`.env` and `configure_git_auth.sh` both referenced `DynoGater/dslv-zpdi` (wrong) instead
-of `DynoGator/dslv-zpdi` (correct). The `.git/config` remote URL was already correct.
-
-**6. Deprecated h5py API (FIXED)**
-`zpdi_mobile_node.py` used `h5py.special_dtype(vlen=bytes)` (deprecated since h5py 3.0).
-Replaced with `h5py.vlen_dtype(bytes)`. No behavioral change — existing HDF5 files are
-compatible (the dtype only applies on dataset creation).
-
-### What Was Done
-
-- Created `supervisor.sh`: foreground supervisor loop inside proot; restarts daemon with
-  exponential back-off (2s → 4 → 8 → … → 60s cap).
-- Rewrote `launch_daemon.sh`: starts an **independent** proot session for the supervisor
-  (`nohup proot-distro login debian -- bash supervisor.sh`). Session stays alive as long
-  as supervisor runs; daemon restarts work because proot is present.
-- Updated `99-start-zpdi.sh` (Termux:Boot): same independent-proot pattern; supervisor
-  is the foreground process, `nohup + &` backgrounds the whole proot at boot.
-- Committed `run_node.sh` and `launch_daemon.sh` (previously untracked).
-- Implemented `.githooks/pre-commit` and `.githooks/pre-push`.
-- Added `CHANGELOG.md` and this `TURNOVER.md`.
-
-### Current State
-
-| Component | Status |
-|---|---|
-| Daemon (pid 8864) | Running — started from interactive session; collecting data |
-| HDF5 stream | Active — `data/zpdi_stream.h5` growing |
-| WSS transport | Fallback mode (placeholder URI); `logs/zpdi_fallback.jsonl` accumulating |
-| Supervisor | Not yet active — takes effect on next reboot or manual `./launch_daemon.sh` |
-| Git hooks | Active — pre-commit and pre-push both installed and executable |
-
-### Next Actions at Handoff
-
-1. **Activate supervisor now (optional):** From Termux or inside proot, run
-   `bash /root/dslv-zpdi/launch_daemon.sh` to migrate the running daemon to the supervised
-   proot session. This will briefly interrupt data collection (~2s for SIGTERM + restart).
-2. **Configure WSS endpoint:** When a real edge server is available, set `ZPDI_WSS_URI` in
-   `.env` and restart. Until then, all data routes to `logs/zpdi_fallback.jsonl`.
-3. **Rotate fallback log:** `zpdi_fallback.jsonl` is 1MB+ after ~8h; consider adding log
-   rotation or periodic archive once WSS is live (at which point the fallback stays small).
-4. **Phase 2A hardware:** Per Living Master Rev 3.3, next milestone is Intel i210-T1 NIC
-   procurement for CM5 Tier-2 nodes. This Tier-1 mobile node continues collecting
-   baseline data in the meantime.
-
----
-
-*(Future turnovers appended below this line — do not edit above this line)*
-
-## TURNOVER — 2026-05-21 (Audit Phase 2: Web Transition & Node Hardening)
-
-**Date:** 2026-05-21
-**Performed by:** Gemini CLI (Auto-Edit Mode)
-
-### Completed Fixes (Phases 1-3)
-
-**1. WebSocket State & Queue Robustness**
-- Switched `zpdi_mobile_node.py` to use `websockets.protocol.State` enum for connection checks.
-- Hardened the "drop-oldest" queue logic in the node's main loop to prevent race conditions during heavy fan-out.
-
-**2. Security & Integrity**
-- Modified `configure_git_auth.sh` to use a dynamic credential helper. GITHUB_PAT is no longer stored in `.git/config` in plaintext; it is now read from `.env` at runtime by the git helper process.
-- Added message type validation to `edge_listener_stub.py` to handle non-canonical payloads gracefully.
-
-**3. Web Server Transition (FastAPI Skeleton)**
-- Implemented `zpdi_web_server.py`: A FastAPI backend that acts as the bridge between the metrology daemon and the upcoming `TheForge_PWA` (Vite) frontend.
-- Added a **Lightweight Query Cache**: The mobile node now maintains a single-row SQLite WAL database (`./data/zpdi_cache.db`). This allows the web server to poll the latest state without hitting the global HDF5 lock or competing for HDF5 SWMR resources.
-- Created `README_WEB.md` documenting the critical Termux network interface constraint (Error 13).
-
-### Instructions for Next Developer
-
-**1. Bridging FastAPI to Vite**
-- The FastAPI server runs on `127.0.0.1:8000` by default.
-- Use `GET /latest` for one-shot status updates.
-- Use `WS /ws/live` for real-time sensor visualization in the PWA.
-- **Important:** Vite **must** be run with `--host 127.0.0.1` to avoid Android permission errors.
-
-**2. Scaling the Cache**
-- The current `SQLiteCache` only stores the *latest* sample. If the frontend requires a historical "sparkline" or windowed view, expand the `latest_state` table to a circular buffer or use the `ZPDI_MAX_QUERY_WINDOW_S` parameter to query a time-range from SQLite (though HDF5 remains the primary archive).
-
-**3. Testing the Web Stack**
-- Start the node: `./run_node.sh`
-- Start the web server: `python3 zpdi_web_server.py` (ensure `.env` is populated)
-- Verify via `curl http://127.0.0.1:8000/health`
-
-
-## TURNOVER — 2026-05-21 (Mobile Node Architecture Compliance — SPEC-005/006/007)
-
-**Date:** 2026-05-21
-**Performed by:** Kimi Code CLI (k2.6) on behalf of J.R. Fross
-**Session directive:** Bring `main` branch into three-layer architecture compliance without breaking the running daemon.
-
-### What Was Found
-
-**1. SPEC Violations on `main` (pre-compliance)**
-- `zpdi_mobile_node.py` was a flat-file monolith with no `IngestionPayload`, no trust-state machine, no coherence engine, and no dual-stream router.
-- All sensor data was dumped into a single HDF5 file — a **SPEC-003 total pipeline kill condition** because Tier-2 mobile data was commingled with primary-stream semantics.
-- Node self-identified as `"dslv-zpdi/tier1"` despite having no PPS, no GPSDO, and no hardware clock.
-- `AUDIT_VIOLATIONS.md` was produced documenting every kill condition currently violated.
-
-### What Was Done
-
-**STEP 1 — Audit & Violation Baseline**
-- Produced `AUDIT_VIOLATIONS.md` comparing `zpdi_mobile_node.py`, `zpdi_verifier.py`, and `edge_listener_stub.py` against `V3_DSLV-ZPDI_LIVING_MASTER.md` Rev 4.3.0.
-- Committed: `docs(audit): SPEC violation baseline for mobile node`
-
-**STEP 2 — Canonical `src/` Structure**
-- Ported `src/layer1_ingestion/`, `src/layer2_core/`, `src/layer3_telemetry/` package structure from commit `3a32be4`.
-- Created `mobile_ingestion.py` with exact Pixel 9 Pro XL sensor names (`ICM45631 Accelerometer`, `MMC5616 Magnetometer`, `ICP20100 Pressure Sensor`) and numpy-based Hilbert transform for Layer 1 phase extraction.
-- Committed: `feat(layer1): port canonical src/ structure and add mobile ingestion driver`
-
-**STEP 3 — Hardened `IngestionPayload` & Trust-State Machine**
-- Implemented full `IngestionPayload` dataclass per SPEC-005A.1b with all mandatory fields (`spec_id`, `schema_version`, `payload_uuid`, `hardware_tier=2`, `pps_jitter_ns=inf`, etc.).
-- `validate()` returns `(trust_state, reason)`: structural corruption → `KILLED`; GPS/PPS failure → `SECONDARY_QUARANTINED`; valid → `ASSEMBLED`.
-- `to_json()` embeds truncated SHA-256 checksum and blocks `KILLED` packets from serialization.
-- Committed: `feat(layer1): hardened IngestionPayload with trust-state validation per SPEC-005A`
-
-**STEP 4 — Refactored Mobile Daemon**
-- Replaced ad-hoc `_build_payload()` with `build_mobile_payload()` + `_ingestion_to_legacy()` backward-compat wrapper.
-- `_consume_stream` now produces one `IngestionPayload` per sensor (3× throughput vs one bundled dict).
-- Live smoke test confirmed daemon starts and streams without crash.
-- Committed: `refactor(node): integrate IngestionPayload into mobile daemon stream`
-
-**STEP 5 — Layer 2 Coherence Engine**
-- Ported `coherence.py` with `CoherenceScorer` implementing Kuramoto `r_local`, EWMA `r_smooth`, and fleet-weighted `r_global` per SPEC-006.
-- Ported `wiring.py` with canonical `wire_to_coherence()` and mobile-specific `wire_mobile_to_coherence()`.
-- `score_mobile_payload()` helper feeds pre-extracted phases from Layer 1 directly into the scorer.
-- Committed: `feat(layer2): port CoherenceScorer and wiring per SPEC-006`
-
-**STEP 6 — Dual-Stream Router (SPEC-007)**
-- Created `mobile_router.py` with `route_packet()` enforcing:
-  - `hardware_tier=2` → **always** `SECONDARY_QUARANTINED`
-  - `r_smooth >= 0.40` → reason `anomalous_candidate_tier2`
-  - `0.15 <= r_smooth < 0.40` → reason `structured_background_tier2`
-  - `r_smooth < 0.15` → reason `noise_tier2`
-- `HDF5Sink.append()` now rejects any packet where `route["stream"] != "PRIMARY"`. Mobile primary dataset is intentionally empty.
-- `_transport_consumer` writes every packet to `SecondaryLog` (JSONL) before attempting WSS.
-- Committed: `feat(layer3): dual-stream router enforcing Tier-2 quarantine per SPEC-007`
-
-**STEP 7 — Test Suite & Live Validation**
-- Ported 7-test regression suite and added 7 mobile-specific tests (14 total).
-- All tests pass: `pytest tests/ -v` → **14/14 passed**.
-- Live 60-second run verified:
-  - `data/zpdi_stream.h5`: **zero new rows** (correct for Tier-2)
-  - `logs/zpdi_fallback.jsonl`: new rows, all `trust_state=SECONDARY_QUARANTINED`, `hardware_tier=2`, quarantine reason present
-  - `zpdi_verifier.py`: **PASS** on existing HDF5 (100% integrity)
-- Committed: `test(integration): mobile node dual-stream validation suite`
-
-**STEP 8 — Operational Hardening**
-- Added 10 MB log rotation with gzip to `SecondaryLog` (keeps 5 backups).
-- Added `_health_watchdog` writing `logs/health.jsonl` every 30s with PID, sensor liveness, queue depths, and WSS connection state.
-- Updated `supervisor.sh` to poll health log age; if stale > 90s, sends SIGTERM → SIGKILL and restarts.
-- Committed: `feat(ops): log rotation and health watchdog for mobile node`
-
-**STEP 9 — Documentation**
-- Updated `CHANGELOG.md` with all conventional commits under `[Unreleased]`.
-- Updated `README.md` with Tier-2 Swarm disclaimer and new `src/` layout.
-- Updated `TURNOVER.md` with this handoff entry.
-- Committed: `docs(turnover): append session log and update canonical docs`
-
-### Current State
-
-| Component | Status |
-|---|---|
-| Daemon | Stopped (was running for live validation; safe to restart via `./launch_daemon.sh`) |
-| Primary HDF5 | Empty for new data (correct for Tier-2); retains ~21k historical pre-compliance rows |
-| Secondary JSONL | Active; `logs/zpdi_fallback.jsonl` ≈ 10.9 MB |
-| Tests | **14/14 passing** |
-| Health watchdog | Writes to `logs/health.jsonl` every 30s when daemon is running |
-| Supervisor | Monitors health staleness (>90s triggers restart) |
-| Git | `main` ahead of `origin/main` by 14 commits |
-
-### Next Actions for Next Developer
-
-1. **Restart daemon if needed:** `./launch_daemon.sh` (supervisor will keep it alive and monitor health).
-2. **Configure WSS endpoint:** When a real edge server is available, set `ZPDI_WSS_URI` in `.env`. Until then, all data routes to `logs/zpdi_fallback.jsonl`.
-3. **Verify health log:** After restart, confirm `logs/health.jsonl` is being updated every 30s and supervisor log shows no forced restarts.
-4. **Field calibration (SPEC-009):** If deploying this mobile node as part of a swarm, run 72-hour passive listening to build adaptive baselines before using `r_smooth` thresholds for vectoring.
-5. **Tier-1 procurement:** Per SPEC-004A.2, institutional-grade primary output requires Raspberry Pi 5/CM5 + HackRF One + Leo Bodnar LBE-1421 GPSDO (or equivalent with external 10 MHz CLKIN + 1 PPS GPIO).
-
----
-
-*(Future turnovers appended below this line)*
-
----
-
-## TURNOVER — 2026-05-30 (Rev 3.5 Integration & Pre-Reboot Handoff)
-
-**Date:** 2026-05-30
-**Performed by:** Claude Code (claude-sonnet-4-6) on behalf of J.R. Fross
-
-### What Was Done
-
-**Rev 3.5 Integration (Tier-1 server ↔ Tier-2 mobile node)**
-
-Ported all KIMI-HOME Rev 3.5 features into the canonical dslv-zpdi working tree and wired the mobile node for SPEC-008 integration with the Tier-1 ingestion server:
-
-| Component | Change |
-|---|---|
-| `src/layer2_core/fusion_engine.py` | NEW — SPEC-006.6 OrientationTracker + apply_orientation_weight |
-| `src/layer1_ingestion/gps_poller.py` | NEW — SPEC-005A.4-GPS async termux-location wrapper |
-| `tier1_ingestion_server.py` | NEW — SPEC-008 WSS ingestion server (Bearer auth, HMAC, AES-256-GCM) |
-| `tests/test_tier1_server.py` | NEW — 19 crypto-pipeline tests |
-| `zpdi_mobile_node.py` | Rev 3.4 → Rev 3.5: HMAC signing, AES-256-GCM, Bearer token, circuit-breaker WSS, GPS task |
-| `src/layer1_ingestion/mobile_ingestion.py` | Rev 3.1 → Rev 3.5: 4 new sensors, GPS fields, orientation-fused coherence, schema 3.5 |
-| `src/layer1_ingestion/payload.py` | +4 SensorModality values (gyroscope, rotation_vector, geomagnetic_rotation, gravity) |
-| `src/layer2_core/wiring.py` | New modality allowlist in both wiring gates |
-| `requirements.txt` | +cryptography>=42.0 |
-| `.venv` | cryptography 48.0.0 installed |
-
-**Tests:** 42/42 passing (14 SPEC compliance + 17 mobile-specific + 11 tier1 server).
-
-**GitHub:** Pushed to `feat/mobile-node-hardening-phase2` (commit `62f9a85`). Note: remote `main` is v4.7.0 Tier-1 hardware node — a separate codebase. Mobile Tier-2 work lives on the feature branch.
-
-**Pre-Reboot Checklist Completed**
-- Vite serve process (PID 7677/7656, port 5173) — gracefully stopped (SIGTERM)
-- zpdi daemon — already stopped (supervisor killed it at 15:18 after stale health detection)
-- HDF5 file — verified clean via `h5clear`, 21,711 rows, SWMR-readable
-- `.venv` — cryptography 48.0.0 installed; all Rev 3.5 imports verified OK
-- Git — clean working tree on `mobile-node-rev35` tracking `origin/feat/mobile-node-hardening-phase2`
-
-### Current State at Reboot
-
-| Component | Status |
-|---|---|
-| Working branch | `mobile-node-rev35` → `origin/feat/mobile-node-hardening-phase2` |
-| zpdi daemon | Stopped — Termux:Boot will auto-restart via `supervisor.sh` |
-| Primary HDF5 | 21,711 historical rows; Tier-2 writes blocked (0 new rows since compliance) |
-| Secondary JSONL | `logs/zpdi_fallback.jsonl` + 2 gzip archives |
-| Supervisor | 90s health-staleness watchdog active; restarts daemon with capped backoff |
-| `.env` | ZPDI_WSS_URI=ws://127.0.0.1:8443/ingest — token/secret/key empty until Tier-1 is live |
-
-### Next Actions After Reboot
-
-1. **Verify daemon restarted:** `tail -f /root/dslv-zpdi/logs/supervisor.log` — expect daemon start entry within ~5s of boot.
-2. **Verify health log:** `tail -f /root/dslv-zpdi/logs/health.jsonl` — entry every 30s; confirm `sensor_alive`, `wss_connected`, `gps_fix`.
-3. **Configure Tier-1 credentials in `.env`**, then restart: `bash /root/dslv-zpdi/launch_daemon.sh`
-   ```
-   ZPDI_WSS_URI=ws://<tier1-ip>:8443/ingest
-   ZPDI_WSS_TOKEN=<shared-token>
-   ZPDI_HMAC_SECRET=<shared-secret>
-   ZPDI_AES_KEY=<base64-32-byte-key>   # optional
-   ```
-4. **Start Tier-1 server (if local):** `python3 tier1_ingestion_server.py`
-
----
-
-## TURNOVER — 2026-06-06 (Grok Build — Workspace Maximization & Shutdown Prep)
-
-**Date:** 2026-06-06
-**Performed by:** Grok Build (xAI) on behalf of J.R. Fross
-
-### What Was Done
-
-- Fetched `origin/main` at Rev 4.7.2 (`d8a4f89`); confirmed Kimi merge still in progress
-- Created multi-agent collaboration docs: `COLLABORATION_GUIDE.md`, `docs/collaboration/`
-- Added mobile tooling: `tools/health_check_mobile.sh`, `tools/orphan_checker.py`, `specs/` stubs
-- Hardened `supervisor.sh` (`.env` export, health grace period, stale log truncate)
-- Ruff lint clean (11 auto-fixes); ruff added to `.venv` via `requirements-dev.txt`
-- Created `GROK_BUILD_MEMORY.md` persistent session state for Grok Build
-- Health check: **0 warnings, 0 criticals** — daemon, WSS, web API all online
-
-### Validation
-
-```
-pytest tests/ -v          → 41 passed, 1 skipped
-ruff check                → All checks passed
-health_check_mobile.sh    → severity 0
-orphan_checker.py         → 29 class-level SPEC gaps (documented, post-merge task)
+# Turnover Notes — DSLV-ZPDI Tier-1 Pi 5 Node
+
+**Date:** 2026-07-09  
+**Node hostname:** `raspberrypi`  
+**Hardware:** Raspberry Pi 5 16 GB + HamGeek PlutoSDR+ (AD9363 REV5) + Leo Bodnar LBE-1421 + Geekworm X-1202 UPS + 10" Lenovo HDMI touchscreen  
+**Repository:** `/home/dynogator/dslv-zpdi` (`github.com/DynoGator/dslv-zpdi`, branch `main`, Rev 5.0.0)  
+
+## 1. What Was Done
+
+This Pi 5 was commissioned as a Tier-1 institutional anchor node for the DSLV-ZPDI network. The following systems were installed, configured, and verified:
+
+1. **GPSDO-disciplined timing**
+   - LBE-1421 1 PPS output wired to GPIO 18 (header pin 12).
+   - `pps-gpio` overlay active; `/dev/pps0` confirmed.
+   - `gpsd` owns `/dev/ttyACM0`; `chronyd` is Stratum 1 locked to PPS.
+
+2. **SDR subsystem**
+   - PlutoSDR+ reachable at `ip:192.168.2.1`.
+   - 10 MHz reference from GPSDO Out2 wired to PlutoSDR+ EXT_REF_CLK.
+   - Pipeline opens the Pluto IIO backend on every ingest cycle.
+
+3. **UPS subsystem**
+   - X-1202 HAT responding on I2C bus 1, address `0x36`.
+   - UPS monitor service enabled; shutdown logic armed but fail-safe (no shutdown if UPS unreadable).
+
+4. **Pipeline + trust**
+   - Production HMAC key installed and wired into `HDF5Writer`.
+   - SPEC-009 baseline learning is now started automatically.
+   - All qualification, routing, and attestation code paths verified with synthetic primary data.
+
+5. **Dashboards**
+   - Flask web dashboard on `http://<pi-ip>:8080/`.
+   - Rich TUI dashboard autostarts on graphical login in compact mode for the 1024×600 touchscreen.
+
+6. **Git / collaboration**
+   - Project home and development environment organized at `/home/dynogator/dslv-zpdi`.
+   - Secure credential storage path prepared at `/home/dynogator/dslv-zpdi/.secrets/git-credentials`.
+   - Awaiting GitHub PAT to push commits.
+
+## 2. Current Runtime State
+
+All systemd services are enabled and active:
+
+```text
+dslv-zpdi-tuning.service    active
+dslv-zpdi-preflight.service active
+dslv-zpdi.service           active
+dslv-zpdi-ups.service       active
+dslv-zpdi-webdash.service   active
 ```
 
-### Current State
+Health endpoint (`/run/dslv-zpdi/health.json`):
 
-| Component | Status |
-|---|---|
-| Branch | `mobile-node-rev35` → `origin/feat/mobile-node-hardening-phase2` |
-| Daemon | Running under supervisor |
-| WSS | Connected to local Tier-1 :8443 |
-| Web API | Up on :8000 |
-| GitHub push to main | **HOLD** — awaiting Kimi restructure completion |
+- `timing_healthy: true`
+- `hal_mode: external`
+- `baseline_state: LEARNING`
+- `chrony_stratum: 1`
+- Secondary packets flowing; primary output gated by baseline lock and multi-node confirmation.
 
-### Next Actions
+## 3. Important Caveats
 
-1. Joe confirms Kimi merge complete → reconcile branch layout
-2. Backfill 29 class-level SPEC-IDs for orphan_checker clean pass
-3. Wire TheForge PWA to local FastAPI backend
-4. SPEC-009 72-hour passive baseline on secondary stream
+- **Baseline learning period:** The node is learning its RF baseline for 72 hours (or 240 samples, whichever comes first). During this time, all packets route to `output/secondary/quarantine.jsonl`. Do not panic — this is expected per SPEC-009. Restarting the pipeline resets the learning clock.
+- **Primary output requires 4 confirming nodes:** The router is configured with `min_confirming_nodes: 4`. The registered Tier-2 node `pixel-9-pro-xl` (`10.128.24.165`) must be online and posting telemetry for primary-confirmed events to occur.
+- **External clock lock:** The PlutoSDR+ 10 MHz lock cannot be verified in software with stock firmware. The qualification result `external_reference_evidence=UNVERIFIED_PHYSICAL_PROPERTY` is expected. Verify with external test equipment or custom Pluto firmware if needed.
+- **UPS AC reading:** Can briefly show `ac_present: false` at boot. The monitor requires continuous AC loss for 300 seconds before scheduling shutdown.
+
+## 4. File Changes to Commit
+
+Run `git status` from `/home/dynogator/dslv-zpdi` to see the full list. Highlights:
+
+- `src/dslv_zpdi/layer1_ingestion/timing/pps_listener.py` — sysfs PPS reader
+- `src/dslv_zpdi/layer1_ingestion/timing/nmea_stream.py` — gpsd TCP reader
+- `src/dslv_zpdi/layer2_core/wiring.py` — env-driven baseline config
+- `src/dslv_zpdi/main_pipeline.py` — key provider + baseline start
+- `config/node_profiles/tier1_pluto_lbe1421.yaml` — production HMAC required
+- `tools/x1202_ups_monitor.py` — new
+- `config/dslv-zpdi-ups.service` — new
+- `tools/dashboard/web_server.py` — UPS panel
+- `docs/hardware/GEEKWORM_X1202_UPS.md` — new
+- `docs/node_ops/WORK_LOG.md` — new
+- `CHANGELOG.md` — updated
+
+## 5. How to Supply Git Credentials
+
+When you have a GitHub personal access token:
+
+```bash
+# Create the credential file
+mkdir -p /home/dynogator/dslv-zpdi/.secrets
+cat > /home/dynogator/dslv-zpdi/.secrets/git-credentials <>OF
+https://<GITHUB_USERNAME>:<TOKEN>@github.com
+EOF
+chmod 600 /home/dynogator/dslv-zpdi/.secrets/git-credentials
+
+# Configure git to use it
+git config --global credential.helper 'store --file /home/dynogator/dslv-zpdi/.secrets/git-credentials'
+
+# Verify push access
+cd /home/dynogator/dslv-zpdi
+git remote -v
+git status
+# git push origin main
+```
+
+## 6. Quick Operational Commands
+
+```bash
+# Pipeline status and logs
+sudo systemctl status dslv-zpdi
+sudo journalctl -u dslv-zpdi -f
+
+# Timing
+cat /run/dslv-zpdi/health.json
+chronyc tracking
+
+# UPS
+sudo systemctl status dslv-zpdi-ups
+.venv/bin/python -c "from dslv_zpdi.layer1_ingestion.x1202_ups import ups_telemetry; import json; print(json.dumps(ups_telemetry(), indent=2))"
+
+# Dashboard
+# Web:  http://<pi-ip>:8080/
+# TUI:  tools/dashboard/launch.sh --compact
+
+# Restart everything cleanly
+sudo systemctl restart dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi dslv-zpdi-ups dslv-zpdi-webdash
+```
+
+## 7. Contacts / Next Steps
+
+- **Hardware wiring:** see `docs/hardware/LBE1421_PLUTO_WIRING.md` and `docs/hardware/GEEKWORM_X1202_UPS.md`.
+- **Baseline progress:** watch `health.json` for `baseline_state: LOCKED`.
+- **Primary output:** will appear in `output/primary/` once baseline is locked and a 4-node confirmation event occurs.
+- **Questions:** consult `docs/node_ops/WORK_LOG.md` and `CHANGELOG.md`.
