@@ -124,17 +124,52 @@ cd /home/dynogator/dslv-zpdi
 
 Expected: 184 passed / 1 skipped, all guard tools clean.
 
-## 8. Next Steps
+## 8. Reboot Preparation
 
-1. Confirm HDF5 primary files finalize and rotate correctly (`output/primary/*.h5`).
-2. Visually confirm the touchscreen dashboard after the next reboot.
-3. When multi-node hardware is available, revert to production baseline/confirmation settings.
-4. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future upgrades (TPM2 key storage, Grafana, nftables).
-5. If the Pixel 9 Pro XL node (`10.128.24.165`) joins the LAN, verify its dashboard and telemetry path.
+The node has been prepared for a clean reboot:
 
-## 9. References
+- All DSLV services (`tuning`, `preflight`, `dslv-zpdi`, `ups`, `webdash`) are
+  `enabled` and will start automatically.
+- `chrony` and `gpsd` are enabled; `gpsd` was specifically enabled during this
+  pass because the NMEA feed is required by the pipeline.
+- The only desktop autostart entry is
+  `~/.config/autostart/dslv-zpdi-dashboard.desktop`, which launches the retro
+  boot orchestrator in `lxterminal`.
+- Autologin for `dynogator` is active in LightDM and getty.
+- `dynogator` has passwordless sudo so the boot orchestrator can start any
+  required service.
+- Installed systemd units match the repo files exactly.
+- The pipeline baseline state persists in `/var/lib/dslv-zpdi/baseline.json`, so
+  the node re-locks quickly after reboot.
+
+Reboot command issued:
+
+```bash
+sudo reboot
+```
+
+Expected post-reboot sequence:
+
+1. systemd starts `chrony`, `gpsd`, tuning, preflight, pipeline, UPS, and webdash.
+2. LightDM autologins `dynogator` into labwc.
+3. Autostart launches `tools/boot_orchestrator.py` in a 120×40 terminal.
+4. The orchestrator verifies the service chain and execs the Rich TUI dashboard.
+5. PRIMARY HDF5 output resumes.
+
+## 9. Next Steps
+
+1. After reboot, confirm the service chain is active and the web dashboard
+   returns live data.
+2. Confirm HDF5 primary files finalize and rotate correctly (`output/primary/*.h5`).
+3. Visually confirm the touchscreen dashboard after the next reboot.
+4. When multi-node hardware is available, revert to production baseline/confirmation settings.
+5. Review `docs/node_ops/TOOLCHAIN_AUDIT.md` for future upgrades (TPM2 key storage, Grafana, nftables).
+6. If the Pixel 9 Pro XL node (`10.128.24.165`) joins the LAN, verify its dashboard and telemetry path.
+
+## 10. References
 
 - `docs/node_ops/WORK_LOG.md` — detailed installation and commissioning log.
+- `docs/node_ops/REBOOT_PREP_REPORT.md` — this reboot pass summary.
 - `docs/node_ops/TOOLCHAIN_AUDIT.md` — component evaluation and optimization notes.
 - `docs/hardware/GEEKWORM_X1202_UPS.md` — UPS operator reference.
 - `specs/SPEC-009.md` — baseline learning FSM specification.

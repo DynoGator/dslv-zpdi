@@ -1,5 +1,38 @@
 # Changelog
 
+## [Unreleased] — Reboot preparation and local validation lock-in (2026-07-09)
+
+### Added
+- `docs/node_ops/REBOOT_PREP_REPORT.md` documenting the final local
+  verification pass and expected post-reboot sequence.
+
+### Changed
+- Enabled `gpsd.service` so the LBE-1421 NMEA feed starts automatically on boot.
+- Verified and locked in persistent boot configuration:
+  - All DSLV systemd services are `enabled`.
+  - Single autostart entry: `~/.config/autostart/dslv-zpdi-dashboard.desktop`.
+  - Autologin for `dynogator` confirmed in LightDM and getty.
+  - Passwordless sudo confirmed for the boot orchestrator.
+- Synced installed systemd units from repo files; `diff` is clean across all
+  DSLV services.
+- Updated `docs/node_ops/WORK_LOG.md` and `docs/node_ops/TURNOVER_NOTES.md` with
+  the reboot preparation checklist and post-reboot expectations.
+
+### Verified
+- Web dashboard `/api/status` shows real hardware state:
+  - `chrony_stratum: 1`, PPS1 reference, RMS offset ~786 ns.
+  - `sdr.mode: REAL`, `clock_src: external`, PlutoSDR+ reachable.
+  - UPS telemetry live from MAX17048 on I2C-1.
+- Pipeline baseline `LOCKED`; PRIMARY HDF5 events actively written.
+- `pytest` 184 passed, 1 skipped; orphan/version-sync/repo-guard clean.
+
+### Caveats
+- Rich TUI waterfall panel remains SIM because no HackRF is connected; all
+  other dashboard data is real.
+- Touchscreen layout not visually verified in this session.
+
+---
+
 ## [Unreleased] — Mono-node dev mode and automatic baseline lock (2026-07-09)
 
 ### Added
