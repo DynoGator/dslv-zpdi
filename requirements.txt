@@ -89,7 +89,7 @@ typing-inspection==0.4.2
     # via pydantic
 urllib3==2.7.0
     # via requests
-websockets==16.0
+websockets==16.1
     # via dslv-zpdi (pyproject.toml)
 werkzeug==3.1.8
     # via flask
