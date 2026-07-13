@@ -10,7 +10,7 @@ annotated-types==0.7.0
     #   pydantic
 ast-serialize==0.6.0
     # via mypy
-astroid==4.0.4
+astroid==4.1.2
     # via pylint
 black==26.5.1
     # via dslv-zpdi (pyproject.toml)
