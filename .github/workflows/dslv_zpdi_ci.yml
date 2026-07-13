@@ -27,7 +27,7 @@ jobs:
       DEV_SIMULATOR: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v6
@@ -80,7 +80,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
