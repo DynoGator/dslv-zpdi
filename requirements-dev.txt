@@ -43,7 +43,7 @@ click==8.4.2
     #   -c requirements.txt
     #   black
     #   flask
-coverage[toml]==7.15.0
+coverage[toml]==7.15.1
     # via pytest-cov
 cryptography==49.0.0
     # via
