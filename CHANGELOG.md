@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — ZPDI_CONDITIONS standalone local dashboard (2026-07-09)
+## [5.1.0] — Consolidation & Housekeeping (2026-07-18)
 
 ### Added
 - New standalone dashboard package `tools/zpdi_conditions/`:
@@ -25,7 +25,7 @@
 
 ---
 
-## [Unreleased] — Reboot preparation and local validation lock-in (2026-07-09)
+### [Merged] — Reboot preparation and local validation lock-in (2026-07-09)
 
 ### Added
 - `docs/node_ops/REBOOT_PREP_REPORT.md` documenting the final local
@@ -58,7 +58,7 @@
 
 ---
 
-## [Unreleased] — Mono-node dev mode and automatic baseline lock (2026-07-09)
+### [Merged] — Mono-node dev mode and automatic baseline lock (2026-07-09)
 
 ### Added
 - **`DSLV_MIN_CONFIRMING_NODES`** environment variable support in
@@ -106,7 +106,7 @@
 
 ---
 
-## [Unreleased] — Tier-1 Pi 5 optimization & boot orchestrator (2026-07-09)
+### [Merged] — Tier-1 Pi 5 optimization & boot orchestrator (2026-07-09)
 
 ### Added
 - **Retro ASCII boot orchestrator** (`tools/boot_orchestrator.py`) for the Tier-1
@@ -164,7 +164,7 @@
 
 ---
 
-## [Unreleased] — Tier-1 Pi 5 node commissioning (2026-07-09)
+### [Merged] — Tier-1 Pi 5 node commissioning (2026-07-09)
 
 ### Added
 - **Geekworm X-1202 UPS integration** (SPEC-004A.8):
@@ -206,7 +206,7 @@
 
 ---
 
-## [Unreleased] — Dashboard node-registry wiring and reboot prep (2026-06-19)
+### [Merged] — Dashboard node-registry wiring and reboot prep (2026-06-19)
 
 ### Fixed
 - `tier1_ingestion_server.py`: `_register_node_seen()` now called on every
@@ -223,7 +223,7 @@
 
 ---
 
-## [Unreleased] — Mobile node sync and installer hardening (2026-06-19)
+### [Merged] — Mobile node sync and installer hardening (2026-06-19)
 
 ### Added
 - `supervisor.sh` now manages all three mobile services (tier1 server :8443,
@@ -249,7 +249,7 @@
 - `CREW_MEMORY.md`: updated to 2026-06-19 with v5.0.0 feature inventory, mobile
   hardware config table, and post-sync next-actions.
 
-## [Unreleased] — Repository hardening follow-up (2026-06-17)
+### [Merged] — Repository hardening follow-up (2026-06-17)
 
 ### Fixed
 - Simulator Tier-1 HAL construction now uses an explicit simulated timing
@@ -321,7 +321,7 @@
 ### Changed
 - Version bump 4.8.0 → 4.8.1 (behavior change for simulator hosts + new test surface coverage). All authorities synchronized: pyproject.toml, __init__.py, README revision line, CHANGELOG.md, new RELEASE_NOTES_v4.8.1.md.
 
-## [Unreleased] · Repository Hardening (2026-06-10)
+### [Merged] · Repository Hardening (2026-06-10)
 
 Repository infrastructure and trust hardening. No runtime/hardware behavior of the
 trust pipeline, RF ingestion, GPSDO/timing, HDF5 schema, or metrology algorithms

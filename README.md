@@ -1,7 +1,9 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
-**Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
-**Revision:** Rev 5.0.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
+# DynoGatorLabs DSLV-ZPDI (Node-Ops Reference)
+
+> **Deep-Sub-Surface Long-Wave Zero-Point Direct Intercept**
+> **Revision:** Rev 5.1.0 — Consolidation & Housekeeping (Pi5 node work integrated)
 **Date:** 2026-06-15
 **Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
 
