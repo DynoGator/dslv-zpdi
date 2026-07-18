@@ -321,3 +321,66 @@ Created:
    - remove or comment out `DSLV_BASELINE_FIXED_THRESHOLD`
    - set `DSLV_MIN_CONFIRMING_NODES=4`
    - set `DSLV_BASELINE_HOURS=72` and `DSLV_MIN_BASELINE_SAMPLES=240`.
+
+## 9. Reboot Preparation (Final Pass)
+
+Goal: ensure the node comes back up cleanly with real hardware data and all startup paths persistent.
+
+### 9.1 Real-Data Verification
+
+Confirmed live telemetry sources:
+
+- **PPS / timing**: `chronyc tracking` reports Stratum 1, Reference ID `PPS1`, RMS offset ~786 ns.
+- **SDR**: `sdr.mode: REAL`, `clock_src: external`, PlutoSDR+ reachable at `ip:192.168.2.1`.
+- **UPS**: MAX17048 on I2C-1/0x36, 97.8% battery, AC present.
+- **Web dashboard**: `http://127.0.0.1:8080/api/status` returns the above live state.
+- **Rich TUI**: system/pipeline/hardware/UPS panels read `/run/dslv-zpdi/health.json`.
+
+### 9.2 Boot Persistence
+
+- Enabled `gpsd.service` (was disabled).
+- Verified all DSLV services are `enabled` and will start on boot.
+- Verified only one autostart entry exists: `~/.config/autostart/dslv-zpdi-dashboard.desktop`.
+- Verified autologin for `dynogator` in `/etc/lightdm/lightdm.conf` and getty.
+- Verified `dynogator` has passwordless sudo so the boot orchestrator can start services.
+- Confirmed installed systemd units match repo files (`diff` clean).
+- Confirmed no conflicting NTP daemon (`systemd-timesyncd` inactive/not enabled).
+
+### 9.3 Startup Blockers Removed
+
+| Issue | Resolution |
+|-------|------------|
+| `gpsd` disabled | `sudo systemctl enable gpsd` |
+| Service file path drift | Synced all installed units from `config/` |
+| Possible duplicate autostart | Only `dslv-zpdi-dashboard.desktop` present |
+| Silent simulation risk | Profile `allow_simulator_fallback: false`; service runs without `--simulator` |
+
+### 9.4 Reboot Command
+
+```bash
+sudo reboot
+```
+
+### 9.5 Expected Post-Reboot Sequence
+
+1. systemd starts `chrony`, `gpsd`, tuning, preflight, pipeline, UPS, and webdash.
+2. LightDM autologins `dynogator` into labwc.
+3. Autostart launches the boot orchestrator in `lxterminal`.
+4. Boot orchestrator verifies services, renders retro ASCII status, and execs the Rich TUI dashboard.
+5. Pipeline reloads persisted baseline state and resumes PRIMARY HDF5 output.
+
+### 9.6 Caveats
+
+- The Rich TUI **waterfall panel** requires `hackrf_sweep`; no HackRF is connected, so it remains in SIM mode. All other dashboard data is real.
+- Touchscreen glyph/layout has been configured but not visually verified.
+- Mono-node dev mode remains active until deliberately reverted for production.
+
+## 10. Files Modified / Created (This Pass)
+
+Created:
+
+- `docs/node_ops/REBOOT_PREP_REPORT.md`
+
+Modified:
+
+- `docs/node_ops/WORK_LOG.md` (this section)

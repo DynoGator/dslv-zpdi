@@ -193,7 +193,8 @@ sleep 3
 
 # Screen-aware geometry.
 # - 5" DSI (800x480): compact terminals that actually fit the screen.
-# - anything larger: the original wide layout.
+# - 10" DSI/touch (1280x800): single large terminal using the two-column layout.
+# - anything larger: original wide layout with separate waterfall window.
 SCREEN_W=0
 SCREEN_H=0
 if command -v xrandr >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
@@ -205,18 +206,27 @@ SCREEN_H=${SCREEN_H:-0}
 if [ "${SCREEN_W:-0}" -le 1024 ] && [ "${SCREEN_H:-0}" -le 600 ] \
    && [ "${SCREEN_W:-0}" -gt 0 ]; then
     # 5" DSI: single fullscreen window, compact layout, no second terminal.
-    # 92x30 keeps the waterfall visible at 800x480 with default lxterminal
-    # font (dense enough to hit ~30 rows on most Pi OS installs).
     GEO_MAIN="92x30+0+0"
     GEO_WF="92x30+0+0"
     COMPACT_MODE=1
+    TEN_INCH_MODE=0
     SAY "detected small display (${SCREEN_W}x${SCREEN_H}) - compact layout enabled"
+elif [ "${SCREEN_W:-0}" -le 1280 ] && [ "${SCREEN_H:-0}" -le 800 ] \
+     && [ "${SCREEN_W:-0}" -gt 0 ]; then
+    # 10" touchscreen: single large terminal with the side-by-side layout.
+    GEO_MAIN="160x45+0+0"
+    GEO_WF="160x45+0+0"
+    COMPACT_MODE=0
+    TEN_INCH_MODE=1
+    SAY "detected 10\" display (${SCREEN_W}x${SCREEN_H}) - side-by-side layout enabled"
 else
     GEO_MAIN="180x50"
     GEO_WF="140x34"
     COMPACT_MODE=0
+    TEN_INCH_MODE=0
 fi
 export DSLV_DASHBOARD_COMPACT="$COMPACT_MODE"
+export DSLV_DASHBOARD_10IN="$TEN_INCH_MODE"
 
 # Pick a GUI terminal emulator once; both windows use the same one.
 TERMCMD=""
@@ -273,6 +283,22 @@ if [ "$COMPACT_MODE" = "1" ]; then
     esac
     sleep 3
     OK "launch complete — single dashboard dispatched (waterfall embedded)"
+elif [ "$TEN_INCH_MODE" = "1" ]; then
+    # 10" touchscreen: single large window with the side-by-side layout.
+    SAY "  - opening single dashboard window (10\" side-by-side mode) ($TERMCMD)"
+    case "$TERMCMD" in
+        lxterminal)
+            nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH --ten-inch" \
+                >/dev/null 2>&1 & disown ;;
+        x-terminal-emulator)
+            nohup x-terminal-emulator -T "$TITLE_MAIN" -e "$DASH --ten-inch" \
+                >/dev/null 2>&1 & disown ;;
+        xterm)
+            nohup xterm -T "$TITLE_MAIN" -geometry "$GEO_MAIN" -fa 'Monospace' -fs 10 -e "$DASH --ten-inch" \
+                >/dev/null 2>&1 & disown ;;
+    esac
+    sleep 3
+    OK "launch complete — single dashboard dispatched (10\" side-by-side layout)"
 else
     # 7a — waterfall second window FIRST so it's visible under the dashboard
     SAY "  - opening waterfall window ($TERMCMD)"

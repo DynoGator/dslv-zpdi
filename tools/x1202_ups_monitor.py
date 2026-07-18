@@ -30,7 +30,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from dslv_zpdi.layer1_ingestion.x1202_ups import X1202UpsMonitor
+from dslv_zpdi.layer1_ingestion.x1202_ups import X1202UpsMonitor  # noqa: E402
 
 logger = logging.getLogger("dslv-zpdi.x1202-monitor")
 

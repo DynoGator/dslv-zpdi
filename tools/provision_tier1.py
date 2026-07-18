@@ -55,29 +55,39 @@ def check_rp1_voltage_guard() -> bool:
 
 def check_soapy_sdr():
     """
-    ARCH-PHASE-2A-PIVOT §5 — Verify SoapySDR installation (hardware-agnostic driver).
+    ARCH-PHASE-2A-PIVOT §5 — Verify SoapySDR installation and PlutoSDR+ module.
+    HackRF is reported only as a legacy option.
     """
     try:
         import SoapySDR
         results = SoapySDR.Device.enumerate()
 
-        hackrf_found = False
-        for result in results:
-            if 'hackrf' in str(result).lower():
-                hackrf_found = True
-                break
+        pluto_found = any("pluto" in str(result).lower() for result in results)
+        hackrf_found = any("hackrf" in str(result).lower() for result in results)
 
-        if hackrf_found:
-            print("[*] SoapySDR installed with HackRF support.")
+        if pluto_found:
+            print("[*] SoapySDR installed with PlutoSDR+ support.")
             return True
-        else:
-            print("[!] SoapySDR installed but HackRF not enumerated.")
-            print("    Ensure HackRF is connected: hackrf_info")
-            return False
+        print("[!] SoapySDR installed but PlutoSDR+ not enumerated.")
+        if hackrf_found:
+            print("    HackRF (legacy) enumerated.")
+        print("    Install: sudo apt install soapysdr-module-plutosdr")
+        return False
     except ImportError:
         print("[!] SoapySDR not installed.")
-        print("    Install: sudo apt install soapysdr-module-hackrf python3-soapysdr")
+        print("    Install: sudo apt install soapysdr-module-plutosdr python3-soapysdr")
         return False
+
+
+def check_iio_binding() -> bool:
+    """Verify the libiio Python binding used by the native Pluto backend."""
+    if importlib.util.find_spec("iio") is not None:
+        print("[*] libiio Python binding available (iio module loaded).")
+        return True
+    print("[!] libiio Python binding not installed.")
+    print("    Install: sudo apt install python3-libiio")
+    print("    Or from the venv: .venv/bin/python -m pip install 'dslv-zpdi[pluto]'")
+    return False
 
 
 def check_hackrf_presence():
@@ -112,7 +122,7 @@ def check_pluto_presence():
     """
     try:
         import iio
-        uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.2.1")
+        uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.3.80")
         ctx = iio.Context(uri)
         ad9361 = ctx.find_device("ad9361-phy")
         if ad9361:
@@ -229,19 +239,19 @@ def check_python_dependencies():
     """
     all_ok = True
 
-    # Check SoapySDR (preferred)
-    if importlib.util.find_spec("SoapySDR") is not None:
-        print("[*] SoapySDR Python library installed.")
-    else:
-        print("[!] SoapySDR Python bindings not installed.")
-        print("    Install: sudo apt install python3-soapysdr")
+    # Native Pluto backend requires the libiio Python binding.
+    if not check_iio_binding():
         all_ok = False
 
-    # Check pyhackrf (fallback)
+    # SoapySDR is the hardware-agnostic fallback; the Pluto module is preferred.
+    if not check_soapy_sdr():
+        all_ok = False
+
+    # pyhackrf is only required for legacy HackRF support.
     if importlib.util.find_spec("pyhackrf") is not None:
-        print("[*] pyhackrf Python library installed (fallback).")
+        print("[*] pyhackrf Python library installed (legacy fallback).")
     else:
-        print("[WARN] pyhackrf not installed. SoapySDR will be used.")
+        print("[INFO] pyhackrf not installed — only needed for legacy HackRF support.")
 
     return all_ok
 
@@ -366,7 +376,7 @@ def main():
     print("Required Wiring:")
     print("  - GPSDO Out2 (10 MHz) → PlutoSDR+ EXT_REF_CLK (hardware ADC lock)")
     print("  - GPSDO Out1 (1 PPS) → Pi 5 GPIO 18 (UTC timestamp)")
-    print("  - PlutoSDR+ data → Pi 5 USB 3.0 / Ethernet (192.168.2.1)")
+    print("  - PlutoSDR+ data → Pi 5 USB 3.0 / Ethernet (192.168.3.80)")
     print("  - ⚠️  VERIFY 3.3V LOGIC LEVEL BEFORE CONNECTING PPS!")
     print()
 
@@ -425,7 +435,7 @@ def main():
         print("Critical checks:")
         print("  1. Is GPSDO Out2 (10 MHz) connected to PlutoSDR+ EXT_REF_CLK?")
         print("  2. Is GPSDO Out1 (1 PPS) connected to Pi 5 GPIO 18 (with 3.3V logic)?")
-        print("  3. Is the PlutoSDR+ / LibreSDR reachable at ip:192.168.2.1 from the Pi 5?")
+        print("  3. Is the PlutoSDR+ / LibreSDR reachable at ip:192.168.3.80 from the Pi 5?")
         print("  4. Has the system been rebooted after config.txt changes?")
         sys.exit(1)
 

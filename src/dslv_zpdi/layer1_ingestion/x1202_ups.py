@@ -104,7 +104,7 @@ class X1202UpsMonitor:
         self._gpio_closed: bool = False
 
     # ── Context manager ─────────────────────────────────────────────────────
-    def __enter__(self) -> "X1202UpsMonitor":
+    def __enter__(self) -> X1202UpsMonitor:
         """SPEC-004A.8 — Open I2C and GPIO resources."""
         self.open()
         return self
