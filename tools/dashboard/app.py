@@ -9,14 +9,16 @@ Keyboard:
     r            toggle REAL SDR data (sets DSLV_DASHBOARD_REAL_SDR env)
     g            cycle LNA gain
     +/-          adjust LNA gain up/down
-    a            toggle RF front-end amp
+    a            toggle RF front-end amp (Pluto/HackRF amp lockout enforced)
     </>          tune center frequency down/up
+    ,/.          fine tune center frequency
     z/x          zoom out/in
     [/]          floor down/up
     {/}          ceil down/up
     p            cycle palette
     s            toggle spectrum view
     c            toggle compact layout
+    t            toggle 10" touchscreen layout
 """
 
 import argparse
@@ -52,6 +54,7 @@ from dashboard.panels.mobile import MobilePanel
 from dashboard.panels.notifications import NotificationPanel
 from dashboard.panels.pipeline import PipelinePanel
 from dashboard.panels.radon import RadonPanel
+from dashboard.panels.settings import SettingsPanel
 from dashboard.panels.storm import StormPanel
 from dashboard.panels.system import SystemPanel
 from dashboard.panels.waterfall import WaterfallPanel
@@ -63,6 +66,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     paused = s.get("paused", False)
     wf_mode = s.get("wf_mode", "SWEEP")
     real_sdr = s.get("real_sdr", False)
+    sdr_source = s.get("sdr_source", "SIM")
     spectrum_on = s.get("spectrum_on", True)
     lna_gain = s.get("lna_gain", 24)
     center_hz = s.get("center_hz", 100_000_000)
@@ -85,8 +89,10 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
         status.append(val, style=style)
         status.append("] ", style="dim")
 
-    _ind("SDR",  "REAL" if real_sdr else "SIM",
-         "bold bright_green" if real_sdr else "bold bright_yellow")
+    if real_sdr:
+        _ind("SDR", sdr_source, "bold bright_green")
+    else:
+        _ind("SDR", "SIM", "bold bright_yellow")
     _ind("WF",   wf_mode, "bold bright_cyan")
     _ind("FREQ", f"{center_hz / 1e6:.1f}MHz", "bright_magenta")
     _ind("LNA",  f"{lna_gain}dB")
@@ -110,7 +116,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
             ("g/v",  "LNA/VGA"),
             ("</>",  "tune"),
             ("z/x",  "zoom"),
-            ("c",    "wide"),
+            ("c/t",  "layout"),
             ("h",    "banner"),
         ]
     else:
@@ -126,6 +132,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
             ("{/}",  "ceil±"),
             ("h",    "banner"),
             ("c",    "compact"),
+            ("t",    "10\" layout"),
             ("g/v",  "LNA/VGA-gain"),
             ("a",    "amp"),
             ("+/-",  "gain-step"),
@@ -166,16 +173,71 @@ def _is_compact() -> bool:
         return False
 
 
+def _is_ten_inch() -> bool:
+    """10\" touchscreen layout (about 1280x800 terminal, e.g. 160x45 cols/rows)."""
+    if os.getenv("DSLV_DASHBOARD_10IN", "").strip() in ("1", "true", "yes"):
+        return True
+    try:
+        cols, lines = shutil.get_terminal_size()
+        # Roughly the terminal geometry of a 10" display with a readable font.
+        return 130 <= cols < 190 and 38 <= lines < 55
+    except Exception:
+        return False
+
+
 def _enabled(names, panels):
     return [n for n in names if getattr(panels, n, True)]
 
 
-def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool = False, panels=None) -> Layout:
+def build_layout(
+    show_banner: bool,
+    waterfall_only: bool = False,
+    compact: bool = False,
+    ten_inch: bool = False,
+    panels=None,
+) -> Layout:
     panels = panels or {}
     layout = Layout()
 
     if waterfall_only:
         layout.split_column(Layout(name="waterfall"))
+        return layout
+
+    settings = _enabled(("settings",), panels)
+
+    if ten_inch:
+        # 10" touchscreen: two-column layout. Left column carries dense status
+        # panels and the settings reference; the right column is dominated by
+        # the waterfall with logs/notifications underneath.
+        left_names = _enabled(("system", "pipeline", "hardware", "settings"), panels)
+        right_bottom = _enabled(("logs", "notifications"), panels)
+
+        root_rows: list[Layout] = []
+        if show_banner:
+            root_rows.append(Layout(name="banner", size=5))
+        root_rows.append(Layout(name="main", ratio=1))
+        root_rows.append(Layout(name="footer", size=4))
+        layout.split_column(*root_rows)
+
+        layout["main"].split_row(
+            Layout(name="left", size=45),
+            Layout(name="right", ratio=1),
+        )
+
+        if left_names:
+            left_rows: list[Layout] = []
+            for n in left_names:
+                left_rows.append(Layout(name=n, size=8 if n == "settings" else 7))
+            layout["left"].split_column(*left_rows)
+
+        right_rows: list[Layout] = [Layout(name="waterfall", ratio=1)]
+        if right_bottom:
+            right_rows.append(Layout(name="bottom", size=10))
+        layout["right"].split_column(*right_rows)
+        if right_bottom:
+            layout["right"]["bottom"].split_row(
+                *[Layout(name=n, ratio=1) for n in right_bottom]
+            )
         return layout
 
     if compact:
@@ -184,7 +246,6 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
         except Exception:
             total_rows = 24
 
-        # short_screen covers 7" DSI (~30 rows) and below; critical is very tight
         short_screen = total_rows < 33
         critical_screen = total_rows < 26
 
@@ -192,9 +253,7 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
         status_b = _enabled(("anomaly", "weather", "storm", "radon", "mobile", "bci"), panels)
         bottom = _enabled(("logs", "notifications"), panels)
 
-        # 2-line footer (status bar + key legend); critical screens drop to 1 line
         footer_sz = 3 if critical_screen else 4
-        # Suppress banner on 7" and smaller screens to free rows for waterfall
         banner_sz = 0 if (critical_screen or short_screen) else (
             (4 if total_rows >= 36 else 3) if show_banner else 0
         )
@@ -204,15 +263,11 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
             rows.append(Layout(name="banner", size=banner_sz))
 
         if short_screen:
-            # Combine status panels into two info-dense rows
             if status_a:
                 rows.append(Layout(name="status_row_a", size=5))
             if status_b:
                 rows.append(Layout(name="status_row_b", size=5))
-
             rows.append(Layout(name="waterfall", ratio=1))
-
-            # Hide bottom panels if screen is too short for both waterfall + logs
             if bottom and total_rows >= 22:
                 rows.append(Layout(name="bottom", size=5))
         else:
@@ -223,6 +278,9 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
             rows.append(Layout(name="waterfall", ratio=1))
             if bottom:
                 rows.append(Layout(name="bottom", size=5))
+
+        if settings:
+            rows.append(Layout(name="settings", size=4))
 
         rows.append(Layout(name="footer", size=footer_sz))
         layout.split_column(*rows)
@@ -262,6 +320,8 @@ def build_layout(show_banner: bool, waterfall_only: bool = False, compact: bool 
     rows.append(Layout(name="waterfall"))
     if space:
         rows.append(Layout(name="space", size=12))
+    if settings:
+        rows.append(Layout(name="settings", size=7))
     if bottom:
         rows.append(Layout(name="bottom", size=12))
     rows.append(Layout(name="footer", size=5))
@@ -283,12 +343,14 @@ class Dashboard:
         show_banner: bool | None = None,
         waterfall_only: bool = False,
         compact: bool | None = None,
+        ten_inch: bool | None = None,
         config: DashboardConfig | None = None,
     ):
         cfg = config if config is not None else load_config()
         self.console = Console()
         self.refresh = refresh if refresh is not None else cfg.refresh
         self.compact = _is_compact() if compact is None else compact
+        self.ten_inch = (_is_ten_inch() if ten_inch is None else ten_inch) and not self.compact
         self._banner_pref = show_banner if show_banner is not None else cfg.show_banner
         self.show_banner = self._banner_pref
         self.waterfall_only = waterfall_only
@@ -357,10 +419,19 @@ class Dashboard:
                 border_style=cfg.theme.notifications_border,
             )
             self._panels["notifications"] = self.note_p
+        if getattr(cfg.panels, "settings", True):
+            self.settings_p = SettingsPanel(border_style=cfg.theme.accent)
+            self._panels["settings"] = self.settings_p
 
         self.paused = False
         self._panels_cfg = cfg.panels
-        self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, cfg.panels)
+        self.layout = build_layout(
+            self.show_banner,
+            self.waterfall_only,
+            self.compact,
+            self.ten_inch,
+            cfg.panels,
+        )
         self._keyboard_mode = None
         self._orig_attrs = None
 
@@ -440,12 +511,15 @@ class Dashboard:
                 )
 
         # Priority: render critical metrics first
-        for name in ("system", "pipeline", "hardware", "anomaly", "weather", "storm", "radon", "mobile", "bci", "logs", "notifications", "waterfall"):
+        for name in ("system", "pipeline", "hardware", "anomaly", "weather", "storm", "radon", "mobile", "bci", "logs", "notifications", "settings", "waterfall"):
             panel = self._panels.get(name)
             panel_l = self._get_layout(name)
             if panel and panel_l:
                 try:
-                    panel_l.update(panel.render(compact=self.compact))
+                    if name == "settings":
+                        panel_l.update(panel.render(compact=self.compact, state=self._get_state()))
+                    else:
+                        panel_l.update(panel.render(compact=self.compact))
                 except Exception as e:
                     # Don't crash the whole dashboard if one panel fails to render
                     if "notifications" in self._panels:
@@ -463,12 +537,17 @@ class Dashboard:
             "paused":      self.paused,
             "wf_mode":     wf.mode if wf else "SWEEP",
             "real_sdr":    os.getenv("DSLV_DASHBOARD_REAL_SDR", "0") == "1",
+            "sdr_source":  wf._last_source if wf else "SIM",
             "spectrum_on": wf.show_spectrum if wf else True,
             "lna_gain":    wf.lna_gain if wf else 24,
             "vga_gain":    wf.vga_gain if wf else 20,
             "center_hz":   wf.center_hz if wf else 100_000_000,
+            "span_hz":     wf.span_hz if wf else 20_000_000,
             "modulation":  getattr(wf, "modulation", "RAW-SWEEP") if wf else "RAW-SWEEP",
             "palette_name": wf.palette_name if wf else "HEAT",
+            "dbm_floor":   wf.dbm_floor if wf else -90.0,
+            "dbm_ceil":    wf.dbm_ceil if wf else -20.0,
+            "refresh":     self.refresh,
             "compact":     self.compact,
             "banner":      self.show_banner,
         }
@@ -505,7 +584,7 @@ class Dashboard:
                 self._banner_pref = not self._banner_pref
                 self.show_banner = self._banner_pref
                 panels = getattr(self, "_panels_cfg", None)
-                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, panels)
+                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, self.ten_inch, panels)
                 if self._live is not None:
                     self._live.update(self.layout)
                 if "notifications" in self._panels:
@@ -513,15 +592,31 @@ class Dashboard:
         elif k in ("c", "C"):
             if not self.waterfall_only:
                 self.compact = not self.compact
+                # Ten-inch and compact are mutually exclusive.
+                if self.compact:
+                    self.ten_inch = False
                 self.show_banner = self._banner_pref
                 if "waterfall" in self._panels:
                     self._panels["waterfall"].compact = self.compact
                 panels = getattr(self, "_panels_cfg", None)
-                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, panels)
+                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, self.ten_inch, panels)
                 if self._live is not None:
                     self._live.update(self.layout)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"compact: {'ON' if self.compact else 'OFF'}")
+        elif k in ("t", "T"):
+            if not self.waterfall_only:
+                self.ten_inch = not self.ten_inch
+                if self.ten_inch:
+                    self.compact = False
+                if "waterfall" in self._panels:
+                    self._panels["waterfall"].compact = self.compact
+                panels = getattr(self, "_panels_cfg", None)
+                self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, self.ten_inch, panels)
+                if self._live is not None:
+                    self._live.update(self.layout)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"10\" layout: {'ON' if self.ten_inch else 'OFF'}")
         elif k == "[":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_floor(-5.0)
@@ -689,6 +784,7 @@ def main(cfg=None):
     parser.add_argument("--waterfall-only", action="store_true", help="render only the waterfall panel")
     parser.add_argument("--compact", action="store_true", help='force compact layout (5" DSI)')
     parser.add_argument("--wide", action="store_true", help="force wide layout (disable compact auto-detect)")
+    parser.add_argument("--ten-inch", action="store_true", help='force 10" touchscreen two-column layout')
     parser.add_argument("--no-real-sdr", action="store_true", help="start with real-SDR mode OFF (default is ON)")
     parser.add_argument("--headless", action="store_true", help="run without TUI (journald only)")
     parser.add_argument("--config", type=str, default="", help="use a custom dashboard.toml")
@@ -706,12 +802,15 @@ def main(cfg=None):
     signal.signal(signal.SIGINT, _signal_handler)
 
     compact: bool | None = None
+    ten_inch: bool | None = None
     if args.compact:
         compact = True
     elif args.wide:
         compact = False
+    if args.ten_inch:
+        ten_inch = True
 
-    # HackRF is ON by default; --no-real-sdr flag allows explicit opt-out.
+    # Real SDR is ON by default; --no-real-sdr flag allows explicit opt-out.
     os.environ["DSLV_DASHBOARD_REAL_SDR"] = "0" if args.no_real_sdr else "1"
 
     show_banner = False if args.no_banner else cfg.show_banner
@@ -731,6 +830,7 @@ def main(cfg=None):
         show_banner=show_banner,
         waterfall_only=args.waterfall_only,
         compact=compact,
+        ten_inch=ten_inch,
         config=cfg,
     )
     if args.no_boot:

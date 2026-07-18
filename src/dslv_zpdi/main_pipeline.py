@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 from dslv_zpdi.config_models import NodeProfile
-from dslv_zpdi.layer1_ingestion.hal_factory import get_tier1_hal, _build_key_provider
+from dslv_zpdi.layer1_ingestion.hal_factory import _build_key_provider, get_tier1_hal
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
