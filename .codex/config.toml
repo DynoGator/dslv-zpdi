@@ -1,4 +1,5 @@
 # Project-scoped Codex defaults for DSLV-ZPDI.
+# INSTRUCTIONS: Read .codex/instructions.md before every task. It is binding.
 model_reasoning_effort = "xhigh"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
@@ -10,3 +11,7 @@ shell_snapshot = true
 unified_exec = true
 multi_agent = true
 memories = true
+
+[instructions]
+file = ".codex/instructions.md"
+required = true
