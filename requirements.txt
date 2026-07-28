@@ -80,7 +80,7 @@ scipy==1.17.1
     # via dslv-zpdi (pyproject.toml)
 smbus2==0.6.1
     # via dslv-zpdi (pyproject.toml)
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   pydantic
     #   pydantic-core
