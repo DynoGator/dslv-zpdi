@@ -25,18 +25,37 @@ _GPSDO_TTL = 5.0    # seconds
 _HEALTH_JSON_PATHS = (Path("/run/dslv-zpdi/health.json"), Path("/tmp/health.json"))
 
 
+import threading
+
 class _Cache:
     def __init__(self, ttl: float):
         self.ttl = ttl
         self.t = 0.0
         self.val = None
+        self._lock = threading.Lock()
+        self._fetching = False
 
     def get(self, producer):
         now = time.time()
-        if self.val is None or now - self.t > self.ttl:
-            self.val = producer()
-            self.t = now
-        return self.val
+        with self._lock:
+            if self.val is None and not self._fetching:
+                # First fetch is synchronous to populate default
+                self.val = producer()
+                self.t = now
+                return self.val
+            if now - self.t > self.ttl and not self._fetching:
+                self._fetching = True
+                def _worker():
+                    try:
+                        res = producer()
+                    except Exception:
+                        res = self.val
+                    with self._lock:
+                        self.val = res
+                        self.t = time.time()
+                        self._fetching = False
+                threading.Thread(target=_worker, daemon=True).start()
+            return self.val
 
 
 def _read_health_json() -> dict:
