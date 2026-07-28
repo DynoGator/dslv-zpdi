@@ -243,7 +243,7 @@ TIER1_PACKAGES=(
     pciutils
     libiio-dev
     python3-soapysdr
-    soapysdr-module-plutosdr
+
 )
 
 log_info "Starting DSLV-ZPDI install (${SCRIPT_REV})"
@@ -272,7 +272,9 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
 
     if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
         log_info "Installing Tier 1 timing/audit packages"
-        apt-get install -y "${TIER1_PACKAGES[@]}" || log_fail "Failed to install Tier 1 packages"
+        apt-get install -y --allow-change-held-packages "${TIER1_PACKAGES[@]}" || {
+            log_fail "Failed to install Tier 1 packages"
+        }
         
         # Configure chrony for PPS priority (ARCH-PHASE-2A-PIVOT §4.3)
         log_info "Configuring chrony for PPS priority over NTP"
@@ -536,7 +538,7 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
         bluez bluez-firmware
         libiio0 libiio-dev python3-libiio
         libad9361-0 libad9361-dev
-        soapysdr-module-plutosdr python3-soapysdr
+        python3-soapysdr
         pps-tools chrony
     )
     # Discover any versioned kernel/header packages installed and hold those too
