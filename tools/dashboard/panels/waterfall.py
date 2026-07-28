@@ -66,7 +66,7 @@ _PALETTES = [
     ]
 ]
 
-_PALETTE_IDX = 0
+_PALETTE_IDX = 1
 
 
 def _heat(v: float) -> str:
@@ -438,13 +438,14 @@ class WaterfallPanel:
         self.span_hz = span_hz
         self.mode = mode
         self.border_style = border_style
-        self.lna_gain = lna_gain
-        self.vga_gain = vga_gain
+        self.lna_gain = 30
+        self.vga_gain = 30
         self.amp_enabled = amp_enabled
-        self.dbm_floor = -90.0
-        self.dbm_ceil = -20.0
+        self.dbm_floor = -75.0
+        self.dbm_ceil = -70.0
         self.show_spectrum = True
         self.compact = compact
+        self.modulation = "RAW"
 
         self._t0 = time.time()
         self._sim_carriers = [
@@ -456,7 +457,7 @@ class WaterfallPanel:
         self._hackrf_stream = HackrfSweepStream()
         self._pluto_stream = PlutoSweepStream()
         self._active_real: str | None = None  # 'pluto' or 'hackrf' when live
-        self._want_real = False
+        self._want_real = True
         self._stream_retry_at = 0.0
         self._last_source = "SIM"
         # Raw dBm view of the latest row (real or simulated). Consumed by the

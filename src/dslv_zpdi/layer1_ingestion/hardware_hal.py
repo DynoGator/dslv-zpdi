@@ -27,6 +27,8 @@ from dslv_zpdi.layer1_ingestion.frequency_translation.mapper import FrequencyMap
 from dslv_zpdi.layer1_ingestion.frequency_translation.model import FrequencyTranslationStage
 from dslv_zpdi.layer1_ingestion.hal_base import BaseHAL
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
+from dslv_zpdi.layer1_ingestion.demodulation import Demodulator
+from dslv_zpdi.layer1_ingestion.mimo_vectoring import MimoVectoringEngine
 from dslv_zpdi.layer1_ingestion.sdr.base import SdrBackend
 from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
 from dslv_zpdi.layer1_ingestion.sdr.qualification import (
@@ -69,6 +71,12 @@ class HardwareHAL(BaseHAL):
         self.key_provider = key_provider
         self._profile = profile
         self._key_loaded = self._check_key_loaded()
+
+        # Advanced SDR Capabilities (Demodulation and MIMO)
+        self.demodulator = Demodulator()
+        self.mimo_engine = MimoVectoringEngine(tx_channels=2, rx_channels=2)
+        # Enable full duplex MIMO by default per spec
+        self.mimo_engine.enable_full_duplex()
 
     def _check_key_loaded(self) -> bool:
         """SPEC-005A.HAL — Determine whether a production HMAC key is available."""
@@ -196,7 +204,7 @@ class HardwareHAL(BaseHAL):
         num_samples = num_samples if num_samples is not None else (
             profile_cfg.sdr.buffer_samples if profile_cfg else 16384
         )
-        gain_db = profile_cfg.rf.gain_db if profile_cfg else 62.0
+        gain_db = profile_cfg.rf.gain_db if profile_cfg else 0.0
 
         profile = CaptureProfile(
             center_frequency_hz=int(center_freq),

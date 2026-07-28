@@ -50,8 +50,8 @@ class PanelsCfg:
 @dataclass
 class WaterfallCfg:
     mode: str = "SWEEP"
-    center_hz: int = 100_000_000
-    span_hz: int = 20_000_000
+    center_hz: int = 3_000_000_000
+    span_hz: int = 40_000_000
     history: int = 24
 
 
@@ -80,7 +80,7 @@ class KeyCfg:
 class DashboardConfig:
     refresh: float = 0.2
     fps: int = 15
-    show_banner: bool = True
+    show_banner: bool = False
     service_unit: str = "dslv-zpdi"
     source_path: str = ""
     theme: ThemeCfg = field(default_factory=ThemeCfg)
