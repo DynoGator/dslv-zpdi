@@ -1,0 +1,34 @@
+[Unit]
+Description=DSLV-ZPDI Tier-1 WSS Ingestion Server (port 8443)
+After=network.target dslv-zpdi.service
+Wants=dslv-zpdi.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=dynogator
+Group=dynogator
+WorkingDirectory=/home/dynogator/dslv-zpdi
+EnvironmentFile=/home/dynogator/dslv-zpdi/.env
+ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python tier1_ingestion_server.py
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/dynogator/dslv-zpdi/src
+Environment=ZPDI_SERVER_HOST=0.0.0.0
+Environment=ZPDI_SERVER_PORT=8443
+Restart=on-failure
+RestartSec=15
+MemoryMax=512M
+
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=true
+ReadWritePaths=/home/dynogator/dslv-zpdi/output /home/dynogator/dslv-zpdi/logs /var/lib/dslv_zpdi /run/dslv-zpdi
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dslv-zpdi-tier1
+
+[Install]
+WantedBy=multi-user.target

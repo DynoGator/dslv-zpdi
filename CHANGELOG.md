@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — ZPDI_CONDITIONS standalone local dashboard (2026-07-09)
+## [5.1.0] — Mobile Node and TUI Refinements (2026-07-28)
 
 ### Added
 - New standalone dashboard package `tools/zpdi_conditions/`:

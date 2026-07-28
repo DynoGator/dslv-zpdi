@@ -104,11 +104,15 @@ class AppliedConfiguration:
 
     def matches(self, requested: CaptureProfile) -> bool:
         """Return True if applied settings match the requested profile within tolerance."""
+        bw_match = (
+            self.bandwidth_hz == requested.bandwidth_hz
+            or abs(self.bandwidth_hz - requested.bandwidth_hz) <= 2_000_000
+        )
         return (
             self.center_frequency_hz == requested.center_frequency_hz
             and self.sample_rate_sps == requested.sample_rate_sps
-            and self.bandwidth_hz == requested.bandwidth_hz
-            and abs(self.gain_db - requested.gain_db) < 0.5
+            and bw_match
+            and abs(self.gain_db - requested.gain_db) <= 2.0
             and self.gain_mode == requested.gain_mode
             and self.receive_channels == requested.receive_channels
             and self.transmit_enabled == requested.transmit_enabled

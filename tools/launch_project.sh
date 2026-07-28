@@ -141,14 +141,14 @@ if [ -n "$SUDO" ]; then
     SAY "step 5/7 :: starting dslv-zpdi chain (tuning → preflight → pipeline)"
     $SUDO systemctl daemon-reload
     sleep 3
-    for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service; do
+    for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service dslv-zpdi-webdash.service dslv-zpdi-tier1.service; do
         SAY "  - start $unit"
         $SUDO systemctl start "$unit" || WARN "failed to start $unit"
         # generous pause between dependent unit starts so each finishes init
         # before the next one is asked to come up
-        sleep 5
+        sleep 3
     done
-    sleep 5
+    sleep 3
 else
     SAY "step 5/7 :: skipping systemd chain start (no sudo)"
 fi
@@ -156,7 +156,7 @@ fi
 # --- 6. Verify chain health -------------------------------------------
 SAY "step 6/7 :: verifying service health"
 FAILED=0
-for unit in dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi; do
+for unit in dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi dslv-zpdi-webdash dslv-zpdi-tier1; do
     STATE="$(systemctl is-active "$unit" 2>/dev/null || true)"
     case "$STATE" in
         active)   OK "$unit: active" ;;

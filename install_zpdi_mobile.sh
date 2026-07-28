@@ -121,8 +121,9 @@ ZPDI_NODE_ID=dslv-zpdi/mobile-tier2
 ZPDI_SERVER_HOST=0.0.0.0
 ZPDI_SERVER_PORT=8443
 
-# --- Mobile daemon WSS endpoint (points at local tier1 server) ---
-ZPDI_WSS_URI=ws://127.0.0.1:8443/ingest
+# --- Mobile daemon WSS endpoint (points at Pi or local tier1 server) ---
+PI_HOST="${PI_HOST:-10.29.134.69}"
+ZPDI_WSS_URI=ws://${PI_HOST}:8443/ingest
 ZPDI_WSS_TOKEN=
 ZPDI_WSS_CA_BUNDLE=
 

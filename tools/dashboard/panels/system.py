@@ -3,9 +3,26 @@
 import os
 import shutil
 import subprocess
+import time
 
 from rich.panel import Panel
 from rich.table import Table
+
+_THROTTLE_TTL = 5.0  # seconds
+
+
+class _Cache:
+    def __init__(self, ttl: float):
+        self.ttl = ttl
+        self.t = 0.0
+        self.val = None
+
+    def get(self, producer):
+        now = time.time()
+        if self.val is None or now - self.t > self.ttl:
+            self.val = producer()
+            self.t = now
+        return self.val
 
 
 def _read(path: str, default: str = "") -> str:
@@ -124,6 +141,7 @@ def _uptime() -> str:
 class SystemPanel:
     def __init__(self, border_style: str = "bright_cyan"):
         self._cpu_state = {}
+        self._throttle = _Cache(_THROTTLE_TTL)
         self.border_style = border_style
 
     def render(self, compact: bool = False) -> Panel:
@@ -132,7 +150,7 @@ class SystemPanel:
         load = _load_avg()
         temp = _cpu_temp_c()
         gov = _governor()
-        thr = _throttle_status()
+        thr = self._throttle.get(_throttle_status)
         up = _uptime()
 
         t = Table.grid(padding=(0, 1 if compact else 2), expand=True)

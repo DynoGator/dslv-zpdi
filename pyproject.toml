@@ -81,6 +81,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "tools"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
 markers = [

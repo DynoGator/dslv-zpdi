@@ -354,7 +354,11 @@ class RadonEyeHttpTransport:
 
 
 class RadonEyeIngestor:
-    """SPEC-015.7 — Unified ingestor with auto-failover BLE → HTTP → SIM."""
+    """SPEC-015.7 — Unified ingestor with auto-failover BLE → HTTP → SIM.
+
+    Supports optional equipment mode where physical device absence is expected
+    and development continues via simulated telemetry streams without error.
+    """
 
     def __init__(
         self,
@@ -363,8 +367,10 @@ class RadonEyeIngestor:
         http_endpoint: str = "/data",
         simulator: RadonEyeSimulator | None = None,
         prefer_ble: bool = True,
+        optional_hardware: bool = True,
     ):
         self.prefer_ble = prefer_ble
+        self.optional_hardware = optional_hardware
         self.ble = RadonEyeBleTransport(device_address=device_address)
         self.http = RadonEyeHttpTransport(base_url=http_url, endpoint=http_endpoint)
         self.sim = simulator or RadonEyeSimulator()
@@ -375,23 +381,31 @@ class RadonEyeIngestor:
             try:
                 return await self.ble.read()
             except Exception as exc:
-                logger.warning("RadonEye BLE failed (%s), trying HTTP fallback", exc)
+                logger.debug("RadonEye BLE failed (%s), trying HTTP fallback", exc)
             try:
                 return self.http.read()
             except Exception as exc:
-                logger.warning("RadonEye HTTP failed (%s), falling back to simulator", exc)
-            return self.sim.read()
+                logger.debug("RadonEye HTTP failed (%s), falling back to simulator", exc)
+            if self.optional_hardware:
+                logger.info("[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development")
+            sample = self.sim.read()
+            sample.provenance["optional_equipment"] = True
+            return sample
 
         # HTTP-first mode
         try:
             return self.http.read()
         except Exception as exc:
-            logger.warning("RadonEye HTTP failed (%s), trying BLE fallback", exc)
+            logger.debug("RadonEye HTTP failed (%s), trying BLE fallback", exc)
         try:
             return await self.ble.read()
         except Exception as exc:
-            logger.warning("RadonEye BLE failed (%s), falling back to simulator", exc)
-        return self.sim.read()
+            logger.debug("RadonEye BLE failed (%s), falling back to simulator", exc)
+        if self.optional_hardware:
+            logger.info("[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development")
+        sample = self.sim.read()
+        sample.provenance["optional_equipment"] = True
+        return sample
 
     def read_sync(self) -> RadonSample:
         """Synchronous wrapper for non-async callers."""

@@ -51,6 +51,7 @@ def _proc_uptime_seconds(pid: int) -> float:
 
 
 _PRIMARY_TTL = 2.0
+_SYSTEMCTL_TTL = 3.0
 _HEALTH_TTL = 1.5
 _HEALTH_STALE_S = 12.0  # Health data older than this means pipeline is not updating
 
@@ -175,9 +176,10 @@ class PipelinePanel:
         self._prim_cache = _Cache(_PRIMARY_TTL)
         self._sec_cache = _MtimeCache()
         self._health_cache = _Cache(_HEALTH_TTL)
+        self._sysctl_cache = _Cache(_SYSTEMCTL_TTL)
 
     def render(self, compact: bool = False) -> Panel:
-        info = _systemctl_show(self.unit)
+        info = self._sysctl_cache.get(lambda: _systemctl_show(self.unit))
         state = info.get("ActiveState", "?")
         substate = info.get("SubState", "?")
         pid = int(info.get("MainPID", "0") or 0)

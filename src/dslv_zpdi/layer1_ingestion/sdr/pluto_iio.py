@@ -246,6 +246,9 @@ class PlutoIioBackend(SdrBackend):
                 "TX is hard-locked out for Tier-1 qualification; set transmit_enabled=False"
             )
 
+        if self._applied is not None and self._applied.matches(profile):
+            return self._applied
+
         # RX LO
         rx_lo = self._ad9361.find_channel("altvoltage0", True)
         if rx_lo is None:
@@ -263,8 +266,7 @@ class PlutoIioBackend(SdrBackend):
         rx_chan.attrs["sampling_frequency"].value = str(int(profile.sample_rate_sps))
 
         # Read back applied values. Some Pluto firmware/libiio revisions return
-        # empty strings immediately after a write; fall back to the requested
-        # profile so ingestion is not killed by a transient read-back gap.
+        # empty strings immediately after a write; fall back to requested.
         applied_center = self._read_attr_int(rx_lo, "frequency", profile.center_frequency_hz)
         applied_sample_rate = self._read_attr_int(
             rx_chan, "sampling_frequency", profile.sample_rate_sps

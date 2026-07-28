@@ -82,6 +82,7 @@ STAGES = [
     ("SDR", "dslv-zpdi.service", True, "PlutoSDR+ pipeline backend"),
     ("UPS", "dslv-zpdi-ups.service", True, "X-1202 power telemetry"),
     ("WEBDASH", "dslv-zpdi-webdash.service", True, "Flask dashboard on :8080"),
+    ("TIER1", "dslv-zpdi-tier1.service", True, "Tier-1 WSS server on :8443"),
 ]
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

@@ -21,9 +21,12 @@ class RadonPanel:
 
     def render(self, compact: bool = False):
         s = self._last_sample
+        is_optional = s.get("provenance", {}).get("optional_equipment", True) if s else True
+        title = "[RADON — OPTIONAL]" if is_optional else "[RADON]"
+
         if not s:
-            content = Text("NO DATA — SNIFFING NOBLE GASES...", style="dim italic")
-            return Panel(content, title="[RADON]", border_style=self.border_style)
+            content = Text("OPTIONAL EQUIPMENT — NOT CONNECTED (SIM READY)", style="dim italic")
+            return Panel(content, title=title, border_style=self.border_style)
 
         age_s = time.time() - s.get("timestamp_utc", 0)
         age_str = f"{age_s:.0f}s" if age_s < 120 else f"{age_s/60:.0f}m"
@@ -43,7 +46,7 @@ class RadonPanel:
             line.append(f"{s.get('radon_pCiL', 0):.2f} pCi/L ", style="bold bright_green")
             line.append(f"({transport}) ", style=transport_style)
             line.append(f"age:{age_str}", style="dim")
-            return Panel(line, title="[RADON]", border_style=self.border_style)
+            return Panel(line, title=title, border_style=self.border_style)
 
         table = Table(show_header=False, box=None, padding=0)
         table.add_column("key", style="dim", justify="right")
@@ -55,4 +58,4 @@ class RadonPanel:
         table.add_row("Quality", f"[{quality_style}]{quality}")
         table.add_row("Age", age_str)
 
-        return Panel(table, title="[RADON]", border_style=self.border_style)
+        return Panel(table, title=title, border_style=self.border_style)

@@ -47,6 +47,7 @@ from dashboard.banner import (
 )
 from dashboard.config import DashboardConfig, load_config
 from dashboard.panels.anomaly import RFAnomalyPanel
+from dashboard.mobile_bridge import MobileBridge
 from dashboard.panels.bci import BCIPanel
 from dashboard.panels.hardware import HardwarePanel
 from dashboard.panels.logs import LogPanel
@@ -349,6 +350,7 @@ class Dashboard:
         cfg = config if config is not None else load_config()
         self.console = Console()
         self.refresh = refresh if refresh is not None else cfg.refresh
+        self.fps = max(1, min(30, int(cfg.fps)))
         self.compact = _is_compact() if compact is None else compact
         self.ten_inch = (_is_ten_inch() if ten_inch is None else ten_inch) and not self.compact
         self._banner_pref = show_banner if show_banner is not None else cfg.show_banner
@@ -399,6 +401,10 @@ class Dashboard:
         if getattr(cfg.panels, "mobile", True):
             self.mobile_p = MobilePanel(border_style="bright_blue")
             self._panels["mobile"] = self.mobile_p
+            self.mobile_bridge = MobileBridge(self.mobile_p)
+            self.mobile_bridge.start()
+        else:
+            self.mobile_bridge = None
         if getattr(cfg.panels, "bci", True):
             self.bci_p = BCIPanel(border_style="bright_magenta")
             self._panels["bci"] = self.bci_p
@@ -749,19 +755,27 @@ class Dashboard:
         self._enter_raw()
         try:
             self._live = Live(self.layout, console=self.console,
-                              refresh_per_second=max(1, int(1 / self.refresh)), screen=True)
+                              refresh_per_second=self.fps, screen=True)
+            frame_period = 1.0 / self.fps
+            next_frame = time.monotonic()
             with self._live:
                 while True:
-                    k = self._read_key()
-                    if k:
+                    while (k := self._read_key()) is not None:
                         self._handle_key(k)
                     if not self.paused:
                         self._render()
-                    time.sleep(self.refresh)
+                    next_frame += frame_period
+                    now = time.monotonic()
+                    if now - next_frame > frame_period:
+                        # Overran by more than a frame; resync the deadline.
+                        next_frame = now + frame_period
+                    time.sleep(max(0.0, next_frame - now))
         except KeyboardInterrupt:
             pass
         finally:
             self._exit_raw()
+            if getattr(self, "mobile_bridge", None):
+                self.mobile_bridge.stop()
             if "logs" in self._panels:
                 self._panels["logs"].stop()
             if "waterfall" in self._panels:

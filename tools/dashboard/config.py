@@ -78,7 +78,8 @@ class KeyCfg:
 
 @dataclass
 class DashboardConfig:
-    refresh: float = 0.5
+    refresh: float = 0.2
+    fps: int = 15
     show_banner: bool = True
     service_unit: str = "dslv-zpdi"
     source_path: str = ""
@@ -122,7 +123,7 @@ def load_config(path: Path | None = None) -> DashboardConfig:
         return cfg
 
     dash = data.get("dashboard", {})
-    for k in ("refresh", "show_banner", "service_unit"):
+    for k in ("refresh", "fps", "show_banner", "service_unit"):
         if k in dash:
             setattr(cfg, k, dash[k])
 
@@ -135,6 +136,7 @@ def load_config(path: Path | None = None) -> DashboardConfig:
 
     # Enforce safe bounds so bad config values don't crash the dashboard.
     cfg.refresh = max(0.1, float(cfg.refresh))
+    cfg.fps = max(1, min(30, int(cfg.fps)))
     cfg.waterfall.history = max(10, int(cfg.waterfall.history))
     cfg.waterfall.center_hz = max(1_000_000, int(cfg.waterfall.center_hz))
     cfg.waterfall.span_hz = max(100_000, min(500_000_000, int(cfg.waterfall.span_hz)))

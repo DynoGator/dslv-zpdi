@@ -374,8 +374,11 @@ class PlutoSweepStream:
         # One-sided power spectrum via FFT; dBFS for now.
         n = len(samples)
         fft = np.fft.fftshift(np.fft.fft(samples))
-        # dBFS: 20*log10(|fft|/n). A full-scale tone would approach 0 dBFS.
-        power = 20.0 * np.log10(np.maximum(np.abs(fft) / max(1, n), 1e-12))
+        # dBFS: 20*log10(|fft|/(n*FS)). Pluto samples are raw AD9361 12-bit
+        # ADC counts (full scale ±2047), so divide by 2048.0 as well — without
+        # this the spectrum is offset by +66 dB and every bin saturates the
+        # palette ceiling. A full-scale tone approaches 0 dBFS.
+        power = 20.0 * np.log10(np.maximum(np.abs(fft) / (max(1, n) * 2048.0), 1e-12))
 
         # Resample the FFT to `width` columns using max-hold.
         if len(power) == width:
@@ -460,6 +463,16 @@ class WaterfallPanel:
         # RF anomaly panel so it can report peak dBm, noise floor, etc.
         self.last_dbm_row: list[float] | None = None
         self._anomaly_count_recent = 0
+        # Data production runs on a daemon thread (mirrors LogPanel) so the
+        # render path stays pure drawing. _rows_lock guards rows, peak_hold,
+        # last_dbm_row and the anomaly counters shared with the UI thread;
+        # _stream_lock serializes stream start/stop against keypress-driven
+        # restarts from the UI thread.
+        self._rows_lock = threading.Lock()
+        self._stream_lock = threading.Lock()
+        self._tick_thread: threading.Thread | None = None
+        self._tick_stop = threading.Event()
+        self._tick_started = False
 
     def cycle_palette(self):
         global _PALETTE_IDX
@@ -544,15 +557,44 @@ class WaterfallPanel:
         w = max(20, int(width))
         if w != self.width:
             self.width = w
-            self.rows = []
-            self.peak_hold = [0.0] * self.width
+            with self._rows_lock:
+                self.rows = []
+                self.peak_hold = [0.0] * self.width
             self._restart_stream_if_running()
 
+    def start(self):
+        """Start the background tick thread (idempotent)."""
+        if self._tick_started:
+            return
+        self._tick_started = True
+        self._tick_thread = threading.Thread(target=self._tick_loop, daemon=True)
+        self._tick_thread.start()
+
+    def stop(self):
+        self._tick_stop.set()
+
+    def _tick_loop(self):
+        # Scroll rate is data-driven: real rows are consumed as fast as they
+        # arrive; when no row is available, back off briefly instead of
+        # spinning.
+        while not self._tick_stop.is_set():
+            try:
+                got_row = self.tick()
+            except Exception:
+                got_row = False
+            if not got_row:
+                time.sleep(0.04)
+
     def shutdown(self):
+        self.stop()
         self._hackrf_stream.stop()
         self._pluto_stream.stop()
 
     def _sync_stream(self):
+        with self._stream_lock:
+            self._sync_stream_locked()
+
+    def _sync_stream_locked(self):
         want_real = os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
         if not want_real:
             if self._active_real is not None:
@@ -603,6 +645,10 @@ class WaterfallPanel:
         self._want_real = want_real
 
     def _restart_stream_if_running(self):
+        with self._stream_lock:
+            self._restart_stream_if_running_locked()
+
+    def _restart_stream_if_running_locked(self):
         if self._active_real == "pluto" and self._pluto_stream.is_running():
             self._pluto_stream.start(
                 center_hz=self.center_hz,
@@ -643,11 +689,14 @@ class WaterfallPanel:
             row.append(v)
         return row
 
-    def tick(self):
+    def tick(self) -> bool:
+        """Produce one waterfall row. Returns True when a real stream row was
+        consumed (False for sim/fallback rows). Runs on the tick thread."""
         self._sync_stream()
         row: list[float] | None = None
         raw_dbm: list[float] | None = None
         source = "SIM"
+        got_row = False
         if self._want_real:
             if self._active_real == "pluto":
                 raw_row = self._pluto_stream.pop_row()
@@ -655,33 +704,38 @@ class WaterfallPanel:
                     source = "PLUTO"
                     raw_dbm = raw_row
                     row = self._normalize(raw_row)
+                    got_row = True
             elif self._active_real == "hackrf":
                 raw_row = self._hackrf_stream.pop_row()
                 if raw_row is not None:
                     source = "HACKRF"
                     raw_dbm = raw_row
                     row = self._normalize(raw_row)
+                    got_row = True
         if row is None:
             row = self._sim_row()
             raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
             if self._want_real:
                 source = f"{self._active_real.upper()}-WAIT" if self._active_real else "WAIT"
         self._last_source = source
-        self.last_dbm_row = raw_dbm
-        if raw_dbm:
-            floor = self._estimate_floor(raw_dbm)
-            self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
 
-        if row:
-            if len(self.peak_hold) != len(row):
-                self.peak_hold = list(row)
-            else:
-                for i in range(len(row)):
-                    self.peak_hold[i] = max(row[i], self.peak_hold[i] * 0.98)
+        with self._rows_lock:
+            self.last_dbm_row = raw_dbm
+            if raw_dbm:
+                floor = self._estimate_floor(raw_dbm)
+                self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
 
-        self.rows.append(row)
-        if len(self.rows) > self.history:
-            self.rows.pop(0)
+            if row:
+                if len(self.peak_hold) != len(row):
+                    self.peak_hold = list(row)
+                else:
+                    for i in range(len(row)):
+                        self.peak_hold[i] = max(row[i], self.peak_hold[i] * 0.98)
+
+            self.rows.append(row)
+            if len(self.rows) > self.history:
+                self.rows.pop(0)
+        return got_row
 
     @staticmethod
     def _estimate_floor(row: list[float]) -> float:
@@ -691,7 +745,9 @@ class WaterfallPanel:
 
     def metrics(self) -> dict:
         """Snapshot of current spectrum metrics for the RF anomaly panel."""
-        row = self.last_dbm_row
+        with self._rows_lock:
+            row = list(self.last_dbm_row) if self.last_dbm_row else None
+            anomaly_count = self._anomaly_count_recent
         if not row:
             return {
                 "have_data": False,
@@ -721,7 +777,7 @@ class WaterfallPanel:
             "peak_freq_hz": peak_freq_hz,
             "noise_floor_dbm": floor,
             "snr_db": peak_v - floor,
-            "anomaly_count": self._anomaly_count_recent,
+            "anomaly_count": anomaly_count,
             "source": self._last_source,
             "span_hz": self.span_hz,
             "center_hz": self.center_hz,
@@ -739,7 +795,7 @@ class WaterfallPanel:
             return self._hackrf_stream
         return None
 
-    def _spectrum_text(self, row: list[float], height: int = 5) -> Text:
+    def _spectrum_text(self, row: list[float], peak_hold: list[float], height: int = 5) -> Text:
         t = Text()
         # Estimate noise floor for the normalized row
         floor_val = sum(sorted(row)[:len(row)//4]) / (len(row)//4 + 1)
@@ -747,7 +803,7 @@ class WaterfallPanel:
         for y in range(height, 0, -1):
             threshold = y / height
             for i, v in enumerate(row):
-                pk = self.peak_hold[i]
+                pk = peak_hold[i]
                 if v >= threshold:
                     t.append("█", style=_heat(v))
                 elif pk >= threshold:
@@ -780,26 +836,31 @@ class WaterfallPanel:
     def render(self, compact: bool | None = None) -> Panel:
         if compact is not None:
             self.compact = compact
-        self.tick()
+        # Data production lives on the tick thread; render is pure drawing
+        # over a consistent snapshot of the shared state.
+        self.start()
+        with self._rows_lock:
+            rows = list(self.rows)
+            peak_hold = list(self.peak_hold)
         lines = Text()
         center_mhz = self.center_hz / 1e6
         span_mhz = self.span_hz / 1e6
 
-        if not self.rows:
+        if not rows:
             lines.append("\n  [ buffering spectrum... ]\n")
         else:
             if self.show_spectrum:
                 spec_h = 3 if self.compact else 5
-                lines.append_text(self._spectrum_text(self.rows[-1], height=spec_h))
+                lines.append_text(self._spectrum_text(rows[-1], peak_hold, height=spec_h))
                 lines.append("─" * self.width, style="dim")
                 lines.append("\n")
 
             # Use as much history as we have, but limit for very small screens if needed.
             # However, the Layout ratio=1 will provide the space, so we should fill it.
             # We don't know the exact line count here, so we'll show most of it.
-            rows_to_show = self.rows
-            if self.compact and len(self.rows) > 15:
-                rows_to_show = self.rows[-15:]
+            rows_to_show = rows
+            if self.compact and len(rows) > 15:
+                rows_to_show = rows[-15:]
 
             for row in reversed(rows_to_show):
                 lines.append_text(self._row_text(row))
