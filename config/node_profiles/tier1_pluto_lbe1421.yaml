@@ -47,7 +47,7 @@ sdr:
   rf_bandwidth_hz: 10000000
   sample_rate_hz: 10000000
   transmit_enabled: false
-  uri: '${DSLV_SDR_URI:-ip:192.168.2.1}'
+  uri: "ip:192.168.2.1"
 timing:
   authority: lbe1421
   max_fix_age_s: 10.0
