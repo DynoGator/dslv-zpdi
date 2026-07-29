@@ -1,11 +1,12 @@
 # DynoGatorLabs Crew - Unified Memory State
 
-**LAST UPDATED:** 2026-07-29T21:20:00+00:00
-**SYSTEM STATUS:** OPERATIONAL — C2 CONTROL PLANE ACTIVE — Phase 4 COMPLETE — FULL VALIDATION GREEN
+**LAST UPDATED:** 2026-07-29T22:05:00+00:00
+**SYSTEM STATUS:** OPERATIONAL — FULL STACK UP — REBOOT PREP COMPLETE — pushed to origin
 
 ## 1. Current Codebase State
-- **Branch:** `main` @ `820d095` — clean tree; **ahead 2, behind 42 vs origin/main** (sync needs Joe's approval)
-- **Tests:** 234 passed — verified 2026-07-29 via `validate.sh` (pip check, version sync, orphan checker, repo guard, ruff, mypy, pytest, git diff --check all green)
+- **Branch:** `main` @ `6434be0` — **in sync with `origin/main`** (rebased + pushed 2026-07-29)
+- **Version:** Rev 5.2.0 (metadata aligned; SPEC-023 added for demod/MIMO hooks)
+- **Tests:** 237 passed — verified 2026-07-29 via `validate.sh` on the integrated tree
 - **Merged Features (v5.0.0 baseline):**
   - `PlutoSDR+ Tier1` hardware abstraction layer (IIO / libiio)
   - `Mobile-Node` architecture (Pixel 9 Pro XL GrapheneOS / PRoot)
@@ -41,7 +42,9 @@
   - Hardware: Pixel 9 Pro XL / GrapheneOS / PRoot Debian
   - Main pipeline: `zpdi_mobile_node.py` via `supervisor.sh`
   - C2 overlay: `/root/dslv-zpdi-local/` (outside main repo)
-  - Boot scripts (Termux): `98-dslv-c2-services.sh`, `99-start-zpdi.sh`
+  - Boot scripts (Termux): `98-dslv-c2-services.sh`, `99-start-zpdi.sh` — both
+    installed in native `~/.termux/boot/`; canonical copies in
+    `/root/dslv-zpdi-local/termux-boot/` and repo `termux-boot/`
   - Running services: C2 `:8444`, HDF5 adapter `:8445`, PWA `:8085`, main pipeline `:8443`/`:8080`
 
 ## 3. Active Development Track — PIXEL_DEV_PLAN.md
@@ -52,14 +55,20 @@
 | # | Task | Status |
 |---|------|--------|
 | 1 | Apply Phase 1 manual GrapheneOS settings on device | Manual — device action required |
-| **2** | **Reboot + confirm services auto-start from boot logs** | **CURRENT — services running; boot-c2.log absent (reboot test pending)** |
+| **2** | **Reboot + confirm services auto-start from boot logs** | **CURRENT — scripts fixed 2026-07-29; reboot test is the next action** |
 | 3 | 30-minute screen-off soak test | Pending step 2 reboot |
 | **4** | **Implement control adapters (`src/dslv_zpdi/control/adapters/`)** | **DONE 2026-07-25 — pipeline, sdr, hdf5_query adapters live** |
 | 5 | Build native APK Phase 6B (Kotlin + LocalOnlyHotspot) | Future |
 | 6 | Complete Phase 8 one-shot installer | Future |
 
-**boot-c2.log status:** Absent — services were manually started, boot script auto-run unverified.
-To verify step 2: reboot device, then `tail -f /root/dslv-zpdi-local/logs/boot-c2.log`
+**boot-c2.log status:** Present at native `~/dslv-zpdi-local/logs/boot-c2.log`.
+**2026-07-29 reboot prep:** `98-dslv-c2-services.sh` had a fatal native-context bug —
+it referenced `/root/...` (proot fake-root home) for log redirects, the PWA server,
+and the watchdog, so every overlay service died silently at boot. Fixed script runs
+all services inside proot logins with in-proot redirects; watchdog runs native from
+the native mirror `~/dslv-zpdi-local/network/`. Full stack verified up pre-reboot
+(self_check: all PASS). Post-reboot verification procedure:
+`/root/dslv-zpdi-local/docs/BOOT_VERIFICATION.md`.
 
 ## 4. Operational Directives
 - **NO DESTRUCTIVE MERGES:** `main` is stable. All new work branches from `main` and must pass the 207-item test suite before merging.
@@ -69,14 +78,15 @@ To verify step 2: reboot device, then `tail -f /root/dslv-zpdi-local/logs/boot-c
 - **VALIDATE:** `bash /root/dslv-zpdi-local/scripts/validate.sh` before and after any code change.
 
 ## 5. Pending Commits (main repo)
-**RESOLVED 2026-07-29:** All Phase 4 artifacts were committed in `91942b9` (SPEC-022 C2
-package) and `820d095` (docs/crew memory). Working tree is clean. Note: local `main`
-is ahead 2 / behind 42 vs `origin/main` — fetch reviewed, merge held pending approval
-per collaboration protocol.
+**RESOLVED 2026-07-29:** All local work (C2 package, docs, version alignment,
+SPEC-023, lint fixes) rebased onto latest `origin/main` and pushed. `main` ==
+`origin/main` @ `6434be0`; working tree clean.
 
 ## 6. Open Risks
 - `CapabilityStore` grants full capabilities to all localhost callers → must change before LAN exposure
 - `hdf5.segment.export` declared but returns staged ack; actual export not implemented
 - `sensor_alive: false` in health log (pre-existing, investigate separately)
+- `logs/tier1_server.log` is ~3.3 GB and growing — rotate or truncate before disk pressure (needs Joe's approval; do not delete data unilaterally)
+- Android phantom-process killer can still `SIGKILL` long-running proot children — confirm Phase 1 "Disable child process restrictions" is set (13:34 boot daemon was `Killed`)
 - Gemini CLI OAuth free tier ended June 2026 — verify subscription
 - Legacy normalization shim in `c2_server.py` should be removed after all clients confirmed spec-compliant
