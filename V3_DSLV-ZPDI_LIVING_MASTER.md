@@ -754,7 +754,7 @@ def ingest_gps_pps(
 
 # ─── SDR Ingestion (Rev 4.2-LBE-1421 — RF Metrology) ────
 def ingest_sdr(
-    center_freq: float = 100e6,
+    center_freq: float = 80e6,
     sample_rate: float = 20e6,  # HackRF capability
     num_samples: int = 262144,
     node_id: str = "PI5-ALPHA",

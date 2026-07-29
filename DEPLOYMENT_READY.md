@@ -29,7 +29,7 @@
 - **PlutoSDR+**: Configured for USB IIO streaming (`usb:`)
   - Model: Analog Devices ADALM-PLUTO (LibreSDR Rev.5, Z7020-AD9361)
   - Serial: Tezuka firmware v0.3.12
-  - Configuration: 100 MHz center, 62 dB gain, 10 MS/s sample rate
+  - Configuration: 80 MHz center, 62 dB gain, 10 MS/s sample rate
   
 - **LBE1421 GPSDO**: Configured as timing authority
   - PPS Device: `/dev/pps0` (configured, disabled strict validation to allow operation during boot)
@@ -51,7 +51,7 @@
 - **Node Profile**: `config/node_profiles/tier1_pluto_lbe1421.yaml`
   - Backend: pluto_iio
   - Trust Settings: Relaxed for operation (fail_closed=false)
-  - RF Parameters: 100 MHz, 10 MS/s, 10 MHz bandwidth, 62 dB gain
+  - RF Parameters: 80 MHz, 10 MS/s, 10 MHz bandwidth, 62 dB gain
 
 - **Systemd Service**: Dashboard Autostart
   - File: `/etc/systemd/system/dslv-zpdi-webdash.service`

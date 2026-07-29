@@ -225,7 +225,7 @@ async function refresh(){
   }catch(e){console.warn('refresh failed',e)}
 }
 refresh();
-setInterval(refresh,5000);
+setInterval(refresh,1000);
 </script>
 </body>
 </html>"""
@@ -363,7 +363,7 @@ def _get_status() -> dict:
     sdr_health = health.get("sdr_health", {})
     status["sdr"] = {
         "mode": "REAL" if sdr_health.get("backend_name") == "pluto_iio" else sdr_health.get("backend_name", "SIM"),
-        "center_hz": 100_000_000,
+        "center_hz": 80_000_000,
         "clock_src": "external" if sdr_health.get("external_reference_configured") else "internal",
         "reachable": sdr_health.get("reachable", False),
         "transport_errors": sdr_health.get("transport_errors", 0),

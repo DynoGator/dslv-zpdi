@@ -47,8 +47,8 @@ from dslv_zpdi.layer3_telemetry.mobile_router import SecondaryLog, route_packet
 # ---------------------------------------------------------------------------
 # Environment-configurable constants
 # ---------------------------------------------------------------------------
-DEFAULT_STREAM_DELAY_MS = int(os.environ.get("ZPDI_STREAM_DELAY_MS", "250"))
-DEFAULT_WSS_URI = os.environ.get("ZPDI_WSS_URI", "wss://edge.placeholder.invalid:8443/ingest")
+DEFAULT_STREAM_DELAY_MS = int(os.environ.get("ZPDI_STREAM_DELAY_MS", "50"))
+DEFAULT_WSS_URI = os.environ.get("ZPDI_WSS_URI", "ws://127.0.0.1:8443/")
 DEFAULT_HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "./data/zpdi_stream.h5"))
 DEFAULT_SQLITE_PATH = Path(os.environ.get("ZPDI_SQLITE_PATH", "./data/zpdi_cache.db"))
 DEFAULT_FALLBACK_LOG = Path(os.environ.get("ZPDI_FALLBACK_LOG", "./logs/zpdi_fallback.jsonl"))
