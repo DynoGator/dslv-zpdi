@@ -1,14 +1,15 @@
 """
-Full Duplex MIMO Operation Module.
+SPEC-023.2 — Full Duplex MIMO Operation Module.
 Provides signal vectoring, spatial multiplexing, and other dual full-duplex operations.
 Built to act as a robust integration hook for advanced capabilities.
 """
 
-from typing import Any, Dict, List
 import numpy as np
 
 
 class MimoVectoringEngine:
+    """SPEC-023.2 — Vectoring-matrix state holder; full-duplex is opt-in, passthrough by default."""
+
     def __init__(self, tx_channels: int = 2, rx_channels: int = 2):
         self.tx_channels = tx_channels
         self.rx_channels = rx_channels
@@ -29,23 +30,23 @@ class MimoVectoringEngine:
             raise ValueError("Invalid vectoring matrix shape.")
         self.vectoring_matrix = new_matrix
 
-    def apply_tx_vectoring(self, tx_streams: List[np.ndarray]) -> List[np.ndarray]:
+    def apply_tx_vectoring(self, tx_streams: list[np.ndarray]) -> list[np.ndarray]:
         """
         Applies MIMO vectoring to outgoing streams.
         """
         if not self.is_full_duplex_enabled:
             return tx_streams
-            
+
         # Hook for spatial multiplexing
         # Returns multiplied matrix for simulated output
         return tx_streams
 
-    def apply_rx_vectoring(self, rx_streams: List[np.ndarray]) -> List[np.ndarray]:
+    def apply_rx_vectoring(self, rx_streams: list[np.ndarray]) -> list[np.ndarray]:
         """
         Applies MIMO spatial demultiplexing to incoming streams.
         """
         if not self.is_full_duplex_enabled:
             return rx_streams
-            
+
         # Hook for spatial demultiplexing / interference cancellation
         return rx_streams

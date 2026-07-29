@@ -1,14 +1,17 @@
 """
-Demodulation Engine for Signal Demodulation into Audio, Data, Video, and Telemetry.
+SPEC-023.1 — Demodulation Engine for Signal Demodulation into Audio, Data, Video, and Telemetry.
 Includes intelligent presets for various demodulation modes (AM, FM, LSB, USB, CW, FSK, PSK, QAM, etc.).
 """
 
-from typing import Any, Dict, List
+from typing import Any
+
 import numpy as np
 
 
 class DemodulationPreset:
-    def __init__(self, name: str, category: str, sample_rate_hz: int, bandwidth_hz: int, params: Dict[str, Any]):
+    """SPEC-023.1 — Value holder for a demodulation preset (name, category, rates, params)."""
+
+    def __init__(self, name: str, category: str, sample_rate_hz: int, bandwidth_hz: int, params: dict[str, Any]):
         self.name = name
         self.category = category  # "audio", "data", "video", "telemetry"
         self.sample_rate_hz = sample_rate_hz
@@ -17,6 +20,8 @@ class DemodulationPreset:
 
 
 class Demodulator:
+    """SPEC-023.1 — Preset registry and mode selector; DSP chain is a staged integration hook."""
+
     PRESETS = {
         "AM_AUDIO": DemodulationPreset("AM", "audio", 48000, 10000, {"squelch": -60.0}),
         "NFM_AUDIO": DemodulationPreset("NFM", "audio", 48000, 12500, {"squelch": -60.0, "deemphasis": 75e-6}),
@@ -33,14 +38,14 @@ class Demodulator:
     def __init__(self):
         self.active_mode: str | None = None
         self.current_preset: DemodulationPreset | None = None
-        
+
     def set_mode(self, mode_key: str):
         if mode_key not in self.PRESETS:
             raise ValueError(f"Unknown demodulation mode: {mode_key}")
         self.active_mode = mode_key
         self.current_preset = self.PRESETS[mode_key]
-        
-    def process(self, iq_samples: np.ndarray) -> Dict[str, Any]:
+
+    def process(self, iq_samples: np.ndarray) -> dict[str, Any]:
         """
         Hook for processing IQ samples into audio, video, data, or telemetry.
         """
@@ -50,7 +55,7 @@ class Demodulator:
         # TODO: Implement actual DSP logic for demodulation based on self.current_preset
         # Currently acts as an integration hook and stub for future DSP pipelines.
         output_data = np.zeros(len(iq_samples), dtype=np.float32)
-        
+
         return {
             "status": "active",
             "mode": self.active_mode,
