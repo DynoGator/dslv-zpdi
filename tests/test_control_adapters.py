@@ -233,7 +233,7 @@ class TestHdf5AdapterLiveFile:
     def _check(self):
         if importlib.util.find_spec("h5py") is None:
             pytest.skip("h5py not available")
-        hdf5_path = Path(os.environ.get("ZPDI_HDF5_PATH", "/root/dslv-zpdi/data/zpdi_stream.h5"))
+        hdf5_path = Path(os.environ.get("ZPDI_HDF5_PATH", "/home/dynogator/dslv-zpdi/data/zpdi_stream.h5"))
         if not hdf5_path.exists():
             pytest.skip("live HDF5 file not present")
 

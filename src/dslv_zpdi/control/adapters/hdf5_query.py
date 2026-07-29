@@ -23,7 +23,7 @@ try:
 except ImportError:  # pragma: no cover
     _HAS_H5PY = False
 
-HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "/root/dslv-zpdi/data/zpdi_stream.h5"))
+HDF5_PATH = Path(os.environ.get("ZPDI_HDF5_PATH", "/home/dynogator/dslv-zpdi/data/zpdi_stream.h5"))
 MAX_EXPORT_RECORDS = 1000
 
 
