@@ -1,12 +1,14 @@
-[5.2.0] - 2026-07-28
+# Changelog
+
+## [5.2.0] — Demodulation Engine and MIMO Vectoring (2026-07-28)
+
 ### Added
 - Built intelligent Demodulation engine (layer1_ingestion) supporting audio, data, video, and telemetry formats with auto-presets.
 - Integrated Full Duplex MIMO Vectoring framework for spatial multiplexing and signal vectoring.
+
 ### Changed
 - Dashboard default configs updated: Live SDR enabled, gain 0.0, raw modulation, sweep mode, center freq 3 GHz, span 40 MHz, plasma palette, LNA 30, VGA 30, noise floor -75.0 dBm, ceiling -70.0 dBm.
 - Dashboard banner disabled by default.
-
-# Changelog
 
 ## [5.1.0] — Mobile Node and TUI Refinements (2026-07-28)
 
