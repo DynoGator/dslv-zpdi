@@ -95,6 +95,13 @@ class ZpdiConditionsConfig:
             timeout_seconds=45.0,
         )
     )
+    xray: DataSource = field(
+        default_factory=lambda: DataSource(
+            name="NOAA Solar X-ray Flux",
+            url="https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json",
+            interval_seconds=300,
+        )
+    )
 
     @property
     def weather_url(self) -> str:
@@ -131,7 +138,7 @@ def load_config() -> ZpdiConditionsConfig:
     }
 
     # Allow per-source interval overrides for tuning refresh cadence.
-    for key in ("kp", "solar_wind", "imf", "ionosphere", "weather", "air_quality", "cosmic_rays", "gamma"):
+    for key in ("kp", "solar_wind", "imf", "ionosphere", "weather", "air_quality", "cosmic_rays", "gamma", "xray"):
         env_interval = os.getenv(f"ZPDI_COND_{key.upper()}_INTERVAL")
         if env_interval:
             source = getattr(ZpdiConditionsConfig, key)

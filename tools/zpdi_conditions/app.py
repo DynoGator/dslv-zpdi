@@ -45,6 +45,7 @@ METRIC_ORDER = [
     "humidity",
     "pressure",
     "pm25",
+    "xray",
     "gamma",
     "cosmic",
 ]

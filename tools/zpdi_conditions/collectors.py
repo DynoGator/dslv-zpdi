@@ -140,6 +140,13 @@ class MetricStore:
                 interval_seconds=self.cfg.gamma.interval_seconds,
             ),
             Metric(
+                key="xray",
+                label="Solar X-ray Flux",
+                category="Space Weather",
+                source=self.cfg.xray.name,
+                interval_seconds=self.cfg.xray.interval_seconds,
+            ),
+            Metric(
                 key="cosmic",
                 label="Secondary Cosmic Ray Flux",
                 category="Ionizing Radiation",
@@ -639,6 +646,53 @@ def _collect_gamma(cfg: ZpdiConditionsConfig) -> Metric:
     return base
 
 
+def _collect_xray(cfg: ZpdiConditionsConfig) -> Metric:
+    base = Metric(
+        key="xray",
+        label="Solar X-ray Flux",
+        category="Space Weather",
+        source=cfg.xray.name,
+        interval_seconds=cfg.xray.interval_seconds,
+    )
+    try:
+        data = _fetch_json(cfg.xray.url, cfg.xray.timeout_seconds)
+        if not isinstance(data, list) or not data:
+            raise ValueError("unexpected X-ray payload shape")
+        # Find latest long-band (0.1-0.8 nm) flux
+        latest_long = max(
+            (row for row in data if row.get("energy") == "0.1-0.8nm"),
+            key=lambda row: row.get("time_tag", ""),
+            default=None,
+        )
+        if latest_long is None:
+            raise ValueError("no long-band X-ray flux found")
+
+        flux = float(latest_long["flux"])
+        
+        # Determine flare class (A, B, C, M, X)
+        if flux < 1e-7:
+            flare_class = "A/B"
+        elif flux < 1e-6:
+            flare_class = "C"
+        elif flux < 1e-5:
+            flare_class = "M"
+        else:
+            flare_class = "X"
+            
+        # Very crude trend logic if we want to iterate.
+        base.value = f"{flux:.2e}"
+        base.unit = f"W/m² ({flare_class}-class)"
+        if flare_class in ("M", "X"):
+            base.trend = "▲ active flare"
+        else:
+            base.trend = "→ background"
+            
+        base.last_refresh = _now()
+    except Exception as exc:  # noqa: BLE001
+        base.error = f"X-ray fetch failed: {exc}"
+    return base
+
+
 # ---------------------------------------------------------------------------
 # Collector threads
 # ---------------------------------------------------------------------------
@@ -700,6 +754,7 @@ def start_collectors(cfg: ZpdiConditionsConfig, store: MetricStore) -> list[thre
         ("air_quality", cfg.air_quality.interval_seconds, _collect_air_quality),
         ("cosmic_rays", cfg.cosmic_rays.interval_seconds, _collect_cosmic_rays),
         ("gamma", cfg.gamma.interval_seconds, _collect_gamma),
+        ("xray", cfg.xray.interval_seconds, _collect_xray),
     ]
     threads: list[threading.Thread] = []
     for name, interval, fn in jobs:
