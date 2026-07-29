@@ -70,7 +70,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     sdr_source = s.get("sdr_source", "SIM")
     spectrum_on = s.get("spectrum_on", True)
     lna_gain = s.get("lna_gain", 24)
-    center_hz = s.get("center_hz", 100_000_000)
+    center_hz = s.get("center_hz", 80_000_000)
     modulation = s.get("modulation", "RAW-SWEEP")
     palette_nm = s.get("palette_name", "HEAT")
 
@@ -547,7 +547,7 @@ class Dashboard:
             "spectrum_on": wf.show_spectrum if wf else True,
             "lna_gain":    wf.lna_gain if wf else 24,
             "vga_gain":    wf.vga_gain if wf else 20,
-            "center_hz":   wf.center_hz if wf else 100_000_000,
+            "center_hz":   wf.center_hz if wf else 80_000_000,
             "span_hz":     wf.span_hz if wf else 20_000_000,
             "modulation":  getattr(wf, "modulation", "RAW-SWEEP") if wf else "RAW-SWEEP",
             "palette_name": wf.palette_name if wf else "HEAT",
