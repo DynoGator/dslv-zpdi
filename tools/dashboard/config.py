@@ -50,7 +50,7 @@ class PanelsCfg:
 @dataclass
 class WaterfallCfg:
     mode: str = "SWEEP"
-    center_hz: int = 3_000_000_000
+    center_hz: int = 100_000_000
     span_hz: int = 40_000_000
     history: int = 24
 
