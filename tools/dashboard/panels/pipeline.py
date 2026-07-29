@@ -13,6 +13,7 @@ import math
 import os
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -70,8 +71,6 @@ def _read_health() -> dict:
             continue
     return {"_stale": True}
 
-
-import threading
 
 class _Cache:
     def __init__(self, ttl: float):

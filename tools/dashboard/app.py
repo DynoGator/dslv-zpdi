@@ -46,8 +46,8 @@ from dashboard.banner import (
     ultra_compact_banner,
 )
 from dashboard.config import DashboardConfig, load_config
-from dashboard.panels.anomaly import RFAnomalyPanel
 from dashboard.mobile_bridge import MobileBridge
+from dashboard.panels.anomaly import RFAnomalyPanel
 from dashboard.panels.bci import BCIPanel
 from dashboard.panels.hardware import HardwarePanel
 from dashboard.panels.logs import LogPanel

@@ -668,7 +668,7 @@ def _collect_xray(cfg: ZpdiConditionsConfig) -> Metric:
             raise ValueError("no long-band X-ray flux found")
 
         flux = float(latest_long["flux"])
-        
+
         # Determine flare class (A, B, C, M, X)
         if flux < 1e-7:
             flare_class = "A/B"
@@ -678,7 +678,7 @@ def _collect_xray(cfg: ZpdiConditionsConfig) -> Metric:
             flare_class = "M"
         else:
             flare_class = "X"
-            
+
         # Very crude trend logic if we want to iterate.
         base.value = f"{flux:.2e}"
         base.unit = f"W/m² ({flare_class}-class)"
@@ -686,7 +686,7 @@ def _collect_xray(cfg: ZpdiConditionsConfig) -> Metric:
             base.trend = "▲ active flare"
         else:
             base.trend = "→ background"
-            
+
         base.last_refresh = _now()
     except Exception as exc:  # noqa: BLE001
         base.error = f"X-ray fetch failed: {exc}"

@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+import threading
 import time
 
 from rich.panel import Panel
@@ -10,8 +11,6 @@ from rich.table import Table
 
 _THROTTLE_TTL = 5.0  # seconds
 
-
-import threading
 
 class _Cache:
     def __init__(self, ttl: float):

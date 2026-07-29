@@ -2,7 +2,6 @@
 
 import json
 import time
-from unittest.mock import MagicMock
 
 from dashboard.mobile_bridge import MobileBridge
 

@@ -12,6 +12,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -24,8 +25,6 @@ _CHRONY_TTL = 1.5   # seconds
 _GPSDO_TTL = 5.0    # seconds
 _HEALTH_JSON_PATHS = (Path("/run/dslv-zpdi/health.json"), Path("/tmp/health.json"))
 
-
-import threading
 
 class _Cache:
     def __init__(self, ttl: float):

@@ -78,7 +78,7 @@ class MobileBridge(threading.Thread):
         # 2. Check local Pi node_registry.jsonl
         if self.registry_path.exists():
             try:
-                with open(self.registry_path, "r", encoding="utf-8") as f:
+                with open(self.registry_path, encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line:
