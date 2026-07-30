@@ -26,10 +26,12 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import gzip
 import hashlib
 import hmac as hmac_lib
 import json
 import logging
+import logging.handlers
 import os
 import ssl
 import sys
@@ -45,9 +47,31 @@ from websockets.http11 import Request, Response
 
 from dslv_zpdi.layer3_telemetry.mobile_router import SecondaryLog, route_packet
 
+
+class _GzipRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """SPEC-008 — Gzip log rotation matching the SecondaryLog convention (.N.gz)."""
+
+    def rotation_filename(self, default_name: str) -> str:
+        return f"{default_name}.gz"
+
+    def rotate(self, source: str, dest: str) -> None:
+        with open(source, "rb") as f_in, gzip.open(dest, "wb") as f_out:
+            f_out.write(f_in.read())
+        os.unlink(source)
+
+
+# Rotating file handler keeps tier1_server.log bounded (10 MB x 5 gzipped
+# backups, same convention as SecondaryLog). stderr stays free for fatal
+# tracebacks, which supervisor.sh still captures.
+_LOG_PATH = Path(os.environ.get("ZPDI_TIER1_LOG", "./logs/tier1_server.log"))
+_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+_file_handler = _GzipRotatingFileHandler(
+    _LOG_PATH, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+)
 logging.basicConfig(
     level=os.environ.get("ZPDI_LOG_LEVEL", "INFO"),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[_file_handler],
 )
 log = logging.getLogger("zpdi.tier1")
 

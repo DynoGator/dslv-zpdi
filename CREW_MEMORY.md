@@ -86,7 +86,7 @@ SPEC-023, lint fixes) rebased onto latest `origin/main` and pushed. `main` ==
 - `CapabilityStore` grants full capabilities to all localhost callers → must change before LAN exposure
 - `hdf5.segment.export` declared but returns staged ack; actual export not implemented
 - `sensor_alive: false` in health log (pre-existing, investigate separately)
-- `logs/tier1_server.log` is ~3.3 GB and growing — rotate or truncate before disk pressure (needs Joe's approval; do not delete data unilaterally)
+- ~~`logs/tier1_server.log` is ~3.3 GB~~ **RESOLVED 2026-07-30:** rotated to `logs/tier1_server.log.2.gz` (126 MB, sha256 in `logs/STATE_VECTOR_2026-07-30.json`); persistent 10 MB × 5 gzip rotation now enforced in-process by `_GzipRotatingFileHandler`
 - Android phantom-process killer can still `SIGKILL` long-running proot children — confirm Phase 1 "Disable child process restrictions" is set (13:34 boot daemon was `Killed`)
 - Gemini CLI OAuth free tier ended June 2026 — verify subscription
 - Legacy normalization shim in `c2_server.py` should be removed after all clients confirmed spec-compliant
