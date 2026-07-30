@@ -46,6 +46,13 @@
     installed in native `~/.termux/boot/`; canonical copies in
     `/root/dslv-zpdi-local/termux-boot/` and repo `termux-boot/`
   - Running services: C2 `:8444`, HDF5 adapter `:8445`, PWA `:8085`, main pipeline `:8443`/`:8080`
+  - **UPLINK: LIVE → ALPHA** since 2026-07-30T06:17Z — `ws://10.12.158.69:8443/ingest`
+    (alpha found on hotspot `PiRepo-Control`; cutover via
+    `/root/dslv-zpdi-local/scripts/connect_alpha_node.sh`; shared creds in
+    `/root/.config/dslv-zpdi/alpha_uplink.env`; runbook `dslv-zpdi-local/docs/ALPHA_CONNECTION.md`)
+  - **CAVEAT:** handshake succeeded immediately → alpha is accepting without
+    verifying (no creds installed alpha-side yet). Install the three secrets
+    from `alpha_uplink.env` into the alpha's `.env` to make the link authenticated.
 
 ## 3. Active Development Track — PIXEL_DEV_PLAN.md
 
