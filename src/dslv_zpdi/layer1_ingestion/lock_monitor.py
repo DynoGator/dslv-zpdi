@@ -57,7 +57,7 @@ class GPSDOLockMonitor:
         metrics["pps_jitter_ns"] = self._get_chronyc_jitter()
 
         # 3. PlutoSDRplus Silent Traitor check
-        metrics["PlutoSDRplus_lock"] = self._verify_PlutoSDRplus_clock()
+        metrics["PlutoSDRplus_lock"] = self._verify_plutosdrplus_clock()
 
         now = time.time()
 
@@ -99,7 +99,7 @@ class GPSDOLockMonitor:
             pass
         return float("inf")
 
-    def _verify_PlutoSDRplus_clock(self) -> bool:
+    def _verify_plutosdrplus_clock(self) -> bool:
         """SPEC-004A.3.PlutoSDRplus | Verify external clock source."""
         try:
             result = subprocess.run(

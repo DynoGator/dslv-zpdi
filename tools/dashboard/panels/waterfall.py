@@ -237,7 +237,7 @@ class PlutoSDRplusSweepStream:
         return row
 
 
-def PlutoSDRplus_present() -> bool:
+def plutosdrplus_present() -> bool:
     try:
         subprocess.check_output(
             ["PlutoSDRplus_info"], stderr=subprocess.STDOUT, timeout=2, text=True
@@ -289,7 +289,7 @@ class WaterfallPanel:
             (0.55, 0.60, 0.00070),
             (0.78, 0.40, 0.00110),
         ]
-        self._have_PlutoSDRplus = PlutoSDRplus_present()
+        self._have_PlutoSDRplus = plutosdrplus_present()
         self._stream = PlutoSDRplusSweepStream()
         self._want_real = False
         self._last_source = "SIM"

@@ -15,11 +15,11 @@ from dslv_zpdi.layer1_ingestion import hal_hardware as hal_hw_module
 from dslv_zpdi.layer1_ingestion.hal_hardware import HardwareHAL
 
 
-def _PlutoSDRplus_hardware_accessible() -> bool:
+def _plutosdrplus_hardware_accessible() -> bool:
     """Probe whether a real PlutoSDRplus is accessible via pyPlutoSDRplus.
 
     The pyPlutoSDRplus clock-source tests patch hal_hardware's module dict with
-    mocks, but HardwareHAL._verify_pyPlutoSDRplus_clock spawns a subprocess that
+    mocks, but HardwareHAL._verify_pyplutosdrplus_clock spawns a subprocess that
     imports the real `PlutoSDRplus` module. If real hardware is present, the probe
     succeeds and the mocks are bypassed, causing the tests to flap. Skipping
     when hardware is present keeps CI honest while avoiding false failures on
@@ -41,7 +41,7 @@ def _PlutoSDRplus_hardware_accessible() -> bool:
         return False
 
 
-_PlutoSDRplus_HARDWARE_ACCESSIBLE = _PlutoSDRplus_hardware_accessible()
+_PLUTOSDRPLUS_HARDWARE_ACCESSIBLE = _plutosdrplus_hardware_accessible()
 
 
 class TestSoapySDRFailurePaths:
@@ -57,7 +57,7 @@ class TestSoapySDRFailurePaths:
             with pytest.raises(DriverUnavailableError):
                 HardwareHAL()
 
-    def test_PlutoSDRplus_not_found_raises_hardware_initialization(self):
+    def test_plutosdrplus_not_found_raises_hardware_initialization(self):
         mock_soapy = mock.MagicMock()
         mock_soapy.Device.enumerate.return_value = [{"driver": "rtlsdr"}]
         patches = {
@@ -87,16 +87,16 @@ class TestSoapySDRFailurePaths:
 
 class TestPyPlutoSDRplusFailurePaths:
     @pytest.mark.skipif(
-        _PlutoSDRplus_HARDWARE_ACCESSIBLE,
+        _PLUTOSDRPLUS_HARDWARE_ACCESSIBLE,
         reason="Subprocess probe uses real PlutoSDRplus module; real hardware bypasses mocks",
     )
-    def test_pyPlutoSDRplus_internal_clock_raises_clock_verification(self):
+    def test_pyplutosdrplus_internal_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "internal"
-        mock_pyPlutoSDRplus = mock.MagicMock()
-        mock_pyPlutoSDRplus.PlutoSDRplus.return_value = mock_device
+        mock_pyplutosdrplus = mock.MagicMock()
+        mock_pyplutosdrplus.PlutoSDRplus.return_value = mock_device
         patches = {
-            "pyPlutoSDRplus": mock_pyPlutoSDRplus,
+            "pyPlutoSDRplus": mock_pyplutosdrplus,
             "SOAPYSDR_AVAILABLE": False,
             "PYPlutoSDRplus_AVAILABLE": True,
         }
@@ -105,16 +105,16 @@ class TestPyPlutoSDRplusFailurePaths:
                 HardwareHAL()
 
     @pytest.mark.skipif(
-        _PlutoSDRplus_HARDWARE_ACCESSIBLE,
+        _PLUTOSDRPLUS_HARDWARE_ACCESSIBLE,
         reason="Subprocess probe uses real PlutoSDRplus module; real hardware bypasses mocks",
     )
-    def test_pyPlutoSDRplus_unknown_clock_raises_clock_verification(self):
+    def test_pyplutosdrplus_unknown_clock_raises_clock_verification(self):
         mock_device = mock.MagicMock()
         mock_device.clock_source = "unknown"
-        mock_pyPlutoSDRplus = mock.MagicMock()
-        mock_pyPlutoSDRplus.PlutoSDRplus.return_value = mock_device
+        mock_pyplutosdrplus = mock.MagicMock()
+        mock_pyplutosdrplus.PlutoSDRplus.return_value = mock_device
         patches = {
-            "pyPlutoSDRplus": mock_pyPlutoSDRplus,
+            "pyPlutoSDRplus": mock_pyplutosdrplus,
             "SOAPYSDR_AVAILABLE": False,
             "PYPlutoSDRplus_AVAILABLE": True,
         }

@@ -33,7 +33,7 @@ class _Cache:
         return self.val
 
 
-def _PlutoSDRplus_info() -> dict:
+def _plutosdrplus_info() -> dict:
     try:
         out = subprocess.check_output(
             ["PlutoSDRplus_info"], text=True, timeout=3, stderr=subprocess.STDOUT
@@ -85,9 +85,9 @@ def _sdr_info() -> dict:
     pluto = _pluto_info()
     if pluto["detected"]:
         return pluto
-    PlutoSDRplus = _PlutoSDRplus_info()
-    if PlutoSDRplus["detected"]:
-        return PlutoSDRplus
+    plutosdrplus = _plutosdrplus_info()
+    if plutosdrplus["detected"]:
+        return plutosdrplus
     # Default to Pluto so the panel shows the expected target even when absent.
     return pluto
 

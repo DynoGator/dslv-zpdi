@@ -69,15 +69,15 @@ try:
     ]
     # Also wrap PlutoSDRplus_device_list() to call PlutoSDRplus_init() first — pyPlutoSDRplus
     # skips this, which can leave libPlutoSDRplus's libusb context uninitialised.
-    _pyPlutoSDRplus_orig_device_list = pyPlutoSDRplus.PlutoSDRplus_device_list
+    _pyplutosdrplus_orig_device_list = pyPlutoSDRplus.PlutoSDRplus_device_list
 
     # SPEC-005A.4b — Safe pyPlutoSDRplus device list wrapper (handles missing init)
-    def _pyPlutoSDRplus_device_list_safe():
+    def _pyplutosdrplus_device_list_safe():
         """SPEC-005A.HAL-HW — Initialize libPlutoSDRplus before enumerating devices."""
         pyPlutoSDRplus.libPlutoSDRplus.PlutoSDRplus_init()
-        return _pyPlutoSDRplus_orig_device_list()
+        return _pyplutosdrplus_orig_device_list()
 
-    pyPlutoSDRplus.PlutoSDRplus_device_list = _pyPlutoSDRplus_device_list_safe
+    pyPlutoSDRplus.PlutoSDRplus_device_list = _pyplutosdrplus_device_list_safe
 
     # Silence pyPlutoSDRplus's debug print in __del__ (emitted on every GC cycle)
     pyPlutoSDRplus.PlutoSDRplus.__del__ = lambda self: self.close()
@@ -151,7 +151,7 @@ class HardwareHAL(BaseHAL):
 
         if not initialized:
             if PYPlutoSDRplus_AVAILABLE:
-                self._verify_pyPlutoSDRplus_clock()
+                self._verify_pyplutosdrplus_clock()
             elif _soapy_exc is not None:
                 # SoapySDR was available but found no usable device, and there
                 # is no pyPlutoSDRplus fallback — surface the original error so the
@@ -175,13 +175,13 @@ class HardwareHAL(BaseHAL):
                 raise DriverUnavailableError("No SoapySDR devices found.")
 
             # Find PlutoSDRplus device
-            PlutoSDRplus_found = False
+            plutosdrplus_found = False
             for result in results:
                 if "plutosdrplus" in str(result).lower():
-                    PlutoSDRplus_found = True
+                    plutosdrplus_found = True
                     break
 
-            if not PlutoSDRplus_found:
+            if not plutosdrplus_found:
                 raise HardwareInitializationError(
                     "PlutoSDRplus not found in SoapySDR enumeration. "
                     "Verify PlutoSDRplus is connected and driver installed."
@@ -236,7 +236,7 @@ class HardwareHAL(BaseHAL):
             ) from e
 
     @staticmethod
-    def _probe_pyPlutoSDRplus_subprocess() -> bool:
+    def _probe_pyplutosdrplus_subprocess() -> bool:
         """
         Run pyPlutoSDRplus init in a subprocess to detect SEGV risk without killing the main process.
         Returns True only if PlutoSDRplus opens, sets up, and closes cleanly.
@@ -260,7 +260,7 @@ class HardwareHAL(BaseHAL):
         except (subprocess.TimeoutExpired, OSError, ValueError):
             return False
 
-    def _verify_pyPlutoSDRplus_clock(self):
+    def _verify_pyplutosdrplus_clock(self):
         """
         Fallback clock verification for pyPlutoSDRplus (non-SoapySDR) installations.
 
@@ -276,7 +276,7 @@ class HardwareHAL(BaseHAL):
         """
         _max_retries = 3
         for attempt in range(_max_retries):
-            if self._probe_pyPlutoSDRplus_subprocess():
+            if self._probe_pyplutosdrplus_subprocess():
                 break
             if attempt < _max_retries - 1:
                 print(
@@ -556,7 +556,7 @@ class HardwareHAL(BaseHAL):
                 phases = raw_val.get("phases", [])
             elif PYPlutoSDRplus_AVAILABLE:
                 # Fallback pyPlutoSDRplus implementation
-                raw_val = self._ingest_pyPlutoSDRplus(center_freq, sample_rate, num_samples)
+                raw_val = self._ingest_pyplutosdrplus(center_freq, sample_rate, num_samples)
                 phases = raw_val.get("phases", [])
             else:
                 # Defensive fallback — should not reach here
@@ -649,30 +649,30 @@ class HardwareHAL(BaseHAL):
                 "driver": "SoapySDR",
             }
 
-    def _ingest_pyPlutoSDRplus(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
+    def _ingest_pyplutosdrplus(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
         """
         pyPlutoSDRplus fallback ingestion.
         """
         try:
-            PlutoSDRplus_device = pyPlutoSDRplus.PlutoSDRplus()
+            plutosdrplus_device = pyPlutoSDRplus.PlutoSDRplus()
 
             # AMP LOCKOUT — PlutoSDRplus 1 front-end amp is blown; parts on order.
             try:
-                PlutoSDRplus_device.set_amp_enable(0)
+                plutosdrplus_device.set_amp_enable(0)
             except Exception:
                 pass
 
             # Configure frequency and sample rate
-            PlutoSDRplus_device.set_freq(int(center_freq))
-            PlutoSDRplus_device.set_sample_rate(int(sample_rate))
+            plutosdrplus_device.set_freq(int(center_freq))
+            plutosdrplus_device.set_sample_rate(int(sample_rate))
 
             # Set moderate gain for wideband capture
-            PlutoSDRplus_device.set_lna_gain(32)
-            PlutoSDRplus_device.set_vga_gain(20)
+            plutosdrplus_device.set_lna_gain(32)
+            plutosdrplus_device.set_vga_gain(20)
 
             # Capture samples
-            iq_complex = PlutoSDRplus_device.read_samples(num_samples)
-            PlutoSDRplus_device.close()
+            iq_complex = plutosdrplus_device.read_samples(num_samples)
+            plutosdrplus_device.close()
 
             # Phase extraction from complex baseband IQ (already analytic)
             phases = np.angle(iq_complex).tolist()[:64]

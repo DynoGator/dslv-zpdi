@@ -60,13 +60,13 @@ def check_soapy_sdr():
         import SoapySDR
         results = SoapySDR.Device.enumerate()
 
-        PlutoSDRplus_found = False
+        plutosdrplus_found = False
         for result in results:
             if 'PlutoSDRplus' in str(result).lower():
-                PlutoSDRplus_found = True
+                plutosdrplus_found = True
                 break
 
-        if PlutoSDRplus_found:
+        if plutosdrplus_found:
             print("[*] SoapySDR installed with PlutoSDRplus support.")
             return True
         else:
@@ -79,7 +79,7 @@ def check_soapy_sdr():
         return False
 
 
-def check_PlutoSDRplus_presence():
+def check_plutosdrplus_presence():
     """
     SPEC-004A.1 — Ensure PlutoSDRplus is connected.
     """
@@ -138,7 +138,7 @@ def check_pluto_presence():
         return False
 
 
-def check_PlutoSDRplus_clock_source():
+def check_plutosdrplus_clock_source():
     """
     ARCH-PHASE-2A-PIVOT §5.1 — Verify PlutoSDRplus is receiving external 10 MHz reference.
 
@@ -367,7 +367,7 @@ def main():
         ("Chrony PPS Config", check_chrony_pps_config()),
         ("PPS GPIO Overlay", check_pps_gpio_overlay()),
         ("Python Dependencies", check_python_dependencies()),
-        ("PlutoSDRplus Presence (legacy)", check_PlutoSDRplus_presence()),
+        ("PlutoSDRplus Presence (legacy)", check_plutosdrplus_presence()),
     ]
 
     # Run the check_timing utility
