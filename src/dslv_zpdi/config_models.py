@@ -117,7 +117,7 @@ class TrustConfig(BaseModel):
 class RfConfig(BaseModel):
     """SPEC-004A.CONFIG — RF observation configuration."""
 
-    center_frequency_hz: int = 100_000_000
+    center_frequency_hz: int = 80_000_000
     sample_rate_hz: int = 10_000_000
     rf_bandwidth_hz: int = 10_000_000
     gain_db: float = 64.0

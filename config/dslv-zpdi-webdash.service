@@ -4,27 +4,31 @@ Description=DSLV-ZPDI Web Dashboard (port 8080)
 # Pixel 9 Pro XL and any Wi-Fi-connected device can browse http://10.42.0.1:8080/
 After=network.target dslv-zpdi.service
 Wants=dslv-zpdi.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
 
 [Service]
 Type=simple
 User=dynogator
 Group=dynogator
-WorkingDirectory=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi
-ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/python -m dashboard.web_server
+WorkingDirectory=/home/dynogator/dslv-zpdi
+ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python -m dashboard.web_server
 Environment=PYTHONUNBUFFERED=1
-Environment=PYTHONPATH=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/tools
-Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/primary
-Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output/secondary
-Environment=DSLV_WEBDASH_HOST=10.42.0.1
+Environment=PYTHONPATH=/home/dynogator/dslv-zpdi/tools
+Environment=DSLV_PRIMARY_OUTPUT_DIR=/home/dynogator/dslv-zpdi/output/primary
+Environment=DSLV_SECONDARY_OUTPUT_DIR=/home/dynogator/dslv-zpdi/output/secondary
+Environment=DSLV_WEBDASH_HOST=0.0.0.0
 Environment=DSLV_WEBDASH_PORT=8080
 Restart=on-failure
 RestartSec=15
+MemoryMax=512M
+CPUAffinity=1
 
 ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=yes
 NoNewPrivileges=true
-ReadWritePaths=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output
+ReadWritePaths=/home/dynogator/dslv-zpdi/output /run/dslv-zpdi
 
 StandardOutput=journal
 StandardError=journal

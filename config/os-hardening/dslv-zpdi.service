@@ -3,20 +3,22 @@ Description=DSLV-ZPDI Production Pipeline (SPEC-011)
 After=network.target chrony.service dslv-zpdi-preflight.service
 Wants=chrony.service
 Requires=dslv-zpdi-preflight.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
 
 [Service]
 Type=simple
 User=dynogator
 Group=dynogator
-WorkingDirectory=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi
-ExecStart=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/.venv/bin/python -m dslv_zpdi.main_pipeline
+WorkingDirectory=/home/dynogator/dslv-zpdi
+ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python -m dslv_zpdi.main_pipeline
 Environment=PYTHONUNBUFFERED=1
-Environment=DSLV_CONFIG_PATH=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/config/deployment.yaml
+EnvironmentFile=/home/dynogator/dslv-zpdi/.env
 Restart=on-failure
 RestartSec=30
-StartLimitInterval=120
-StartLimitBurst=3
 ExecStartPre=/bin/sleep 3
+TimeoutStartSec=60
+TimeoutStopSec=30
 Nice=-5
 IOSchedulingClass=realtime
 IOSchedulingPriority=4
@@ -29,6 +31,8 @@ LimitNOFILE=65536
 # Systemd Sandboxing
 ProtectSystem=strict
 ProtectHome=read-only
+ProtectClock=true
+ProtectHostname=true
 PrivateTmp=yes
 NoNewPrivileges=true
 RestrictSUIDSGID=true
@@ -39,9 +43,11 @@ LockPersonality=true
 MemoryDenyWriteExecute=false
 RestrictRealtime=false
 RestrictNamespaces=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
 
 # Read-write paths needed for pipeline operation
-ReadWritePaths=/home/dynogator/Desktop/DSLV-ZPDI_GitHub_Dev/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
+ReadWritePaths=/home/dynogator/dslv-zpdi/output /var/lib/dslv_zpdi /run/dslv-zpdi /dev/bus/usb
 
 StandardOutput=journal
 StandardError=journal

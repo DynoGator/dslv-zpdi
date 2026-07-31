@@ -2,15 +2,29 @@
 # Verify GITHUB_PAT is present and the remote URL is clean before push.
 # Governed by .githooks/README.md — see that file for policy rationale.
 
-# Load .env if present (PAT is read from environment, not from the file directly)
+set -euo pipefail
+
+SECRETS_DIR="${HOME}/.config/dslv-zpdi"
+PAT_FILE="${SECRETS_DIR}/github_pat"
+
+# Load non-secret config from .env if present
 if [ -f .env ]; then
     set -a
+    # shellcheck source=/dev/null
     source .env
     set +a
 fi
 
+# Load PAT from secure storage if not already in environment
+if [ -z "${GITHUB_PAT:-}" ] && [ -f "$PAT_FILE" ]; then
+    chmod 600 "$PAT_FILE" 2>/dev/null || true
+    GITHUB_PAT=$(tr -d '[:space:]' < "$PAT_FILE")
+    export GITHUB_PAT
+fi
+
 if [ -z "${GITHUB_PAT:-}" ]; then
-    echo "pre-push: GITHUB_PAT not set — run ./configure_git_auth.sh first"
+    echo "pre-push: GITHUB_PAT not set — store one with:"
+    echo "  bash /root/dslv-zpdi-local/scripts/set_github_pat.sh"
     exit 1
 fi
 

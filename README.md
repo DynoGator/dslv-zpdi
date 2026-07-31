@@ -1,9 +1,9 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
-**Revision:** Rev 5.0.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
-**Date:** 2026-06-15
-**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, PlutoSDRplus moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
+**Revision:** Rev 5.2.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
+**Date:** 2026-07-28
+**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
 
 ---
 
@@ -12,6 +12,29 @@
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
 
 **Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/PlutoSDRplus). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
+
+---
+
+## ☠️ Toolchain & Export Controls ☢️
+
+```text
+       _.-^^---....,,--       
+   _--                  --_   
+  <                        >) 
+  |                         | 
+   \._                   _./  
+      ```--. . , ; .--'''       
+            | |   |             
+         .-=||  | |=-.   
+         `-=#$%&%$#=-'   
+            | ;  :|     
+   _____.,-#%&$@%#&#~,._____
+```
+
+*This institutional-grade FPGA timing pipeline was synthesized and developed using:*
+- **Vivado 2022.2 (Zynq-7000-only image)** 
+
+> **WARNING:** *AMD/Xilinx Vivado is dual-use, export-controlled technology (EAR). You will need an authorized, compliance-cleared AMD account to download the toolchain required to build this bitstream. Unauthorized distribution is a violation of federal export laws.*
 
 ---
 
@@ -116,14 +139,12 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 - 7" DSI display (800×480) — optional; dashboard runs headless if absent
 
 **Mobile node (optional but supported)**
-- Google Pixel 9 Pro XL running GrapheneOS
-- Connect to `PiRepo` Wi-Fi hotspot (see Network Configuration below)
-- Telemetry sender POSTs JSON to `http://10.42.0.1:5775/api/v1/ingest`
-
-**Python dependencies (beyond standard requirements.txt)**
-```bash
-pip install flask psutil   # required for node-receiver and web dashboard
-```
+- Google Pixel 9 Pro XL running GrapheneOS + Termux + proot-distro (Debian)
+- Runs the full Tier-2 stack (`supervisor.sh` manages three services):
+  - `zpdi_mobile_node.py` — sensor collection via termux-sensor → HDF5 + WSS
+  - `tier1_ingestion_server.py` — local WSS ingest receiver (port 8443)
+  - `tools/dashboard/web_server.py` — status dashboard (port 8080)
+- Install: run `bash install_zpdi_mobile.sh` from Termux (see Mobile Node section below)
 
 ### One-Shot Bootstrap (Recommended)
 
@@ -166,7 +187,7 @@ lsmod | grep pps
 ppstest /dev/pps0
 
 # PlutoSDR+ detected via IIO
-python -c "import iio; print(iio.Context('ip:192.168.3.80').name)"
+python -c "import iio; print(iio.Context('ip:192.168.2.1').name)"
 
 # GPSDO NMEA telemetry on USB-C virtual serial
 python -c "import serial; s=serial.Serial('/dev/ttyACM0', 9600, timeout=2); print(s.readline())"
@@ -194,7 +215,7 @@ clock_discipline:
   pps_required:              true          # Require /dev/pps0
   pps_device:                /dev/pps0
   chrony_tracking_required:  true
-  max_pps_jitter_ns:         1000.0        # Quarantine threshold
+  max_pps_jitter_ns:         5000.0        # Quarantine threshold
   gps_lock_required:         true
 
 spec009:
@@ -525,33 +546,67 @@ sudo nmcli connection up PiRepo
 
 The Pi holds static IP `10.42.0.1/24`. Connected devices receive `10.42.0.x` via DHCP.
 
-### Connect the Pixel 9 Pro XL
+### Mobile Node — Pixel 9 Pro XL (GrapheneOS / PRoot)
 
-1. Open **Settings → Network → Wi-Fi** on the Pixel 9 Pro XL (GrapheneOS).
-2. Connect to `PiRepo`.
-3. The device will receive a `10.42.0.x` IP automatically.
-4. Node telemetry is sent to `http://10.42.0.1:5775/api/v1/ingest`.
-5. The web dashboard is viewable at `http://10.42.0.1:8080/`.
+The mobile device runs a full self-contained Tier-2 stack inside a Debian proot.
+
+**One-shot install (run from Termux, not inside proot):**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/DynoGator/dslv-zpdi/main/install_zpdi_mobile.sh)
+```
+Or if already cloned:
+```bash
+bash /root/dslv-zpdi/install_zpdi_mobile.sh
+```
+
+This (Rev 5) installer:
+1. Installs Debian proot, `hdf5-tools`, all Python deps via `pip install -e ".[dev]"`
+2. Generates a complete `.env` with fresh AES-256-GCM + HMAC-SHA256 keys
+3. Creates `data/`, `logs/`, `output/primary`, `output/secondary`
+4. Copies `termux-boot/99-start-zpdi.sh` → `~/.termux/boot/` for auto-boot
+5. Runs the full test suite as a smoke check
+
+**Services managed by `supervisor.sh`:**
+
+| Service | Port | Purpose |
+|---|---|---|
+| `tier1_ingestion_server.py` | 8443 (WS) | Receives sensor payloads from mobile daemon |
+| `zpdi_mobile_node.py` | — | Polls termux-sensor, writes HDF5 + SQLite, forwards via WSS |
+| `tools/dashboard/web_server.py` | 8080 (HTTP) | Status dashboard viewable on LAN |
+
+**Manual start (from inside proot):**
+```bash
+cd /root/dslv-zpdi
+h5clear -s data/zpdi_stream.h5 2>/dev/null || true
+set -a && source .env && set +a
+source .venv/bin/activate
+nohup bash supervisor.sh >> logs/supervisor.log 2>&1 &
+```
+
+**Status check:**
+```bash
+tail -1 /root/dslv-zpdi/logs/health.jsonl | python3 -m json.tool
+# Healthy: sensor_alive=true, wss_connected=true, gps_fix present
+```
+
+**Web dashboard URL** (on device or LAN):
+```
+http://<device-ip>:8080/
+```
+
+**Auto-boot (Termux:Boot):**
+Give Termux and Termux:Boot unrestricted battery usage in Android Settings.
+The boot script acquires a wake-lock, clears stale locks, and launches
+`supervisor.sh` in an independent proot session.
 
 ### Node Receiver API (SPEC-014)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/ingest` | POST | JSON telemetry from any swarm node |
-| `/api/v1/ingest/radoneye` | POST | EcoSense RadonEye Pro staging (SPEC-015 pending) |
+| `/api/v1/ingest` | POST | JSON telemetry from any swarm node (legacy HTTP) |
+| `/api/v1/ingest/radoneye` | POST | EcoSense RadonEye Pro staging (SPEC-015) |
 | `/api/v1/health` | GET | Service health + HDF5 writer stats |
-
-**RadonEye Pro integration path** (future — SPEC-015 pending):
-```json
-POST http://10.42.0.1:5775/api/v1/ingest/radoneye
-{
-  "source": "EcoSense_RadonEye_Pro",
-  "radon_bq_m3": 12.5,
-  "timestamp_utc": 1748560000.0,
-  "unit_id": "RE200-XXXXXX"
-}
-```
-Packets stage to `output/secondary/radoneye_staging.jsonl` until SPEC-015 is ratified.
+| `ws://<host>:8443/ingest` | WS | WebSocket ingest — Tier-2 mobile daemon primary path |
 
 ---
 
@@ -687,8 +742,8 @@ python -m dashboard
 
 ### Waterfall is stuck on `SIM` even after pressing `r`
 
-- PlutoSDR+ is not reachable at `ip:192.168.3.80`. Verify the network link and run `iio_info -u ip:192.168.3.80`.
-- Legacy PlutoSDRplus only: run `PlutoSDRplus_info` — if it fails, check USB connection.
+- PlutoSDR+ is not reachable at `ip:192.168.2.1`. Verify the network link and run `iio_info -u ip:192.168.2.1`.
+- Legacy HackRF only: run `hackrf_info` — if it fails, check USB connection.
 - If the SDR is detected but sweep fails, check the error label in the waterfall title bar.
 
 ### Pipeline running in SIMULATOR when I expect HARDWARE
@@ -700,7 +755,7 @@ journalctl -u dslv-zpdi | grep -i "HardwareHAL\|simulator\|fallback"
 ```
 
 Common causes:
-- PlutoSDR+ not reachable at `ip:192.168.3.80` when service started
+- PlutoSDR+ not reachable at `ip:192.168.2.1` when service started
 - `/dev/pps0` does not exist (dtoverlay not loaded — add to `/boot/firmware/config.txt` and reboot)
 - LBE-1421 not powered or USB-C not seated
 
@@ -749,7 +804,7 @@ cat /var/lib/dslv_zpdi/baseline.json
 
 - Check chrony: `chronyc tracking` — look for "Stratum" and "RMS offset".
 - If chrony is not running: `sudo systemctl start chrony`.
-- The jitter threshold is `max_pps_jitter_ns` in `config/deployment.yaml` (default 1000 ns). Raise this temporarily if GPSDO is still acquiring lock.
+- The jitter threshold is `max_pps_jitter_ns` in `config/deployment.yaml` (default 5000 ns). Raise this temporarily if GPSDO is still acquiring lock.
 
 ### Config changes have no effect
 

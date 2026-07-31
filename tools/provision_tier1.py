@@ -11,6 +11,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+import time
 
 
 def print_rp1_warning():
@@ -54,34 +55,48 @@ def check_rp1_voltage_guard() -> bool:
 
 def check_soapy_sdr():
     """
-    ARCH-PHASE-2A-PIVOT §5 — Verify SoapySDR installation (hardware-agnostic driver).
+    ARCH-PHASE-2A-PIVOT §5 — Verify SoapySDR installation and PlutoSDR+ module.
+    HackRF is reported only as a legacy option.
     """
     try:
         import SoapySDR
         results = SoapySDR.Device.enumerate()
 
-        plutosdrplus_found = False
-        for result in results:
-            if 'PlutoSDRplus' in str(result).lower():
-                plutosdrplus_found = True
-                break
+        pluto_found = any("pluto" in str(result).lower() for result in results)
+        hackrf_found = any("hackrf" in str(result).lower() for result in results)
 
-        if plutosdrplus_found:
-            print("[*] SoapySDR installed with PlutoSDRplus support.")
+        if pluto_found:
+            print("[*] SoapySDR installed with PlutoSDR+ support.")
             return True
-        else:
-            print("[!] SoapySDR installed but PlutoSDRplus not enumerated.")
-            print("    Ensure PlutoSDRplus is connected: PlutoSDRplus_info")
-            return False
+        print("[!] SoapySDR installed but PlutoSDR+ not enumerated.")
+        if hackrf_found:
+            print("    HackRF (legacy) enumerated.")
+        print("    Install: sudo apt install soapysdr-module-plutosdr")
+        return False
     except ImportError:
         print("[!] SoapySDR not installed.")
-        print("    Install: sudo apt install soapysdr-module-PlutoSDRplus python3-soapysdr")
+        print("    Install: sudo apt install soapysdr-module-plutosdr python3-soapysdr")
         return False
 
 
-def check_plutosdrplus_presence():
+def check_iio_binding() -> bool:
+    """Verify the libiio Python binding used by the native Pluto backend."""
+    if importlib.util.find_spec("iio") is not None:
+        print("[*] libiio Python binding available (iio module loaded).")
+        return True
+    print("[!] libiio Python binding not installed.")
+    print("    Install: sudo apt install python3-libiio")
+    print("    Or from the venv: .venv/bin/python -m pip install 'dslv-zpdi[pluto]'")
+    return False
+
+
+def check_hackrf_presence():
     """
-    SPEC-004A.1 — Ensure PlutoSDRplus is connected.
+    SPEC-004A.1 — Ensure HackRF One is connected (legacy / optional).
+
+    Rev 5.0.0: HackRF is the legacy minimum reference floor. Tier-1 nodes
+    using PlutoSDR+ do not require a HackRF. Missing tools/device is a
+    warning, not a hard failure.
     """
     try:
         res = subprocess.run(["PlutoSDRplus_info"], capture_output=True, text=True, check=False)
@@ -92,12 +107,13 @@ def check_plutosdrplus_presence():
                     print(f"    {line.strip()}")
             return True
         else:
-            print("[!] PlutoSDRplus NOT found.")
-            print("    Ensure PlutoSDRplus is connected via USB 3.0 and powered.")
-            return False
+            print("[WARN] HackRF One NOT found (legacy optional device).")
+            print("    Ensure HackRF is connected via USB 3.0 and powered if in use.")
+            return True
     except FileNotFoundError:
-        print("[!] PlutoSDRplus_info not found. Install: sudo apt install PlutoSDRplus")
-        return False
+        print("[WARN] hackrf_info not found. HackRF support is optional/legacy.")
+        print("    Tier-1 PlutoSDR+ nodes do not require HackRF.")
+        return True
 
 
 def check_pluto_presence():
@@ -106,11 +122,11 @@ def check_pluto_presence():
     """
     try:
         import iio
-        uri = "ip:192.168.3.80"
+        uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.3.80")
         ctx = iio.Context(uri)
         ad9361 = ctx.find_device("ad9361-phy")
         if ad9361:
-            print(f"[*] PlutoSDR+ IIO context reachable at {uri} ✅")
+            print(f"[*] PlutoSDR+ / LibreSDR IIO context reachable at {uri} ✅")
             print("    AD9361 device enumerated.")
 
             # Check external clock
@@ -223,19 +239,19 @@ def check_python_dependencies():
     """
     all_ok = True
 
-    # Check SoapySDR (preferred)
-    if importlib.util.find_spec("SoapySDR") is not None:
-        print("[*] SoapySDR Python library installed.")
-    else:
-        print("[!] SoapySDR Python bindings not installed.")
-        print("    Install: sudo apt install python3-soapysdr")
+    # Native Pluto backend requires the libiio Python binding.
+    if not check_iio_binding():
         all_ok = False
 
-    # Check pyPlutoSDRplus (fallback)
-    if importlib.util.find_spec("pyPlutoSDRplus") is not None:
-        print("[*] pyPlutoSDRplus Python library installed (fallback).")
+    # SoapySDR is the hardware-agnostic fallback; the Pluto module is preferred.
+    if not check_soapy_sdr():
+        all_ok = False
+
+    # pyhackrf is only required for legacy HackRF support.
+    if importlib.util.find_spec("pyhackrf") is not None:
+        print("[*] pyhackrf Python library installed (legacy fallback).")
     else:
-        print("[WARN] pyPlutoSDRplus not installed. SoapySDR will be used.")
+        print("[INFO] pyhackrf not installed — only needed for legacy HackRF support.")
 
     return all_ok
 
@@ -310,6 +326,9 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
 def check_hal_factory_lock() -> bool:
     """
     SPEC-005A.4 — Verify the composed Tier-1 HAL returns live clock evidence.
+
+    Allows a short warm-up window for the PPS listener and NMEA stream to
+    collect their first samples, which are required for discipline claims.
     """
     try:
         from dslv_zpdi.config_models import NodeProfile
@@ -317,14 +336,21 @@ def check_hal_factory_lock() -> bool:
 
         profile = NodeProfile.from_yaml("config/node_profiles/tier1_pluto_lbe1421.yaml")
         hal = get_tier1_hal(profile)
-        lock_info = hal.verify_gpsdo_lock()
-        timing = lock_info.get("timing_attestation", {})
-        if timing.get("frequency_disciplined") and timing.get("utc_epoch_disciplined"):
-            print("[*] Tier-1 HAL live — frequency/UTC discipline verified ✅")
-            return True
+
+        # Wait up to 10 s for PPS history and NMEA fix to populate.
+        for _ in range(20):
+            lock_info = hal.verify_gpsdo_lock()
+            timing = lock_info.get("timing_attestation", {})
+            if timing.get("frequency_disciplined") and timing.get("utc_epoch_disciplined"):
+                print("[*] Tier-1 HAL live — frequency/UTC discipline verified ✅")
+                hal.close()
+                return True
+            time.sleep(0.5)
+
         print("[!] Tier-1 HAL returned but GPSDO discipline NOT verified ❌")
         print(f"    Backend: {lock_info.get('backend_name', 'unknown')}")
         print(f"    Warnings: {lock_info.get('timing_attestation', {}).get('warnings', [])}")
+        hal.close()
         return False
     except Exception as e:
         print(f"[!] HAL factory verification failed: {e}")
@@ -409,7 +435,7 @@ def main():
         print("Critical checks:")
         print("  1. Is GPSDO Out2 (10 MHz) connected to PlutoSDR+ EXT_REF_CLK?")
         print("  2. Is GPSDO Out1 (1 PPS) connected to Pi 5 GPIO 18 (with 3.3V logic)?")
-        print("  3. Is the PlutoSDR+ reachable at ip:192.168.3.80 from the Pi 5?")
+        print("  3. Is the PlutoSDR+ / LibreSDR reachable at ip:192.168.3.80 from the Pi 5?")
         print("  4. Has the system been rebooted after config.txt changes?")
         sys.exit(1)
 

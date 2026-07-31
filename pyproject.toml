@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dslv-zpdi"
-version = "5.0.0"
+version = "5.2.0"
 description = "Distributed Sensor Locational Vectoring — Zero-Point Data Integration"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -38,19 +38,26 @@ dependencies = [
     "bleak>=0.21.0",
     "cryptography>=42.0.0",
     "websockets>=12.0",
+    "smbus2>=0.4.0",
 ]
 
 [project.optional-dependencies]
 pluto = [
-    # libiio Python binding is normally a system package (python3-libiio).
-    # This group reserves the namespace for any future PyPI-hosted bindings.
+    # Native libiio Python binding (PyPI mirror of the ADI binding).
+    # System python3-libiio is still preferred on Debian/Raspberry Pi OS.
+    "pylibiio>=0.23,<0.27; platform_system=='Linux'",
+    # ADI high-level Pluto helpers (optional, for advanced PHY utilities).
+    "pyadi-iio>=0.0.16",
 ]
 PlutoSDRplus = [
     "pyPlutoSDRplus>=0.2.0",
 ]
 hardware = [
-    # System libiio / python3-libiio must be installed via apt.
+    # System libiio / python3-libiio and soapysdr-module-plutosdr must be
+    # installed via apt for native IIO and SoapySDR Pluto support.
     # This group reserves the namespace for any future PyPI-hosted bindings.
+    "dslv-zpdi[pluto]",
+    "dslv-zpdi[hackrf]",
 ]
 dev = [
     "pytest>=7.0.0",
@@ -74,6 +81,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "tools"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
 markers = [

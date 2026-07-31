@@ -21,4 +21,4 @@ export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 # before the Python TUI takes over the pty.
 sleep 3
 
-exec "$REPO/venv/bin/python" -m dashboard "$@"
+exec "$REPO/.venv/bin/python" -m dashboard "$@"

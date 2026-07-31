@@ -100,7 +100,7 @@ footer_border        = "bright_black"
 
 [dashboard.waterfall]
 mode       = "SWEEP"        # SWEEP | NARROW | SCOPE
-center_hz  = 100_000_000    # starting center frequency
+center_hz  = 80_000_000    # starting center frequency
 span_hz    = 20_000_000     # starting span
 history    = 12             # visible history rows
 

@@ -106,7 +106,8 @@ _HTML = """<!DOCTYPE html>
   <div class="card" id="c-system"><h2>System</h2><p class="val cyan">Loading…</p></div>
   <div class="card" id="c-pipeline"><h2>Pipeline</h2><p class="val cyan">Loading…</p></div>
   <div class="card node-card" id="c-nodes"><h2>Swarm Nodes</h2><p class="val cyan">Loading…</p></div>
-  <div class="card" id="c-sdr"><h2>SDR / PlutoSDRplus</h2><p class="val cyan">Loading…</p></div>
+  <div class="card" id="c-sdr"><h2>SDR / PlutoSDR+</h2><p class="val cyan">Loading…</p></div>
+  <div class="card" id="c-ups"><h2>UPS / Power</h2><p class="val cyan">Loading…</p></div>
 </div>
 <div id="ts">Last update: —</div>
 <script>
@@ -140,11 +141,14 @@ async function refresh(){
     document.getElementById('c-pipeline').innerHTML=
       '<h2>Pipeline</h2>'+
       row('Service',badge(p.active?'ACTIVE':'INACTIVE',p.active,!p.active))+
+      row('Timing',badge(p.timing_healthy?'LOCKED':'DEGRADED',p.timing_healthy,!p.timing_healthy))+
       row('Primary writes',p.primary_written??'?','ok')+
       row('Secondary logs',p.secondary_logged??'?','warn')+
       row('Integrity fails',p.integrity_failed??'?',p.integrity_failed>0?'bad':'ok')+
       row('Chrony stratum',p.chrony_stratum!=null?p.chrony_stratum:'?',
           p.chrony_stratum<=2?'ok':p.chrony_stratum<=5?'warn':'bad')+
+      row('Baseline',(p.baseline&&p.baseline.baseline_state)?p.baseline.baseline_state:'?',
+          (p.baseline&&p.baseline.ready)?'ok':'warn')+
       row('Receiver',':'+p.receiver_port,'dim');
 
     // ── Swarm nodes ─────────────────────────────────────────────────────────
@@ -186,18 +190,42 @@ async function refresh(){
     document.getElementById('c-nodes').innerHTML=nodeHtml;
 
     document.getElementById('c-sdr').innerHTML=
-      '<h2>SDR / PlutoSDRplus</h2>'+
+      '<h2>SDR / PlutoSDR+</h2>'+
       row('Mode',badge(sdr.mode||'SIM',sdr.mode==='REAL',false))+
+      row('Reachable',sdr.reachable?'YES':'NO',sdr.reachable?'ok':'bad')+
       row('Center',sdr.center_hz!=null?(sdr.center_hz/1e6).toFixed(3)+' MHz':'?','cyan')+
-      row('Amp','LOCKED OUT (blown — parts on order)','bad')+
-      row('Clock src',sdr.clock_src||'?',sdr.clock_src==='external'?'ok':'warn');
+      row('Clock src',sdr.clock_src||'?',sdr.clock_src==='external'?'ok':'warn')+
+      row('Transport errs',sdr.transport_errors??'?',sdr.transport_errors>0?'warn':'ok')+
+      row('Short reads',sdr.short_read_count??'?',sdr.short_read_count>0?'warn':'ok');
+
+    const u=d.ups||{};
+    let upsHtml='<h2>UPS / Power</h2>';
+    if(u.health==='absent'){
+      upsHtml+=row('Status','ABSENT','bad');
+      if(u.error) upsHtml+=row('Error',u.error,'bad');
+    }else{
+      const upsOk = u.health==='healthy';
+      const upsBad = u.health==='critical';
+      upsHtml+=row('Status',badge(u.health||'?',upsOk,!upsBad),'dim');
+      upsHtml+=row('Battery',u.battery_percent!=null?u.battery_percent.toFixed(2)+'%':'?',
+                    u.battery_percent<=15?'bad':u.battery_percent<=30?'warn':'ok');
+      upsHtml+=row('Voltage',u.battery_voltage_v!=null?u.battery_voltage_v.toFixed(3)+'V':'?',
+                    u.battery_voltage_v<=3.4?'bad':u.battery_voltage_v<=3.6?'warn':'ok');
+      upsHtml+=row('Charge rate',u.charge_rate_percent_per_hour!=null?u.charge_rate_percent_per_hour.toFixed(2)+'%/h':'?','dim');
+      upsHtml+=row('AC present',u.ac_present===true?'YES':u.ac_present===false?'NO':'?',
+                    u.ac_present===true?'ok':'warn');
+      upsHtml+=row('Charging',u.charging_enabled===true?'YES':u.charging_enabled===false?'NO':'?','dim');
+      if(u.alert_low_battery) upsHtml+=row('Alert','LOW BATTERY','bad');
+      if(u.alert_ac_lost) upsHtml+=row('Alert','AC LOST','warn');
+    }
+    document.getElementById('c-ups').innerHTML=upsHtml;
 
     document.getElementById('ts').textContent=
       'Last update: '+new Date().toUTCString();
   }catch(e){console.warn('refresh failed',e)}
 }
 refresh();
-setInterval(refresh,5000);
+setInterval(refresh,1000);
 </script>
 </body>
 </html>"""
@@ -235,6 +263,22 @@ def _get_pi_ip() -> str:
 def _get_status() -> dict:
     status: dict = {}
 
+    # Pipeline health endpoint — single source of truth for live telemetry.
+    health: dict = {}
+    health_paths = [
+        os.path.join(os.getenv("DSLV_STATE_DIR", "/run/dslv-zpdi"), "health.json"),
+        "/run/dslv-zpdi/health.json",
+        "/tmp/health.json",
+    ]
+    for hpath in health_paths:
+        try:
+            if os.path.exists(hpath):
+                with open(hpath, encoding="utf-8") as f:
+                    health = json.load(f)
+                break
+        except Exception:
+            pass
+
     # System
     try:
         import psutil  # type: ignore
@@ -259,49 +303,75 @@ def _get_status() -> dict:
     except Exception:
         status["system"] = {"hostname": "?", "pi_ip": _get_pi_ip()}
 
-    # Pipeline service state
-    try:
-        result = subprocess.run(
-            ["systemctl", "is-active", "dslv-zpdi"],
-            capture_output=True, text=True, timeout=3, check=False,
-        )
-        active = result.stdout.strip() == "active"
-    except Exception:
-        active = False
+    # Pipeline service state — prefer health.json existence; fall back to systemctl.
+    active = bool(health)
+    if not active:
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "dslv-zpdi"],
+                capture_output=True, text=True, timeout=3, check=False,
+            )
+            active = result.stdout.strip() == "active"
+        except Exception:
+            active = False
 
-    # Chrony stratum
+    # Chrony stratum — prefer health.json timing evidence; fall back to chronyc.
     chrony_stratum = 99
     try:
-        cr = subprocess.run(
-            ["chronyc", "tracking"],
-            capture_output=True, text=True, timeout=3, check=False,
-        )
-        for line in cr.stdout.splitlines():
-            if "Stratum" in line:
-                chrony_stratum = int(line.split(":")[-1].strip())
-                break
+        evidence = health.get("evidence", {})
+        chrony_snap = evidence.get("chrony_snapshot", {})
+        chrony_stratum = int(chrony_snap.get("stratum", 99))
     except Exception:
         pass
+    if chrony_stratum == 99:
+        try:
+            cr = subprocess.run(
+                ["chronyc", "tracking"],
+                capture_output=True, text=True, timeout=3, check=False,
+            )
+            for line in cr.stdout.splitlines():
+                if "Stratum" in line:
+                    chrony_stratum = int(line.split(":")[-1].strip())
+                    break
+        except Exception:
+            pass
 
-    # HDF5 writer stats
-    stats_path = os.path.join(
-        os.getenv("DSLV_PRIMARY_OUTPUT_DIR", "./output/primary"), ".stats.json"
-    )
-    hdf5_stats: dict = {}
-    try:
-        if os.path.exists(stats_path):
-            with open(stats_path) as f:
-                hdf5_stats = json.load(f)
-    except Exception:
-        pass
+    # HDF5 writer stats — prefer health.json stats; fall back to .stats.json.
+    hdf5_stats: dict = health.get("stats", {})
+    if not hdf5_stats:
+        stats_path = os.path.join(
+            os.getenv("DSLV_PRIMARY_OUTPUT_DIR", "./output/primary"), ".stats.json"
+        )
+        try:
+            if os.path.exists(stats_path):
+                with open(stats_path) as f:
+                    hdf5_stats = json.load(f)
+        except Exception:
+            pass
 
     receiver_port = int(os.getenv("DSLV_RECEIVER_PORT", "5775"))
     status["pipeline"] = {
         "active": active,
         "chrony_stratum": chrony_stratum,
         "receiver_port": receiver_port,
+        "timing_healthy": health.get("timing_healthy", False),
+        "baseline": health.get("baseline", {}),
         **hdf5_stats,
     }
+
+    # SDR state — from pipeline health.json when available.
+    sdr_health = health.get("sdr_health", {})
+    status["sdr"] = {
+        "mode": "REAL" if sdr_health.get("backend_name") == "pluto_iio" else sdr_health.get("backend_name", "SIM"),
+        "center_hz": 80_000_000,
+        "clock_src": "external" if sdr_health.get("external_reference_configured") else "internal",
+        "reachable": sdr_health.get("reachable", False),
+        "transport_errors": sdr_health.get("transport_errors", 0),
+        "short_read_count": sdr_health.get("short_read_count", 0),
+    }
+
+    # UPS state — from pipeline health.json when available.
+    status["ups"] = health.get("ups", {"health": "absent"})
 
     # ── Registered nodes — live-probe each one ────────────────────────────────
     registered_node_cfgs = _load_registered_nodes()
@@ -350,19 +420,6 @@ def _get_status() -> dict:
         "registered_nodes": probed_nodes,
         "telemetry_nodes": telemetry_nodes,
     }
-
-    # SDR state
-    sdr_env_path = os.path.join(
-        os.getenv("DSLV_PRIMARY_OUTPUT_DIR", "./output/primary"), ".sdr_state.json"
-    )
-    sdr_state: dict = {"mode": "REAL", "center_hz": 100_000_000, "clock_src": "external"}
-    try:
-        if os.path.exists(sdr_env_path):
-            with open(sdr_env_path) as f:
-                sdr_state.update(json.load(f))
-    except Exception:
-        pass
-    status["sdr"] = sdr_state
 
     return status
 

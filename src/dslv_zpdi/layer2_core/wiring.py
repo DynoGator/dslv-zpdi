@@ -8,12 +8,47 @@ Rev 3.1 FIXES:
   - No scipy imports (Layer 2 is hardware-agnostic)
 """
 import json
+import os
 
 from dslv_zpdi.layer1_ingestion.payload import SensorModality
 
 from .coherence import CoherencePacket, CoherenceScorer
 
-coherence_engine = CoherenceScorer()
+
+def _load_baseline_config() -> dict:
+    """SPEC-009 — Load baseline learning parameters from environment."""
+    cfg: dict = {}
+    try:
+        cfg["baseline_duration_hours"] = float(
+            os.getenv("DSLV_BASELINE_HOURS", "72")
+        )
+    except ValueError:
+        cfg["baseline_duration_hours"] = 72.0
+    try:
+        cfg["min_baseline_samples"] = int(
+            os.getenv("DSLV_MIN_BASELINE_SAMPLES", "240")
+        )
+    except ValueError:
+        cfg["min_baseline_samples"] = 240
+    try:
+        cfg["min_confirming_nodes"] = int(
+            os.getenv("DSLV_MIN_CONFIRMING_NODES", "4")
+        )
+    except ValueError:
+        cfg["min_confirming_nodes"] = 4
+    cfg["baseline_state_path"] = os.getenv(
+        "DSLV_BASELINE_STATE_PATH", "/var/lib/dslv_zpdi/baseline.json"
+    )
+    return cfg
+
+
+_baseline_cfg = _load_baseline_config()
+coherence_engine = CoherenceScorer(
+    baseline_duration_hours=_baseline_cfg["baseline_duration_hours"],
+    min_baseline_samples=_baseline_cfg["min_baseline_samples"],
+    min_nodes=_baseline_cfg["min_confirming_nodes"],
+    baseline_state_path=_baseline_cfg["baseline_state_path"],
+)
 
 
 def wire_to_coherence(json_payload: str) -> CoherencePacket | None:

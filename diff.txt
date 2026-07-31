@@ -1,0 +1,664 @@
+diff --git a/install_zpdi_mobile.sh b/install_zpdi_mobile.sh
+index 029340a..c08a22c 100755
+--- a/install_zpdi_mobile.sh
++++ b/install_zpdi_mobile.sh
+@@ -121,8 +121,9 @@ ZPDI_NODE_ID=dslv-zpdi/mobile-tier2
+ ZPDI_SERVER_HOST=0.0.0.0
+ ZPDI_SERVER_PORT=8443
+ 
+-# --- Mobile daemon WSS endpoint (points at local tier1 server) ---
+-ZPDI_WSS_URI=ws://127.0.0.1:8443/ingest
++# --- Mobile daemon WSS endpoint (points at Pi or local tier1 server) ---
++PI_HOST="${PI_HOST:-10.29.134.69}"
++ZPDI_WSS_URI=ws://${PI_HOST}:8443/ingest
+ ZPDI_WSS_TOKEN=
+ ZPDI_WSS_CA_BUNDLE=
+ 
+diff --git a/pyproject.toml b/pyproject.toml
+index 1490631..2f79abe 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -81,6 +81,7 @@ where = ["src"]
+ 
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
++pythonpath = ["src", "tools"]
+ python_files = ["test_*.py"]
+ asyncio_mode = "auto"
+ markers = [
+diff --git a/src/dslv_zpdi/layer1_ingestion/radoneye_ingestor.py b/src/dslv_zpdi/layer1_ingestion/radoneye_ingestor.py
+index 56ac8ff..e25f939 100644
+--- a/src/dslv_zpdi/layer1_ingestion/radoneye_ingestor.py
++++ b/src/dslv_zpdi/layer1_ingestion/radoneye_ingestor.py
+@@ -354,7 +354,11 @@ class RadonEyeHttpTransport:
+ 
+ 
+ class RadonEyeIngestor:
+-    """SPEC-015.7 — Unified ingestor with auto-failover BLE → HTTP → SIM."""
++    """SPEC-015.7 — Unified ingestor with auto-failover BLE → HTTP → SIM.
++
++    Supports optional equipment mode where physical device absence is expected
++    and development continues via simulated telemetry streams without error.
++    """
+ 
+     def __init__(
+         self,
+@@ -363,8 +367,10 @@ class RadonEyeIngestor:
+         http_endpoint: str = "/data",
+         simulator: RadonEyeSimulator | None = None,
+         prefer_ble: bool = True,
++        optional_hardware: bool = True,
+     ):
+         self.prefer_ble = prefer_ble
++        self.optional_hardware = optional_hardware
+         self.ble = RadonEyeBleTransport(device_address=device_address)
+         self.http = RadonEyeHttpTransport(base_url=http_url, endpoint=http_endpoint)
+         self.sim = simulator or RadonEyeSimulator()
+@@ -375,23 +381,31 @@ class RadonEyeIngestor:
+             try:
+                 return await self.ble.read()
+             except Exception as exc:
+-                logger.warning("RadonEye BLE failed (%s), trying HTTP fallback", exc)
++                logger.debug("RadonEye BLE failed (%s), trying HTTP fallback", exc)
+             try:
+                 return self.http.read()
+             except Exception as exc:
+-                logger.warning("RadonEye HTTP failed (%s), falling back to simulator", exc)
+-            return self.sim.read()
++                logger.debug("RadonEye HTTP failed (%s), falling back to simulator", exc)
++            if self.optional_hardware:
++                logger.info("[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development")
++            sample = self.sim.read()
++            sample.provenance["optional_equipment"] = True
++            return sample
+ 
+         # HTTP-first mode
+         try:
+             return self.http.read()
+         except Exception as exc:
+-            logger.warning("RadonEye HTTP failed (%s), trying BLE fallback", exc)
++            logger.debug("RadonEye HTTP failed (%s), trying BLE fallback", exc)
+         try:
+             return await self.ble.read()
+         except Exception as exc:
+-            logger.warning("RadonEye BLE failed (%s), falling back to simulator", exc)
+-        return self.sim.read()
++            logger.debug("RadonEye BLE failed (%s), falling back to simulator", exc)
++        if self.optional_hardware:
++            logger.info("[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development")
++        sample = self.sim.read()
++        sample.provenance["optional_equipment"] = True
++        return sample
+ 
+     def read_sync(self) -> RadonSample:
+         """Synchronous wrapper for non-async callers."""
+diff --git a/src/dslv_zpdi/layer1_ingestion/sdr/capabilities.py b/src/dslv_zpdi/layer1_ingestion/sdr/capabilities.py
+index 2f8bc81..bc81586 100644
+--- a/src/dslv_zpdi/layer1_ingestion/sdr/capabilities.py
++++ b/src/dslv_zpdi/layer1_ingestion/sdr/capabilities.py
+@@ -104,11 +104,15 @@ class AppliedConfiguration:
+ 
+     def matches(self, requested: CaptureProfile) -> bool:
+         """Return True if applied settings match the requested profile within tolerance."""
++        bw_match = (
++            self.bandwidth_hz == requested.bandwidth_hz
++            or abs(self.bandwidth_hz - requested.bandwidth_hz) <= 2_000_000
++        )
+         return (
+             self.center_frequency_hz == requested.center_frequency_hz
+             and self.sample_rate_sps == requested.sample_rate_sps
+-            and self.bandwidth_hz == requested.bandwidth_hz
+-            and abs(self.gain_db - requested.gain_db) < 0.5
++            and bw_match
++            and abs(self.gain_db - requested.gain_db) <= 2.0
+             and self.gain_mode == requested.gain_mode
+             and self.receive_channels == requested.receive_channels
+             and self.transmit_enabled == requested.transmit_enabled
+diff --git a/src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py b/src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py
+index df789af..8ba308b 100644
+--- a/src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py
++++ b/src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py
+@@ -246,6 +246,9 @@ class PlutoIioBackend(SdrBackend):
+                 "TX is hard-locked out for Tier-1 qualification; set transmit_enabled=False"
+             )
+ 
++        if self._applied is not None and self._applied.matches(profile):
++            return self._applied
++
+         # RX LO
+         rx_lo = self._ad9361.find_channel("altvoltage0", True)
+         if rx_lo is None:
+@@ -263,8 +266,7 @@ class PlutoIioBackend(SdrBackend):
+         rx_chan.attrs["sampling_frequency"].value = str(int(profile.sample_rate_sps))
+ 
+         # Read back applied values. Some Pluto firmware/libiio revisions return
+-        # empty strings immediately after a write; fall back to the requested
+-        # profile so ingestion is not killed by a transient read-back gap.
++        # empty strings immediately after a write; fall back to requested.
+         applied_center = self._read_attr_int(rx_lo, "frequency", profile.center_frequency_hz)
+         applied_sample_rate = self._read_attr_int(
+             rx_chan, "sampling_frequency", profile.sample_rate_sps
+diff --git a/tools/boot_orchestrator.py b/tools/boot_orchestrator.py
+index b6a31b7..cc74bcf 100755
+--- a/tools/boot_orchestrator.py
++++ b/tools/boot_orchestrator.py
+@@ -82,6 +82,7 @@ STAGES = [
+     ("SDR", "dslv-zpdi.service", True, "PlutoSDR+ pipeline backend"),
+     ("UPS", "dslv-zpdi-ups.service", True, "X-1202 power telemetry"),
+     ("WEBDASH", "dslv-zpdi-webdash.service", True, "Flask dashboard on :8080"),
++    ("TIER1", "dslv-zpdi-tier1.service", True, "Tier-1 WSS server on :8443"),
+ ]
+ 
+ # ── Helpers ──────────────────────────────────────────────────────────────────
+diff --git a/tools/dashboard/app.py b/tools/dashboard/app.py
+index 8457a26..653d8e9 100644
+--- a/tools/dashboard/app.py
++++ b/tools/dashboard/app.py
+@@ -47,6 +47,7 @@ from dashboard.banner import (
+ )
+ from dashboard.config import DashboardConfig, load_config
+ from dashboard.panels.anomaly import RFAnomalyPanel
++from dashboard.mobile_bridge import MobileBridge
+ from dashboard.panels.bci import BCIPanel
+ from dashboard.panels.hardware import HardwarePanel
+ from dashboard.panels.logs import LogPanel
+@@ -349,6 +350,7 @@ class Dashboard:
+         cfg = config if config is not None else load_config()
+         self.console = Console()
+         self.refresh = refresh if refresh is not None else cfg.refresh
++        self.fps = max(1, min(30, int(cfg.fps)))
+         self.compact = _is_compact() if compact is None else compact
+         self.ten_inch = (_is_ten_inch() if ten_inch is None else ten_inch) and not self.compact
+         self._banner_pref = show_banner if show_banner is not None else cfg.show_banner
+@@ -399,6 +401,10 @@ class Dashboard:
+         if getattr(cfg.panels, "mobile", True):
+             self.mobile_p = MobilePanel(border_style="bright_blue")
+             self._panels["mobile"] = self.mobile_p
++            self.mobile_bridge = MobileBridge(self.mobile_p)
++            self.mobile_bridge.start()
++        else:
++            self.mobile_bridge = None
+         if getattr(cfg.panels, "bci", True):
+             self.bci_p = BCIPanel(border_style="bright_magenta")
+             self._panels["bci"] = self.bci_p
+@@ -749,19 +755,27 @@ class Dashboard:
+         self._enter_raw()
+         try:
+             self._live = Live(self.layout, console=self.console,
+-                              refresh_per_second=max(1, int(1 / self.refresh)), screen=True)
++                              refresh_per_second=self.fps, screen=True)
++            frame_period = 1.0 / self.fps
++            next_frame = time.monotonic()
+             with self._live:
+                 while True:
+-                    k = self._read_key()
+-                    if k:
++                    while (k := self._read_key()) is not None:
+                         self._handle_key(k)
+                     if not self.paused:
+                         self._render()
+-                    time.sleep(self.refresh)
++                    next_frame += frame_period
++                    now = time.monotonic()
++                    if now - next_frame > frame_period:
++                        # Overran by more than a frame; resync the deadline.
++                        next_frame = now + frame_period
++                    time.sleep(max(0.0, next_frame - now))
+         except KeyboardInterrupt:
+             pass
+         finally:
+             self._exit_raw()
++            if getattr(self, "mobile_bridge", None):
++                self.mobile_bridge.stop()
+             if "logs" in self._panels:
+                 self._panels["logs"].stop()
+             if "waterfall" in self._panels:
+diff --git a/tools/dashboard/config.py b/tools/dashboard/config.py
+index 20468ff..90ed272 100644
+--- a/tools/dashboard/config.py
++++ b/tools/dashboard/config.py
+@@ -78,7 +78,8 @@ class KeyCfg:
+ 
+ @dataclass
+ class DashboardConfig:
+-    refresh: float = 0.5
++    refresh: float = 0.2
++    fps: int = 15
+     show_banner: bool = True
+     service_unit: str = "dslv-zpdi"
+     source_path: str = ""
+@@ -122,7 +123,7 @@ def load_config(path: Path | None = None) -> DashboardConfig:
+         return cfg
+ 
+     dash = data.get("dashboard", {})
+-    for k in ("refresh", "show_banner", "service_unit"):
++    for k in ("refresh", "fps", "show_banner", "service_unit"):
+         if k in dash:
+             setattr(cfg, k, dash[k])
+ 
+@@ -135,6 +136,7 @@ def load_config(path: Path | None = None) -> DashboardConfig:
+ 
+     # Enforce safe bounds so bad config values don't crash the dashboard.
+     cfg.refresh = max(0.1, float(cfg.refresh))
++    cfg.fps = max(1, min(30, int(cfg.fps)))
+     cfg.waterfall.history = max(10, int(cfg.waterfall.history))
+     cfg.waterfall.center_hz = max(1_000_000, int(cfg.waterfall.center_hz))
+     cfg.waterfall.span_hz = max(100_000, min(500_000_000, int(cfg.waterfall.span_hz)))
+diff --git a/tools/dashboard/panels/mobile.py b/tools/dashboard/panels/mobile.py
+index 58a5ac4..1c5dd23 100644
+--- a/tools/dashboard/panels/mobile.py
++++ b/tools/dashboard/panels/mobile.py
+@@ -25,8 +25,13 @@ class MobilePanel:
+             content = Text("NO DATA — PIXEL OFF GRID", style="dim italic")
+             return Panel(content, title="[MOBILE/T2]", border_style=self.border_style)
+ 
+-        age_s = time.time() - t.get("timestamp_utc", 0)
+-        age_str = f"{age_s:.0f}s" if age_s < 120 else f"{age_s/60:.0f}m"
++        ts = t.get("timestamp_utc", 0.0)
++        age_s = time.time() - ts if ts > 0 else 9999
++        is_online = t.get("online", False) and age_s <= 60
++        status_str = "ONLINE" if is_online else "STALE" if age_s < 300 else "OFFLINE"
++        status_style = "bright_green" if is_online else "bright_yellow" if age_s < 300 else "bright_red"
++
++        age_str = f"{age_s:.0f}s" if age_s < 120 else f"{age_s/60:.0f}m" if age_s < 7200 else "—"
+ 
+         mag = t.get("magnetometer_ut")
+         mag_str = f"{sum(v*v for v in mag)**0.5:.1f} µT" if mag else "—"
+@@ -44,6 +49,7 @@ class MobilePanel:
+ 
+         if compact:
+             line = Text()
++            line.append(f"[{status_str}] ", style=status_style)
+             line.append(f"MAG:{mag_str} ", style="bright_cyan")
+             line.append(f"GPS:{fix_str} ", style=fix_style)
+             line.append(f"T:{trust:.2f}", style=trust_style)
+@@ -52,6 +58,7 @@ class MobilePanel:
+         table = Table(show_header=False, box=None, padding=0)
+         table.add_column("key", style="dim", justify="right")
+         table.add_column("val", style="bright_white")
++        table.add_row("Status", f"[{status_style}]{status_str}")
+         table.add_row("Mag", mag_str, style="bright_cyan")
+         table.add_row("GPS fix", f"[{fix_style}]{fix_str}")
+         table.add_row("Cam hash", cam_str)
+@@ -62,3 +69,4 @@ class MobilePanel:
+             table.add_row("Flags", ", ".join(flags), style="bright_yellow")
+ 
+         return Panel(table, title="[MOBILE/T2]", border_style=self.border_style)
++
+diff --git a/tools/dashboard/panels/pipeline.py b/tools/dashboard/panels/pipeline.py
+index 702f120..9e9dfb3 100644
+--- a/tools/dashboard/panels/pipeline.py
++++ b/tools/dashboard/panels/pipeline.py
+@@ -51,6 +51,7 @@ def _proc_uptime_seconds(pid: int) -> float:
+ 
+ 
+ _PRIMARY_TTL = 2.0
++_SYSTEMCTL_TTL = 3.0
+ _HEALTH_TTL = 1.5
+ _HEALTH_STALE_S = 12.0  # Health data older than this means pipeline is not updating
+ 
+@@ -175,9 +176,10 @@ class PipelinePanel:
+         self._prim_cache = _Cache(_PRIMARY_TTL)
+         self._sec_cache = _MtimeCache()
+         self._health_cache = _Cache(_HEALTH_TTL)
++        self._sysctl_cache = _Cache(_SYSTEMCTL_TTL)
+ 
+     def render(self, compact: bool = False) -> Panel:
+-        info = _systemctl_show(self.unit)
++        info = self._sysctl_cache.get(lambda: _systemctl_show(self.unit))
+         state = info.get("ActiveState", "?")
+         substate = info.get("SubState", "?")
+         pid = int(info.get("MainPID", "0") or 0)
+diff --git a/tools/dashboard/panels/radon.py b/tools/dashboard/panels/radon.py
+index 1962e24..31592fd 100644
+--- a/tools/dashboard/panels/radon.py
++++ b/tools/dashboard/panels/radon.py
+@@ -21,9 +21,12 @@ class RadonPanel:
+ 
+     def render(self, compact: bool = False):
+         s = self._last_sample
++        is_optional = s.get("provenance", {}).get("optional_equipment", True) if s else True
++        title = "[RADON — OPTIONAL]" if is_optional else "[RADON]"
++
+         if not s:
+-            content = Text("NO DATA — SNIFFING NOBLE GASES...", style="dim italic")
+-            return Panel(content, title="[RADON]", border_style=self.border_style)
++            content = Text("OPTIONAL EQUIPMENT — NOT CONNECTED (SIM READY)", style="dim italic")
++            return Panel(content, title=title, border_style=self.border_style)
+ 
+         age_s = time.time() - s.get("timestamp_utc", 0)
+         age_str = f"{age_s:.0f}s" if age_s < 120 else f"{age_s/60:.0f}m"
+@@ -43,7 +46,7 @@ class RadonPanel:
+             line.append(f"{s.get('radon_pCiL', 0):.2f} pCi/L ", style="bold bright_green")
+             line.append(f"({transport}) ", style=transport_style)
+             line.append(f"age:{age_str}", style="dim")
+-            return Panel(line, title="[RADON]", border_style=self.border_style)
++            return Panel(line, title=title, border_style=self.border_style)
+ 
+         table = Table(show_header=False, box=None, padding=0)
+         table.add_column("key", style="dim", justify="right")
+@@ -55,4 +58,4 @@ class RadonPanel:
+         table.add_row("Quality", f"[{quality_style}]{quality}")
+         table.add_row("Age", age_str)
+ 
+-        return Panel(table, title="[RADON]", border_style=self.border_style)
++        return Panel(table, title=title, border_style=self.border_style)
+diff --git a/tools/dashboard/panels/system.py b/tools/dashboard/panels/system.py
+index a1c7894..0f2c485 100644
+--- a/tools/dashboard/panels/system.py
++++ b/tools/dashboard/panels/system.py
+@@ -3,10 +3,27 @@
+ import os
+ import shutil
+ import subprocess
++import time
+ 
+ from rich.panel import Panel
+ from rich.table import Table
+ 
++_THROTTLE_TTL = 5.0  # seconds
++
++
++class _Cache:
++    def __init__(self, ttl: float):
++        self.ttl = ttl
++        self.t = 0.0
++        self.val = None
++
++    def get(self, producer):
++        now = time.time()
++        if self.val is None or now - self.t > self.ttl:
++            self.val = producer()
++            self.t = now
++        return self.val
++
+ 
+ def _read(path: str, default: str = "") -> str:
+     try:
+@@ -124,6 +141,7 @@ def _uptime() -> str:
+ class SystemPanel:
+     def __init__(self, border_style: str = "bright_cyan"):
+         self._cpu_state = {}
++        self._throttle = _Cache(_THROTTLE_TTL)
+         self.border_style = border_style
+ 
+     def render(self, compact: bool = False) -> Panel:
+@@ -132,7 +150,7 @@ class SystemPanel:
+         load = _load_avg()
+         temp = _cpu_temp_c()
+         gov = _governor()
+-        thr = _throttle_status()
++        thr = self._throttle.get(_throttle_status)
+         up = _uptime()
+ 
+         t = Table.grid(padding=(0, 1 if compact else 2), expand=True)
+diff --git a/tools/dashboard/panels/waterfall.py b/tools/dashboard/panels/waterfall.py
+index 050e15b..56d2cb3 100644
+--- a/tools/dashboard/panels/waterfall.py
++++ b/tools/dashboard/panels/waterfall.py
+@@ -374,8 +374,11 @@ class PlutoSweepStream:
+         # One-sided power spectrum via FFT; dBFS for now.
+         n = len(samples)
+         fft = np.fft.fftshift(np.fft.fft(samples))
+-        # dBFS: 20*log10(|fft|/n). A full-scale tone would approach 0 dBFS.
+-        power = 20.0 * np.log10(np.maximum(np.abs(fft) / max(1, n), 1e-12))
++        # dBFS: 20*log10(|fft|/(n*FS)). Pluto samples are raw AD9361 12-bit
++        # ADC counts (full scale ±2047), so divide by 2048.0 as well — without
++        # this the spectrum is offset by +66 dB and every bin saturates the
++        # palette ceiling. A full-scale tone approaches 0 dBFS.
++        power = 20.0 * np.log10(np.maximum(np.abs(fft) / (max(1, n) * 2048.0), 1e-12))
+ 
+         # Resample the FFT to `width` columns using max-hold.
+         if len(power) == width:
+@@ -460,6 +463,16 @@ class WaterfallPanel:
+         # RF anomaly panel so it can report peak dBm, noise floor, etc.
+         self.last_dbm_row: list[float] | None = None
+         self._anomaly_count_recent = 0
++        # Data production runs on a daemon thread (mirrors LogPanel) so the
++        # render path stays pure drawing. _rows_lock guards rows, peak_hold,
++        # last_dbm_row and the anomaly counters shared with the UI thread;
++        # _stream_lock serializes stream start/stop against keypress-driven
++        # restarts from the UI thread.
++        self._rows_lock = threading.Lock()
++        self._stream_lock = threading.Lock()
++        self._tick_thread: threading.Thread | None = None
++        self._tick_stop = threading.Event()
++        self._tick_started = False
+ 
+     def cycle_palette(self):
+         global _PALETTE_IDX
+@@ -544,15 +557,44 @@ class WaterfallPanel:
+         w = max(20, int(width))
+         if w != self.width:
+             self.width = w
+-            self.rows = []
+-            self.peak_hold = [0.0] * self.width
++            with self._rows_lock:
++                self.rows = []
++                self.peak_hold = [0.0] * self.width
+             self._restart_stream_if_running()
+ 
++    def start(self):
++        """Start the background tick thread (idempotent)."""
++        if self._tick_started:
++            return
++        self._tick_started = True
++        self._tick_thread = threading.Thread(target=self._tick_loop, daemon=True)
++        self._tick_thread.start()
++
++    def stop(self):
++        self._tick_stop.set()
++
++    def _tick_loop(self):
++        # Scroll rate is data-driven: real rows are consumed as fast as they
++        # arrive; when no row is available, back off briefly instead of
++        # spinning.
++        while not self._tick_stop.is_set():
++            try:
++                got_row = self.tick()
++            except Exception:
++                got_row = False
++            if not got_row:
++                time.sleep(0.04)
++
+     def shutdown(self):
++        self.stop()
+         self._hackrf_stream.stop()
+         self._pluto_stream.stop()
+ 
+     def _sync_stream(self):
++        with self._stream_lock:
++            self._sync_stream_locked()
++
++    def _sync_stream_locked(self):
+         want_real = os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
+         if not want_real:
+             if self._active_real is not None:
+@@ -603,6 +645,10 @@ class WaterfallPanel:
+         self._want_real = want_real
+ 
+     def _restart_stream_if_running(self):
++        with self._stream_lock:
++            self._restart_stream_if_running_locked()
++
++    def _restart_stream_if_running_locked(self):
+         if self._active_real == "pluto" and self._pluto_stream.is_running():
+             self._pluto_stream.start(
+                 center_hz=self.center_hz,
+@@ -643,11 +689,14 @@ class WaterfallPanel:
+             row.append(v)
+         return row
+ 
+-    def tick(self):
++    def tick(self) -> bool:
++        """Produce one waterfall row. Returns True when a real stream row was
++        consumed (False for sim/fallback rows). Runs on the tick thread."""
+         self._sync_stream()
+         row: list[float] | None = None
+         raw_dbm: list[float] | None = None
+         source = "SIM"
++        got_row = False
+         if self._want_real:
+             if self._active_real == "pluto":
+                 raw_row = self._pluto_stream.pop_row()
+@@ -655,33 +704,38 @@ class WaterfallPanel:
+                     source = "PLUTO"
+                     raw_dbm = raw_row
+                     row = self._normalize(raw_row)
++                    got_row = True
+             elif self._active_real == "hackrf":
+                 raw_row = self._hackrf_stream.pop_row()
+                 if raw_row is not None:
+                     source = "HACKRF"
+                     raw_dbm = raw_row
+                     row = self._normalize(raw_row)
++                    got_row = True
+         if row is None:
+             row = self._sim_row()
+             raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
+             if self._want_real:
+                 source = f"{self._active_real.upper()}-WAIT" if self._active_real else "WAIT"
+         self._last_source = source
+-        self.last_dbm_row = raw_dbm
+-        if raw_dbm:
+-            floor = self._estimate_floor(raw_dbm)
+-            self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
+-
+-        if row:
+-            if len(self.peak_hold) != len(row):
+-                self.peak_hold = list(row)
+-            else:
+-                for i in range(len(row)):
+-                    self.peak_hold[i] = max(row[i], self.peak_hold[i] * 0.98)
+-
+-        self.rows.append(row)
+-        if len(self.rows) > self.history:
+-            self.rows.pop(0)
++
++        with self._rows_lock:
++            self.last_dbm_row = raw_dbm
++            if raw_dbm:
++                floor = self._estimate_floor(raw_dbm)
++                self._anomaly_count_recent = sum(1 for v in raw_dbm if v >= floor + 10.0)
++
++            if row:
++                if len(self.peak_hold) != len(row):
++                    self.peak_hold = list(row)
++                else:
++                    for i in range(len(row)):
++                        self.peak_hold[i] = max(row[i], self.peak_hold[i] * 0.98)
++
++            self.rows.append(row)
++            if len(self.rows) > self.history:
++                self.rows.pop(0)
++        return got_row
+ 
+     @staticmethod
+     def _estimate_floor(row: list[float]) -> float:
+@@ -691,7 +745,9 @@ class WaterfallPanel:
+ 
+     def metrics(self) -> dict:
+         """Snapshot of current spectrum metrics for the RF anomaly panel."""
+-        row = self.last_dbm_row
++        with self._rows_lock:
++            row = list(self.last_dbm_row) if self.last_dbm_row else None
++            anomaly_count = self._anomaly_count_recent
+         if not row:
+             return {
+                 "have_data": False,
+@@ -721,7 +777,7 @@ class WaterfallPanel:
+             "peak_freq_hz": peak_freq_hz,
+             "noise_floor_dbm": floor,
+             "snr_db": peak_v - floor,
+-            "anomaly_count": self._anomaly_count_recent,
++            "anomaly_count": anomaly_count,
+             "source": self._last_source,
+             "span_hz": self.span_hz,
+             "center_hz": self.center_hz,
+@@ -739,7 +795,7 @@ class WaterfallPanel:
+             return self._hackrf_stream
+         return None
+ 
+-    def _spectrum_text(self, row: list[float], height: int = 5) -> Text:
++    def _spectrum_text(self, row: list[float], peak_hold: list[float], height: int = 5) -> Text:
+         t = Text()
+         # Estimate noise floor for the normalized row
+         floor_val = sum(sorted(row)[:len(row)//4]) / (len(row)//4 + 1)
+@@ -747,7 +803,7 @@ class WaterfallPanel:
+         for y in range(height, 0, -1):
+             threshold = y / height
+             for i, v in enumerate(row):
+-                pk = self.peak_hold[i]
++                pk = peak_hold[i]
+                 if v >= threshold:
+                     t.append("█", style=_heat(v))
+                 elif pk >= threshold:
+@@ -780,26 +836,31 @@ class WaterfallPanel:
+     def render(self, compact: bool | None = None) -> Panel:
+         if compact is not None:
+             self.compact = compact
+-        self.tick()
++        # Data production lives on the tick thread; render is pure drawing
++        # over a consistent snapshot of the shared state.
++        self.start()
++        with self._rows_lock:
++            rows = list(self.rows)
++            peak_hold = list(self.peak_hold)
+         lines = Text()
+         center_mhz = self.center_hz / 1e6
+         span_mhz = self.span_hz / 1e6
+ 
+-        if not self.rows:
++        if not rows:
+             lines.append("\n  [ buffering spectrum... ]\n")
+         else:
+             if self.show_spectrum:
+                 spec_h = 3 if self.compact else 5
+-                lines.append_text(self._spectrum_text(self.rows[-1], height=spec_h))
++                lines.append_text(self._spectrum_text(rows[-1], peak_hold, height=spec_h))
+                 lines.append("─" * self.width, style="dim")
+                 lines.append("\n")
+ 
+             # Use as much history as we have, but limit for very small screens if needed.
+             # However, the Layout ratio=1 will provide the space, so we should fill it.
+             # We don't know the exact line count here, so we'll show most of it.
+-            rows_to_show = self.rows
+-            if self.compact and len(self.rows) > 15:
+-                rows_to_show = self.rows[-15:]
++            rows_to_show = rows
++            if self.compact and len(rows) > 15:
++                rows_to_show = rows[-15:]
+ 
+             for row in reversed(rows_to_show):
+                 lines.append_text(self._row_text(row))
+diff --git a/tools/launch_project.sh b/tools/launch_project.sh
+index c7396ad..32c7357 100755
+--- a/tools/launch_project.sh
++++ b/tools/launch_project.sh
+@@ -141,14 +141,14 @@ if [ -n "$SUDO" ]; then
+     SAY "step 5/7 :: starting dslv-zpdi chain (tuning → preflight → pipeline)"
+     $SUDO systemctl daemon-reload
+     sleep 3
+-    for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service; do
++    for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service dslv-zpdi-webdash.service dslv-zpdi-tier1.service; do
+         SAY "  - start $unit"
+         $SUDO systemctl start "$unit" || WARN "failed to start $unit"
+         # generous pause between dependent unit starts so each finishes init
+         # before the next one is asked to come up
+-        sleep 5
++        sleep 3
+     done
+-    sleep 5
++    sleep 3
+ else
+     SAY "step 5/7 :: skipping systemd chain start (no sudo)"
+ fi
+@@ -156,7 +156,7 @@ fi
+ # --- 6. Verify chain health -------------------------------------------
+ SAY "step 6/7 :: verifying service health"
+ FAILED=0
+-for unit in dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi; do
++for unit in dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi dslv-zpdi-webdash dslv-zpdi-tier1; do
+     STATE="$(systemctl is-active "$unit" 2>/dev/null || true)"
+     case "$STATE" in
+         active)   OK "$unit: active" ;;

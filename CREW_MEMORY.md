@@ -1,15 +1,30 @@
 # DynoGatorLabs Crew - Unified Memory State
 
-**LAST UPDATED:** 2026-06-16T01:55:00-06:00
-**SYSTEM STATUS:** PRE-REBOOT PREPARATION
+**LAST UPDATED:** 2026-07-29T22:05:00+00:00
+**SYSTEM STATUS:** OPERATIONAL — FULL STACK UP — REBOOT PREP COMPLETE — pushed to origin
 
 ## 1. Current Codebase State
-- **Branch:** `main` (Fully unified and consolidated)
-- **Tests:** 185/185 Passing (100% Green)
-- **Merged Features:**
-  - `PlutoSDR+ Tier1` hardware abstraction layer
-  - `Mobile-Node` architecture (Pixel 9 Pro XL Graphene)
+- **Branch:** `main` @ `6434be0` — **in sync with `origin/main`** (rebased + pushed 2026-07-29)
+- **Version:** Rev 5.2.0 (metadata aligned; SPEC-023 added for demod/MIMO hooks)
+- **Tests:** 237 passed — verified 2026-07-29 via `validate.sh` on the integrated tree
+- **Merged Features (v5.0.0 baseline):**
+  - `PlutoSDR+ Tier1` hardware abstraction layer (IIO / libiio)
+  - `Mobile-Node` architecture (Pixel 9 Pro XL GrapheneOS / PRoot)
   - `Radon-Eye Pro` telemetry fusion
+  - CLI: `preflight`, `probe`, `verify` commands
+  - Key provider chain (dev / file / env / production)
+  - Tier-1 ingestion server with AES-256-GCM + HMAC + SHA256 integrity
+  - Frequency translation / calibration subpackage
+  - Timing subpackage (PPS, NMEA, Chrony, LBE-1421, attestations)
+  - Complete CI matrix (GitHub Actions + Docker + security scan)
+- **Phase 4 — NEW (untracked, to be committed):**
+  - `specs/SPEC-C2-001.md` — C2 protocol spec (SPEC-022)
+  - `docs/security/C2_THREAT_MODEL.md` — C2 threat model
+  - `src/dslv_zpdi/control/` — canonical C2 package (protocol, authorization, audit)
+  - `src/dslv_zpdi/control/adapters/` — real adapters (pipeline, sdr, hdf5_query)
+  - `tests/test_control_protocol.py` — 23 test cases
+  - `tests/test_control_adapters.py` — 26 test cases (adapters)
+- **TEST COMMAND:** `DEV_SIMULATOR=1 .venv/bin/python -m pytest tests/ -v`
 
 ## 2. Hardware Configuration
 - **Tier 1 Primary Node:**
@@ -17,16 +32,68 @@
   - Network: Gigabit Ethernet at `192.168.3.80`
   - SDR Connection: IIO network context (`ip:192.168.3.80`)
   - Firmware: Custom Tezuka-Libre hybrid (required for Zynq-7020 RAM mapping)
+  - See: `docs/PLUTO_SDR_FIRMWARE_GUIDE.md`, `docs/PlutoSDR/`
 - **GPSDO Metrology Clock:**
   - Hardware: Leo Bodnar LBE-1421
   - Out 1 (1 PPS) → Pi 5 GPIO 18 (UTC anchoring)
   - Out 2 (10 MHz) → PlutoSDR+ CLKIN (Hardware phase lock)
+  - See: `docs/hardware/LBE1421_PLUTO_WIRING.md`
+- **Mobile Tier-2 C2 Node:**
+  - Hardware: Pixel 9 Pro XL / GrapheneOS / PRoot Debian
+  - Main pipeline: `zpdi_mobile_node.py` via `supervisor.sh`
+  - C2 overlay: `/root/dslv-zpdi-local/` (outside main repo)
+  - Boot scripts (Termux): `98-dslv-c2-services.sh`, `99-start-zpdi.sh` — both
+    installed in native `~/.termux/boot/`; canonical copies in
+    `/root/dslv-zpdi-local/termux-boot/` and repo `termux-boot/`
+  - Running services: C2 `:8444`, HDF5 adapter `:8445`, PWA `:8085`, main pipeline `:8443`/`:8080`
+  - **UPLINK: LIVE → ALPHA** since 2026-07-30T06:17Z — `ws://10.12.158.69:8443/ingest`
+    (alpha found on hotspot `PiRepo-Control`; cutover via
+    `/root/dslv-zpdi-local/scripts/connect_alpha_node.sh`; shared creds in
+    `/root/.config/dslv-zpdi/alpha_uplink.env`; runbook `dslv-zpdi-local/docs/ALPHA_CONNECTION.md`)
+  - **CAVEAT:** handshake succeeded immediately → alpha is accepting without
+    verifying (no creds installed alpha-side yet). Install the three secrets
+    from `alpha_uplink.env` into the alpha's `.env` to make the link authenticated.
 
-## 3. Next Immediate Steps (Post-Reboot)
-1. **User Action:** Physically install the LBE-1421 onto the PlutoSDR+.
-2. **System Action:** Boot sequence triggers Supervisor daemon.
-3. **Crew Action:** Run the live hardware verification tests to confirm the PlutoSDR+ is successfully slaved to the GPSDO 10MHz external clock.
+## 3. Active Development Track — PIXEL_DEV_PLAN.md
+
+**Canonical plan:** `/data/data/com.termux/files/home/PIXEL_DEV_PLAN.md`
+**Current plan step:** Section 6 — Immediate Next Steps
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Apply Phase 1 manual GrapheneOS settings on device | Manual — device action required |
+| **2** | **Reboot + confirm services auto-start from boot logs** | **CURRENT — scripts fixed 2026-07-29; reboot test is the next action** |
+| 3 | 30-minute screen-off soak test | Pending step 2 reboot |
+| **4** | **Implement control adapters (`src/dslv_zpdi/control/adapters/`)** | **DONE 2026-07-25 — pipeline, sdr, hdf5_query adapters live** |
+| 5 | Build native APK Phase 6B (Kotlin + LocalOnlyHotspot) | Future |
+| 6 | Complete Phase 8 one-shot installer | Future |
+
+**boot-c2.log status:** Present at native `~/dslv-zpdi-local/logs/boot-c2.log`.
+**2026-07-29 reboot prep:** `98-dslv-c2-services.sh` had a fatal native-context bug —
+it referenced `/root/...` (proot fake-root home) for log redirects, the PWA server,
+and the watchdog, so every overlay service died silently at boot. Fixed script runs
+all services inside proot logins with in-proot redirects; watchdog runs native from
+the native mirror `~/dslv-zpdi-local/network/`. Full stack verified up pre-reboot
+(self_check: all PASS). Post-reboot verification procedure:
+`/root/dslv-zpdi-local/docs/BOOT_VERIFICATION.md`.
 
 ## 4. Operational Directives
-- **NO DESTRUCTIVE MERGES:** The `main` branch is stable. All new work must branch from `main` and pass the 185-item test suite (`DEV_SIMULATOR=1 .venv/bin/python -m pytest tests/ -v`) before merging.
-- **HARDWARE PRIORITY:** If the SDR cannot be reached, the system must gracefully degrade to SIMULATOR mode, not crash.
+- **NO DESTRUCTIVE MERGES:** `main` is stable. All new work branches from `main` and must pass the 207-item test suite before merging.
+- **HARDWARE PRIORITY:** SDR unreachable → degrade to SIMULATOR, do not crash.
+- **C2 SECURITY:** Bearer token auth at `127.0.0.1` only. No LAN exposure until mTLS implemented.
+- **SPEC-ID DISCIPLINE:** Every new `src/dslv_zpdi/` module must cite a SPEC-ID.
+- **VALIDATE:** `bash /root/dslv-zpdi-local/scripts/validate.sh` before and after any code change.
+
+## 5. Pending Commits (main repo)
+**RESOLVED 2026-07-29:** All local work (C2 package, docs, version alignment,
+SPEC-023, lint fixes) rebased onto latest `origin/main` and pushed. `main` ==
+`origin/main` @ `6434be0`; working tree clean.
+
+## 6. Open Risks
+- `CapabilityStore` grants full capabilities to all localhost callers → must change before LAN exposure
+- `hdf5.segment.export` declared but returns staged ack; actual export not implemented
+- `sensor_alive: false` in health log (pre-existing, investigate separately)
+- ~~`logs/tier1_server.log` is ~3.3 GB~~ **RESOLVED 2026-07-30:** rotated to `logs/tier1_server.log.2.gz` (126 MB, sha256 in `logs/STATE_VECTOR_2026-07-30.json`); persistent 10 MB × 5 gzip rotation now enforced in-process by `_GzipRotatingFileHandler`
+- Android phantom-process killer can still `SIGKILL` long-running proot children — confirm Phase 1 "Disable child process restrictions" is set (13:34 boot daemon was `Killed`)
+- Gemini CLI OAuth free tier ended June 2026 — verify subscription
+- Legacy normalization shim in `c2_server.py` should be removed after all clients confirmed spec-compliant

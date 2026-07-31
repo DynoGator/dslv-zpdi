@@ -89,10 +89,10 @@ echo ""
 
 # 6. Web API
 echo "[6/8] FastAPI web server"
-if curl -sf "http://127.0.0.1:8000/health" >/dev/null 2>&1; then
-  log_ok "zpdi_web_server /health reachable"
+if curl -sf "http://127.0.0.1:8080/health" >/dev/null 2>&1; then
+  log_ok "Flask web dashboard /health reachable"
 else
-  log_warn "web server down on 127.0.0.1:8000"
+  log_warn "web dashboard down on 127.0.0.1:8080"
 fi
 
 echo ""

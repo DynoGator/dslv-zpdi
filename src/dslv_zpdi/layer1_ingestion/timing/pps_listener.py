@@ -16,11 +16,8 @@ PPS_FETCH ioctl constant derivation (aarch64, linux/pps.h):
 
 from __future__ import annotations
 
-import fcntl
 import logging
 import os
-import select
-import struct
 import threading
 import time
 
@@ -56,13 +53,14 @@ class PpsListener:
     ) -> None:
         self._device = device
         self._history_max = history_max
+        self._sysfs_path = f"/sys/class/pps/{os.path.basename(device)}/assert"
 
         self._lock = threading.Lock()
         self._edge_event = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
-        # (monotonic_ns, kernel_pps_ns) — kernel_pps_ns is 0 if ioctl failed
+        # (monotonic_ns, kernel_pps_ns) — kernel_pps_ns is 0 if read failed
         self._history: list[tuple[int, int]] = []
         self.last_edge_mono_ns: int = 0
         self.rms_jitter_ns: float = float("inf")
@@ -120,29 +118,52 @@ class PpsListener:
     # ------------------------------------------------------------------ #
 
     def _run(self) -> None:
-        try:
-            fd = os.open(self._device, os.O_RDWR)
-        except OSError as exc:
-            logger.error("PpsListener: cannot open %s: %s", self._device, exc)
+        """
+        SPEC-005A.TIMING-PPS — Monitor the sysfs PPS assert node.
+
+        The pps-gpio driver exposes one assert timestamp per second under
+        /sys/class/pps/pps0/assert. Poll it at 10 Hz, detect sequence-number
+        changes, and record the arrival time. This avoids the PPS_FETCH ioctl,
+        which is not reliably implemented across all Pi 5 kernel configurations.
+        """
+        sysfs_path = self._sysfs_path
+        if not os.path.exists(sysfs_path):
+            logger.error("PpsListener: sysfs node not found: %s", sysfs_path)
             return
 
-        poller = select.poll()
-        poller.register(fd, select.POLLIN)
+        last_seq: int = -1
+        try:
+            fd = os.open(sysfs_path, os.O_RDONLY)
+        except OSError as exc:
+            logger.error("PpsListener: cannot open %s: %s", sysfs_path, exc)
+            return
 
         try:
             while not self._stop.is_set():
-                # 1.2 s poll timeout so _stop is checked promptly if PPS is absent
-                events = poller.poll(1200)
-                if not events:
+                os.lseek(fd, 0, os.SEEK_SET)
+                try:
+                    raw = os.read(fd, 256)
+                except OSError as exc:
+                    logger.debug("PpsListener: sysfs read error: %s", exc)
+                    self._stop.wait(0.1)
                     continue
 
-                # Snapshot CLOCK_MONOTONIC immediately after kernel wakeup.
-                mono_ns = time.monotonic_ns()
-                pps_kernel_ns = self._fetch_kernel_ts(fd)
+                parsed = self._parse_sysfs_assert(raw)
+                if parsed is None:
+                    self._stop.wait(0.1)
+                    continue
 
+                seq, kernel_ns = parsed
+                if seq == last_seq:
+                    # No new edge since last read; wait a tick and retry.
+                    self._stop.wait(0.1)
+                    continue
+                last_seq = seq
+
+                mono_ns = time.monotonic_ns()
                 with self._lock:
                     self.last_edge_mono_ns = mono_ns
-                    self._history.append((mono_ns, pps_kernel_ns))
+                    self._history.append((mono_ns, kernel_ns))
                     if len(self._history) > self._history_max:
                         self._history.pop(0)
                     self._recompute_jitter()
@@ -157,48 +178,56 @@ class PpsListener:
             except OSError:
                 pass
 
-    def _fetch_kernel_ts(self, fd: int) -> int:
+    def _parse_sysfs_assert(self, raw: bytes) -> tuple[int, int] | None:
         """
-        SPEC-005A.TIMING-PPS — Fetch the kernel timestamp for the latest PPS edge.
+        SPEC-005A.TIMING-PPS — Parse a sysfs PPS assert line.
 
-        Issue PPS_FETCH ioctl to read the kernel-timestamped edge time.
-        The timeout field is set to PPS_TIME_INVALID so the ioctl returns
-        immediately with the most recent captured timestamp rather than
-        blocking for the next pulse.
-
-        Returns nanoseconds since UNIX epoch (CLOCK_REALTIME), or 0 on error.
+        Format: `<sec>.<nsec>#<sequence>\n`
+        Returns (sequence, kernel_ns) or None on parse failure.
         """
         try:
-            request = struct.pack(
-                _PPS_FDATA_FMT,
-                0,
-                0,
-                0,  # info: sec=0, nsec=0, flags=0 (filled by kernel)
-                0,
-                0,
-                _PPS_TIME_INVALID,  # timeout: sec=0, nsec=0, flags=PPS_TIME_INVALID
-            )
-            response = fcntl.ioctl(fd, _PPS_FETCH, request)
-            sec, nsec, _ = struct.unpack_from("qiI", response, 0)
-            return sec * 1_000_000_000 + nsec
+            line = raw.decode("ascii", errors="ignore").strip()
+            ts_part, seq_part = line.split("#", 1)
+            sec_str, nsec_str = ts_part.split(".", 1)
+            seq = int(seq_part)
+            kernel_ns = int(sec_str) * 1_000_000_000 + int(nsec_str.ljust(9, "0")[:9])
+            return seq, kernel_ns
+        except Exception:  # pylint: disable=broad-except
+            return None
+
+    def _fetch_kernel_ts(self, fd: int, timeout_s: float = 2.0) -> int:
+        """
+        SPEC-005A.TIMING-PPS — Deprecated ioctl path; retained for API compat.
+
+        This implementation reads the sysfs assert node instead of issuing the
+        PPS_FETCH ioctl, which is unreliable on the current Pi 5 kernel.
+        """
+        _ = fd, timeout_s  # signature kept for compatibility
+        try:
+            with open(self._sysfs_path, "rb") as f:  # noqa: SIM115
+                raw = f.read(256)
+            parsed = self._parse_sysfs_assert(raw)
+            return parsed[1] if parsed else 0
         except OSError as exc:
-            logger.debug("PpsListener: PPS_FETCH ioctl failed: %s", exc)
+            logger.debug("PpsListener: sysfs fetch failed: %s", exc)
             return 0
 
     def _recompute_jitter(self) -> None:
         """
         SPEC-005A.TIMING-PPS — Recompute RMS PPS jitter from recent edge intervals.
 
-        Compute RMS jitter from CLOCK_MONOTONIC inter-arrival intervals.
-        Monotonic timestamps are immune to NTP slew, so this captures
-        scheduling latency + GPS oscillator instability combined. Intervals
-        outside 500 ms–2 s are treated as missed pulses and discarded.
+        Compute RMS jitter from kernel PPS timestamps exposed by the pps-gpio
+        driver. These timestamps are captured in interrupt context and are
+        immune to userspace scheduling latency. Intervals outside 500 ms–2 s
+        are treated as missed pulses and discarded.
         """
-        mono_ts = [m for m, _ in self._history]
-        if len(mono_ts) < 2:
+        # Prefer kernel timestamps; fall back to monotonic only if the driver
+        # returned zero (should not happen with pps-gpio sysfs assert node).
+        ts_list = [k if k else m for m, k in self._history]
+        if len(ts_list) < 2:
             self.rms_jitter_ns = float("inf")
             return
-        intervals = [mono_ts[i] - mono_ts[i - 1] for i in range(1, len(mono_ts))]
+        intervals = [ts_list[i] - ts_list[i - 1] for i in range(1, len(ts_list))]
         valid = [iv for iv in intervals if 500_000_000 <= iv <= 2_000_000_000]
         if not valid:
             self.rms_jitter_ns = float("inf")

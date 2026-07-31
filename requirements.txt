@@ -12,13 +12,13 @@ blinker==1.9.0
     # via flask
 branca==0.8.2
     # via folium
-certifi==2026.5.20
+certifi==2026.6.17
     # via requests
 cffi==2.0.0
     # via cryptography
 charset-normalizer==3.4.7
     # via requests
-click==8.4.1
+click==8.4.2
     # via flask
 cryptography==49.0.0
     # via dslv-zpdi (pyproject.toml)
@@ -78,7 +78,9 @@ rich==15.0.0
     # via dslv-zpdi (pyproject.toml)
 scipy==1.17.1
     # via dslv-zpdi (pyproject.toml)
-typing-extensions==4.15.0
+smbus2==0.6.1
+    # via dslv-zpdi (pyproject.toml)
+typing-extensions==4.16.0
     # via
     #   pydantic
     #   pydantic-core

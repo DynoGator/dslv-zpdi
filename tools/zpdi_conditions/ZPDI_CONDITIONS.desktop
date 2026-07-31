@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ZPDI_CONDITIONS
+Comment=Live local and space-weather conditions dashboard
+Exec=lxterminal --title="ZPDI_CONDITIONS" -e /home/dynogator/dslv-zpdi/tools/zpdi_conditions/launch.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Science;Monitoring;Network;
+Keywords=weather;space;radnet;noaa;conditions;zpdi;
+StartupNotify=true

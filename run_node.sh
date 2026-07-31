@@ -1,5 +1,6 @@
 #!/bin/bash
-cd /root/dslv-zpdi
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO"
 source .venv/bin/activate
 # Mirror GitHub master package layout (src/dslv_zpdi) + mobile overlays
 export PYTHONPATH="$PWD/src:${PYTHONPATH:-}"

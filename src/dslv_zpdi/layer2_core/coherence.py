@@ -113,9 +113,13 @@ class CoherenceScorer:
             self._baseline_state = BaselineState.LOCKED
 
     def start_baseline(self, started_utc: float | None = None) -> None:
-        """SPEC-009 — Transition NOT_STARTED → LEARNING. Restarting from LOCKED is forbidden."""
+        """SPEC-009 — Transition NOT_STARTED → LEARNING. Idempotent for LEARNING."""
         if self._baseline_state == BaselineState.LOCKED:
             logger.warning("SPEC-009: Cannot restart baseline from LOCKED state")
+            return
+        if self._baseline_state == BaselineState.LEARNING:
+            # Preserve accumulated samples and start time across restarts.
+            logger.debug("SPEC-009: Baseline already LEARNING; preserving progress")
             return
         self._baseline_state = BaselineState.LEARNING
         self.baseline_started_utc = started_utc or time.time()
@@ -199,12 +203,25 @@ class CoherenceScorer:
         if not force:
             if len(self.baseline_samples) < self.min_baseline_samples:
                 return None
-            # 72-hour duration gate
+            # Duration gate
             elapsed_hours = (time.time() - self.baseline_started_utc) / 3600.0
             if elapsed_hours < self.baseline_duration_hours:
                 return None
 
         self._baseline_state = BaselineState.LOCKED
+
+        # Optional development override for a fixed event threshold.
+        fixed_threshold: float | None = None
+        try:
+            fixed_threshold = float(os.getenv("DSLV_BASELINE_FIXED_THRESHOLD", ""))
+        except ValueError:
+            fixed_threshold = None
+
+        if fixed_threshold is not None:
+            self.dynamic_threshold = max(fixed_threshold, 0.05)
+            self._save_baseline_state()
+            return self.dynamic_threshold
+
         if not self.baseline_samples:
             self.dynamic_threshold = 0.40
             self._save_baseline_state()

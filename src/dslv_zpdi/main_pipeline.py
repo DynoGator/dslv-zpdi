@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 from dslv_zpdi.config_models import NodeProfile
-from dslv_zpdi.layer1_ingestion.hal_factory import get_tier1_hal
+from dslv_zpdi.layer1_ingestion.hal_factory import _build_key_provider, get_tier1_hal
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
@@ -60,8 +60,9 @@ def _ingest_loop(hal, args, state, ingest_q):
             time.sleep(0.1)
 
 
-def _process_loop(monitor, writer, ingest_q, state, health_reporter):
+def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter):
     """SPEC-011.2 | Processing consumer thread."""
+    hw_tick = 0
     while state.running:
         try:
             payload = ingest_q.get(timeout=1.0)
@@ -94,6 +95,30 @@ def _process_loop(monitor, writer, ingest_q, state, health_reporter):
                     "r_smooth": decision.packet.r_smooth,
                     "r_global": decision.packet.r_global,
                 }
+
+            # Publish hardware telemetry every ~10 payloads (~10 s) to keep
+            # dashboards current without hammering I2C or libiio every tick.
+            hw_tick += 1
+            if hw_tick % 10 == 0:
+                try:
+                    update_data["sdr_health"] = hal.sdr_backend.health().summary()
+                except Exception:
+                    pass
+                try:
+                    pps_snap = hal.timing_authority._pps.snapshot()
+                    update_data["pps"] = {
+                        "history_len": pps_snap.get("history_len", 0),
+                        "rms_jitter_ns": pps_snap.get("rms_jitter_ns", float("inf")),
+                    }
+                except Exception:
+                    pass
+                try:
+                    from dslv_zpdi.layer1_ingestion.x1202_ups import ups_telemetry
+
+                    update_data["ups"] = ups_telemetry()
+                except Exception:
+                    pass
+
             health_reporter.update(update_data)
 
         except queue.Empty:
@@ -127,15 +152,26 @@ def main():
     state = PipelineState()
     hal = get_tier1_hal(profile, simulator=args.simulator)
 
-    writer_kwargs = {}
+    writer_kwargs: dict = {}
     if args.output:
         base_out = Path(args.output)
         writer_kwargs["output_path"] = str(base_out / "primary")
         writer_kwargs["secondary_path"] = str(base_out / "secondary")
 
-    writer = HDF5Writer(**writer_kwargs)
-    monitor = TimingMonitor(simulated=args.simulator)
+    key_provider = _build_key_provider(profile, simulator=args.simulator)
+    writer = HDF5Writer(
+        **writer_kwargs,
+        key_provider=key_provider,
+        allow_development_key=not profile.trust.require_production_hmac_key,
+    )
+    monitor = TimingMonitor(
+        simulated=args.simulator,
+        jitter_source=lambda: hal.timing_authority.pps_jitter_ns(),
+    )
     monitor.start()
+
+    # SPEC-009 | Begin baseline learning for trust-tier primary routing.
+    scorer.start_baseline()
 
     # SPEC-014 | Initialize dashboard health reporter
     health_reporter = HealthReporter(interval_sec=2.0)
@@ -145,7 +181,7 @@ def main():
 
     t_ingest = threading.Thread(target=_ingest_loop, args=(hal, args, state, ingest_q), daemon=True)
     t_process = threading.Thread(
-        target=_process_loop, args=(monitor, writer, ingest_q, state, health_reporter), daemon=True
+        target=_process_loop, args=(hal, monitor, writer, ingest_q, state, health_reporter), daemon=True
     )
 
     def _sig_handler(signum, _frame):
@@ -165,9 +201,16 @@ def main():
     t_process.start()
 
     logger.info("Pipeline running. Mode=%s", args.mode)
+    last_baseline_check = time.time()
     try:
         while state.running:
             time.sleep(1)
+            # SPEC-009 | Periodically attempt to finalize baseline once duration
+            # and sample gates are satisfied. After lock, primary routing and
+            # event confirmation become possible.
+            if time.time() - last_baseline_check >= 60:
+                scorer.finalize_baseline()
+                last_baseline_check = time.time()
     except KeyboardInterrupt:
         state.running = False
 

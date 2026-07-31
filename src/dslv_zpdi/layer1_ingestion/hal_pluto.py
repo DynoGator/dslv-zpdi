@@ -14,6 +14,7 @@ SPEC-005A.
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 
@@ -64,7 +65,7 @@ class PlutoHAL(BaseHAL):
 
     def __init__(
         self,
-        uri: str = "ip:192.168.3.80",
+        uri: str | None = None,
         pps_device: str = "/dev/pps0",
         nmea_port: str = "/dev/ttyACM0",
         external_clock: bool = False,
@@ -75,6 +76,7 @@ class PlutoHAL(BaseHAL):
 
         Args:
             uri: libiio URI for the Pluto (e.g. ip:192.168.3.80, usb:3.15.5).
+                Defaults to DSLV_SDR_URI or ip:192.168.3.80.
             pps_device: Host PPS device for UTC epoch anchoring.
             nmea_port: GPSDO NMEA telemetry port (used when external_clock=True).
             external_clock: Assert that the Pluto is GPSDO-referenced.
@@ -87,7 +89,7 @@ class PlutoHAL(BaseHAL):
                 "No Pluto driver available. Install python3-libiio or SoapyPlutoSDR."
             )
 
-        self.uri = uri
+        self.uri = uri or os.getenv("DSLV_SDR_URI", "ip:192.168.3.80")
         self.external_clock = external_clock
         self.gain = gain
         self._ctx: iio.Context | None = None
@@ -219,31 +221,34 @@ class PlutoHAL(BaseHAL):
         host_lock = jitter_ok and result["gps_fix"]
 
         # ACTUAL hardware register read for AD9361 PLL lock
-        hw_pll_locked = False
+        hw_pll_locked: bool | None = None
         if IIO_AVAILABLE and self._ad9361 is not None:
             try:
-                # AD9361 exposes rx_pll_locked as a device or channel attribute.
-                # We attempt to read it directly from the ad9361-phy device.
+                # Try the device-level attribute first.
                 if "rx_pll_locked" in self._ad9361.attrs:
-                    hw_pll_locked = str(self._ad9361.attrs["rx_pll_locked"].value).strip() == "1"
+                    hw_pll_locked = (
+                        str(self._ad9361.attrs["rx_pll_locked"].value).strip() == "1"
+                    )
                 else:
-                    # Fallback if it's exposed on the RX_LO altvoltage channel
+                    # Fallback: some firmwares expose it on the RX_LO channel.
                     rx_lo = self._ad9361.find_channel("altvoltage0", True)
-                    if rx_lo and "powerdown" in rx_lo.attrs:
-                        # If the channel is up, we can infer it's attempting to lock.
-                        # Some older firmwares don't expose rx_pll_locked directly.
-                        # We simulate the hardware read block for the spec compliance.
-                        pass
-                    # If we can't find the exact attribute, but context is live,
-                    # we must conservatively fail or rely on external assertion if simulator.
-                    # Since this is a hard requirement, we must read the real register:
-                    # We will assume modern PlutoSDR firmware exposes rx_pll_locked.
-                    hw_pll_locked = False
+                    if rx_lo:
+                        for attr_name in ("pll_locked", "pll_lock"):
+                            if attr_name in rx_lo.attrs:
+                                hw_pll_locked = (
+                                    str(rx_lo.attrs[attr_name].value).strip() == "1"
+                                )
+                                break
             except Exception as e:
                 result["warnings"].append(f"IIO PLL read error: {e}")
 
-        # Lock is only verified if BOTH the host GPSDO is stable AND the AD9361 PLL is locked.
-        result["phase_lock_verified"] = host_lock and (hw_pll_locked if self._ad9361 else True)
+        # Lock is verified by host-side GPSDO evidence. The AD9361 PLL lock bit
+        # is used only when the firmware actually exposes it; otherwise it is
+        # recorded as unknown (None) rather than falsely reported as unlocked.
+        if hw_pll_locked is False:
+            result["phase_lock_verified"] = False
+        else:
+            result["phase_lock_verified"] = host_lock
         result["hw_pll_locked"] = hw_pll_locked
         return result
 

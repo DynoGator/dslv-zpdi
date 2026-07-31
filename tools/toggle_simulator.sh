@@ -16,7 +16,7 @@ set -Eeuo pipefail
 
 DROPIN_DIR="/etc/systemd/system/dslv-zpdi.service.d"
 DROPIN_FILE="$DROPIN_DIR/99-simulator.conf"
-VENV_PY="/home/dynogator/dslv-zpdi/venv/bin/python"
+VENV_PY="/home/dynogator/Desktop/KIMI/dslv-zpdi/.venv/bin/python"
 UNIT="dslv-zpdi.service"
 
 usage() {

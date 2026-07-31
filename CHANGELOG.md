@@ -1,5 +1,264 @@
 # Changelog
 
+## [5.2.0] — Demodulation Engine and MIMO Vectoring (2026-07-28)
+
+### Added
+- Built intelligent Demodulation engine (layer1_ingestion) supporting audio, data, video, and telemetry formats with auto-presets.
+- Integrated Full Duplex MIMO Vectoring framework for spatial multiplexing and signal vectoring.
+
+### Changed
+- Dashboard default configs updated: Live SDR enabled, gain 0.0, raw modulation, sweep mode, center freq 3 GHz, span 40 MHz, plasma palette, LNA 30, VGA 30, noise floor -75.0 dBm, ceiling -70.0 dBm.
+- Dashboard banner disabled by default.
+
+## [5.1.0] — Mobile Node and TUI Refinements (2026-07-28)
+
+### Added
+- New standalone dashboard package `tools/zpdi_conditions/`:
+  - Aggregates live space weather, surface weather, barometric, aerosol, and
+    ionizing-radiation metrics for the Penrose, CO tracking footprint.
+  - Sources: NOAA SWPC (Kp, RTSW wind/mag, scales), Open-Meteo (weather and
+    air quality), NMDB real-time neutron monitor, EPA RadNet Colorado Springs.
+  - Rich two-column TUI optimized for a 10" touchscreen with per-metric
+    refresh intervals and last-refresh timestamps.
+  - Manual refresh on spacebar; quit with `q` or `Ctrl+C`.
+  - Self-checking collectors display source-specific errors inside each metric
+    card instead of crashing the dashboard.
+  - Launch script `launch.sh` and desktop icon `ZPDI_CONDITIONS.desktop` with
+    `install_desktop_icon.sh` for one-click setup.
+- No SDR, GPSDO, or radio hardware access; designed to run in parallel with the
+  main `dslv-zpdi` stack without conflicts.
+
+### Verified
+- All 12 collectors return live data or clear errors.
+- `pytest` 184 passed, 1 skipped; ruff/orphan/repo-guard/version-sync clean.
+- Desktop icon installed and executable on the Tier-1 anchor node.
+
+---
+
+## [Unreleased] — Reboot preparation and local validation lock-in (2026-07-09)
+
+### Added
+- `docs/node_ops/REBOOT_PREP_REPORT.md` documenting the final local
+  verification pass and expected post-reboot sequence.
+
+### Changed
+- Enabled `gpsd.service` so the LBE-1421 NMEA feed starts automatically on boot.
+- Verified and locked in persistent boot configuration:
+  - All DSLV systemd services are `enabled`.
+  - Single autostart entry: `~/.config/autostart/dslv-zpdi-dashboard.desktop`.
+  - Autologin for `dynogator` confirmed in LightDM and getty.
+  - Passwordless sudo confirmed for the boot orchestrator.
+- Synced installed systemd units from repo files; `diff` is clean across all
+  DSLV services.
+- Updated `docs/node_ops/WORK_LOG.md` and `docs/node_ops/TURNOVER_NOTES.md` with
+  the reboot preparation checklist and post-reboot expectations.
+
+### Verified
+- Web dashboard `/api/status` shows real hardware state:
+  - `chrony_stratum: 1`, PPS1 reference, RMS offset ~786 ns.
+  - `sdr.mode: REAL`, `clock_src: external`, PlutoSDR+ reachable.
+  - UPS telemetry live from MAX17048 on I2C-1.
+- Pipeline baseline `LOCKED`; PRIMARY HDF5 events actively written.
+- `pytest` 184 passed, 1 skipped; orphan/version-sync/repo-guard clean.
+
+### Caveats
+- Rich TUI waterfall panel remains SIM because no HackRF is connected; all
+  other dashboard data is real.
+- Touchscreen layout not visually verified in this session.
+
+---
+
+## [Unreleased] — Mono-node dev mode and automatic baseline lock (2026-07-09)
+
+### Added
+- **`DSLV_MIN_CONFIRMING_NODES`** environment variable support in
+  `src/dslv_zpdi/layer2_core/wiring.py`; defaults to `4` for backward
+  compatibility but is set to `1` on this node for standalone development.
+- **Automatic baseline finalization**: `main_pipeline.py` now calls
+  `coherence_engine.finalize_baseline()` every 60 seconds so the baseline FSM
+  can transition `LEARNING → LOCKED` without manual intervention.
+- **Optional fixed event threshold**: `DSLV_BASELINE_FIXED_THRESHOLD` in
+  `src/dslv_zpdi/layer2_core/coherence.py` overrides the 3-sigma calculation
+  for development environments.
+- **Real `specs/SPEC-009.md`** documenting the baseline-learning FSM, state
+  transitions, persistence, and environment parameters (was a placeholder stub).
+
+### Changed
+- **Mono-node configuration** in `.env`:
+  - `DSLV_MIN_CONFIRMING_NODES=1`
+  - `DSLV_BASELINE_HOURS=0.02`
+  - `DSLV_MIN_BASELINE_SAMPLES=30`
+  - `DSLV_BASELINE_FIXED_THRESHOLD=0.30`
+- **`CoherenceScorer.start_baseline()`** is now idempotent for the `LEARNING`
+  state, preserving accumulated samples and start time across pipeline restarts.
+- **Service file cleanup**: corrected stale `/home/dynogator/Desktop/KIMI/...`
+  paths in `config/dslv-zpdi-webdash.service`,
+  `config/dslv-zpdi-preflight.service`, and
+  `config/dslv-zpdi-tuning.service`; added resource/restart limits to webdash
+  and UPS services.
+- **Main pipeline unit hardening**: added `ProtectClock=true`,
+  `ProtectHostname=true`, `RestrictAddressFamilies`, `SystemCallFilter=@system-service`,
+  and timeout settings.
+
+### Verified
+- Full test suite: 184 passed, 1 skipped, 2 SWIG deprecation warnings.
+- `tools/orphan_checker.py`, `tools/check_version_sync.py`, and
+  `tools/repo_guard.py` all report clean.
+- All systemd services active after service-file sync and restart.
+- Web dashboard `/api/status` reports `baseline_state: LOCKED` and
+  `pipeline.primary_written` > 0.
+- Primary HDF5 file created in `output/primary/`.
+
+### Caveats
+- This is **development mono-node mode**. PRIMARY events are confirmed with a
+  single node and a fixed low threshold. Revert to multi-node settings before
+  production deployment.
+
+---
+
+## [Unreleased] — Tier-1 Pi 5 optimization & boot orchestrator (2026-07-09)
+
+### Added
+- **Retro ASCII boot orchestrator** (`tools/boot_orchestrator.py`) for the Tier-1
+  Pi 5 touchscreen autostart path. It verifies/starts the systemd service chain in
+  order, renders a Rich TUI with ASCII art, sequential stage list, rotating snark
+  messages, and a status footer, then execs the operations dashboard on success.
+- **Boot orchestrator desktop autostart** at
+  `~/.config/autostart/dslv-zpdi-dashboard.desktop`; launches the orchestrator in
+  a 120×40 `lxterminal` on Wayland login.
+- **`docs/node_ops/TOOLCHAIN_AUDIT.md`** — full component-by-component evaluation
+  of timing discipline, SDR ingestion, persistence/trust, UPS/power, dashboards,
+  and process supervision, with alternatives and future-tool recommendations.
+- **`docs/node_ops/TURNOVER_NOTES.md`** — concise collaborator hand-off covering
+  node state, credentials, service commands, dashboard URLs, and caveats.
+- **Live telemetry bridge through `/run/dslv-zpdi/health.json`**:
+  `main_pipeline.py` now publishes `sdr_health`, `pps`, and `ups` snapshots every
+  10 payloads; the web dashboard and TUI hardware panel consume them directly.
+- **`SdrHealth.external_reference_configured`** field; `PlutoIioBackend.health()`
+  populates it so the dashboard reports `clock_src: external` for GPSDO-disciplined
+  PlutoSDR+ operation.
+
+### Changed
+- **Main pipeline systemd unit hardening**
+  (`config/os-hardening/dslv-zpdi.service`): `ProtectSystem=strict`,
+  `ProtectHome=read-only`, explicit `ReadWritePaths`, `CPUAffinity=2 3`,
+  `MemoryMax=2G`, `LimitNOFILE=65536`, and `StartLimitIntervalSec=120` /
+  `StartLimitBurst=3`. Installed unit synced and `daemon-reload` run.
+- **PPS jitter metric stability**: `TimingMonitor` and `tools/check_timing.py`
+  now read `RMS offset` from `chronyc tracking` instead of `System time` for a
+  stable figure after chrony convergence.
+- **Dashboard telemetry decoupling**: `tools/dashboard/web_server.py` and
+  `tools/dashboard/panels/hardware.py` no longer re-probe hardware every refresh;
+  they read the shared health JSON written by the pipeline.
+
+### Security
+- Project GitHub credentials stored in `.secrets/` (`git-credentials` and
+  `github-account.txt`) with mode `0600`; `.gitignore` keeps them out of the repo.
+  `./configure_git_auth.sh` activates a repo-scoped credential helper.
+
+### Verified
+- Full test suite: 184 passed, 1 skipped, 2 SWIG deprecation warnings.
+- `tools/orphan_checker.py`, `tools/check_version_sync.py`, and
+  `tools/repo_guard.py` all report clean.
+- All systemd services active: `dslv-zpdi-tuning`, `dslv-zpdi-preflight`,
+  `dslv-zpdi`, `dslv-zpdi-ups`, `dslv-zpdi-webdash`, `chrony`, `gpsd`.
+- Web dashboard `/api/status` returns live system, pipeline, SDR (`clock_src:
+  external`), UPS, and node-registry data.
+- Boot orchestrator `--no-start` confirms the required service chain is active.
+
+### Caveats
+- The Rich TUI dashboard is configured to autostart via the orchestrator but has
+  not been visually verified on the touchscreen in this session.
+- Baseline remains in `LEARNING` state; PRIMARY HDF5 output is gated until SPEC-009
+  baseline locks and a 4-node confirmed event occurs.
+
+---
+
+## [Unreleased] — Tier-1 Pi 5 node commissioning (2026-07-09)
+
+### Added
+- **Geekworm X-1202 UPS integration** (SPEC-004A.8):
+  - `tools/x1202_ups_monitor.py` daemon polls fuel gauge and triggers graceful
+    shutdown on low battery or extended AC loss.
+  - `config/dslv-zpdi-ups.service` runs the monitor under systemd.
+  - `docs/hardware/GEEKWORM_X1202_UPS.md` operator reference.
+  - UPS telemetry now appears in the Flask web dashboard (`/api/status` + HTML
+    power card).
+- **Production HMAC key wiring**: `main_pipeline.py` supplies an explicit
+  `KeyProvider` to `HDF5Writer`; profile now requires the production key. Key
+  stored at `/etc/dslv-zpdi/hmac.key` with mode `0600`.
+- **Baseline learning start**: `main_pipeline.py` now calls
+  `coherence_engine.start_baseline()` so SPEC-009 learning actually begins.
+- **Environment-driven baseline config**: `src/dslv_zpdi/layer2_core/wiring.py`
+  reads `DSLV_BASELINE_HOURS`, `DSLV_MIN_BASELINE_SAMPLES`, and
+  `DSLV_BASELINE_STATE_PATH` instead of hard-coded defaults.
+
+### Fixed
+- `PpsListener` now reads `/sys/class/pps/pps0/assert` and computes jitter from
+  kernel timestamps. The `PPS_FETCH` ioctl failed on the Pi 5 kernel with
+  "Inappropriate ioctl for device".
+- `NmeaStream` now supports `gpsd://host:port` URLs, allowing `gpsd` to own the
+  LBE-1421 USB-C serial port while the pipeline still receives GGA sentences.
+- `dslv-zpdi.service` uses `RuntimeDirectory=dslv-zpdi` so
+  `/run/dslv-zpdi/health.json` is written at the expected path.
+- TUI dashboard autostart desktop entry points to the lightweight
+  `tools/dashboard/launch.sh --compact` for the 1024×600 touchscreen.
+
+### Verified
+- All 184 tests pass (1 skipped, 2 SWIG deprecation warnings).
+- `tools/orphan_checker.py`, `tools/check_version_sync.py`, and
+  `tools/repo_guard.py` all report clean.
+- `tools/provision_tier1.py` reports Tier-1 compliance.
+- Pipeline service active; health endpoint shows `timing_healthy: true`,
+  `chrony_stratum: 1`, `baseline_state: LEARNING`.
+- Synthetic primary-write test confirms HDF5 file creation, SHA-256 event-chain
+  hashing, and HMAC-SHA256 manifest attestation with the production key.
+
+---
+
+## [Unreleased] — Dashboard node-registry wiring and reboot prep (2026-06-19)
+
+### Fixed
+- `tier1_ingestion_server.py`: `_register_node_seen()` now called on every
+  ACCEPTED packet, writing `output/secondary/node_registry.jsonl` (throttled to
+  once per 30 s per node). This populates `telemetry_nodes` in the Flask
+  dashboard, which previously always returned an empty array.
+
+### Verified
+- All 184 tests pass (1 skipped) after the dashboard fix.
+- Repo fully clean: 0 open branches beyond `main`, 0 open issues, 0 open PRs.
+- Termux:Boot script (`~/.termux/boot/99-start-zpdi.sh`) confirmed to launch
+  `supervisor.sh`, which starts all three services (tier1 :8443, daemon,
+  dashboard :8080) automatically on device boot.
+
+---
+
+## [Unreleased] — Mobile node sync and installer hardening (2026-06-19)
+
+### Added
+- `supervisor.sh` now manages all three mobile services (tier1 server :8443,
+  Flask web dashboard :8080, mobile daemon) — previously only the daemon was
+  supervised. Ancillary services auto-restart if they exit unexpectedly.
+  `DSLV_WEBDASH_HOST` defaults to `0.0.0.0` so the dashboard is reachable on LAN.
+- `install_zpdi_mobile.sh` Rev 5: `pip install -e ".[dev]"` replaces bare
+  requirements.txt install; `hdf5-tools` apt package added (provides `h5clear`);
+  complete `.env` with all 16 required variables including AES-256-GCM + HMAC keys,
+  server host/port, webdash host/port, and path variables; non-destructive
+  `add_if_missing` upgrade path for existing installs; boot script copied from
+  repo (`termux-boot/99-start-zpdi.sh`) instead of inlining a stale duplicate;
+  runtime directories created; post-install smoke test runs full pytest suite.
+- `.gitignore` now excludes `.grok/` (Grok agent workspace), `logs/` (runtime
+  logs), and `*.pid` (daemon PID files).
+
+### Changed
+- `README.md`: mobile node prerequisites and "Connect the Pixel 9 Pro XL" section
+  updated to reflect the current three-service WSS-based architecture with
+  one-shot installer, service table, start/stop commands, and health check.
+- `docs/collaboration/README.md`: local checkout path corrected to `/root/dslv-zpdi`
+  (Pixel 9 Pro XL / GrapheneOS / PRoot Debian).
+- `CREW_MEMORY.md`: updated to 2026-06-19 with v5.0.0 feature inventory, mobile
+  hardware config table, and post-sync next-actions.
+
 ## [Unreleased] — Repository hardening follow-up (2026-06-17)
 
 ### Fixed

@@ -23,9 +23,11 @@ from dslv_zpdi.core.exceptions import (
     QualificationError,
 )
 from dslv_zpdi.core.key_provider import KeyProvider
+from dslv_zpdi.layer1_ingestion.demodulation import Demodulator
 from dslv_zpdi.layer1_ingestion.frequency_translation.mapper import FrequencyMapper
 from dslv_zpdi.layer1_ingestion.frequency_translation.model import FrequencyTranslationStage
 from dslv_zpdi.layer1_ingestion.hal_base import BaseHAL
+from dslv_zpdi.layer1_ingestion.mimo_vectoring import MimoVectoringEngine
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 from dslv_zpdi.layer1_ingestion.sdr.base import SdrBackend
 from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
@@ -69,6 +71,12 @@ class HardwareHAL(BaseHAL):
         self.key_provider = key_provider
         self._profile = profile
         self._key_loaded = self._check_key_loaded()
+
+        # Advanced SDR Capabilities (Demodulation and MIMO)
+        self.demodulator = Demodulator()
+        self.mimo_engine = MimoVectoringEngine(tx_channels=2, rx_channels=2)
+        # Enable full duplex MIMO by default per spec
+        self.mimo_engine.enable_full_duplex()
 
     def _check_key_loaded(self) -> bool:
         """SPEC-005A.HAL — Determine whether a production HMAC key is available."""
@@ -196,7 +204,7 @@ class HardwareHAL(BaseHAL):
         num_samples = num_samples if num_samples is not None else (
             profile_cfg.sdr.buffer_samples if profile_cfg else 16384
         )
-        gain_db = profile_cfg.rf.gain_db if profile_cfg else 62.0
+        gain_db = profile_cfg.rf.gain_db if profile_cfg else 0.0
 
         profile = CaptureProfile(
             center_frequency_hz=int(center_freq),
@@ -275,8 +283,16 @@ class HardwareHAL(BaseHAL):
         return payload
 
     def wait_for_pps_edge(self, pps_device: str = "/dev/pps0", timeout_s: float = 2.0) -> bool:
-        """SPEC-005A.SYNC — Block until next host PPS edge."""
-        return self.timing_authority._pps.wait_for_edge(timeout_s=timeout_s)  # type: ignore[attr-defined]
+        """SPEC-005A.SYNC — Block until next host PPS edge.
+
+        Falls back to a deterministic sleep for timing authorities that do not
+        expose a physical PPS listener (e.g., simulator).
+        """
+        pps_listener = getattr(self.timing_authority, "_pps", None)
+        if pps_listener is not None and hasattr(pps_listener, "wait_for_edge"):
+            return pps_listener.wait_for_edge(timeout_s=timeout_s)
+        time.sleep(min(timeout_s, 1.0))
+        return True
 
     def verify_gpsdo_lock(self, device_index: int = 0) -> dict[str, Any]:
         """SPEC-005A.LOCK — Return GPSDO + SDR lock evidence."""

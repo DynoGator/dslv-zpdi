@@ -22,6 +22,11 @@ class TimingAuthority(ABC):
         ...
 
     @abstractmethod
+    def pps_jitter_ns(self) -> float:
+        """Return current PPS RMS jitter in nanoseconds, or inf if unavailable."""
+        ...
+
+    @abstractmethod
     def healthy(self, degraded_ok: bool = False) -> bool:
         """
         Return True if the timing authority meets the configured threshold.

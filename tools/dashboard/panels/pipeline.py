@@ -13,6 +13,7 @@ import math
 import os
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -51,6 +52,7 @@ def _proc_uptime_seconds(pid: int) -> float:
 
 
 _PRIMARY_TTL = 2.0
+_SYSTEMCTL_TTL = 3.0
 _HEALTH_TTL = 1.5
 _HEALTH_STALE_S = 12.0  # Health data older than this means pipeline is not updating
 
@@ -75,13 +77,29 @@ class _Cache:
         self.ttl = ttl
         self.t = 0.0
         self.val = None
+        self._lock = threading.Lock()
+        self._fetching = False
 
     def get(self, producer):
         now = time.time()
-        if self.val is None or now - self.t > self.ttl:
-            self.val = producer()
-            self.t = now
-        return self.val
+        with self._lock:
+            if self.val is None and not self._fetching:
+                self.val = producer()
+                self.t = now
+                return self.val
+            if now - self.t > self.ttl and not self._fetching:
+                self._fetching = True
+                def _worker():
+                    try:
+                        res = producer()
+                    except Exception:
+                        res = self.val
+                    with self._lock:
+                        self.val = res
+                        self.t = time.time()
+                        self._fetching = False
+                threading.Thread(target=_worker, daemon=True).start()
+            return self.val
 
 
 class _MtimeCache:
@@ -175,9 +193,10 @@ class PipelinePanel:
         self._prim_cache = _Cache(_PRIMARY_TTL)
         self._sec_cache = _MtimeCache()
         self._health_cache = _Cache(_HEALTH_TTL)
+        self._sysctl_cache = _Cache(_SYSTEMCTL_TTL)
 
     def render(self, compact: bool = False) -> Panel:
-        info = _systemctl_show(self.unit)
+        info = self._sysctl_cache.get(lambda: _systemctl_show(self.unit))
         state = info.get("ActiveState", "?")
         substate = info.get("SubState", "?")
         pid = int(info.get("MainPID", "0") or 0)
