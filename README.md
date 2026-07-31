@@ -389,6 +389,9 @@ Live-tailing `journalctl -fu dslv-zpdi`. Shows the most recent N lines from the 
 #### Notifications
 Rotating event ticker: pipeline state changes, keybinding confirmations, dark-humor quips, and glitch events. Also receives error notifications if a panel fails to render (dashboard does not crash — it pushes the error here instead).
 
+#### Demodulation & MIMO
+Direct signal demodulation interface with predefined profiles (ADS-B, AM, FM, EMS, Broadcast TV). Operates in RX (Listen Only) mode by default. MIMO TX (Transmit) functionality is available as a toggleable option with explicit warnings regarding restricted operations.
+
 #### Footer
 Keybinding quick-reference, live UTC timestamp, and a blinking pulse indicator.
 
@@ -528,6 +531,15 @@ All keys are case-insensitive unless noted.
 | `-`    | LNA gain down one step                                    |
 | `a`    | Toggle PlutoSDRplus internal amp (±14 dB, use carefully)        |
 | `d`    | Cycle demodulation mode (RAW-SWEEP / AM / NFM / WFM / LSB / USB / CW) |
+
+### Waterfall — Demodulation & MIMO
+
+| Key    | Action                                                    |
+|--------|-----------------------------------------------------------|
+| `f`    | Enter numerical frequency directly (hit Enter to confirm) |
+| `1`-`5`| Select predefined demodulation profiles (ADS-B, FM, AM, EMS, TV) |
+| `Enter`| Toggle Demodulation active state                          |
+| `T`    | Toggle MIMO TX Mode (CAUTION: Restricted activity)        |
 
 ---
 

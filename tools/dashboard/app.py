@@ -60,6 +60,7 @@ from dashboard.panels.storm import StormPanel
 from dashboard.panels.system import SystemPanel
 from dashboard.panels.waterfall import WaterfallPanel
 from dashboard.panels.weather import SpaceWeatherPanel
+from dashboard.panels.demod import DemodPanel
 
 
 def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
@@ -95,7 +96,10 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     else:
         _ind("SDR", "SIM", "bold bright_yellow")
     _ind("WF",   wf_mode, "bold bright_cyan")
-    _ind("FREQ", f"{center_hz / 1e6:.1f}MHz", "bright_magenta")
+    if s.get("input_mode") == "freq":
+        _ind("FREQ-INPUT", f"{s.get('input_buffer', '')}_ MHz", "bold bright_yellow")
+    else:
+        _ind("FREQ", f"{center_hz / 1e6:.1f}MHz", "bright_magenta")
     _ind("LNA",  f"{lna_gain}dB")
     _ind("SPEC", "ON" if spectrum_on else "OFF",
          "bright_green" if spectrum_on else "dim")
@@ -251,7 +255,7 @@ def build_layout(
         critical_screen = total_rows < 26
 
         status_a = _enabled(("system", "pipeline", "hardware"), panels)
-        status_b = _enabled(("anomaly", "weather", "storm", "radon", "mobile", "bci"), panels)
+        status_b = _enabled(("anomaly", "weather", "storm", "radon", "mobile", "bci", "demod"), panels)
         bottom = _enabled(("logs", "notifications"), panels)
 
         footer_sz = 3 if critical_screen else 4
@@ -310,7 +314,7 @@ def build_layout(
 
     # Wide layout
     top = _enabled(("system", "pipeline", "hardware", "anomaly"), panels)
-    space = _enabled(("weather", "storm", "radon", "mobile", "bci"), panels)
+    space = _enabled(("weather", "storm", "radon", "mobile", "bci", "demod"), panels)
     bottom = _enabled(("logs", "notifications"), panels)
 
     rows: list[Layout] = []
@@ -428,6 +432,9 @@ class Dashboard:
         if getattr(cfg.panels, "settings", True):
             self.settings_p = SettingsPanel(border_style=cfg.theme.accent)
             self._panels["settings"] = self.settings_p
+        
+        self.demod_p = DemodPanel()
+        self._panels["demod"] = self.demod_p
 
         self.paused = False
         self._panels_cfg = cfg.panels
@@ -444,6 +451,8 @@ class Dashboard:
         self._wf_modes = ["SWEEP", "NARROW", "SCOPE"]
         self._wf_idx = 0
         self._live: Any = None
+        self._input_mode: str | None = None
+        self._input_buffer: str = ""
 
     # keyboard raw mode ---
     def _enter_raw(self):
@@ -517,12 +526,12 @@ class Dashboard:
                 )
 
         # Priority: render critical metrics first
-        for name in ("system", "pipeline", "hardware", "anomaly", "weather", "storm", "radon", "mobile", "bci", "logs", "notifications", "settings", "waterfall"):
+        for name in ("system", "pipeline", "hardware", "anomaly", "weather", "storm", "radon", "mobile", "bci", "logs", "notifications", "settings", "demod", "waterfall"):
             panel = self._panels.get(name)
             panel_l = self._get_layout(name)
             if panel and panel_l:
                 try:
-                    if name == "settings":
+                    if name in ("settings", "demod"):
                         panel_l.update(panel.render(compact=self.compact, state=self._get_state()))
                     else:
                         panel_l.update(panel.render(compact=self.compact))
@@ -539,7 +548,17 @@ class Dashboard:
 
     def _get_state(self) -> dict:
         wf = self._panels.get("waterfall")
+        demod_panel = self._panels.get("demod")
+        demod_profile = getattr(demod_panel, "active_profile", "None") if demod_panel else "None"
+        demod_active = getattr(demod_panel, "is_active", False) if demod_panel else False
+        mimo_tx = getattr(demod_panel, "mimo_tx", False) if demod_panel else False
+
         return {
+            "input_mode":  self._input_mode,
+            "input_buffer": self._input_buffer,
+            "demod_profile": demod_profile,
+            "demod_active": demod_active,
+            "mimo_tx": mimo_tx,
             "paused":      self.paused,
             "wf_mode":     wf.mode if wf else "SWEEP",
             "real_sdr":    os.getenv("DSLV_DASHBOARD_REAL_SDR", "0") == "1",
@@ -567,6 +586,29 @@ class Dashboard:
         time.sleep(0.5)
 
     def _handle_key(self, k: str):
+        if self._input_mode == "freq":
+            if k == "\n" or k == "\r":
+                if self._input_buffer:
+                    try:
+                        hz = float(self._input_buffer) * 1e6
+                        if "waterfall" in self._panels:
+                            self._panels["waterfall"].center_hz = int(hz)
+                            self._panels["waterfall"]._restart_stream_if_running()
+                            if "notifications" in self._panels:
+                                self._panels["notifications"].push("INFO", f"freq set: {hz/1e6:.3f} MHz")
+                    except ValueError:
+                        pass
+                self._input_mode = None
+                self._input_buffer = ""
+            elif k in ("BACKSPACE", "\x7f", "\b"):
+                self._input_buffer = self._input_buffer[:-1]
+            elif k == "\x1b":
+                self._input_mode = None
+                self._input_buffer = ""
+            elif k.isdigit() or k == ".":
+                self._input_buffer += k
+            return
+
         if k in ("q", "Q"):
             raise KeyboardInterrupt
         if k == " ":
@@ -595,6 +637,31 @@ class Dashboard:
                     self._live.update(self.layout)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
+        elif k == "f":
+            self._input_mode = "freq"
+            self._input_buffer = ""
+        elif k in ("1", "2", "3", "4", "5"):
+            if "demod" in self._panels:
+                p = self._panels["demod"]
+                profile_map = {"1": "ADS-B", "2": "FM Radio", "3": "AM Radio", "4": "EMS/Fire", "5": "Broadcast TV"}
+                p.active_profile = profile_map[k]
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"Profile selected: {p.active_profile}")
+        elif k in ("\n", "\r"):
+            if "demod" in self._panels:
+                p = self._panels["demod"]
+                p.is_active = not getattr(p, "is_active", False)
+                if "notifications" in self._panels:
+                    self._panels["notifications"].push("INFO", f"Demodulation: {'ON' if p.is_active else 'OFF'}")
+        elif k == "T":
+            if "demod" in self._panels:
+                p = self._panels["demod"]
+                p.mimo_tx = not getattr(p, "mimo_tx", False)
+                if "notifications" in self._panels:
+                    if p.mimo_tx:
+                        self._panels["notifications"].push("WARN", "MIMO TX Enabled (RESTRICTED)")
+                    else:
+                        self._panels["notifications"].push("INFO", "MIMO TX Disabled")
         elif k in ("c", "C"):
             if not self.waterfall_only:
                 self.compact = not self.compact
