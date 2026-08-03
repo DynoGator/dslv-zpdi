@@ -144,7 +144,7 @@ Verified local notes identify this current Tier-1 profile:
 - HamGeek PlutoSDR+ 1 GB / AD9363 at `ip:192.168.3.80`.
 - Leo Bodnar LBE-1421 GPSDO.
 - LBE-1421 10 MHz Out2 to PlutoSDR+ CLKIN.
-- LBE-1421 1 PPS Out1 to Pi GPIO 18.
+- LBE-1421 1 PPS Out1 to Pi GPIO 24 (physical pin 18).
 - Pixel 9 Pro XL GrapheneOS as the Tier-2 mobile node.
 
 Do not mark physical hardware validation as passing unless it was actually run

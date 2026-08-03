@@ -52,9 +52,9 @@ timing:
   authority: lbe1421
   max_fix_age_s: 10.0
   nmea_port: gpsd://localhost:2947
-  pps_degraded_ns: 1000.0
+  pps_degraded_ns: 15000.0
   pps_device: /dev/pps0
-  pps_kill_ns: 10000.0
+  pps_kill_ns: 50000.0
   reference_frequency_hz: 10000000
 trust:
   allow_simulator_fallback: false

@@ -42,7 +42,17 @@ def _ingest_loop(hal, args, state, ingest_q):
         try:
             # SPEC-004A.4-SYNC | PPS-edge alignment
             if not args.simulator:
-                hal.wait_for_pps_edge()
+                if not hal.wait_for_pps_edge():
+                    now = time.monotonic()
+                    if now - getattr(state, "pps_lost_log_ts", 0.0) >= 30.0:
+                        state.pps_lost_log_ts = now
+                        pps_listener = getattr(hal.timing_authority, "_pps", None)
+                        pps_device = getattr(pps_listener, "_device", "/dev/pps0")
+                        logger.error(
+                            "No 1PPS edge on %s within timeout — check GPSDO Output 1 "
+                            "wiring to GPIO 24 (dtoverlay pps-gpio,gpiopin=24)",
+                            pps_device,
+                        )
 
             if args.mode == "sdr":
                 payload = hal.ingest_sdr()

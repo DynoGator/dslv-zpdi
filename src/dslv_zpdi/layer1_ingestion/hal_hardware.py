@@ -5,7 +5,7 @@ Raspberry Pi 5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO.
 
 This implementation achieves hardware-level ADC phase coherence by:
 1. 10 MHz reference from GPSDO → PlutoSDRplus CLKIN (hardware ADC lock)
-2. 1 PPS from GPSDO → GPIO 18 (UTC epoch anchoring)
+2. 1 PPS from GPSDO → GPIO 24 (UTC epoch anchoring)
 
 Rev 5.0-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
 Added "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
@@ -96,7 +96,7 @@ class HardwareHAL(BaseHAL):
     - PlutoSDRplus with CLKIN port for 10 MHz GPSDO reference
     - Leo Bodnar LBE-1421 GPSDO (Out2=10 MHz reference, Out1=1 PPS)
     - GPSDO Out2 (10 MHz) → PlutoSDRplus CLKIN (hardware ADC phase-lock, 50 Ω)
-    - GPSDO Out1 (1 PPS) → Pi 5 GPIO 18 (UTC timestamp interrupt)
+    - GPSDO Out1 (1 PPS) → Pi 5 GPIO 24 (UTC timestamp interrupt)
     - Power Budget: 250 mA ±10 % @ 5 V USB-C + 30 mA antenna port (active)
     - Stability: 1 × 10⁻¹² @ 1000 s (no frequency/phase jumps on GPS loss)
 
@@ -120,7 +120,7 @@ class HardwareHAL(BaseHAL):
 
         Args:
             pps_device: Path to kernel PPS character device (default /dev/pps0).
-                        GPIO 18 is claimed by the pps-gpio kernel driver; access
+                        GPIO 24 is claimed by the pps-gpio kernel driver; access
                         goes through this device, not libgpiod.
             nmea_port:  Serial port for LBE-1421 NMEA telemetry (default /dev/ttyACM0).
         """
@@ -396,7 +396,7 @@ class HardwareHAL(BaseHAL):
         The PPS signal provides UTC epoch anchoring for the GPS-locked ADC samples.
 
         CRITICAL: Pi 5 RP1 southbridge uses 3.3V logic. Verify GPSDO PPS output
-        does not exceed 3.3V before connecting to GPIO 18.
+        does not exceed 3.3V before connecting to GPIO 24.
 
         Args:
             pps_device: Path to PPS device (default: /dev/pps0)

@@ -1,11 +1,11 @@
 """
 SPEC-005A.TIMING-PPS — Kernel PPS edge listener via /dev/ppsX character device.
 
-GPIO 18 is owned by the pps-gpio kernel driver (dtoverlay=pps-gpio,gpiopin=18).
+GPIO 24 is owned by the pps-gpio kernel driver (dtoverlay=pps-gpio,gpiopin=24).
 The driver timestamps each rising edge in interrupt context and exposes events
 through the Linux PPS character device. This module reads those events using
 select.poll() + PPS_FETCH ioctl — the correct approach when the kernel holds
-the GPIO line. Attempting to also claim GPIO 18 via libgpiod returns EBUSY.
+the GPIO line. Attempting to also claim GPIO 24 via libgpiod returns EBUSY.
 
 PPS_FETCH ioctl constant derivation (aarch64, linux/pps.h):
     struct pps_ktime  = __s64 sec + __s32 nsec + __u32 flags = 16 bytes
