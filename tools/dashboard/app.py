@@ -169,25 +169,16 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
 
 def _is_compact() -> bool:
     """Compact mode for 7" DSI (800×480 ≈ 92×30 cols/rows) and smaller screens."""
-    if os.getenv("DSLV_DASHBOARD_COMPACT", "").strip() in ("1", "true", "yes"):
+    if os.getenv("DSLV_DASHBOARD_COMPACT", "0").strip() in ("1", "true", "yes"):
         return True
-    try:
-        cols, lines = shutil.get_terminal_size()
-        return cols < 120 or lines < 35
-    except Exception:
-        return False
+    return False
 
 
 def _is_ten_inch() -> bool:
     """10\" touchscreen layout (about 1280x800 terminal, e.g. 160x45 cols/rows)."""
-    if os.getenv("DSLV_DASHBOARD_10IN", "").strip() in ("1", "true", "yes"):
+    if os.getenv("DSLV_DASHBOARD_10IN", "1").strip() in ("1", "true", "yes"):
         return True
-    try:
-        cols, lines = shutil.get_terminal_size()
-        # Roughly the terminal geometry of a 10" display with a readable font.
-        return 130 <= cols < 190 and 38 <= lines < 55
-    except Exception:
-        return False
+    return True
 
 
 def _enabled(names, panels):

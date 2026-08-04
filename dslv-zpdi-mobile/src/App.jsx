@@ -11,29 +11,41 @@ function App() {
     magUt: 0,
   });
 
-  // Simulate auto-connection sequence and live telemetry flow
   useEffect(() => {
-    let interval;
-    const connect = async () => {
-      // Simulate C2 handshake
-      await new Promise(r => setTimeout(r, 1000));
-      setTelemetry(prev => ({ ...prev, online: true, uplink: 'ESTABLISHING...' }));
-      
-      await new Promise(r => setTimeout(r, 1000));
-      setTelemetry(prev => ({ ...prev, uplink: 'CONNECTED: ALPHA NODE', trustScore: 0.4 }));
-
-      interval = setInterval(() => {
-        setTelemetry(prev => ({
-          ...prev,
-          trustScore: Math.min(1.0, prev.trustScore + Math.random() * 0.05),
-          magUt: 40 + Math.random() * 15,
-          centerHz: 80000000 + (Math.random() - 0.5) * 1000,
-        }));
-      }, 1000);
+    // Attempt to connect to the backend WebSocket
+    const ws = new WebSocket(`ws://${window.location.hostname}:8000/ws/live`);
+    let lastUpdateTime = 0;
+    
+    ws.onopen = () => {
+      setTelemetry(prev => ({ ...prev, online: true, uplink: 'CONNECTED: ALPHA NODE', trustScore: 0.4 }));
     };
     
-    connect();
-    return () => clearInterval(interval);
+    ws.onmessage = (event) => {
+      try {
+        const now = Date.now();
+        // Throttle updates to ~15 FPS to keep the UI snappy
+        if (now - lastUpdateTime < 66) return;
+        lastUpdateTime = now;
+
+        const data = JSON.parse(event.data);
+        if (data.layer1) {
+          setTelemetry(prev => ({
+            ...prev,
+            centerHz: data.layer1.center_frequency_hz || prev.centerHz,
+            magUt: (data.layer3 && data.layer3.mag_ut) ? data.layer3.mag_ut : prev.magUt,
+            trustScore: (data.layer3 && data.layer3.trust_score) ? data.layer3.trust_score : prev.trustScore
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to parse websocket message", err);
+      }
+    };
+    
+    ws.onclose = () => {
+      setTelemetry(prev => ({ ...prev, online: false, uplink: 'DISCONNECTED' }));
+    };
+    
+    return () => ws.close();
   }, []);
 
   return (

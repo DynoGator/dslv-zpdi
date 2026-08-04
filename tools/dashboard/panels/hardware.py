@@ -115,14 +115,59 @@ def _pluto_info() -> dict:
         return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "pluto"}
 
 
+def _hackrf_info() -> dict:
+    try:
+        out = subprocess.check_output(
+            ["hackrf_info"], text=True, timeout=2, stderr=subprocess.STDOUT
+        )
+        serial = re.search(r"Serial number:\s+(\S+)", out)
+        fw = re.search(r"Firmware Version:\s+(\S+)", out)
+        board = re.search(r"Board ID Number:\s+\d+\s+\((.+)\)", out)
+        return {
+            "detected": "Found HackRF" in out or "HackRF One" in out,
+            "serial": serial.group(1) if serial else "?",
+            "fw": fw.group(1) if fw else "?",
+            "rev": "?",
+            "board": board.group(1) if board else "HackRF One",
+            "source": "hackrf",
+        }
+    except Exception:
+        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "hackrf"}
+
+
+def _libresdr_info() -> dict:
+    try:
+        out = subprocess.check_output(
+            ["iio_info", "-u", "ip:192.168.2.1"], text=True, timeout=2, stderr=subprocess.STDOUT
+        )
+        serial = re.search(r"hw_serial:\s+(\S+)", out)
+        fw = re.search(r"fw_version:\s+(\S+)", out)
+        return {
+            "detected": True,
+            "serial": serial.group(1) if serial else "?",
+            "fw": fw.group(1) if fw else "?",
+            "rev": "?",
+            "board": "LibreSDR",
+            "source": "libresdr",
+        }
+    except Exception:
+        return {"detected": False, "serial": "-", "fw": "-", "rev": "-", "board": "-", "source": "libresdr"}
+
+
 def _sdr_info() -> dict:
     """Return the first detected Tier-1/legacy SDR, preferring Pluto."""
     pluto = _pluto_info()
     if pluto["detected"]:
         return pluto
+    
+    libresdr = _libresdr_info()
+    if libresdr["detected"]:
+        return libresdr
+
     hackrf = _hackrf_info()
     if hackrf["detected"]:
         return hackrf
+        
     return pluto
 
 

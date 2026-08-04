@@ -15,6 +15,7 @@ from dslv_zpdi.layer1_ingestion.sdr.qualification import (
     Tier1QualificationPolicy,
 )
 from dslv_zpdi.layer1_ingestion.sdr.simulated import SimulatedSdrBackend
+from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
 
 __all__ = [
     "SdrBackend",
@@ -25,6 +26,7 @@ __all__ = [
     "SdrHealth",
     "PlutoIioBackend",
     "SimulatedSdrBackend",
+    "HackrfBackend",
     "Tier1QualificationPolicy",
     "QualificationResult",
     "QualificationState",

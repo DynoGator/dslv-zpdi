@@ -141,6 +141,30 @@ def get_tier1_hal(
             uri=sdr_cfg.uri,
             expected_iio_phy=sdr_cfg.expected_iio_phy,
         )
+    elif backend_name == "hackrf":
+        from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
+        sdr_backend = HackrfBackend()
+    elif backend_name == "libresdr":
+        from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
+        # LibreSDR uses Pluto iio backend
+        sdr_backend = PlutoIioBackend(
+            uri=sdr_cfg.uri,
+            expected_iio_phy=sdr_cfg.expected_iio_phy,
+        )
+    elif backend_name == "auto":
+        from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
+        try:
+            sdr_backend = PlutoIioBackend(
+                uri=sdr_cfg.uri,
+                expected_iio_phy=sdr_cfg.expected_iio_phy,
+            )
+            sdr_backend.discover()
+        except Exception:
+            try:
+                sdr_backend = HackrfBackend()
+                sdr_backend.discover()
+            except Exception:
+                raise ConfigurationError("No SDR found in auto mode")
     else:
         raise ConfigurationError(f"Unsupported SDR backend in profile: {backend_name}")
 
@@ -161,6 +185,7 @@ def get_tier1_hal(
         allow_simulator=simulator,
         production_hmac_key_required=profile.trust.require_production_hmac_key,
         external_reference_evidence_required=ref_required,
+        gps_fix_required=False,
     )
 
     # Key provider

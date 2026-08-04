@@ -37,7 +37,7 @@ rf:
   sample_rate_hz: 10000000
 schema_version: '1'
 sdr:
-  backend: pluto_iio
+  backend: auto
   buffer_samples: 262144
   expected_iio_phy: ad9361-phy
   gain_db: 62.0
