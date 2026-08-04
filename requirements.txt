@@ -20,7 +20,7 @@ charset-normalizer==3.4.9
     # via requests
 click==8.4.2
     # via flask
-cryptography==49.0.0
+cryptography==50.0.0
     # via dslv-zpdi (pyproject.toml)
 dbus-fast==5.0.22
     # via bleak

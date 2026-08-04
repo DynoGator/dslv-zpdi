@@ -45,7 +45,7 @@ click==8.4.2
     #   flask
 coverage[toml]==7.15.0
     # via pytest-cov
-cryptography==49.0.0
+cryptography==50.0.0
     # via
     #   -c requirements.txt
     #   dslv-zpdi (pyproject.toml)
