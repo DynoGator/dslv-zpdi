@@ -39,7 +39,7 @@ class TestNodeProfileLoad:
     def test_loads_pluto_profile(self):
         profile = NodeProfile.from_yaml("config/node_profiles/tier1_pluto_lbe1421.yaml")
         assert profile.identity.profile_id == "tier1-pluto-lbe1421"
-        assert profile.sdr.backend == "pluto_iio"
+        assert profile.sdr.backend == "auto"
         assert profile.trust.fail_closed is True
 
     def test_env_expansion_in_profile(self, monkeypatch, tmp_path: Path):
