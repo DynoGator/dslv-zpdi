@@ -145,7 +145,6 @@ def get_tier1_hal(
         from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
         sdr_backend = HackrfBackend()
     elif backend_name == "libresdr":
-        from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
         # LibreSDR uses Pluto iio backend
         sdr_backend = PlutoIioBackend(
             uri=sdr_cfg.uri,
@@ -177,14 +176,25 @@ def get_tier1_hal(
     # backend. For pluto_iio we rely on the profile/wiring assertion plus
     # host-side PPS/NMEA evidence instead.
     ref_required = False
+    pps_required = True
     if backend_name != "pluto_iio":
-        if isinstance(profile.hardware, dict) and "reference_clock" in profile.hardware:
-            ref_required = bool(profile.hardware["reference_clock"].get("required", False))
+        if isinstance(profile.hardware, dict):
+            if "reference_clock" in profile.hardware:
+                ref_required = bool(profile.hardware["reference_clock"].get("required", False))
+        elif hasattr(profile.hardware, "reference_clock"):
+            ref_required = getattr(getattr(profile.hardware, "reference_clock", None), "required", False)
+
+    if isinstance(profile.hardware, dict):
+        if "pps" in profile.hardware:
+            pps_required = bool(profile.hardware["pps"].get("required", True))
+    elif hasattr(profile.hardware, "pps"):
+        pps_required = getattr(getattr(profile.hardware, "pps", None), "required", True)
 
     policy = Tier1QualificationPolicy(
         allow_simulator=simulator,
         production_hmac_key_required=profile.trust.require_production_hmac_key,
         external_reference_evidence_required=ref_required,
+        pps_required=pps_required,
         gps_fix_required=False,
     )
 

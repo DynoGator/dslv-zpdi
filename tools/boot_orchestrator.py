@@ -268,8 +268,8 @@ def run_boot_sequence(
     return True
 
 
-def launch_dashboard(compact: bool = True) -> None:
-    """Exec the Rich TUI dashboard in compact or wide mode."""
+def launch_dashboard(compact: bool = False) -> None:
+    """Exec the Rich TUI dashboard in wide/10-inch or compact mode."""
     repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     tools = os.path.join(repo, "tools")
     python = os.path.join(repo, ".venv", "bin", "python")
@@ -294,7 +294,7 @@ def main() -> int:
     parser.add_argument(
         "--no-dashboard", action="store_true", help="skip launching the TUI dashboard"
     )
-    parser.add_argument("--wide", action="store_true", help="force wide dashboard layout")
+    parser.add_argument("--compact", action="store_true", help="force compact dashboard layout")
     args = parser.parse_args()
 
     if os.geteuid() == 0:
@@ -311,7 +311,7 @@ def main() -> int:
         return 1
 
     if not args.no_dashboard:
-        launch_dashboard(compact=not args.wide)
+        launch_dashboard(compact=args.compact)
 
     console.print("\n[bold green]DSLV-ZPDI READY[/]")
     return 0
