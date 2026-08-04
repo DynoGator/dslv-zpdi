@@ -17,15 +17,19 @@ from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHeal
 from dslv_zpdi.layer1_ingestion.timing.attestation import ClockAttestation
 
 class HackrfBackend(SdrBackend):
+    \"\"\"SPEC-004A.HACKRF — HackRF backend class.\"\"\"
     def __init__(self):
+        \"\"\"SPEC-004A.HACKRF — Init.\"\"\"
         self._is_open = False
         self._temp_dir = tempfile.TemporaryDirectory()
 
     @property
     def backend_name(self) -> str:
+        \"\"\"SPEC-004A.HACKRF — Return backend name.\"\"\"
         return "hackrf"
 
     def discover(self) -> SdrCapabilities:
+        \"\"\"SPEC-004A.HACKRF — Discover.\"\"\"
         result = subprocess.run(["hackrf_info"], capture_output=True, text=True)
         if result.returncode != 0 or "Found HackRF" not in result.stdout:
             raise HardwareInitializationError("HackRF not found")
@@ -44,6 +48,7 @@ class HackrfBackend(SdrBackend):
         )
 
     def configure(self, profile: CaptureProfile) -> AppliedConfiguration:
+        \"\"\"SPEC-004A.HACKRF — Configure.\"\"\"
         # We don't hold persistent state, just echo it
         return AppliedConfiguration(
             center_frequency_hz=profile.center_frequency_hz,
@@ -56,6 +61,7 @@ class HackrfBackend(SdrBackend):
         )
 
     def verify_clocking(self) -> ClockAttestation:
+        \"\"\"SPEC-004A.HACKRF — Verify clocking.\"\"\"
         return ClockAttestation(
             backend=self.backend_name,
             timestamp_domain="none",
@@ -65,6 +71,7 @@ class HackrfBackend(SdrBackend):
         )
 
     def capture(self, request: CaptureProfile) -> CaptureResult:
+        \"\"\"SPEC-004A.HACKRF — Capture.\"\"\"
         if not request.num_samples:
             num_samples = request.buffer_samples
         else:
@@ -121,6 +128,7 @@ class HackrfBackend(SdrBackend):
         )
 
     def health(self) -> SdrHealth:
+        \"\"\"SPEC-004A.HACKRF — Health.\"\"\"
         return SdrHealth(
             backend_name="hackrf",
             temperature_c=0.0,
@@ -131,5 +139,6 @@ class HackrfBackend(SdrBackend):
         )
 
     def close(self) -> None:
+        \"\"\"SPEC-004A.HACKRF — Close.\"\"\"
         self._temp_dir.cleanup()
 

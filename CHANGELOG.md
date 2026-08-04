@@ -9,6 +9,13 @@
 ### Changed
 - Dashboard default configs updated: Live SDR enabled, gain 0.0, raw modulation, sweep mode, center freq 3 GHz, span 40 MHz, plasma palette, LNA 30, VGA 30, noise floor -75.0 dBm, ceiling -70.0 dBm.
 - Dashboard banner disabled by default.
+- Dashboard default layout changed from compact to 10-inch optimized.
+
+### Fixed
+- Fixed ingestion pipeline PPS qualification parameter parsing for Tier-1 external reference profiles.
+- Resolved `UnboundLocalError` scoping bug in `hal_factory.py` preventing PlutoSDR backend fallback.
+- Added support and SPEC-004A.HACKRF compliance for HackRF and LibreSDR backends.
+- Repaired real-SDR hardware detection probes in `dashboard/panels/hardware.py` to gracefully degrade on failure.
 
 ## [5.1.0] — Mobile Node and TUI Refinements (2026-07-28)
 
