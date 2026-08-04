@@ -1,0 +1,114 @@
+#!/bin/sh
+# vim:ts=2:sw=2:et
+# see also:
+# https://kernel-team.pages.debian.net/kernel-handbook/ch-update-hooks.html#s-kernel-hooks
+
+set -e
+
+# Play nice when run under debconf.
+exec </dev/null >&2
+
+kernel_version="$1"
+image_path="$2"
+firmware_dst="/boot/firmware"
+
+eval set -- "$DEB_MAINT_PARAMS"
+
+# Only run on configure and remove to avoid unnecessary work.
+case "$1" in
+  configure|remove)
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+
+is_arm_system() {
+  # Check to see if the host is running an arm-based system
+  # (i.e. whether the raspi-firmware package is useful)
+  DPKG_ARCH=$(dpkg --print-architecture)
+  case "$DPKG_ARCH" in
+    arm64|armel|armhf)
+      return 0;;
+    *)
+      return 1;;
+  esac
+}
+
+if ! is_arm_system ; then
+  # Not running on an arm-based system, skip postinst.
+  exit 0
+fi
+
+if ischroot ; then
+  true # chroot detected - skip mount point check
+elif [ -e /usr/bin/systemd-detect-virt ] && systemd-detect-virt -q ; then
+  true # virtualization detected - skip mount point check
+elif [ "$(stat -f -c %T "${firmware_dst}")" = "nfs" ]; then
+  true
+elif ! mountpoint -q "${firmware_dst}" ; then
+  echo "raspi-firmware: missing ${firmware_dst}, did you forget to mount it?" >&2
+  exit 1
+fi
+
+# Ensure the target directory exists. See https://bugs.debian.org/887062
+mkdir -p "${firmware_dst}/overlays"
+
+# Default configurations, overridable at /etc/default/raspi-firmware
+KERNEL=${KERNEL:-auto}
+
+# Load user configuration
+if [ -r /etc/default/raspi-firmware ] ; then
+        . /etc/default/raspi-firmware
+fi
+
+flavour="${kernel_version#*-rpi-}"
+
+case $flavour in
+  v8|v8-rt|2712)
+    dtb_path="/usr/lib/linux-image-${kernel_version}/broadcom"
+    ;;
+  v6|v7)
+    dtb_path="/usr/lib/linux-image-${kernel_version}"
+    ;;
+  *)
+    echo "WARNING: Unsupported kernel version ($kernel_version) - skipping setup"
+    echo "NOTE: Manual boot configuration may be required"
+    exit 0
+    ;;
+esac
+
+# TODO: Handle removal of device tree files
+
+if [ "$KERNEL" = "auto" ]; then
+  kernel_dst="$firmware_dst/kernel$(echo "$flavour" | sed 's/^v//;s/^6//;s/2712/_2712/;s/-/_/;').img"
+  latest_kernel=$(find /boot -maxdepth 1 -name "vmlinuz-*-rpi-$flavour" -print0 | sort -z -V -r | head -z -n1)
+  overlay_path="/usr/lib/linux-image-${kernel_version}/overlays"
+  case "$1" in
+    configure)
+      if ! [ -e "$image_path" ]; then
+        echo "ERROR: $image_path not found"
+        exit 1
+      elif [ "$image_path" != "$latest_kernel" ]; then
+        exit 0
+      fi
+      rsync -ct "${dtb_path}"/bcm27*.dtb /boot/firmware/
+      rsync -ct "${overlay_path}"/*.dtb* "${overlay_path}"/README "${firmware_dst}/overlays"
+      if [ -e "${firmware_dst}/.firmware_revision" ]; then
+        echo "WARNING: raspi-firmware: replacing rpi-update kernels" >&2
+        rm -f "${firmware_dst}/.firmware_revision"
+      fi
+      cp -v "$image_path" "$kernel_dst"
+      ;;
+    remove)
+      if [ -z "$latest_kernel" ] ; then
+        rm -fv "$kernel_dst"
+        /etc/initramfs/post-update.d/z50-raspi-firmware "$kernel_version" "$(echo "$image_path" | sed 's/vmlinuz/initrd.img/')"
+      fi
+      ;;
+    *)
+      exit 1
+      ;;
+  esac
+  sync -f "$firmware_dst"
+fi

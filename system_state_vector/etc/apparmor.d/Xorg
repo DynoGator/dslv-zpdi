@@ -1,0 +1,123 @@
+# vim:syntax=apparmor
+# Author: Daniel Richard G. <skunk@iSKUNK.ORG>
+
+# Related:
+#   https://bugs.launchpad.net/bugs/1292324
+#   https://github.com/canonical/lightdm/issues/18
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+# Note: attach_disconnected appears necessary in rootless mode
+profile Xorg /usr/lib/xorg/Xorg flags=(complain,attach_disconnected, complain) {
+  include <abstractions/base>
+  include <abstractions/dbus-strict>
+  include <abstractions/fonts>
+  include <abstractions/mesa>
+  include <abstractions/nameservice>
+  include <abstractions/vulkan>
+  include <abstractions/X>
+
+  capability dac_override,
+  capability ipc_owner,
+  capability perfmon,
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_nice,
+  capability sys_rawio,
+
+  network netlink raw,
+
+  signal (receive) set=(hup, term),
+  signal (send) set=(usr1),
+
+  unix (accept, bind, listen, receive, send) type=stream addr="@/tmp/.X11-unix/X[0-9]*",
+
+  dbus (send)
+    bus=system
+    path=/org/freedesktop/login1
+    interface=org.freedesktop.login1.Manager
+    member=GetSessionByPID
+    peer=(name=org.freedesktop.login1),
+
+  dbus (send)
+    bus=system
+    path=/org/freedesktop/login1/session/*
+    interface=org.freedesktop.login1.Session
+    member={PauseDeviceComplete,ReleaseControl,ReleaseDevice,TakeControl,TakeDevice}
+    peer=(name=org.freedesktop.login1),
+
+  dbus (receive)
+    bus=system
+    path=/org/freedesktop/login1/session/*
+    interface=org.freedesktop.login1.Session
+    member=PauseDevice,
+
+  /{,usr/}bin/{bash,dash,sh} ix,
+  /usr/bin/xkbcomp           ix,
+
+  @{PROC}/cmdline         r,
+  @{PROC}/@{pid}/cmdline  r,
+  @{PROC}/ioports         r,
+  @{PROC}/mtrr            rw,
+
+  @{sys}/**/              r,
+  @{sys}/devices/**       r,
+  @{sys}/module/**        r,
+
+  @{sys}/devices/pci*/**/backlight/*/brightness rw,
+
+  # Display managers
+  @{run}/user/@{uid}/gdm/* r,
+  @{run}/lightdm/**        r,
+  @{run}/lxdm/*            r,
+  @{run}/sddm/*            r,
+  @{run}/slim.auth         r,
+  /var/lib/wdm/**          r,
+  /var/lib/xdm/**          r,
+
+  @{run}/nvidia-xdriver-*  rw,	# TODO: double-check
+  @{run}/udev/data/**      r,
+
+  /dev/dri/card[0-9]*      r,
+  /dev/fb0                 rw,
+  /dev/input/event*        rw,
+  /dev/tty[0-9]*           rw,
+  /dev/vga_arbiter         rw,
+
+  /etc/X11/** r,
+
+  owner /tmp/.tX[0-9]*-lock    rw,
+  owner /tmp/.X[0-9]*-lock     wl,
+  owner /tmp/serverauth.*      r,    # startx(1)
+  owner /tmp/server-[0-9]*.xkm rw,
+
+  /usr/lib/xorg/modules/   r,
+  /usr/lib/xorg/modules/** mr,
+  /usr/share/**            r,
+
+  owner /var/lib/xkb/**                 rw,
+  owner /var/log/Xorg.pid-[1-9]*.log    rw,
+  owner /var/log/Xorg.[0-9]*.log{,.old} rw,
+
+  # Rootless mode (gdm3, startx)
+  owner @{HOME}/.local/                                        w,
+  owner @{HOME}/.local/share/                                  w,
+  owner @{HOME}/.local/share/xorg/                             w,
+  owner @{HOME}/.local/share/xorg/Xorg.pid-[1-9]*.log          rw,
+  owner @{HOME}/.local/share/xorg/Xorg.[0-9]*.log{,.old}       rw,
+  owner /var/lib/gdm*/.cache/mesa_shader_cache/                rw,
+  owner /var/lib/gdm*/.cache/mesa_shader_cache/**              rwk,
+  owner /var/lib/gdm*/.local/share/xorg/Xorg.pid-[1-9]*.log    rw,
+  owner /var/lib/gdm*/.local/share/xorg/Xorg.[0-9]*.log{,.old} rw,
+
+  # When running without a kernel mode-setting (KMS) driver, Xorg may need
+  # these additional permissions. DO NOT enable these unless necessary!
+  #nokms#/dev/mem rw,
+  #nokms#@{sys}/devices/pci[0-9]*/*/*/resource[0-9] w,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/Xorg>
+}

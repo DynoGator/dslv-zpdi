@@ -1,0 +1,5 @@
+# Tag name          ;  color
+FM RADIO            ; #c0c0c0
+
+# Frequency ; Name                     ; Modulation          ;  Bandwidth; Tags
+    98100000; KKFM                     ; WFM (stereo)        ;     160000; FM RADIO

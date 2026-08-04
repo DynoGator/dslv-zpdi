@@ -1,0 +1,72 @@
+{
+	"alternate_error_pages":{
+		"enabled":false
+	},
+	"initial_extensions":{
+		"list":[
+			"ddkjiahejlhfcafbddmgiahcphecmpfh",
+			"aleakchihdccplidncghkekgioiakgal"]
+	},
+	"extensions": {
+		"theme":{
+			"id":"",
+			"system_theme":1,
+			"use_system":true
+		}
+	},
+	"browser":{
+		"custom_chrome_frame":false,
+		"default_browser_infobar_last_declined":"1"
+	},
+	"default_search_provider":{
+		"synced_guid":"9A111FB4-A8D3-4FDD-84CE-76178E50246B"
+	},
+	"default_search_provider_data":{
+		"template_url_data":{
+			"alternate_urls":[],
+			"created_by_policy":false,
+			"date_created":"13114024949603971",
+			"favicon_url":"",
+			"id":"7",
+			"image_url":"",
+			"image_url_post_params":"",
+			"input_encodings":[],
+			"instant_url":"",
+			"instant_url_post_params":"",
+			"keyword":"duckduckgo.com",
+			"last_modified":"13114024949603971",
+			"new_tab_url":"",
+			"originating_url":"",
+			"prepopulate_id":0,
+			"safe_for_autoreplace":false,
+			"search_terms_replacement_key":"",
+			"search_url_post_params":"",
+			"short_name":"DuckDuckGo",
+			"suggestions_url":"",
+			"suggestions_url_post_params":"",
+			"synced_guid":"9A111FB4-A8D3-4FDD-84CE-76178E50246B",
+			"url":"https://duckduckgo.com/?q={searchTerms}&t=raspberrypi",
+			"usage_count":0
+		}
+	},
+	"search":{
+	    "suggest_enabled":false
+	},
+	"profile":{
+	    "default_content_setting_values":{
+	        "plugins":0
+	    }
+	},
+	"distribution": {
+		"import_bookmarks": false,
+		"import_bookmarks_from_file": "/etc/chromium/bookmarks.html"
+	},
+	"bookmark_bar": {
+		"show_on_all_tabs": true
+	},
+	"first_run_tabs":["https://welcome.raspberrypi.com/raspberry-pi-os?id=UNIDENTIFIED"]
+}
+
+
+
+

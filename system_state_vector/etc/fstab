@@ -1,0 +1,3 @@
+proc            /proc           proc    defaults          0       0
+PARTUUID=e0859c89-01  /boot/firmware  vfat    defaults          0       2
+PARTUUID=e0859c89-02  /               ext4    defaults,noatime  0       1

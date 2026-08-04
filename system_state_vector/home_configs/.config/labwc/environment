@@ -1,0 +1,17 @@
+XKB_DEFAULT_MODEL=pc105
+XKB_DEFAULT_LAYOUT=us
+XKB_DEFAULT_VARIANT=
+XKB_DEFAULT_OPTIONS=
+XCURSOR_SIZE=36
+
+# Force Qt6 apps (e.g. GQRX) to use XWayland for stability on labwc
+QT_QPA_PLATFORM=xcb
+QT_QPA_PLATFORMTHEME=gtk2
+
+# Reduce GPU/CPU overhead for Wayland compositor
+WLR_NO_HARDWARE_CURSORS=0
+WLR_DRM_NO_ATOMIC=0
+
+# Improve OpenGL/Vulkan behavior under XWayland
+MESA_GL_VERSION_OVERRIDE=3.3
+MESA_GLSL_VERSION_OVERRIDE=330

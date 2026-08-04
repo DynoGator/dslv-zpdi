@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /etc/kernel/postinst.d/z50-raspi-firmware "$@"

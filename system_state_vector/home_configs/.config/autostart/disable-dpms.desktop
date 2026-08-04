@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Disable Screen Blanking and Power Saving
+Exec=bash -c "xset s off 2>/dev/null; xset -dpms 2>/dev/null; xset s noblank 2>/dev/null; wayfire-ctl set idle_inhibit true 2>/dev/null || true"
+Terminal=false
+X-GNOME-Autostart-enabled=true

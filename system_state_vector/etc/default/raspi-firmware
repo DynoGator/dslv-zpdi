@@ -1,0 +1,16 @@
+# If set to 'auto', raspi-firmware will automatically copy
+# and rename supported kernels into /boot/firmware
+#
+#KERNEL=auto
+
+# If set to 'auto', raspi-firmware will automatically copy
+# and rename supported initramfs images into /boot/firmware
+#
+#INITRAMFS=auto
+
+# If set to yes, supported kernels will not trigger
+# initramfs updates on install and upgrade. If this is the desired
+# behaviour, you may also wish to set update_initramfs=no in
+# /etc/initramfs-tools/update-initramfs.conf
+#
+#SKIP_INITRAMFS_GEN=no

@@ -1,0 +1,281 @@
+###############################################################################
+#
+#  MIME media types and programs that process those types
+#
+#  Much of this file is generated automatically by the program "update-mime".
+#  Please see the "update-mime" man page for more information.
+#
+#  Users can add their own rules if they wish by creating a ".mailcap"
+#  file in their home directory.  Entries included there will take
+#  precedence over those listed here.
+#
+###############################################################################
+
+
+###############################################################################
+#
+#  User section follows:  Any entries included in this section will take
+#  precedence over those created by "update-mime".  DO NOT CHANGE the
+#  "User Section Begins" and "User Section Ends" lines, or anything outside
+#  of this section!
+#
+
+# ----- User Section Begins ----- #
+# -----  User Section Ends  ----- #
+
+###############################################################################
+
+text/plain; less %s; needsterminal
+video/mpeg; vlc %s; description="MPEG Video"; test=test -n "$DISPLAY"
+video/x-mpeg; vlc %s; description="MPEG Video"; test=test -n "$DISPLAY"
+video/mpeg-system; vlc %s; description="MPEG Video"; test=test -n "$DISPLAY"
+video/x-mpeg-system; vlc %s; description="MPEG Video"; test=test -n "$DISPLAY"
+audio/x-wav; vlc %s; description="WAV Audio"; nametemplate=%s.wav; test=test -n "$DISPLAY"
+video/mpeg4; vlc %s; description="MPEG-4 Video"; test=test -n "$DISPLAY"
+audio/mpeg; vlc %s; description="MPEG Audio"; nametemplate=%s.mpg; test=test -n "$DISPLAY"
+audio/mpegurl; vlc %s; description="MPEG Audio URL"; nametemplate=%s.m3u; test=test -n "$DISPLAY"
+audio/x-mp3; vlc %s; nametemplate=%s.mp3; description="MPEG Audio"; test=test -n "$DISPLAY"
+audio/mpeg4; vlc %s; description="MPEG-4 Audio"; test=test -n "$DISPLAY"
+application/mpeg4-iod; vlc %s; description="MPEG-4 Video"; test=test -n "$DISPLAY"
+application/mpeg4-muxcodetable; vlc %s; description="MPEG-4 Video"; test=test -n "$DISPLAY"
+application/x-troff-man; /usr/bin/man -X100 -l %s; test=test -n "$DISPLAY" -a -e /usr/bin/gxditview; description=Man page
+text/troff; /usr/bin/man -X100 -l %s; test=test -n "$DISPLAY" -a -e /usr/bin/gxditview; description=Man page
+application/x-troff-man; /usr/bin/man -l %s; needsterminal; description=Man page
+text/troff; /usr/bin/man -l %s; needsterminal; description=Man page
+text/html; /usr/bin/sensible-browser %s; description=HTML Text; nametemplate=%s.html
+text/html; /usr/bin/firefox %s; description=HTML Text; test=test -n "$DISPLAY";  nametemplate=%s.html
+text/xml; /usr/bin/firefox %s; description=XML Text; test=test -n "$DISPLAY";  nametemplate=%s.xml
+application/x-troff-man; /usr/bin/nroff -t -mandoc -Tutf8; copiousoutput; print=/usr/bin/nroff -t -mandoc -Tutf8 | print text/plain:-
+text/troff; /usr/bin/nroff -t -mandoc -Tutf8; copiousoutput; print=/usr/bin/nroff -t -mandoc -Tutf8 | print text/plain:-
+text/plain; more %s; needsterminal
+application/x-rar; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="RAR Archive"; test=test -n "$DISPLAY" && test -e /usr/bin/unrar
+application/rar; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="RAR Archive"; test=test -n "$DISPLAY" && test -e /usr/bin/unrar
+application/x-arj; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="ARJ Archive"; test=test -n "$DISPLAY" && test -e /usr/bin/arj
+application/arj; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="ARJ Archive"; test=test -n "$DISPLAY" && test -e /usr/bin/arj
+application/x-zip; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="ZIP Archive"; test=test -n "$DISPLAY" && test -e /usr/bin/unzip
+application/zip; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="ZIP Archive"; test=test -n "$DISPLAY" && test -e /usr/bin/unzip
+application/x-redhat-package-manager; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="RPM Archive"; test=test -n "$DISPLAY" && test -f /usr/bin/rpm
+application/x-tar; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="TAR Archive"; test=test -n "$DISPLAY"
+application/x-gtar; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="TAR Archive"; test=test -n "$DISPLAY"
+application/x-ustar; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="TAR Archive"; test=test -n "$DISPLAY"
+application/x-gzip; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="GZ compressed file"; test=test -n "$DISPLAY"
+application/x-bzip2; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="BZIP2 compressed file"; test=test -n "$DISPLAY"
+application/x-lzma; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="LZMA compressed file"; test=test -n "$DISPLAY"
+application/x-xz; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="XZ compressed file"; test=test -n "$DISPLAY"
+application/x-xz-compressed-tar; /usr/bin/xarchiver -- %s; edit=/usr/bin/xarchiver -- %s; description="XZ compressed tar file"; test=test -n "$DISPLAY"
+text/html; /usr/bin/chromium %s; test=test -n "$DISPLAY"
+text/xml; /usr/bin/chromium %s; test=test -n "$DISPLAY"
+application/xhtml_xml; /usr/bin/chromium %s; test=test -n "$DISPLAY"
+application/x-mimearchive; /usr/bin/chromium %s; test=test -n "$DISPLAY"
+x-scheme-handler/http; /usr/bin/chromium %s; test=test -n "$DISPLAY"
+x-scheme-handler/https; /usr/bin/chromium %s; test=test -n "$DISPLAY"
+x-scheme-handler/rpi-imager; /usr/bin/rpi-imager %s; test=test -n "$DISPLAY"
+application/vnd.raspberrypi.imager-manifest+json; /usr/bin/rpi-imager %s; test=test -n "$DISPLAY"
+application/ico; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-navi-animation; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+audio/x-riff; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/bmp; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/gif; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/ico; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/icon; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/jp2; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/jpeg; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/jpeg2000; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/jpg; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/jpx; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/pjpeg; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/png; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/qtif; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/svg; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/svg+xml; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/svg+xml-compressed; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/svg-xml; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/tiff; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/vnd.adobe.svg+xml; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/vnd.microsoft.icon; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/vnd.wap.wbmp; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/webp; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-MS-bmp; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-adobe-dng; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-bmp; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-canon-cr2; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-canon-crw; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-compressed-xcf; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-epson-erf; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-fuji-raf; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-gray; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-icb; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-icns; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-ico; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-icon; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-minolta-mrw; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-nikon-nef; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-olympus-orf; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-pcx; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-pentax-pef; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-png; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-portable-anymap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-portable-bitmap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-portable-graymap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-portable-pixmap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-quicktime; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-sony-arw; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-tga; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-win-bitmap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-wmf; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-xbitmap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-xcf; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-xpixmap; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+text/ico; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+text/xml-svg; eom %s; test=command -v eom > /dev/null 2>&1 && test -n "$DISPLAY"
+application/pkcs12; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs12+pem; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs7-mime; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs7-mime+pem; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs8; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs8+pem; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkix-cert; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkix-cert+pem; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkix-crl; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkix-crl+pem; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-pem-file; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-pem-key; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-pkcs12; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-pkcs7-certificates; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-x509-ca-cert; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-x509-user-cert; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs10; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/pkcs10+pem; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-spkac; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+application/x-spkac+base64; /usr/bin/gcr-viewer %s; test=test -n "$DISPLAY"
+text/plain; geany %s; test=test -n "$DISPLAY"
+text/x-chdr; geany %s; test=test -n "$DISPLAY"
+text/x-csrc; geany %s; test=test -n "$DISPLAY"
+text/x-c++hdr; geany %s; test=test -n "$DISPLAY"
+text/x-c++src; geany %s; test=test -n "$DISPLAY"
+text/x-java; geany %s; test=test -n "$DISPLAY"
+text/x-dsrc; geany %s; test=test -n "$DISPLAY"
+text/x-pascal; geany %s; test=test -n "$DISPLAY"
+text/x-perl; geany %s; test=test -n "$DISPLAY"
+text/x-python; geany %s; test=test -n "$DISPLAY"
+application/x-php; geany %s; test=test -n "$DISPLAY"
+application/x-httpd-php3; geany %s; test=test -n "$DISPLAY"
+application/x-httpd-php4; geany %s; test=test -n "$DISPLAY"
+application/x-httpd-php5; geany %s; test=test -n "$DISPLAY"
+application/xml; geany %s; test=test -n "$DISPLAY"
+text/html; geany %s; test=test -n "$DISPLAY"
+text/css; geany %s; test=test -n "$DISPLAY"
+text/x-sql; geany %s; test=test -n "$DISPLAY"
+text/x-diff; geany %s; test=test -n "$DISPLAY"
+application/gnuradio-grc; gnuradio-companion %s; test=test -n "$DISPLAY"
+application/vnd.comicbook-rar; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/vnd.comicbook+zip; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-cb7; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-cbr; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-cbt; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-cbz; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-cb7; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-cbr; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-cbt; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-cbz; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-djv; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-djvu; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+image/vnd.djvu; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-bzdvi; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-dvi; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-dvi; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-gzdvi; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/pdf; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-bzpdf; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-pdf; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-gzpdf; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-xzpdf; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/postscript; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-bzpostscript; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-gzpostscript; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-eps; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/x-ext-ps; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-bzeps; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-eps; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+image/x-gzeps; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+image/tiff; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/oxps; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/vnd.ms-xpsdocument; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+application/illustrator; evince %s; test=command -v evince > /dev/null 2>&1 && test -n "$DISPLAY"
+text/x-python; /usr/bin/thonny %s; test=test -n "$DISPLAY"
+text/plain; mousepad %s; test=test -n "$DISPLAY"
+application/x-zerosize; mousepad %s; test=test -n "$DISPLAY"
+inode/directory; pcmanfm %s; test=test -n "$DISPLAY"
+application/x-rpm; pi-gpk-install-local-file %s; test=test -n "$DISPLAY"
+application/x-redhat-package-manager; pi-gpk-install-local-file %s; test=test -n "$DISPLAY"
+application/x-deb; pi-gpk-install-local-file %s; test=test -n "$DISPLAY"
+application/x-app-package; pi-gpk-install-local-file %s; test=test -n "$DISPLAY"
+x-scheme-handler/com.realvnc.vncviewer.connect; vncviewer -uri %s; test=test -n "$DISPLAY"
+x-scheme-handler/rp-bookshelf; rp-bookshelf %s; test=test -n "$DISPLAY"
+text/english; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/plain; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-makefile; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-c++hdr; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-c++src; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-chdr; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-csrc; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-java; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-moc; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-pascal; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-tcl; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-tex; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+application/x-shellscript; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-c; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/x-c++; vim %s; needsterminal; test=command -v vim > /dev/null 2>&1
+text/html; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+text/xml; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+application/xml; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+application/xhtml+xml; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+application/xhtml_xml; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+x-scheme-handler/http; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+x-scheme-handler/https; x-www-browser %s; test=command -v /usr/bin/x-www-browser > /dev/null 2>&1 && test -n "$DISPLAY"
+text/plain; view %s; edit=vim %s; compose=vim %s; test=test -x /usr/bin/vim; needsterminal
+video/mpeg; vlc -I rc -V caca %s; needsterminal; description="MPEG Video"
+video/x-mpeg; vlc -I rc -V caca %s; needsterminal; description="MPEG Video"
+video/mpeg-system; vlc -I rc -V caca %s; needsterminal; description="MPEG Video"
+video/x-mpeg-system; vlc -I rc -V caca %s; needsterminal; description="MPEG Video"
+audio/x-wav; vlc -I rc -V caca %s; nametemplate=%s.wav; needsterminal; description="WAV Audio"
+video/mpeg4; vlc -I rc -V caca %s; needsterminal; description="MPEG-4 Video"
+audio/mpeg; vlc -I rc -V caca %s; nametemplate=%s.mpg; needsterminal; description="MPEG Audio"
+audio/mpegurl; vlc -I rc -V caca %s; nametemplate=%s.m3u; needsterminal; description="MPEG Audio URL"
+audio/x-mp3; vlc -I rc -V caca %s; nametemplate=%s.mp3; needsterminal; description="MPEG Audio"
+audio/mpeg4; vlc -I rc -V caca %s; needsterminal; description="MPEG-4 Audio"
+application/mpeg4-iod; vlc -I rc -V caca %s; needsterminal; description="MPEG-4 Video"
+application/mpeg4-muxcodetable; vlc -I rc -V caca %s; needsterminal; description="MPEG-4 Video"
+video/x-msvideo; vlc %s; description="MS Video (AVI)"; test=test -n "$DISPLAY"
+video/quicktime; vlc %s; description="Apple Quicktime Video"; test=test -n "$DISPLAY"
+application/ogg; vlc %s; nametemplate=%s.ogg; description="Ogg stream"; test=test -n "$DISPLAY"
+application/x-ogg; vlc %s; nametemplate=%s.ogg; description="Ogg stream"; test=test -n "$DISPLAY"
+video/ogg; vlc %s; description="Ogg Video"; test=test -n "$DISPLAY"
+application/x-ms-asf-plugin; vlc %s; description="Windows Media Video"; test=test -n "$DISPLAY"
+application/x-mplayer2; vlc %s; description="Windows Media"; test=test -n "$DISPLAY"
+text/html; /usr/bin/lynx -force_html %s; needsterminal; description=HTML Text; nametemplate=%s.html
+application/zip; unzip -l %s; nametemplate=%s.zip; copiousoutput
+text/plain; view %s; edit=vi %s; compose=vi %s; needsterminal
+video/x-msvideo; vlc -I rc -V caca %s; needsterminal; description="MS Video (AVI)"
+video/quicktime; vlc -I rc -V caca %s; needsterminal; description="Apple Quicktime Video"
+application/ogg; vlc -I rc -V caca %s; nametemplate=%s.ogg; needsterminal; description="Ogg stream"
+application/x-ogg; vlc -I rc -V caca %s; nametemplate=%s.ogg; needsterminal; description="Ogg stream"
+video/ogg; vlc -I rc -V caca %s; needsterminal; description="Ogg Video"
+application/x-ms-asf-plugin; vlc -I rc -V caca %s; needsterminal; description="Windows Media Video"
+application/x-mplayer2; vlc -I rc -V caca %s; needsterminal; description="Windows Media"
+image/png;  /usr/bin/firefox %s; description=PNG Image; test=test -n "$DISPLAY";  nametemplate=%s.png
+image/jpeg;  /usr/bin/firefox %s; description=JPEG Image; test=test -n "$DISPLAY";  nametemplate=%s.jpeg
+image/gif;  /usr/bin/firefox %s; description=GIF Image; test=test -n "$DISPLAY";  nametemplate=%s.gif
+text/html; /usr/bin/lynx -dump -force_html %s; copiousoutput; description=HTML Text; nametemplate=%s.html
+application/x-troff-man; /usr/bin/man -Tascii -l %s | col -b; copiousoutput; description=Man page
+text/troff; /usr/bin/man -Tascii -l %s | col -b; copiousoutput; description=Man page
+text/*; less %s; needsterminal
+text/*; view %s; edit=vim %s; compose=vim %s; test=test -x /usr/bin/vim; needsterminal
+application/x-tar; /bin/tar tvf %s; print=/bin/tar tvf - | print text/plain:-; copiousoutput
+application/x-gtar; /bin/tar tvf %s; print=/bin/tar tvf - | print text/plain:-; copiousoutput
+application/x-ustar; /bin/tar tvf %s; print=/bin/tar tvf - | print text/plain:-; copiousoutput
+text/*; more %s; needsterminal
+text/*; view %s; edit=vi %s; compose=vi %s; needsterminal
+application/postscript; /usr/bin/ps2txt '%s'; copiousoutput; description=Postscript
+application/vnd.debian.binary-package; /usr/lib/mime/debian-view %s; needsterminal; description=Debian GNU/Linux Package; nametemplate=%s.deb

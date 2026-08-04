@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+
+<Menu>
+
+	<Name>Applications</Name>
+	<Directory>rpd-applications.directory</Directory>
+
+	<DefaultAppDirs/>
+	<DefaultDirectoryDirs/>
+	<DefaultMergeDirs/>
+
+	<Menu>
+		<Name>AudioVideo</Name>
+		<Directory>rpd-audio-video.directory</Directory>
+		<Include>
+			<Category>AudioVideo</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Development</Name>
+		<Directory>rpd-development.directory</Directory>
+		<Include>
+			<Category>Development</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Education</Name>
+		<Directory>rpd-education.directory</Directory>
+		<Include>
+			<Category>Education</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Game</Name>
+		<Directory>rpd-game.directory</Directory>
+		<Include>
+			<Category>Game</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Graphics</Name>
+		<Directory>rpd-graphics.directory</Directory>
+		<Include>
+			<Category>Graphics</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Network</Name>
+		<Directory>rpd-network.directory</Directory>
+		<Include>
+			<Category>Network</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Office</Name>
+		<Directory>rpd-office.directory</Directory>
+		<Include>
+			<Category>Office</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Science</Name>
+		<Directory>rpd-science.directory</Directory>
+		<Include>
+			<Category>Science</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Settings</Name>
+		<Directory>rpd-settings.directory</Directory>
+		<Include>
+			<Category>Settings</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>System</Name>
+		<Directory>rpd-system-tools.directory</Directory>
+		<Include>
+			<Category>System</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Utility</Name>
+		<Directory>rpd-utility.directory</Directory>
+		<Include>
+			<Category>Utility</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Help</Name>
+		<Directory>rpd-help.directory</Directory>
+		<Include>
+			<Category>Help</Category>
+		</Include>
+	</Menu>
+
+	<Menu>
+		<Name>Other</Name>
+		<Directory>rpd-other.directory</Directory>
+		<OnlyUnallocated/>
+		<Include>
+			<And>
+			</And>
+		</Include>
+	</Menu>
+
+	<Include>
+		<Category>Applications</Category>
+	</Include>
+
+	<Layout>
+		<Menuname>Development</Menuname>
+		<Menuname>Education</Menuname>
+		<Menuname>Science</Menuname>
+		<Menuname>Office</Menuname>
+		<Menuname>Network</Menuname>
+		<Menuname>AudioVideo</Menuname>
+		<Menuname>Graphics</Menuname>
+		<Menuname>Game</Menuname>
+		<Menuname>Other</Menuname>
+		<Menuname>System</Menuname>
+		<Menuname>Utility</Menuname>
+		<Merge type="menus"/>
+		<Separator/>
+		<Menuname>Help</Menuname>
+		<Separator/>
+		<Menuname>Settings</Menuname>
+		<Separator/>
+		<Merge type="files"/>
+		<Filename>gui-runcmd.desktop</Filename>
+		<Separator/>
+		<Filename>pishutdown.desktop</Filename>
+	</Layout>
+
+</Menu>

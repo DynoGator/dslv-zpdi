@@ -1,0 +1,2 @@
+/usr/sbin/pi-greeter &
+/usr/bin/kanshi -c /etc/xdg/labwc-greeter/config.kanshi &

@@ -1,0 +1,25 @@
+[Unit]
+Description=DSLV-ZPDI Geekworm X-1202 UPS monitor (SPEC-004A.8)
+After=network.target local-fs.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=dynogator
+Group=dynogator
+SupplementaryGroups=i2c gpio
+WorkingDirectory=/home/dynogator/dslv-zpdi
+ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python /home/dynogator/dslv-zpdi/tools/x1202_ups_monitor.py
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/dynogator/dslv-zpdi/.env
+Restart=on-failure
+RestartSec=10
+MemoryMax=128M
+CPUAffinity=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dslv-zpdi-ups
+
+[Install]
+WantedBy=multi-user.target
