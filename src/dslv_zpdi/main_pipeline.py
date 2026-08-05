@@ -21,7 +21,7 @@ from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
 from dslv_zpdi.watchdog.timing_monitor import TimingMonitor
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("pipeline")
 
 

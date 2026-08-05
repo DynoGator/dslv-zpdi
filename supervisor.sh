@@ -14,15 +14,44 @@
 
 set -uo pipefail
 
+# --- Tiered Ramp-up Phase ---
+echo "Initiating 5-second pause before resolving directory..."
+sleep 5
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+if [ ! -d "$SCRIPT_DIR" ]; then
+    echo "CRITICAL: Script directory $SCRIPT_DIR not found!"
+    exit 1
+fi
+cd "$SCRIPT_DIR" || { echo "CRITICAL: failed to cd to $SCRIPT_DIR"; exit 1; }
 
+echo "Directory resolved. Buffering for 2 seconds..."
+sleep 2
+
+echo "Initiating 3-second pause before activating venv..."
+sleep 3
+if [ ! -f ".venv/bin/activate" ]; then
+    echo "CRITICAL: .venv/bin/activate not found! Venv missing."
+    exit 1
+fi
 source .venv/bin/activate
+
+echo "Venv activated. Buffering for 2 seconds..."
+sleep 2
 
 # Export all .env vars to child processes.
 set -a
-[ -f .env ] && source .env
+if [ -f .env ]; then
+    source .env
+fi
+if [ -f ".debug_mode" ]; then
+    export ZPDI_LOG_LEVEL="DEBUG"
+else
+    export ZPDI_LOG_LEVEL="INFO"
+fi
 set +a
+
+echo "Environment loaded. Buffering for 2 seconds..."
+sleep 2
 
 mkdir -p logs data output/primary output/secondary
 
@@ -32,6 +61,9 @@ WEBDASHPID=.zpdi_webdash.pid
 LOG=logs/supervisor.log
 
 _log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [zpdi-supervisor] $*" >> "$LOG"; }
+
+_log "Tiered ramp-up: initial directory and environment setup complete."
+
 
 _stop() {
     _log "stop signal received"
@@ -79,8 +111,18 @@ _start_webdash() {
     _log "web dashboard started (pid=$pid) on :${DSLV_WEBDASH_PORT:-8080}"
 }
 
+echo "Initiating 5-second pause before services spin up..."
+_log "pausing 5s before services spin up"
+sleep 5
 _start_tier1
+
+echo "Buffering for 2 seconds..."
+sleep 2
 _start_webdash
+
+echo "Initiating 5-second pause before scripts start running..."
+_log "pausing 5s before scripts start running"
+sleep 5
 
 # ---------------------------------------------------------------------------
 # Main loop: manage zpdi_mobile_node.py with health monitoring.
@@ -107,6 +149,9 @@ while true; do
     # immediate watchdog kill before the new daemon writes its first heartbeat.
     : > logs/health.jsonl 2>/dev/null || true
 
+    # Buffer 2 seconds before starting the main daemon script
+    echo "Buffering 2 seconds before daemon launch..."
+    sleep 2
     python3 zpdi_mobile_node.py >> logs/daemon.log 2>&1 &
     dpid=$!
     echo "$dpid" > "$DAEMONPID"

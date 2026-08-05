@@ -21,6 +21,13 @@ DASH="$REPO/tools/dashboard/launch.sh"
 mkdir -p "$REPO/logs" 2>/dev/null || true
 exec > >(tee -a "$LOG") 2>&1
 
+if [ "${1:-}" = "--debug" ]; then
+    echo "DSLV-ZPDI: Launching with DEBUG mode enabled"
+    touch "$REPO/.debug_mode"
+else
+    rm -f "$REPO/.debug_mode"
+fi
+
 STAMP() { date -Iseconds; }
 SAY()   { printf "\033[1;36m[launch %s]\033[0m %s\n" "$(STAMP)" "$*"; }
 OK()    { printf "\033[1;32m[launch %s] OK:\033[0m %s\n"   "$(STAMP)" "$*"; }
@@ -84,6 +91,18 @@ if [ -n "$SUDO" ]; then
     sleep 3
     $SUDO systemctl stop dslv-zpdi-baseline.service  2>/dev/null || true
     sleep 5
+fi
+
+# Clear any SWMR lock left by a crash to prep for clean launch
+if [ -f "$REPO/data/zpdi_stream.h5" ]; then
+    h5clear -s "$REPO/data/zpdi_stream.h5" 2>/dev/null || true
+fi
+
+if [ "${1:-}" = "--stop-only" ]; then
+    OK "CLEAN SLATE ACHIVED: All DSLV-ZPDI processes, services, and locks cleared."
+    SAY "Ready for clean initialization."
+    sleep 3
+    exit 0
 fi
 
 # --- 3. Validate venv --------------------------------------------------

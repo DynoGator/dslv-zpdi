@@ -37,7 +37,7 @@ class _DSLVEncoder(jsonlogger.JsonFormatter):
 
 
 def setup_logging(
-    level: int = logging.INFO,
+    level: int = logging.DEBUG,
     node_id: str = "UNKNOWN",
     log_format: str = "json",
 ) -> logging.Logger:
