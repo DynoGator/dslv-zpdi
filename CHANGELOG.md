@@ -4,6 +4,17 @@
 
 ### Added
 - Zero-copy binary ingestion.
+- Metrology plasmoid humor integrated into the Tier-1 provisioning script.
+
+### Changed
+- Removed Dependabot configuration (`.github/dependabot.yml`) to permanently resolve automated interference that was causing the repository release workflow to stall at `v5.1.0`. 
+- Re-tagged and force-pushed `v5.3.0` to the latest commit to successfully trigger the GitHub Actions release workflow.
+
+### Fixed
+- Addressed multiple undefined variable and type-hint issues (`IngestionPayload`) in Layer 1 ingestors (`pixel_node_bridge.py`, `radoneye_ingestor.py`).
+- Resolved undefined fallback function call (`check_plutosdrplus_presence`) in `tools/provision_tier1.py`.
+- Thoroughly cleaned up the repository by purging duplicate and obsolete cache directories (`.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `__pycache__`).
+- Passed a strict Ruff linting sweep, fixing 120+ trailing whitespace, string syntax, and bare except warnings across the HTML dashboard and core Python scripts.
 
 ## [5.2.0] — Demodulation Engine and MIMO Vectoring (2026-07-28)
 
