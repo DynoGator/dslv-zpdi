@@ -40,9 +40,10 @@ class DualStreamRouter:
         pkt = wire_to_coherence(payload)
         if pkt is None:
             self.stats["routed_secondary"] += 1
+            reason = payload.quarantine_reason or "wiring_rejected"
             return RoutingDecision(
                 RouteStream.SECONDARY.value,
-                "wiring_rejected",
+                reason,
                 None,
                 TrustState.SECONDARY_QUARANTINED.value,
             )

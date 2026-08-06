@@ -186,32 +186,41 @@ _HTML = """<!DOCTYPE html>
     </div>
     
     <div class="demod-panel">
-      <h3>Demodulation Presets</h3>
-      <div class="preset-btns">
-        <button onclick="applyPreset('airband')">VHF Airband (120 MHz, AM)</button>
-        <button onclick="applyPreset('marine')">Marine VHF (156 MHz, FM)</button>
-        <button onclick="applyPreset('weather')">NOAA Wx (162.4 MHz, FM)</button>
-        <button onclick="applyPreset('adsb')">ADS-B (1090 MHz, RAW)</button>
+      <h3>Demodulation Control Center</h3>
+      <div class="row" style="margin-bottom: 12px;">
+        <span class="label">Quick Presets</span>
+        <select id="demod-preset" onchange="applyPresetDropdown()" style="flex-grow: 1; margin-left: 10px;">
+          <option value="">-- Select Preset --</option>
+          <option value="airband">VHF Airband (120 MHz, AM)</option>
+          <option value="marine">Marine VHF (156 MHz, FM)</option>
+          <option value="weather">NOAA Wx (162.4 MHz, FM)</option>
+          <option value="adsb">ADS-B (1090 MHz, RAW)</option>
+          <option value="am_broadcast">AM Broadcast (1 MHz, AM)</option>
+          <option value="fm_broadcast">FM Broadcast (98.1 MHz, WFM)</option>
+        </select>
+      </div>
+      <hr>
+      <div class="row">
+        <span class="label">Custom Freq (MHz)</span>
+        <input type="number" id="freq-input" step="0.1" style="width: 100px; background: #0b0f19; color: var(--cyan); border: 1px solid var(--border); padding: 6px; border-radius: 4px; font-family: monospace;">
       </div>
       <div class="row">
-        <span class="label">Freq (MHz)</span>
-        <input type="number" id="freq-input" step="0.1" style="width: 80px; background: #0b0f19; color: var(--text); border: 1px solid var(--border); padding: 4px; border-radius: 4px;">
-      </div>
-      <div class="row">
-        <span class="label">Mode</span>
-        <select id="demod-mode">
+        <span class="label">Demod Mode</span>
+        <select id="demod-mode" style="width: 100px;">
           <option value="WFM">WFM</option>
           <option value="NFM">NFM</option>
           <option value="AM">AM</option>
           <option value="USB">USB</option>
           <option value="LSB">LSB</option>
+          <option value="CW">CW</option>
           <option value="RAW">RAW</option>
         </select>
       </div>
-      <div class="btn-group">
-        <button onclick="applyCustomFreq()" style="background: var(--cyan); color: #000;">Apply Custom Tune</button>
-        <button onclick="toggleAudio()">Toggle Audio Listen</button>
+      <div class="btn-group" style="margin-top: 15px; justify-content: space-between;">
+        <button onclick="applyCustomFreq()" style="background: var(--cyan); color: #0b0f19; width: 48%;">TUNE</button>
+        <button id="audio-btn" onclick="toggleAudio()" style="background: var(--green); color: #0b0f19; width: 48%;">START AUDIO</button>
       </div>
+      <audio id="audio-player" style="display: none;" controls preload="none"></audio>
     </div>
   </div>
   
@@ -305,6 +314,18 @@ async function updateSDR() {
   refresh();
 }
 
+async function applyPresetDropdown() {
+  const select = document.getElementById('demod-preset');
+  const presetName = select.value;
+  if(!presetName) return;
+  await fetch('/api/sdr/preset', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ preset: presetName })
+  });
+  alert('Preset ' + presetName + ' applied!');
+  refresh();
+}
+
 async function applyPreset(presetName) {
   await fetch('/api/sdr/preset', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -341,8 +362,29 @@ async function sysShutdown() {
 }
 
 function toggleAudio() {
+  const player = document.getElementById('audio-player');
+  const btn = document.getElementById('audio-btn');
   isAudioPlaying = !isAudioPlaying;
-  alert(isAudioPlaying ? 'Audio streaming started (simulated on dashboard)' : 'Audio streaming stopped');
+  
+  if (isAudioPlaying) {
+    player.src = '/api/audio/stream?t=' + Date.now();
+    player.play().catch(e => {
+        console.warn('Audio play failed:', e);
+        alert('Could not start audio stream. Ensure SDR is tuned.');
+        isAudioPlaying = false;
+        btn.textContent = 'START AUDIO';
+        btn.style.background = 'var(--green)';
+    });
+    if(isAudioPlaying) {
+        btn.textContent = 'STOP AUDIO';
+        btn.style.background = 'var(--red)';
+    }
+  } else {
+    player.pause();
+    player.src = '';
+    btn.textContent = 'START AUDIO';
+    btn.style.background = 'var(--green)';
+  }
 }
 
 refresh();
@@ -485,12 +527,28 @@ def create_app() -> Flask:
             "airband": {"hz": 120_000_000, "mode": "AM"},
             "marine": {"hz": 156_800_000, "mode": "WFM"},
             "weather": {"hz": 162_400_000, "mode": "NFM"},
-            "adsb": {"hz": 1_090_000_000, "mode": "RAW"}
+            "adsb": {"hz": 1_090_000_000, "mode": "RAW"},
+            "am_broadcast": {"hz": 1_000_000, "mode": "AM"},
+            "fm_broadcast": {"hz": 98_100_000, "mode": "WFM"}
         }
         if preset in presets:
             GLOBAL_SDR_CONFIG["center_hz"] = presets[preset]["hz"]
             GLOBAL_SDR_CONFIG["demod_mode"] = presets[preset]["mode"]
         return jsonify({"status": "ok"})
+
+    @app.route("/api/audio/stream")
+    def audio_stream():
+        # Simulated audio stream endpoint that would normally route samples from the demodulator
+        # For now, it returns a 404 or a silent wav stream to satisfy the UI player
+        import wave
+        import io
+        buf = io.BytesIO()
+        with wave.open(buf, 'wb') as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(48000)
+            wav.writeframes(b'\x00' * 48000 * 2) # 1 second of silence
+        return Response(buf.getvalue(), mimetype="audio/wav")
 
     @app.route("/api/sdr/reboot", methods=["POST"])
     def reboot_sdr():

@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.3.0] — Zero-Copy Binary Ingestion Refactor (2026-08-06)
+
+### Added
+- Zero-copy binary ingestion.
+
 ## [5.2.0] — Demodulation Engine and MIMO Vectoring (2026-07-28)
 
 ### Added
