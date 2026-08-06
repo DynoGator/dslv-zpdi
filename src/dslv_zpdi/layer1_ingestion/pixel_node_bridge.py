@@ -69,8 +69,8 @@ class PixelTelemetry:
         self,
         node_id: str = "PIXEL-9PRO-T2",
         sensor_id: str = "PIXEL-NODE-01",
-    ) -> dict:
-        """SPEC-016.2 — Serialize to Layer 1 ingestion contract dict."""
+    ) -> IngestionPayload:
+        """SPEC-016.2 — Serialize to Layer 1 ingestion contract."""
         from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
         # Determine modality based on what sensors are present
@@ -110,7 +110,7 @@ class PixelTelemetry:
             hardware_tier=self.hardware_tier,
             trust_state="ASSEMBLED",
         )
-        return json.loads(payload.to_json())
+        return payload
 
 
 # ── Trust Scorer ──────────────────────────────────────────────────────────

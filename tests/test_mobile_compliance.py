@@ -58,12 +58,10 @@ def test_serialization_roundtrip():
         gps_locked=True,  # Force ASSEMBLED to allow serialization
         extracted_phases=[0.1],
     )
-    raw = p.to_json()
+    raw = p.to_binary()
     assert raw is not None
-    d = json.loads(raw)
-    assert d["modality"] == SensorModality.ACCEL.value
-    assert d["payload_checksum"] != ""
-    assert len(d["payload_checksum"]) == 16
+    assert p.modality == SensorModality.ACCEL.value
+    assert p.payload_checksum != ""
 
 
 def test_state_machine_enforcement():
@@ -77,12 +75,10 @@ def test_state_machine_enforcement():
         gps_locked=False,
         extracted_phases=[0.1] * 50,
     )
-    json_payload = p.to_json()
-    # wire_to_coherence (canonical) blocks SECONDARY_QUARANTINED
+    p.to_binary()
     from dslv_zpdi.layer2_core.wiring import wire_to_coherence
-    assert wire_to_coherence(json_payload) is None
-    # mobile wiring allows it
-    assert wire_mobile_to_coherence(json.loads(json_payload)) is not None
+    assert wire_to_coherence(p) is None
+    assert wire_mobile_to_coherence(p) is not None
 
 
 def test_full_pipeline():
@@ -96,11 +92,11 @@ def test_full_pipeline():
         gps_locked=False,
         extracted_phases=[0.1] * 50,
     )
-    d = json.loads(p.to_json())
-    d["trust_state"] = "SECONDARY_QUARANTINED"
-    coherence = wire_mobile_to_coherence(d)
+    p.trust_state = "SECONDARY_QUARANTINED"
+    p.to_binary()
+    coherence = wire_mobile_to_coherence(p)
     assert coherence is not None
-    decision = route_packet({**d, "r_smooth": coherence.r_smooth})
+    decision = route_packet({"hardware_tier": 2, "trust_state": "SECONDARY_QUARANTINED", "r_smooth": coherence.r_smooth})
     assert decision["stream"] == "SECONDARY"
     assert decision["trust_state"] == "SECONDARY_QUARANTINED"
 
@@ -125,7 +121,7 @@ def test_global_r_weighting():
 
 def test_killed_packet_no_json():
     """SPEC-005A.3: KILLED packets must not serialize."""
-    assert IngestionPayload().to_json() is None
+    assert IngestionPayload().to_binary() is None
 
 
 # ---------------------------------------------------------------------------
@@ -223,11 +219,9 @@ def test_all_mobile_packets_have_infinite_pps_jitter():
 def test_quarantine_reason_present_on_all_packets():
     """Every secondary packet must carry an explicit quarantine reason."""
     p = build_mobile_payload("ICM45631 Accelerometer", {"x": 1, "y": 0, "z": 0})
-    json_str = p.to_json()
-    assert json_str is not None
-    d = json.loads(json_str)
-    assert d["quarantine_reason"] is not None
-    assert d["quarantine_reason"] != ""
+    p.to_binary()
+    assert p.quarantine_reason is not None
+    assert p.quarantine_reason != ""
 
 
 # ---------------------------------------------------------------------------
@@ -242,8 +236,8 @@ def test_mobile_phase_extraction_in_layer1():
         p = build_mobile_payload("ICM45631 Accelerometer", reading)
     assert len(p.extracted_phases) > 0
     # Layer 2 must accept pre-extracted phases without performing Hilbert
-    d = json.loads(p.to_json())
-    packet = wire_mobile_to_coherence(d)
+    p.to_binary()
+    packet = wire_mobile_to_coherence(p)
     assert packet is not None
 
 
@@ -297,14 +291,12 @@ def test_gps_enrichment_in_payload():
         "ts": time.time(),
     }
     p = build_mobile_payload("ICM45631 Accelerometer", {"x": 1, "y": 0, "z": 0}, loc)
-    json_str = p.to_json()
-    assert json_str is not None
-    d = json.loads(json_str)
-    assert d["latitude"] == 33.4484
-    assert d["longitude"] == -112.0740
-    assert d["altitude"] == 331.0
-    assert d["accuracy"] == 12.5
-    assert d["location_provider"] == "gps"
+    p.to_binary()
+    assert p.latitude == 33.4484
+    assert p.longitude == -112.0740
+    assert p.altitude == 331.0
+    assert p.accuracy == 12.5
+    assert p.location_provider == "gps"
 
 
 def test_aes_encryption_envelope():
@@ -399,5 +391,8 @@ def test_wiring_accepts_all_mobile_modalities():
             "payload_uuid": "test-uuid",
             "timestamp_utc": 0.0,
         }
-        result = wire_mobile_to_coherence(payload_dict)
+        from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
+        payload = payload_dict
+        payload.setdefault("sensor_id", "test-sensor")
+        result = wire_mobile_to_coherence(IngestionPayload(**payload))
         assert result is not None, f"wire_mobile_to_coherence returned None for modality={mod}"

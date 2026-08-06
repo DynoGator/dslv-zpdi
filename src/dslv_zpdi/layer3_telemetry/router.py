@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from dslv_zpdi.core.states import RouteStream, TrustState
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
 from dslv_zpdi.layer2_core.swarm_integrity import SwarmIntegrityMonitor
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.wiring import coherence_engine, wire_to_coherence
 
 
@@ -33,10 +34,10 @@ class DualStreamRouter:
         self.stats = {"routed_primary": 0, "routed_secondary": 0}
         self.swarm_monitor = SwarmIntegrityMonitor()
 
-    def route(self, json_payload: str) -> RoutingDecision:
+    def route(self, payload: IngestionPayload) -> RoutingDecision:
         """SPEC-007.3a — Route single packet to PRIMARY or SECONDARY.
         Per SPEC-003, exactly two routing destinations exist. No third stream."""
-        pkt = wire_to_coherence(json_payload)
+        pkt = wire_to_coherence(payload)
         if pkt is None:
             self.stats["routed_secondary"] += 1
             return RoutingDecision(

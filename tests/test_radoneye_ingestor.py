@@ -108,19 +108,20 @@ class TestRadonSampleToPayload:
     def test_payload_structure(self):
         sim = RadonEyeSimulator(baseline_bq_m3=111.0, noise_sigma=0.0)
         sample = sim.read()
-        payload_dict = sample.to_ingestion_payload(node_id="TEST-NODE")
-        assert payload_dict["node_id"] == "TEST-NODE"
-        assert payload_dict["modality"] == "radon"
-        assert payload_dict["hardware_tier"] == 2
-        assert payload_dict["raw_value"]["radon_pCiL"] == sample.radon_pCiL
-        assert "payload_checksum" in payload_dict
+        payload = sample.to_ingestion_payload(node_id="TEST-NODE")
+        assert payload.node_id == "TEST-NODE"
+        assert payload.modality == "radon"
+        assert payload.hardware_tier == 2
+        assert payload.raw_value["radon_pCiL"] == sample.radon_pCiL
+        assert hasattr(payload, "payload_checksum")
 
     def test_payload_checksum_present(self):
         sim = RadonEyeSimulator(baseline_bq_m3=50.0, noise_sigma=0.0)
         sample = sim.read()
-        payload_dict = sample.to_ingestion_payload()
-        assert payload_dict["payload_checksum"] != ""
-        assert len(payload_dict["payload_checksum"]) == 64  # SHA-256 hex
+        payload = sample.to_ingestion_payload()
+        payload.to_binary()
+        assert payload.payload_checksum != ""
+        assert len(payload.payload_checksum) == 64  # SHA-256 hex
 
 
 class TestRadonEyeIngestorFailover:

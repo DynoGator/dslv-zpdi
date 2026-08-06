@@ -20,6 +20,7 @@ class TestProbeCli:
     def test_discover_json_output(self, capsys):
         probe_main(["--discover"])
         captured = capsys.readouterr()
+        import json
         report = json.loads(captured.out)
         assert report["mode"] == "discover"
         assert "iio_available" in report
@@ -35,6 +36,7 @@ class TestPreflightCli:
             ]
         )
         captured = capsys.readouterr()
+        import json
         report = json.loads(captured.out)
         assert report["profile_id"] == "simulator-only"
         assert "checks" in report

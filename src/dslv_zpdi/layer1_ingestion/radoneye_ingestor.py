@@ -67,8 +67,8 @@ class RadonSample:
     provenance: dict[str, Any] = field(default_factory=dict)
     hardware_tier: int = 2
 
-    def to_ingestion_payload(self, node_id: str = "PI5-ALPH", sensor_id: str = "RD200P-01") -> dict:
-        """SPEC-015.2 — Serialize to Layer 1 ingestion contract dict."""
+    def to_ingestion_payload(self, node_id: str = "PI5-ALPH", sensor_id: str = "RD200P-01") -> IngestionPayload:
+        """SPEC-015.2 — Serialize to Layer 1 ingestion contract."""
         from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
         payload = IngestionPayload(
@@ -95,7 +95,7 @@ class RadonSample:
             hardware_tier=self.hardware_tier,
             trust_state="ASSEMBLED",
         )
-        return json.loads(payload.to_json())
+        return payload
 
 
 # ── Simulator ─────────────────────────────────────────────────────────────

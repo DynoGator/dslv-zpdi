@@ -17,6 +17,9 @@ from pathlib import Path
 from dslv_zpdi.core.exceptions import SecurityError
 from dslv_zpdi.core.key_provider import DevelopmentKeyProvider, KeyProvider
 from dslv_zpdi.core.states import RouteStream
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
+from dslv_zpdi.layer2_core.coherence import CoherencePacket
+from dslv_zpdi.core.states import RouteStream
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
 
 from .router import DualStreamRouter, RoutingDecision
@@ -106,15 +109,15 @@ class HDF5Writer:
         """SPEC-007.1 — Documented genesis value for event hash chain."""
         return hashlib.sha256(b"DSLV-ZPDI event-chain genesis v5.0.0").hexdigest()
 
-    def ingest(self, json_payload: str) -> RoutingDecision:
+    def ingest(self, binary_payload: bytes, payload_obj: IngestionPayload) -> RoutingDecision:
         """SPEC-007 — Process single packet through router and persist."""
-        decision = self.router.route(json_payload)
+        decision = self.router.route(payload_obj)
         if decision.packet is not None:
-            integrity_ok = self.verify_packet_integrity(decision.packet, json_payload)
+            integrity_ok = self.verify_packet_integrity(decision.packet, binary_payload, payload_obj)
             if not integrity_ok:
                 self.stats["integrity_failed"] += 1
                 # Reject primary write; log to secondary for forensics
-                self._log_secondary(json_payload, decision)
+                self._log_secondary(binary_payload, decision, payload_obj)
                 return RoutingDecision(
                     RouteStream.SECONDARY.value,
                     "integrity_failed",
@@ -123,16 +126,16 @@ class HDF5Writer:
                 )
 
         if decision.stream == RouteStream.PRIMARY.value and decision.packet is not None:
-            self._write_primary(decision.packet, json_payload)
+            self._write_primary(decision.packet, binary_payload, payload_obj)
             self.stats["primary_written"] += 1
         elif decision.stream == RouteStream.SECONDARY.value:
-            self._log_secondary(json_payload, decision)
+            self._log_secondary(binary_payload, decision, payload_obj)
             self.stats["secondary_logged"] += 1
         else:
             self.stats["rejected"] += 1
         return decision
 
-    def _write_primary(self, packet: CoherencePacket, original_json: str):
+    def _write_primary(self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload):
         """SPEC-007 — Write institutional-grade packet to HDF5 with attestation.
 
         Thread-safe: acquires self._write_lock so that concurrent ingest calls
@@ -143,9 +146,9 @@ class HDF5Writer:
             logger.warning("h5py not installed — primary write skipped")
             return
         with self._write_lock:
-            self._write_primary_locked(packet, original_json)
+            self._write_primary_locked(packet, binary_payload, payload_obj)
 
-    def _write_primary_locked(self, packet: CoherencePacket, original_json: str):
+    def _write_primary_locked(self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload):
         """Inner write — called with _write_lock held."""
         if self.current_file is None or self._file_size_exceeded():
             self._rotate_file()
@@ -162,17 +165,15 @@ class HDF5Writer:
         grp.attrs["dynamic_threshold"] = bl.get("threshold", 0.40)
         grp.attrs["baseline_state"] = bl.get("baseline_state", "UNKNOWN")
 
-        try:
-            payload_dict = json.loads(original_json)
-            event_timestamp = payload_dict.get("timestamp_utc", time.time())
-        except (json.JSONDecodeError, TypeError):
-            event_timestamp = time.time()
+        event_timestamp = payload_obj.timestamp_utc
         grp.create_dataset("timestamp_utc", data=event_timestamp)
+        
+        # Native binary storage
+        import numpy as np
+        grp.create_dataset("raw_payload", data=np.frombuffer(binary_payload, dtype=np.uint8))
 
         # Event hash chain
-        payload_checksum = (
-            payload_dict.get("payload_checksum", "") if isinstance(payload_dict, dict) else ""
-        )
+        payload_checksum = payload_obj.payload_checksum
         content_bytes = json.dumps(
             {
                 "r_local": packet.r_local.tolist()
@@ -231,7 +232,7 @@ class HDF5Writer:
         self.event_count += 1
         logger.info("PRIMARY WRITE: %s (r_smooth=%.4f)", group_name, packet.r_smooth)
 
-    def _log_secondary(self, json_payload: str, decision: RoutingDecision):
+    def _log_secondary(self, binary_payload: bytes, decision: RoutingDecision, payload_obj: IngestionPayload):
         """SPEC-007 — Append quarantined packet to secondary exploratory JSONL stream."""
         quarantine_file = self.secondary_dir / "quarantine.jsonl"
         log_entry = {
@@ -239,7 +240,8 @@ class HDF5Writer:
             "stream": decision.stream,
             "reason": decision.reason,
             "trust_state": decision.trust_state,
-            "payload_snippet": json_payload[:500],
+            "payload_uuid": payload_obj.payload_uuid,
+            "payload_preview_hex": binary_payload[:64].hex(),
         }
         if decision.packet is not None:
             log_entry["r_smooth"] = decision.packet.r_smooth
@@ -376,28 +378,22 @@ class HDF5Writer:
         """SPEC-007 — Return pipeline statistics."""
         return {**self.stats, **self.router.stats}
 
-    def verify_packet_integrity(self, packet: CoherencePacket, original_json: str) -> bool:
+    def verify_packet_integrity(self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload) -> bool:
         """SPEC-010 — Verify payload checksum before persistence."""
-        try:
-            payload_dict = json.loads(original_json)
-            stored_checksum = payload_dict.get("payload_checksum", "")
+        stored_checksum = payload_obj.payload_checksum
 
-            if not stored_checksum:
-                logger.error("SPEC-010 VIOLATION: Missing checksum for %s", packet.payload_uuid)
-                self.stats["checksum_missing"] += 1
-                return False
+        if not stored_checksum:
+            logger.error("SPEC-010 VIOLATION: Missing checksum for %s", packet.payload_uuid)
+            self.stats["checksum_missing"] += 1
+            return False
 
-            # Recompute checksum
-            d = payload_dict.copy()
-            d["payload_checksum"] = ""
-            clean_json = json.dumps(d, sort_keys=True)
-            computed_checksum = hashlib.sha256(clean_json.encode()).hexdigest()
+        # Recompute checksum directly on the exact struct header and payload bytes
+        # Since payload_obj.to_binary() generated binary_payload originally and set the checksum on payload_obj
+        # we can verify that computing blake2b on binary_payload yields the expected value.
+        computed_checksum = hashlib.blake2b(binary_payload, digest_size=32).hexdigest()
 
-            if stored_checksum != computed_checksum:
-                logger.error("SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid)
-                self.stats["checksum_invalid"] += 1
-                return False
-            return True
-        except (json.JSONDecodeError, KeyError):
+        if stored_checksum != computed_checksum:
+            logger.error("SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid)
             self.stats["checksum_invalid"] += 1
             return False
+        return True

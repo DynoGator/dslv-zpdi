@@ -81,8 +81,8 @@ def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter):
                 payload.trust_state = "SECONDARY_QUARANTINED"
                 payload.quarantine_reason = "timing_unhealthy"
 
-            payload_json = payload.to_json()
-            decision = writer.ingest(payload_json)
+            payload_bin = payload.to_binary()
+            decision = writer.ingest(payload_bin, payload)
 
             if decision.stream == "PRIMARY":
                 state.primary_events += 1

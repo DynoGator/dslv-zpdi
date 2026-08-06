@@ -40,6 +40,7 @@ except ImportError:
     FLASK_AVAILABLE = False
 
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 
 logger = logging.getLogger("dslv-zpdi.node-receiver")
 
@@ -137,7 +138,11 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
         payload.setdefault("timestamp_utc", time.time())
 
         node_id = payload["node_id"]
-        decision = _get_writer().ingest(json.dumps(payload))
+        payload.setdefault("sensor_id", "UNKNOWN")
+        payload.setdefault("modality", "unknown")
+        payload.setdefault("payload_uuid", "")
+        p = IngestionPayload(**payload)
+        decision = _get_writer().ingest(p.to_binary(), p)
 
         # Update node registry so the web dashboard can track last-seen time.
         _update_node_registry(node_id)

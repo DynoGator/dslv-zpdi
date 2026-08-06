@@ -178,4 +178,4 @@ class TestHDF5Unavailable:
         writer = HDF5Writer()
         writer.current_file = None
         # Should not raise even though h5py is unavailable
-        writer._write_primary(mock.MagicMock(), "{}")
+        writer._write_primary(mock.MagicMock(), mock.MagicMock(), mock.MagicMock())

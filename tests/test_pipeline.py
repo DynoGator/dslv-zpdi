@@ -47,8 +47,8 @@ def test_serialization_roundtrip():
         gps_locked=True,
         extracted_phases=[0.1],
     )
-    d = json.loads(p.to_json())
-    assert SensorModality(d["modality"]) == SensorModality.RF_SDR
+    d = p.to_binary()
+    assert SensorModality(p.modality) == SensorModality.RF_SDR
     print("  TEST 2 PASS: Serialization ✅")
 
 
@@ -61,7 +61,7 @@ def test_state_machine():
         timestamp_utc=time.time(),
         gps_locked=False,
     )
-    assert wire_to_coherence(p.to_json()) is None
+    assert wire_to_coherence(p) is None
     print("  TEST 3 PASS: State Machine ✅")
 
 
@@ -75,9 +75,9 @@ def test_full_pipeline():
         gps_locked=True,
         extracted_phases=[0.1] * 50,
     )
-    d = json.loads(p.to_json())
-    d["trust_state"] = TrustState.CAL_TRUSTED.value
-    assert DualStreamRouter().route(json.dumps(d)).packet is not None
+    p.trust_state = TrustState.CAL_TRUSTED.value
+    d = p.to_binary()
+    assert DualStreamRouter().route(p).packet is not None
     print("  TEST 4 PASS: Full Pipeline ✅")
 
 

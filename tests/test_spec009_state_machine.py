@@ -1,3 +1,4 @@
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 import json
 import os
 import tempfile
@@ -45,7 +46,7 @@ def test_router_blocks_primary_during_baseline_learning():
         "extracted_phases": [0.1] * 64,
     }
     router = DualStreamRouter()
-    decision = router.route(json.dumps(payload))
+    decision = router.route(IngestionPayload(**payload))
 
     coherence_engine.finalize_baseline(force=True)  # cleanup
 

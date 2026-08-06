@@ -6,7 +6,7 @@ Hardware-anchored ingestion payload with full SHA-256 attestation.
 from __future__ import annotations
 
 import hashlib
-import json
+import struct
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
@@ -54,9 +54,23 @@ class IngestionPayload:
     hardware_tier: int = 1
     trust_state: str = TrustState.ASSEMBLED.value
     quarantine_reason: str | None = None
-    schema_version: str = "3.2"
+    schema_version: str = "4.0"
     payload_checksum: str = ""
-    checksum_algo: str = "sha256"  # SPEC-005A.2a: Full checksum metadata
+    checksum_algo: str = "blake2b"
+
+    # Define binary struct format for zero-copy routing
+    # d: timestamp_utc
+    # Q: ingest_monotonic_ns
+    # d: pps_jitter_ns
+    # d: calibration_age_s
+    # d: drift_percent
+    # 32s: payload_uuid
+    # 16s: node_id
+    # 16s: sensor_id
+    # 16s: modality
+    # B: flags
+    _STRUCT_FMT = "<d Q d d d 32s 16s 16s 16s B"
+    _struct = struct.Struct(_STRUCT_FMT)
 
     def validate(self) -> tuple[str, str | None]:
         """SPEC-003 / SPEC-005A.3 — Validate packet trust state."""
@@ -68,11 +82,11 @@ class IngestionPayload:
         except ValueError:
             return TrustState.KILLED.value, "invalid_modality"
 
-        if self.schema_version not in ("3.1", "3.2"):
+        if self.schema_version not in ("3.1", "3.2", "4.0"):
             return TrustState.SECONDARY_QUARANTINED.value, "schema_version_mismatch"
 
-        if not isinstance(self.raw_value, dict):
-            return TrustState.KILLED.value, "malformed_raw_value"
+        if self.schema_version != "4.0" and not isinstance(self.raw_value, dict):
+            return TrustState.SECONDARY_QUARANTINED.value, "raw_value_not_dict"
 
         if self.extracted_phases is not None:
             if not isinstance(self.extracted_phases, list):
@@ -97,27 +111,50 @@ class IngestionPayload:
 
         return TrustState.ASSEMBLED.value, None
 
-    def to_json(self) -> str:
-        """SPEC-005A.5 — Serialize to JSON with immutable digest handling."""
-        # Create shallow copy to avoid mutating original state
-        raw_copy = self.raw_value.copy() if isinstance(self.raw_value, dict) else {}
+    def to_binary(self) -> bytes:
+        """SPEC-005A.5 — Pack core telemetry into fixed binary struct and append IQ buffer."""
+        flags = 0
+        if self.gps_locked:
+            flags |= (1 << 0)
+        if self.calibration_valid:
+            flags |= (1 << 1)
 
-        # Digest IQ samples if present (always digest; full IQ stays binary/HDF5 only)
-        if "iq_samples" in raw_copy:
-            iq = raw_copy["iq_samples"]
+        # Pack structured header
+        header = self._struct.pack(
+            self.timestamp_utc,
+            self.ingest_monotonic_ns,
+            self.pps_jitter_ns,
+            self.calibration_age_s,
+            self.drift_percent,
+            self.payload_uuid.encode()[:32].ljust(32, b'\0'),
+            self.node_id.encode()[:16].ljust(16, b'\0'),
+            self.sensor_id.encode()[:16].ljust(16, b'\0'),
+            self.modality.encode()[:16].ljust(16, b'\0'),
+            flags
+        )
+
+        iq_bytes = b""
+        if isinstance(self.raw_value, dict) and "iq_samples" in self.raw_value:
+            # We assume iq_samples could already be bytes or numpy arrays in the future,
+            # but for now if it's a list, we pack it fast or leave it as bytes
+            iq = self.raw_value["iq_samples"]
             if isinstance(iq, list):
-                iq_bytes = json.dumps(iq).encode()
-                raw_copy["iq_digest"] = hashlib.sha256(iq_bytes).hexdigest()
-                raw_copy["iq_preview"] = iq[:64]
-                del raw_copy["iq_samples"]
+                # Flatten the list of complex floats
+                import itertools
+                flat = list(itertools.chain.from_iterable(iq))
+                iq_bytes = struct.pack(f"<{len(flat)}f", *flat)
+            elif isinstance(iq, bytes):
+                iq_bytes = iq
+            # Remove IQ from raw_value for downstream if it is a list
+            # We don't deep copy the whole thing, just store the checksum.
+            self.raw_value["iq_digest"] = hashlib.blake2b(iq_bytes, digest_size=32).hexdigest()
+            # Retain a small preview for debug
+            if isinstance(iq, list):
+                self.raw_value["iq_preview"] = iq[:32]
+            del self.raw_value["iq_samples"]
 
-        # Build dict with digested copy
-        d = asdict(self)
-        d["raw_value"] = raw_copy
-        d["payload_checksum"] = ""
-
-        clean_json = json.dumps(d, sort_keys=True)
-        self.payload_checksum = hashlib.sha256(clean_json.encode()).hexdigest()
-        d["payload_checksum"] = self.payload_checksum
-
-        return json.dumps(d, sort_keys=True)
+        # Append IQ payload to the header
+        full_payload = header + iq_bytes
+        self.payload_checksum = hashlib.blake2b(full_payload, digest_size=32).hexdigest()
+        
+        return full_payload

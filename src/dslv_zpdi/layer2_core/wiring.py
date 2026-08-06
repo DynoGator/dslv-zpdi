@@ -10,7 +10,7 @@ Rev 3.1 FIXES:
 import json
 import os
 
-from dslv_zpdi.layer1_ingestion.payload import SensorModality
+from dslv_zpdi.layer1_ingestion.payload import SensorModality, IngestionPayload
 
 from .coherence import CoherencePacket, CoherenceScorer
 
@@ -51,57 +51,46 @@ coherence_engine = CoherenceScorer(
 )
 
 
-def wire_to_coherence(json_payload: str) -> CoherencePacket | None:
-    """SPEC-006.5a — Layer 2 Wiring (Rev 3.1)
+def wire_to_coherence(payload: IngestionPayload) -> CoherencePacket | None:
+    """SPEC-006.5a — Layer 2 Wiring (Rev 4.0 - Binary)
     Called by DualStreamRouter after every Layer 1 emission.
     Never called directly from Layer 1 or Layer 3.
     """
-    if not json_payload:
+    if payload is None:
         return None
-
-    try:
-        payload_dict = json.loads(json_payload)
-    except json.JSONDecodeError:
-        return None
-
-    # Rev 3.1 FIX: Rehydrate enum from string for type-safe comparison
-    modality_str = payload_dict.get('modality', '')
-    try:
-        SensorModality(modality_str)
-    except ValueError:
-        # Unknown modality — if it's a mobile modality, allow it through
-        if modality_str not in {
-            "accel", "magnetometer", "barometer",
-            "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
-        }:
-            return None  # Unknown modality = silent kill
 
     # State machine enforcement (Section 5.2B)
-    trust_state = payload_dict.get('trust_state', '')
-    if trust_state in ["SECONDARY_QUARANTINED", "KILLED"]:
+    if payload.trust_state in ["SECONDARY_QUARANTINED", "KILLED"]:
         return None  # Do not process — these packets go to secondary stream only
-    if trust_state not in ["TIME_TRUSTED", "CAL_TRUSTED"]:
+    if payload.trust_state not in ["TIME_TRUSTED", "CAL_TRUSTED"]:
         return None  # Insufficient trust gate
 
-    # Rev 3.1 FIX: Read pre-extracted phases from Layer 1 (NO Hilbert transform here)
-    phases = payload_dict.get('extracted_phases') or []
+    # Construct payload dict dynamically for coherence engine without json serialization
+    payload_dict = {
+        "node_id": payload.node_id,
+        "modality": payload.modality,
+        "timestamp_utc": payload.timestamp_utc,
+        "payload_uuid": payload.payload_uuid,
+        "trust_state": payload.trust_state
+    }
 
+    phases = payload.extracted_phases or []
     coherence_packet = coherence_engine.update(payload_dict, phases)
     coherence_packet.trust_state = "CORE_PROCESSED"
     return coherence_packet
 
 
-def wire_mobile_to_coherence(payload_dict: dict) -> CoherencePacket | None:
+def wire_mobile_to_coherence(payload: IngestionPayload) -> CoherencePacket | None:
     """Mobile-specific wiring that bypasses the Tier-1 trust gate.
 
     Tier-2 packets are inherently SECONDARY_QUARANTINED, but we still
     compute coherence scores for categorisation (noise / structured /
     anomalous) within the secondary stream per SPEC-007 mobile router.
     """
-    if not payload_dict:
+    if not payload:
         return None
 
-    modality_str = payload_dict.get('modality', '')
+    modality_str = payload.modality
     try:
         SensorModality(modality_str)
     except ValueError:
@@ -111,11 +100,19 @@ def wire_mobile_to_coherence(payload_dict: dict) -> CoherencePacket | None:
         }:
             return None
 
-    trust_state = payload_dict.get('trust_state', '')
+    trust_state = payload.trust_state
     if trust_state == "KILLED":
         return None
 
-    phases = payload_dict.get('extracted_phases') or []
+    payload_dict = {
+        "node_id": payload.node_id,
+        "modality": payload.modality,
+        "timestamp_utc": payload.timestamp_utc,
+        "payload_uuid": payload.payload_uuid,
+        "trust_state": payload.trust_state
+    }
+    
+    phases = payload.extracted_phases or []
     packet = coherence_engine.update(payload_dict, phases)
     packet.trust_state = "CORE_PROCESSED"
     return packet

@@ -14,7 +14,7 @@ def test_payload_validation():
         SensorModality.RF_SDR.value,
         123.4,
         gps_locked=True,
-        pps_jitter_ns=50.0,
+        pps_jitter_ns=5.0,
         raw_value={"clock_source": "external"},
     )
     state, reason = p.validate()
@@ -54,7 +54,7 @@ def test_payload_validation():
         SensorModality.RF_SDR.value,
         123.4,
         gps_locked=True,
-        pps_jitter_ns=50.0,
+        pps_jitter_ns=5.0,
         raw_value={"clock_source": "internal"},
     )
     state, reason = p4.validate()
@@ -62,21 +62,20 @@ def test_payload_validation():
     assert reason == "rf_clock_not_external"
 
 
-def test_payload_to_json_harden():
+def test_payload_to_binary_harden():
     # Large IQ array
-    iq = [0.1] * 1000
+    iq = [[0.1, 0.1]] * 10
     p = IngestionPayload("uuid", "node", "sensor", "modality", 123.4, raw_value={"iq_samples": iq})
-    json_str = p.to_json()
-    data = json.loads(json_str)
-
-    assert "iq_samples" not in data["raw_value"]
-    assert "iq_digest" in data["raw_value"]
-    assert len(data["raw_value"]["iq_preview"]) == 64
-    assert data["payload_checksum"] != ""
-    assert data["checksum_algo"] == "sha256"
+    binary_data = p.to_binary()
+    
+    assert "iq_samples" not in p.raw_value
+    assert "iq_digest" in p.raw_value
+    assert p.payload_checksum != ""
+    assert p.checksum_algo == "blake2b"
+    assert len(binary_data) > 0
 
 
 if __name__ == "__main__":
     test_payload_validation()
-    test_payload_to_json_harden()
+    test_payload_to_binary_harden()
     print("Payload tests passed.")

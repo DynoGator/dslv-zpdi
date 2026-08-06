@@ -140,12 +140,12 @@ class TestPixelNodeBridge:
         sim = PixelSimulator()
         scorer = PixelTrustScorer()
         telem = sim.poll(scorer)
-        payload_dict = telem.to_ingestion_payload(node_id="TEST-PIXEL")
-        assert payload_dict["node_id"] == "TEST-PIXEL"
-        assert payload_dict["modality"] == "gps_pps"
-        assert payload_dict["hardware_tier"] == 2
-        assert payload_dict["raw_value"]["trust_score"] == telem.trust_score
-        assert "payload_checksum" in payload_dict
+        payload = telem.to_ingestion_payload(node_id="TEST-PIXEL")
+        assert payload.node_id == "TEST-PIXEL"
+        assert payload.modality == "gps_pps"
+        assert payload.hardware_tier == 2
+        assert payload.raw_value["trust_score"] == telem.trust_score
+        assert hasattr(payload, "payload_checksum")
 
     def test_payload_modality_mag_when_no_gps(self):
         telem = PixelTelemetry(
@@ -155,5 +155,5 @@ class TestPixelNodeBridge:
             trust_flags=[],
             transport="sim",
         )
-        payload_dict = telem.to_ingestion_payload()
-        assert payload_dict["modality"] == "magnetometer"
+        payload = telem.to_ingestion_payload()
+        assert payload.modality == "magnetometer"

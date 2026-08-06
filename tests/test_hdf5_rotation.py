@@ -1,3 +1,4 @@
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 """Tests for real HDF5 file rotation behavior (SPEC-007)."""
 
 import json
@@ -55,7 +56,7 @@ def test_real_file_rotation():
                         _fake_strftime,
                     ):
                         # First write — should open file_1
-                        decision = writer.ingest(json.dumps({"timestamp_utc": time.time()}))
+                        decision = writer.ingest(b"dummy", IngestionPayload(payload_uuid="uuid", node_id="N1", sensor_id="S1", modality="rf_sdr", timestamp_utc=time.time()))
                 file_1 = writer.current_filepath
                 event_count_1 = writer.event_count
 
@@ -72,7 +73,7 @@ def test_real_file_rotation():
                         "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                         _fake_strftime,
                     ):
-                        decision = writer.ingest(json.dumps({"timestamp_utc": time.time()}))
+                        decision = writer.ingest(b"dummy", IngestionPayload(payload_uuid="uuid", node_id="N1", sensor_id="S1", modality="rf_sdr", timestamp_utc=time.time()))
                 file_2 = writer.current_filepath
                 event_count_2 = writer.event_count
 
@@ -111,7 +112,7 @@ def test_event_count_resets_on_rotation():
                             "dslv_zpdi.layer3_telemetry.hdf5_writer.time.strftime",
                             _fake_strftime,
                         ):
-                            writer.ingest(json.dumps({"timestamp_utc": time.time()}))
+                            writer.ingest(b"dummy", IngestionPayload(payload_uuid="uuid", node_id="N1", sensor_id="S1", modality="rf_sdr", timestamp_utc=time.time()))
                     assert writer.event_count == 1
                     assert writer.current_filepath is not None
         finally:

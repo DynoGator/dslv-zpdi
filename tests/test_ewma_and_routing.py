@@ -1,3 +1,4 @@
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 """Tests for EWMA smoothing (SPEC-006 Section 5.5.3),
 weighted global R(t) (SPEC-006 Section 5.5.2),
 and two-stream routing enforcement (SPEC-003/SPEC-007)."""
@@ -90,7 +91,7 @@ def test_router_only_two_streams():
         "extracted_phases": [0.5, 1.5, 2.5, 3.5] * 10,
     }
 
-    decision = router.route(json.dumps(payload))
+    decision = router.route(IngestionPayload(**payload))
     assert decision.stream in (RouteStream.PRIMARY.value, RouteStream.SECONDARY.value)
     # No third stream allowed
     assert decision.stream != "PRIMARY_CANDIDATE"
@@ -113,5 +114,5 @@ def test_structured_background_routes_to_secondary():
         "extracted_phases": [0.5, 1.5, 2.5, 3.5] * 10,
     }
 
-    decision = router.route(json.dumps(payload))
+    decision = router.route(IngestionPayload(**payload))
     assert decision.stream == RouteStream.SECONDARY.value
