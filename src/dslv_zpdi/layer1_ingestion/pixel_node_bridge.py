@@ -34,8 +34,11 @@ import math
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 
 logger = logging.getLogger("dslv-zpdi.pixel-bridge")
 

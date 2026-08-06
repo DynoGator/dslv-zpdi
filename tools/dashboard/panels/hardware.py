@@ -159,7 +159,7 @@ def _sdr_info() -> dict:
     pluto = _pluto_info()
     if pluto["detected"]:
         return pluto
-    
+
     libresdr = _libresdr_info()
     if libresdr["detected"]:
         return libresdr
@@ -167,7 +167,7 @@ def _sdr_info() -> dict:
     hackrf = _hackrf_info()
     if hackrf["detected"]:
         return hackrf
-        
+
     return pluto
 
 

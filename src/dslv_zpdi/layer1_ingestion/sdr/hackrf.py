@@ -1,9 +1,10 @@
 """SPEC-004A.HACKRF — HackRF One backend."""
 
-import subprocess
-import time
 import os
+import subprocess
 import tempfile
+import time
+
 import numpy as np
 
 from dslv_zpdi.core.exceptions import HardwareInitializationError
@@ -15,6 +16,7 @@ from dslv_zpdi.layer1_ingestion.sdr.capabilities import (
 )
 from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
 from dslv_zpdi.layer1_ingestion.timing.attestation import ClockAttestation
+
 
 class HackrfBackend(SdrBackend):
     """SPEC-004A.HACKRF — HackRF backend class."""
@@ -33,7 +35,7 @@ class HackrfBackend(SdrBackend):
         result = subprocess.run(["hackrf_info"], capture_output=True, text=True)
         if result.returncode != 0 or "Found HackRF" not in result.stdout:
             raise HardwareInitializationError("HackRF not found")
-            
+
         return SdrCapabilities(
             backend_name="hackrf",
             channels=1,
@@ -78,36 +80,36 @@ class HackrfBackend(SdrBackend):
             num_samples = request.num_samples
 
         out_file = os.path.join(self._temp_dir.name, "capture.iq")
-        
+
         mono_start = time.monotonic_ns()
         utc_start = time.time()
-        
-        # NOTE: -a 0 because AMP IS BLOWN. 
+
+        # NOTE: -a 0 because AMP IS BLOWN.
         # -l 16 sets IF gain, -g [gain] sets VGA gain
         cmd = [
             "hackrf_transfer",
             "-r", out_file,
             "-f", str(int(request.center_frequency_hz)),
             "-s", str(int(request.sample_rate_hz)),
-            "-a", "0", 
+            "-a", "0",
             "-g", str(int(min(max(request.hardware_gain_db, 0), 62))),
             "-n", str(int(num_samples))
         ]
-        
+
         res = subprocess.run(cmd, capture_output=True)
         if res.returncode != 0:
             raise HardwareInitializationError(f"hackrf_transfer failed: {res.stderr}")
-            
+
         mono_end = time.monotonic_ns()
-        utc_end = time.time()
-        
+        time.time()
+
         # hackrf gives 8-bit signed IQ interleaving (I, Q, I, Q)
         raw = np.fromfile(out_file, dtype=np.int8)
-        
+
         # pad if short
         if len(raw) < num_samples * 2:
             raw = np.pad(raw, (0, num_samples * 2 - len(raw)))
-            
+
         # Convert to complex64
         i_data = raw[0::2].astype(np.float32)
         q_data = raw[1::2].astype(np.float32)

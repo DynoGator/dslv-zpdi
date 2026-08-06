@@ -4,9 +4,10 @@ Includes intelligent presets for various demodulation modes (AM, FM, LSB, USB, C
 Production ready module optimized for ARM64, Raspberry Pi 5 (Debian Trixie), Pluto SDR, and Leo Bodnar LBE-1421.
 """
 
-from typing import Any
-import numpy as np
 import logging
+from typing import Any
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class Demodulator:
 
     def toggle_tx(self, enable: bool):
         """
-        Enable or disable MIMO TX function. 
+        Enable or disable MIMO TX function.
         WARNING: Restricted activity. Ensure regulatory compliance.
         """
         self.mimo_tx_enabled = enable
@@ -74,7 +75,7 @@ class Demodulator:
             return {"status": "inactive", "output": None}
 
         self.rx_active = True
-        
+
         # Stub for complex DSP processing (e.g., ADSB payload decoding, NFM squelch evaluation)
         output_data = np.zeros(len(iq_samples), dtype=np.float32)
 
@@ -93,7 +94,7 @@ class Demodulator:
         """
         if not self.mimo_tx_enabled or not self.active_mode or not self.current_preset:
             return None
-        
+
         # Stub for TX modulation (e.g. QAM constellation mapping, FM modulation)
         # Returns an array of complex64 IQ samples ready for the Pluto SDR DMA
         num_samples = len(payload) * 8

@@ -49,6 +49,7 @@ from dashboard.config import DashboardConfig, load_config
 from dashboard.mobile_bridge import MobileBridge
 from dashboard.panels.anomaly import RFAnomalyPanel
 from dashboard.panels.bci import BCIPanel
+from dashboard.panels.demod import DemodPanel
 from dashboard.panels.hardware import HardwarePanel
 from dashboard.panels.logs import LogPanel
 from dashboard.panels.mobile import MobilePanel
@@ -60,7 +61,6 @@ from dashboard.panels.storm import StormPanel
 from dashboard.panels.system import SystemPanel
 from dashboard.panels.waterfall import WaterfallPanel
 from dashboard.panels.weather import SpaceWeatherPanel
-from dashboard.panels.demod import DemodPanel
 
 
 def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
@@ -423,7 +423,7 @@ class Dashboard:
         if getattr(cfg.panels, "settings", True):
             self.settings_p = SettingsPanel(border_style=cfg.theme.accent)
             self._panels["settings"] = self.settings_p
-        
+
         self.demod_p = DemodPanel()
         self._panels["demod"] = self.demod_p
 

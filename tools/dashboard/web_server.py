@@ -21,7 +21,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 try:
-    from flask import Flask, Response, request, jsonify
+    from flask import Flask, Response, jsonify, request
     FLASK_AVAILABLE = True
 except ImportError:
     FLASK_AVAILABLE = False
@@ -74,36 +74,36 @@ _HTML = """<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0b0f19; --card: #151b2b; --card-hover: #1e253c; 
+    --bg: #0b0f19; --card: #151b2b; --card-hover: #1e253c;
     --border: #2a3441; --cyan: #00e5ff; --cyan-dim: #00e5ff33;
-    --green: #00e676; --yellow: #ffea00; --red: #ff1744; 
+    --green: #00e676; --yellow: #ffea00; --red: #ff1744;
     --text: #e2e8f0; --dim: #94a3b8; --accent: #3b82f6;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { 
-    background: var(--bg); color: var(--text); 
-    font-family: 'Inter', sans-serif; font-size: 14px; 
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 14px;
     padding: 20px; line-height: 1.5;
   }
-  h1 { 
-    color: var(--cyan); font-size: 24px; margin-bottom: 20px; 
+  h1 {
+    color: var(--cyan); font-size: 24px; margin-bottom: 20px;
     letter-spacing: 2px; font-weight: 800; text-transform: uppercase;
     text-shadow: 0 0 10px var(--cyan-dim);
   }
   .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .grid { 
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
-    gap: 16px; margin-bottom: 20px; 
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px; margin-bottom: 20px;
   }
-  .card { 
-    background: var(--card); border: 1px solid var(--border); 
-    border-radius: 12px; padding: 16px; 
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
     transition: transform 0.2s, box-shadow 0.2s;
   }
   .card:hover { transform: translateY(-2px); box-shadow: 0 8px 12px -2px rgba(0,0,0,0.4); border-color: #3b4b5e; }
-  .card h2 { 
-    font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; 
+  .card h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;
     color: var(--cyan); margin-bottom: 12px; font-weight: 600;
     border-bottom: 1px solid var(--border); padding-bottom: 8px;
   }
@@ -113,8 +113,8 @@ _HTML = """<!DOCTYPE html>
   .ok { color: var(--green); } .warn { color: var(--yellow); } .bad { color: var(--red); }
   .cyan { color: var(--cyan); }
   #ts { color: var(--dim); font-size: 12px; margin-top: 10px; text-align: center; }
-  .badge { 
-    display: inline-block; padding: 2px 8px; border-radius: 12px; 
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
     font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-left: 4px;
     text-transform: uppercase;
   }
@@ -123,11 +123,11 @@ _HTML = """<!DOCTYPE html>
   .badge-red { background: rgba(255, 23, 68, 0.15); color: var(--red); border: 1px solid rgba(255,23,68,0.3); }
   .badge-blue { background: rgba(0, 229, 255, 0.15); color: var(--cyan); border: 1px solid rgba(0,229,255,0.3); }
   hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-  
+
   /* Buttons & Controls */
   button {
-    background: var(--border); color: var(--text); border: none; 
-    padding: 6px 12px; border-radius: 6px; cursor: pointer; 
+    background: var(--border); color: var(--text); border: none;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer;
     font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
     transition: all 0.2s;
   }
@@ -140,12 +140,12 @@ _HTML = """<!DOCTYPE html>
     background: #0b0f19; color: var(--cyan); border: 1px solid var(--border);
     padding: 6px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
   }
-  
+
   /* Demodulator UI */
   .demod-panel { background: rgba(0,229,255,0.05); border: 1px solid var(--cyan-dim); border-radius: 8px; padding: 12px; margin-top: 12px; }
   .demod-panel h3 { font-size: 12px; color: var(--cyan); margin-bottom: 8px; text-transform: uppercase; }
   .preset-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-  
+
 </style>
 </head>
 <body>
@@ -159,13 +159,13 @@ _HTML = """<!DOCTYPE html>
 <div class="grid" id="panels">
   <!-- System -->
   <div class="card" id="c-system"><h2>System</h2><p class="val cyan">Loading…</p></div>
-  
+
   <!-- Pipeline -->
   <div class="card" id="c-pipeline"><h2>Pipeline</h2><p class="val cyan">Loading…</p></div>
-  
+
   <!-- Swarm Nodes -->
   <div class="card" id="c-nodes"><h2>Swarm Nodes</h2><p class="val cyan">Loading…</p></div>
-  
+
   <!-- SDR Control Panel -->
   <div class="card" id="c-sdr-ctrl">
     <h2>SDR Hardware & Demodulation</h2>
@@ -184,7 +184,7 @@ _HTML = """<!DOCTYPE html>
     <div class="btn-group" style="justify-content: flex-end;">
       <button class="btn-danger" onclick="rebootSDR()">Soft Reboot Hardware</button>
     </div>
-    
+
     <div class="demod-panel">
       <h3>Demodulation Control Center</h3>
       <div class="row" style="margin-bottom: 12px;">
@@ -223,7 +223,7 @@ _HTML = """<!DOCTYPE html>
       <audio id="audio-player" style="display: none;" controls preload="none"></audio>
     </div>
   </div>
-  
+
   <!-- UPS -->
   <div class="card" id="c-ups"><h2>UPS / Power</h2><p class="val cyan">Loading…</p></div>
 </div>
@@ -252,7 +252,7 @@ async function refresh() {
     const n = d.nodes || {};
     const sdr = d.sdr || {};
     const u = d.ups || {};
-    
+
     // System Panel
     document.getElementById('c-system').innerHTML =
       '<h2>System</h2>'+
@@ -365,7 +365,7 @@ function toggleAudio() {
   const player = document.getElementById('audio-player');
   const btn = document.getElementById('audio-btn');
   isAudioPlaying = !isAudioPlaying;
-  
+
   if (isAudioPlaying) {
     player.src = '/api/audio/stream?t=' + Date.now();
     player.play().catch(e => {
@@ -398,7 +398,8 @@ setInterval(refresh, 5000); // 5 sec refresh as requested
 def _probe_node(probe_url: str, timeout: float = 2.0) -> tuple[bool, int | None]:
     try:
         parsed = urlparse(probe_url)
-        if parsed.scheme not in {"http", "https"}: return False, None
+        if parsed.scheme not in {"http", "https"}:
+            return False, None
         t0 = time.monotonic()
         req = urllib.request.Request(probe_url, method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -418,7 +419,7 @@ def _get_pi_ip() -> str:
 def _get_status() -> dict:
     status: dict = {}
     health: dict = {}
-    
+
     # Check for health.json or assume active if processes are running
     health_paths = ["/run/dslv-zpdi/health.json", "/tmp/health.json", "./logs/health.jsonl"]
     for hpath in health_paths:
@@ -426,9 +427,10 @@ def _get_status() -> dict:
             if os.path.exists(hpath):
                 # if it's jsonl, read last line
                 if hpath.endswith('.jsonl'):
-                    with open(hpath, 'r') as f:
+                    with open(hpath) as f:
                         lines = f.readlines()
-                        if lines: health = json.loads(lines[-1])
+                        if lines:
+                            health = json.loads(lines[-1])
                 else:
                     with open(hpath) as f:
                         health = json.load(f)
@@ -460,7 +462,7 @@ def _get_status() -> dict:
     try:
         cr = subprocess.run(["pgrep", "-f", "tier1_ingestion_server.py"], capture_output=True)
         active = (cr.returncode == 0) or bool(health)
-    except:
+    except Exception:
         active = bool(health)
 
     status["pipeline"] = {
@@ -492,7 +494,7 @@ def _get_status() -> dict:
             "probe_ms": latency
         })
     status["nodes"] = {"registered_nodes": probed_nodes}
-    
+
     return status
 
 
@@ -514,9 +516,12 @@ def create_app() -> Flask:
     def update_sdr_config():
         data = request.json
         if data:
-            if "active_device" in data: GLOBAL_SDR_CONFIG["active_device"] = data["active_device"]
-            if "center_hz" in data: GLOBAL_SDR_CONFIG["center_hz"] = data["center_hz"]
-            if "demod_mode" in data: GLOBAL_SDR_CONFIG["demod_mode"] = data["demod_mode"]
+            if "active_device" in data:
+                GLOBAL_SDR_CONFIG["active_device"] = data["active_device"]
+            if "center_hz" in data:
+                GLOBAL_SDR_CONFIG["center_hz"] = data["center_hz"]
+            if "demod_mode" in data:
+                GLOBAL_SDR_CONFIG["demod_mode"] = data["demod_mode"]
         return jsonify({"status": "ok"})
 
     @app.route("/api/sdr/preset", methods=["POST"])
@@ -540,8 +545,8 @@ def create_app() -> Flask:
     def audio_stream():
         # Simulated audio stream endpoint that would normally route samples from the demodulator
         # For now, it returns a 404 or a silent wav stream to satisfy the UI player
-        import wave
         import io
+        import wave
         buf = io.BytesIO()
         with wave.open(buf, 'wb') as wav:
             wav.setnchannels(1)

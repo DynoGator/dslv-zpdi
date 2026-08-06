@@ -1,10 +1,9 @@
-from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
-import json
 import os
 import tempfile
 import time
 import uuid
 
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.coherence import CoherenceScorer
 from dslv_zpdi.layer3_telemetry.router import DualStreamRouter
 

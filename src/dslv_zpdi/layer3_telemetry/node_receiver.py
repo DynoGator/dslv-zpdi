@@ -39,8 +39,8 @@ try:
 except ImportError:
     FLASK_AVAILABLE = False
 
-from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
+from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
 
 logger = logging.getLogger("dslv-zpdi.node-receiver")
 

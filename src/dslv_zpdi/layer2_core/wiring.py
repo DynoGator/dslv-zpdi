@@ -7,10 +7,9 @@ Rev 3.1 FIXES:
   - Phase extraction REMOVED (phases come from Layer 1 via extracted_phases)
   - No scipy imports (Layer 2 is hardware-agnostic)
 """
-import json
 import os
 
-from dslv_zpdi.layer1_ingestion.payload import SensorModality, IngestionPayload
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
 from .coherence import CoherencePacket, CoherenceScorer
 
@@ -111,7 +110,7 @@ def wire_mobile_to_coherence(payload: IngestionPayload) -> CoherencePacket | Non
         "payload_uuid": payload.payload_uuid,
         "trust_state": payload.trust_state
     }
-    
+
     phases = payload.extracted_phases or []
     packet = coherence_engine.update(payload_dict, phases)
     packet.trust_state = "CORE_PROCESSED"

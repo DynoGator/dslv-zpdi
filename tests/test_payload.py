@@ -1,6 +1,5 @@
 """Unit tests for IngestionPayload contract."""
 
-import json
 
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
@@ -67,7 +66,7 @@ def test_payload_to_binary_harden():
     iq = [[0.1, 0.1]] * 10
     p = IngestionPayload("uuid", "node", "sensor", "modality", 123.4, raw_value={"iq_samples": iq})
     binary_data = p.to_binary()
-    
+
     assert "iq_samples" not in p.raw_value
     assert "iq_digest" in p.raw_value
     assert p.payload_checksum != ""

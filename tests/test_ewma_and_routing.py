@@ -1,13 +1,12 @@
-from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 """Tests for EWMA smoothing (SPEC-006 Section 5.5.3),
 weighted global R(t) (SPEC-006 Section 5.5.2),
 and two-stream routing enforcement (SPEC-003/SPEC-007)."""
 
-import json
 import time
 import uuid
 
 from dslv_zpdi.core.states import RouteStream, TrustState
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.coherence import CoherenceScorer
 from dslv_zpdi.layer3_telemetry.router import DualStreamRouter
 

@@ -19,8 +19,6 @@ from dslv_zpdi.core.key_provider import DevelopmentKeyProvider, KeyProvider
 from dslv_zpdi.core.states import RouteStream
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
-from dslv_zpdi.core.states import RouteStream
-from dslv_zpdi.layer2_core.coherence import CoherencePacket
 
 from .router import DualStreamRouter, RoutingDecision
 
@@ -167,7 +165,7 @@ class HDF5Writer:
 
         event_timestamp = payload_obj.timestamp_utc
         grp.create_dataset("timestamp_utc", data=event_timestamp)
-        
+
         # Native binary storage
         import numpy as np
         grp.create_dataset("raw_payload", data=np.frombuffer(binary_payload, dtype=np.uint8))

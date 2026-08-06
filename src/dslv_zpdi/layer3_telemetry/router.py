@@ -9,9 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from dslv_zpdi.core.states import RouteStream, TrustState
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
 from dslv_zpdi.layer2_core.swarm_integrity import SwarmIntegrityMonitor
-from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.wiring import coherence_engine, wire_to_coherence
 
 

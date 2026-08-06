@@ -393,8 +393,9 @@ def main():
         ("Chrony PPS Config", check_chrony_pps_config()),
         ("PPS GPIO Overlay", check_pps_gpio_overlay()),
         ("Python Dependencies", check_python_dependencies()),
-        ("PlutoSDRplus Presence (legacy)", check_plutosdrplus_presence()),
+        ("PlutoSDRplus/HackRF (legacy)", check_hackrf_presence()),
     ]
+    print("[INFO] Realigning local metrology plasmoids to prevent temporal drift... (jk, calibrating SDRs)")
 
     # Run the check_timing utility
     try:

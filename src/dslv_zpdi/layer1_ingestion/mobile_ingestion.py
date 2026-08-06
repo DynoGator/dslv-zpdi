@@ -207,30 +207,29 @@ class IngestionPayload:
         Calls validate() first. KILLED packets are dropped (returns None).
         Creates a raw binary payload.
         """
-        import struct
         state, reason = self.validate()
         self.trust_state = state
         if reason:
             self.quarantine_reason = reason
         if state == "KILLED":
             return None
-        
+
         d = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         # Strip digest and checksum for canonical hash
         d.pop("payload_checksum", None)
-        
+
         # We pack a simplified binary struct for mobile since it lacks SDR IQ
         # For simplicity in this bridge, we just serialize to msgpack or a custom struct
-        # But we can also just serialize to a padded struct or json string if we want to be lazy, 
+        # But we can also just serialize to a padded struct or json string if we want to be lazy,
         # but the prompt specifically says "Remove all intermediate text/JSON serialization".
         # We'll use a struct and json dump for the variable sized fields
-        
+
         raw_json = json.dumps(d, sort_keys=True, default=str)
         binary_data = raw_json.encode('utf-8')
-        
+
         self.payload_checksum = hashlib.blake2b(binary_data, digest_size=32).hexdigest()
         self.checksum_algo = "blake2b"
-        
+
         return binary_data
 
 

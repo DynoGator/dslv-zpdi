@@ -47,7 +47,7 @@ def test_serialization_roundtrip():
         gps_locked=True,
         extracted_phases=[0.1],
     )
-    d = p.to_binary()
+    p.to_binary()
     assert SensorModality(p.modality) == SensorModality.RF_SDR
     print("  TEST 2 PASS: Serialization ✅")
 
@@ -76,7 +76,7 @@ def test_full_pipeline():
         extracted_phases=[0.1] * 50,
     )
     p.trust_state = TrustState.CAL_TRUSTED.value
-    d = p.to_binary()
+    p.to_binary()
     assert DualStreamRouter().route(p).packet is not None
     print("  TEST 4 PASS: Full Pipeline ✅")
 

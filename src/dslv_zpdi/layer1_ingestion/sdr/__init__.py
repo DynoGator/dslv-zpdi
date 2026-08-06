@@ -7,6 +7,7 @@ from dslv_zpdi.layer1_ingestion.sdr.capabilities import (
     SdrCapabilities,
 )
 from dslv_zpdi.layer1_ingestion.sdr.capture_result import CaptureResult, SdrHealth
+from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
 from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
 from dslv_zpdi.layer1_ingestion.sdr.qualification import (
     DimensionResult,
@@ -15,7 +16,6 @@ from dslv_zpdi.layer1_ingestion.sdr.qualification import (
     Tier1QualificationPolicy,
 )
 from dslv_zpdi.layer1_ingestion.sdr.simulated import SimulatedSdrBackend
-from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
 
 __all__ = [
     "SdrBackend",

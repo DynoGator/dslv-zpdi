@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -156,5 +156,5 @@ class IngestionPayload:
         # Append IQ payload to the header
         full_payload = header + iq_bytes
         self.payload_checksum = hashlib.blake2b(full_payload, digest_size=32).hexdigest()
-        
+
         return full_payload
