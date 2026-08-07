@@ -1,3 +1,4 @@
+> **SUPERSEDED by MASTER_SPEC.md**
 # DSLV-ZPDI — LIVING MASTER DOCUMENT
 
 **Document Role:** Unified Master Binder

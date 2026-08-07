@@ -17,12 +17,13 @@ coverage.xml
 # dashboard stdout capture files (runtime artifacts)
 data/
 dist/
+docs/audits/*.txt
 !docs/validation-logs/*.log
 .DS_Store
 *.egg-info/
 .env
 env/
-GEMINI-HOME/
+GEM-HOME/
 .grok/
 *.h5
 *.hdf5

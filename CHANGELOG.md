@@ -845,3 +845,571 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 - Phase 1 Software Sandbox officially sealed.
 - HDF5Writer with cryptographic attestation deployed.
 - Dual-Stream Protocol (quarantine vs kill) enforced.
+# DSLV-ZPDI Release Notes: v5.0.0
+**Date:** 2026-04-09  
+**Revision:** Rev 5.0.2 (Airtight Baseline)
+
+## 🚀 Overview
+Version 4.0.2 introduces a robust, unified installer script (`install_dslv_zpdi.sh`) that automates the deployment, dependency management, and hardware audit protocols for Tier 1 Anchor Nodes. This release also synchronizes the entire repository with the Rev 5.0.2 baseline, ensuring 100% compliance with SPEC-004A.1 timing mandates.
+
+## 🛠️ Key Changes
+1. **Unified Installer Deployed:**
+   - Automates `apt` dependency installation for PTP/timing.
+   - Handles `python` venv creation and package management.
+   - Implements hardware-safe detection (CM4, CM5, Pi 4, Pi 5).
+   - Includes `--simulator` mode for non-hardware validation.
+2. **Version Alignment:**
+   - Bumped version to 4.0.2 across `pyproject.toml`, `README.md`, `CHANGELOG.md`, and all `tools/`.
+   - Updated `V3_DSLV-ZPDI_LIVING_MASTER.md` with Session 19 turnover notes.
+3. **Hardware Auditing:**
+   - Installer now validates `igb` driver, `udev` rules, and PTP jitter (<50ns) via integrated Tier 1 audit.
+4. **Git Protocol Hardening:**
+   - Automated `git safe.directory` configuration for root-level execution.
+
+## 🧪 Verification & QA
+- **Regression Suite:** All 16+ integration and unit tests passed with 100% success rate.
+- **Orphan Checker:** 100% SPEC-ID compliance verified (no orphaned claims).
+- **Installer Logic:** Verified in simulated environment with `--simulator` and `--skip-apt` flags.
+
+## 📦 Installation
+```bash
+sudo ./install_dslv_zpdi.sh --tier1
+```
+
+---
+**Status:** Software is 100% PRODUCTION READY.
+**Next Steps:** Proceed to physical timing surgery and node commissioning.
+# DSLV-ZPDI Release Notes — v5.0.0
+
+**Revision:** Rev 5.0.0 (LBE-1421 Hardware Pivot)
+**Date:** 2026-04-11
+**Codename:** LBE-1421
+
+## Summary
+
+Version 4.2.0 implements the mandatory hardware migration from the Leo Bodnar Mini GPSDO to the **Leo Bodnar LBE-1421 GPSDO** across the entire project. This update eliminates the fragile Mini-USB connection, adds software-observable NMEA telemetry, and leverages the LBE-1421's native 3.3V CMOS output for direct Pi 5 GPIO compatibility without level-shifting.
+
+Additionally, this release introduces the RF & Magnetic Shielding design documentation for the cyberdeck chassis build.
+
+## Breaking Changes
+
+- **GPSDO Model:** Leo Bodnar Mini GPSDO is formally **deprecated**. All Tier 1 deployments must use the LBE-1421.
+- **Dependencies:** `pyrtlsdr` removed from core dependencies (Tier 2 only). Replaced with `pyPlutoSDRplus` as core SDR dependency.
+- **BOM Updated:** ANT500 antenna, SMA cabling, and jumper wires added to mandatory Tier 1 BOM.
+
+## Changes
+
+### Hardware
+- Migrated Clock Authority from Leo Bodnar Mini GPSDO to **LBE-1421 GPSDO** (USB-C, NMEA, 3.3V CMOS)
+- Added Great Scott Gadgets **ANT500** antenna (75 MHz - 1 GHz) to Tier 1 BOM
+- Added SMA Male-to-Male coaxial cable (50 Ohm, ≤ 1FT) specification
+- Added premium F-to-F jumper wire (2.54mm pitch) specification for PPS interconnect
+- Updated physical routing protocol with LBE-1421-specific wiring instructions
+- Removed level-shifter requirement for PPS line (LBE-1421 outputs 3.3V natively)
+
+### Software
+- Added `verify_nmea_telemetry()` method to `HardwareHAL` for LBE-1421 NMEA stream verification
+- Added NMEA check to `provision_tier1.py` validation suite
+- Updated `hal_hardware.py` source strings from `gpsdo_leo_bodnar_mini` to `gpsdo_leo_bodnar_lbe1420`
+- Removed `pyrtlsdr` from core dependencies (moved to optional/Tier 2)
+- Added `pyPlutoSDRplus>=1.0.0` to core dependencies
+- Added Python 3.12/3.13 classifiers to pyproject.toml
+- Updated installer script to Rev 5.0.0, removed `rtl-sdr`/`librtlsdr0` from base packages
+
+### Documentation
+- Created `docs/HARDWARE_CHANGE_JUSTIFICATION.md` (SPEC-UPDATE-PHASE-2A-LBE-1421)
+- Created `docs/RF_MAGNETIC_SHIELDING.md` — cyberdeck chassis shielding design
+- Updated all hardware references across 20+ files from Mini GPSDO to LBE-1421
+- Synchronized version strings to 4.2.0 across pyproject.toml, README, installer, tests, specs, and tools
+- Updated RP1 voltage warnings to reflect LBE-1421 native 3.3V compatibility
+
+### Version Alignment
+- `pyproject.toml`: 4.0.2.4 → 4.2.0
+- `README.md`: Rev 5.0-PIVOT → Rev 5.0.0
+- `install_dslv_zpdi.sh`: Rev 5.0.2.4 → Rev 5.0.0
+- `CONTRIBUTING.md`: Rev 5.0.2 → Rev 5.0.0
+- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 5.0.2 → Rev 5.0.0
+- All HAL modules: Rev 5.0-FORGE/4.1-PIVOT → Rev 5.0-LBE-1421
+
+## Validation
+
+- 31/31 tests passing
+- SPEC-ID orphan checker: clean
+- Version sync: aligned
+# DSLV-ZPDI Release Notes — v5.0.0
+
+**Revision:** Rev 5.0.1 (Dependency Hotfix)
+**Date:** 2026-04-15
+**Codename:** LBE-1421-HOTFIX
+
+## Summary
+
+Version 4.2.1 is a maintenance release that corrects an invalid dependency requirement in the core software stack. Version 4.2.0 incorrectly specified `pyPlutoSDRplus>=1.0.0`, which is not currently available on PyPI (latest stable is 0.2.0). This prevented clean installation via `pip` and the automated installer.
+
+## Changes
+
+### Software
+- Updated `pyproject.toml` and `requirements.txt` to require `pyPlutoSDRplus>=0.2.0`.
+- Verified 100% test pass rate with the corrected dependency.
+
+### Installation
+- Updated `install_dslv_zpdi.sh` to Rev 5.0.1.
+- Validated installer in `--simulator` mode.
+
+## Version Alignment
+- `pyproject.toml`: 4.2.0 → 4.2.1
+- `README.md`: Rev 5.0.0 → Rev 5.0.1
+- `install_dslv_zpdi.sh`: Rev 5.0.0 → Rev 5.0.1
+- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 5.0.0 → Rev 5.0.1
+
+## Validation
+- 31/31 tests passing
+- SPEC-ID orphan checker: clean
+- Version sync: aligned
+# DSLV-ZPDI Release Notes — v5.0.0
+
+**Revision:** Rev 5.0.0 (Multi-OS Compliance & Installer Hardening)
+**Date:** 2026-04-15
+**Codename:** MULTI-OS-PIVOT
+
+## Summary
+
+Version 4.3.0 introduces a hardened, multi-OS compatible deployment architecture. It formally validates and supports **Raspberry Pi OS Trixie (Debian 13)** alongside **Bookworm (Debian 12)**. This release also addresses the "SoapySDR Venv Isolation" problem by introducing an automated linkage layer for hardware-agnostic SDR drivers.
+
+## Changes
+
+### Installation & Deployment
+- **OS Detection:** `install_dslv_zpdi.sh` now detects Debian version and codename to ensure path compliance (e.g., firmware config location).
+- **SoapySDR Linkage:** Automatically symlinks system `python3-soapysdr` into the project's virtual environment. This enables the high-performance C++ bindings to be used within the isolated Python environment without requiring complex source builds.
+- **Improved venv creation:** Hardened venv setup for Python 3.12/3.13 compatibility.
+
+### Compatibility
+- **Trixie (Debian 13) Support:** Validated on Python 3.13.5. All core algorithms (Kuramoto coherence, HDF5 persistence) are verified stable.
+- **Bookworm (Debian 12) Support:** Retained 100% compatibility for existing Phase 2A deployments.
+
+## Version Alignment
+- `pyproject.toml`: 4.2.1 → 4.3.0
+- `README.md`: Rev 5.0.1 → Rev 5.0.0
+- `install_dslv_zpdi.sh`: Rev 5.0.1 → Rev 5.0.0
+- `MASTER_SPEC.md` / `V3_DSLV-ZPDI_LIVING_MASTER.md`: Rev 5.0.1 → Rev 5.0.0
+
+## Validation
+- 31/31 tests passing on Trixie (Python 3.13)
+- SPEC-ID orphan checker: clean
+- Version sync: aligned
+- SoapySDR venv linkage: VERIFIED
+# Release Notes v5.0.0
+
+**Date:** 2026-04-15
+
+## Summary
+Production pipeline loop, live HardwareHAL wiring, canonical HAL factory, field baseline capture script, installer hardening, and modality expansion hooks.
+
+## Added
+- `src/dslv_zpdi/main_pipeline.py` — SPEC-011 production pipeline loop with `--field` baseline mode.
+- `tools/capture_baseline.py` — 72 h passive baseline capture script (SPEC-009.1).
+- `src/dslv_zpdi/layer1_ingestion/hal_factory.py` — canonical SPEC-005A.4 factory with typed `get_hal()`.
+- Hilbert phase extraction in `HardwareHAL` and `SimulatedHAL` (Layer 1 per SPEC-005).
+- Thermal/acoustic ingest hooks in `HardwareHAL` (Layer 1 modality expansion).
+- udev rules deployment (`99-pps.rules`, `52-PlutoSDRplus.rules`) and `systemctl enable chrony` in installer.
+- CI matrix expansion for Python 3.10–3.13 and Pi 5 self-hosted hardware runners.
+- RP1 3.3V hard enforcement guard in `provision_tier1.py` and build sheet.
+
+## Changed
+- `hal_hardware.py` — integrated NMEA telemetry into `ingest_gps_pps()`, 64-item IQ preview, Hilbert phase extraction.
+- `payload.py`, `tier1_policy.py`, `hdf5_writer.py` — schema bumped to 3.2.
+- Version alignment to Rev 5.0.0 across all canonical sources.
+# Release Notes v5.0.0
+
+**Date:** 2026-04-24
+
+## Summary
+LBE-1421 hardened operations stack with fully instrumented dashboard, automated email telemetry pipeline, interactive geospatial mapping, hardened project launcher, and field baseline coherence integration.
+
+## Added
+- **Dashboard v2** (`tools/dashboard/`)
+  - 5" DSI-optimized layout with compact/full banner modes and startup animation.
+  - NOAA Space Weather integration (`noaa.py`) for real-time Kp, solar wind, and aurora alerts.
+  - New panels: RF Anomaly, Storm Watch, Weather Overlay, Waterfall spectrogram, enhanced Hardware/Logs/Notifications/Pipeline/System views.
+  - `config.py` with TOML-based runtime configuration (`config/dashboard.toml.example`).
+- **Auto-Email Pipeline** (`tools/mailer/`)
+  - Modular backends (`backends.py`) supporting SMTP, SendGrid, and AWS SES.
+  - `send_data.py` — daily/alert-triggered telemetry dispatch with HDF5 attachment support.
+  - `configure.py` — interactive TUI for credential and recipient management.
+  - `send_now.sh` — one-shot manual send wrapper.
+  - Example config: `config/email.example.yaml`.
+- **Interactive Mapping** (`tools/mapping/`)
+  - `render_map.py` — Folium-based HTML map generation with anomaly clustering and GPS track overlay.
+  - `aggregate.py` — HDF5 telemetry aggregator for multi-node map layers.
+  - `open_map.sh` / `open_hdf5_browser.sh` — quick-launch helpers.
+- **Project Launcher** (`tools/launch_project.sh`)
+  - Clean-boot sequence with preflight checks, dual-window terminal spawn (dashboard + logs), and autostart integration.
+  - `tools/toggle_simulator.sh` — runtime simulator/hardware mode switch with systemd service restart.
+- **Test Infrastructure**
+  - `tests/conftest.py` — shared pytest fixtures and monkey-patched HAL helpers.
+- **Configuration Examples**
+  - `config/dashboard.toml.example`
+  - `config/email.example.yaml`
+  - `config/sensor_location.example.yaml`
+
+## Changed
+- `main_pipeline.py` — integrated simulator resolution via `_resolve_simulator()` with env/CLI priority; graceful signal handling (`SIGINT`/`SIGTERM`); `DSLV_SIM_DEMO` mode for 4-node rotation gate testing.
+- `wiring.py` — baseline state path resolution with env override (`DSLV_BASELINE_STATE_PATH`).
+- `hal_simulated.py` — simulator fidelity improvements aligned to SPEC-005A.HAL-SIM.
+- `.gitignore` — expanded to cover agent workspaces (`GEMINI-HOME/`, `CLAUDE-HOME/`), local runtime configs, and artefact directories.
+- `README.md` — bumped to Rev 5.0.0 with LBE-1421 hardened operations stack documentation.
+
+## Fixed
+- Launcher race conditions on clean-boot dual-window startup (lxterminal UTF-8 codec guard, service dependency ordering).
+- Pipeline baseline state not loaded into coherence engine on cold start.
+
+## Version Alignment
+- Project version bumped to **4.5.0** across `pyproject.toml`, `README.md`, `CHANGELOG.md`, `install_dslv_zpdi.sh`, and `tests/test_pipeline.py`.
+# Release Notes v5.0.0
+
+## DSLV-ZPDI v5.0.0 — LBE-1421 Hardened Operations Stack
+
+### Summary
+Production-hardened release integrating Leo Bodnar LBE-1421 GPSDO timing
+discipline, installer robustness fixes, and Tier-1 baseline validation.
+
+### Changes
+- Installer idempotency and bootstrap reliability improvements
+- Dynamic path resolution in shell scripts (preflight, launch, dashboard)
+- SoapySDR linkage fix for virtual environment provisioning
+- Version synchronization across all authority files
+
+### Verification
+- pytest: 49 passed
+- orphan_checker: clean
+- repo_guard: passed
+- version_sync: clean
+# Release Notes v5.0.0
+
+## DSLV-ZPDI v5.0.0 — Dependency and Validation Alignment
+
+### Summary
+Maintenance release aligning the package version with the current runtime
+dependency set and validation contract after the v5.0.0 node bridge,
+multi-node HDF5 aggregation, and dashboard finalisation work.
+
+### Changes
+- Added Flask and psutil to the canonical Python dependency authority for the
+  node receiver and web dashboard runtime paths.
+- Kept project validation anchored on editable installs, pytest, orphan
+  checking, version sync, and repo guard checks.
+- Preserved v5.0.0 operational scope while making dependency installation
+  reproducible on new development machines.
+- Added shared collaboration documentation and turnover process for Gemini CLI,
+  Claude Code, Kimi Code, and Codex CLI.
+
+### Verification
+- pip check: clean
+- version_sync: clean
+- orphan_checker: clean
+- repo_guard: passed
+- pytest: 47 passed
+- simulator smoke path: 10/10 passed
+# Release Notes — v5.0.0
+
+**Date:** 2026-06-01
+**Theme:** Robustness, Reliability & Security Hardening
+**Baseline:** Rev 5.0.1 → Rev 5.0.2
+
+This is a quality-and-hardening release. The trust pipeline's behaviour is
+unchanged; the work makes shutdown safe for the data on disk, shrinks the swarm
+receiver's attack surface, and raises overall code health. The objective for the
+pass was system stability and trustworthy data output.
+
+## Highlights
+
+### Reliability / data integrity
+- **Graceful shutdown.** `main_pipeline.py` previously terminated via
+  `os._exit(0)` inside the signal handler, which could leave the open HDF5 file
+  truncated. Shutdown is now cooperative: SIGINT/SIGTERM stop the worker threads,
+  join them, then flush and close the HDF5 writer, timing monitor, and health
+  reporter. `SIGTERM` (systemd's stop signal) is now handled as well as `SIGINT`.
+- **Latent import crash fixed.** The deprecated `cm5_ingestion` shim imported
+  `BaseHAL` from `hal_factory`, which never exported it — importing the module
+  raised `ImportError`. `hal_factory` now re-exports the canonical HAL surface and
+  every package submodule imports cleanly.
+
+### Security
+- **Request-size cap** on the Flask node receiver (`MAX_CONTENT_LENGTH = 1 MiB`)
+  rejects oversized bodies before they are buffered into memory.
+- **Atomic, locked node registry** writes remove a read-modify-write corruption
+  race under concurrent POSTs.
+- **RadonEye numeric validation** returns a clean `422` for a non-numeric
+  `radon_bq_m3` reading instead of a later `500`.
+- **Loud insecure-key warning** when `HDF5Writer` falls back to the development
+  HMAC key, so weakened attestation cannot silently ship to the field.
+
+### Code health
+- Ruff is clean across `src/`, `tools/`, and `tests/` (~240 findings resolved).
+- Pylint rating improved from **9.31 → 9.64 / 10**.
+- Type hints modernized to PEP 585/604 behind `from __future__ import annotations`
+  (3.9-safe).
+- `dslv_zpdi.__version__` is now defined and enforced against `pyproject.toml` by
+  `tools/check_version_sync.py`.
+
+## Verification
+
+Run from the editable `.venv`:
+
+- `pip check`: clean
+- `tools/check_version_sync.py`: clean at 4.7.2
+- `tools/orphan_checker.py`: clean
+- `tools/repo_guard.py`: passed
+- `ruff check src/ tools/ tests/`: all checks passed
+- `pylint src/dslv_zpdi/`: 9.64/10
+- `DEV_SIMULATOR=1 pytest tests/ -v`: 47 passed
+- `DEV_SIMULATOR=1 tests/test_pipeline.py`: 10/10 passed
+
+## Upgrade notes
+
+No configuration or schema changes. Operators running the node receiver behind a
+reverse proxy may align the proxy body-size limit with the new 1 MiB cap.
+# Release Notes — v5.0.0
+
+**Date:** 2026-06-05 (release notes reconciled 2026-06-10)
+**Phase:** 2B — Radon Validation Metrology Stack (Tier 2)
+**Tag:** `v5.0.0`
+
+## Summary
+
+Phase 2B adds a Tier 2 radon-validation metrology stack alongside the existing
+Tier 1 RF/GPSDO anchor. The new stack is additive and trust-subordinate: nothing
+in this release alters the Tier 1 primary stream, the Kuramoto coherence core, or
+the existing HDF5 event schema. All new sensor paths ship with a simulator so the
+full suite validates with `DEV_SIMULATOR=1` and no physical hardware.
+
+## Added
+
+- **RadonEye Pro RD200P ingestor** (SPEC-015) — BLE GATT primary transport with
+  HTTP fallback and a CI simulator. Reads radon concentration with BLE → HTTP →
+  SIM graceful degradation. Remains **secondary-only** pending SPEC-015 promotion
+  criteria.
+- **Pixel 9 Pro XL mobile node bridge** (SPEC-016) — HTTP polling bridge with
+  trust scoring (0.0–1.0); surfaces magnetometer, GPS fix, and camera perceptual
+  hash. Sub-threshold scores are flagged for review.
+- **Pi–Pixel uplink manager** (SPEC-017) — classifies hotspot connectivity as
+  online / offline / degraded and triggers backfill replay on restore. Never
+  blocks the Tier 1 primary stream.
+- **HDF5 schema extension** (SPEC-018) — five new top-level branches
+  (`certified_crm`, `macro_atmosphere`, `space_weather`, `mobile_node_tier2`,
+  `validation_index`) with a signed manifest (per-branch SHA-256 + HMAC
+  attestation). Existing event groups are unchanged.
+- **Barometric coherence engine** (SPEC-019) — χ(τ) cross-correlation between
+  radon and barometric pressure with optional RH weighting. The review flag is
+  explicitly subordinate to certified CRM data and never overrides it.
+- **48-hour session orchestrator** (SPEC-020) — full campaign lifecycle
+  (init → run → finalize → summary) with resume-from-cache and a compound `.h5`
+  audit file plus a human-readable summary.
+- **Dashboard panel suite** (SPEC-021) — RADON, MOBILE/T2, and BCI panels added
+  to the existing compact/wide layout with zero regression to current panels.
+- **`SensorModality.RADON`** added to the ingestion enum contract.
+- **`bleak>=0.21.0`** dependency for BLE GATT transport.
+
+## Fixed
+
+- Closed 27 pre-existing SPEC-ID orphan gaps (`node_receiver`, `pps_listener`,
+  `nmea_stream`, `hal_hardware`) and added real `specs/SPEC-014.md`.
+- Corrected LBE-1420 → LBE-1421 dual-output references in the living master and
+  build sheet.
+
+## Validation
+
+- Full simulator suite green (`DEV_SIMULATOR=1`).
+- `orphan_checker`, `repo_guard`, and `pip check` clean.
+
+## Notes
+
+Hardware-only paths (BLE radon transport, PPS/NMEA, PlutoSDRplus) are validated in
+simulator mode here and must still be confirmed on the Tier 1 Pi 5 per
+`docs/collaboration/NEXT_STEPS.md`.
+# Release Notes — v5.0.0
+
+**Date:** 2026-06-11
+**Phase:** 2B — Simulator hardening + Node Receiver contract tests (Pixel proot host)
+**Tag:** `v5.0.0`
+**Authority:** Joseph R. Fross (DynoGator Labs) — autonomous Grok execution on Pixel 9 Pro XL / GrapheneOS / Debian Trixie proot (aarch64, no PlutoSDRplus attached)
+
+## Summary
+
+This patch release is the direct result of the autonomous work order executed on a **simulator-only** dev host (no libPlutoSDRplus.so.0, no PPS/GPSDO hardware). The primary defect was that bare `except ImportError:` guards around native SDR libs allowed `OSError` (from `ctypes.CDLL` at import time inside third-party packages) to escape, making test collection impossible (0 tests collected) on any host without the native shared objects.
+
+The fix broadens the guards for native-loading imports only. Pure-Python imports remain `ImportError`-only. All changes are SPEC-tied, orphan-clean, and preserve the existing fallback-to-simulator semantics.
+
+113 tests now pass under `DEV_SIMULATOR=1` (was 103 on hw hosts; the two previously uncollectable modules now run). `test_pipeline.py` now dynamically reads the package version.
+
+## Fixed
+
+- **OSError vs ImportError guard defect (Task A, SPEC-005A.HAL-HW)**: 
+  - `src/dslv_zpdi/layer1_ingestion/hal_hardware.py` (SoapySDR ~line 42, pyPlutoSDRplus ~line 74): `except ImportError:` → `except (ImportError, OSError):`. Added Rev 5.0.x comments with exact root-cause narrative and SPEC reference.
+  - Audit + same treatment for h5py (hdf5_writer.py, radon_session_writer.py) and bleak (radoneye_ingestor.py, including previously unguarded `from bleak import BleakClient` call sites).
+  - Pure-Python left unchanged: flask (node_receiver), pyserial (inner imports in hal_hardware + nmea_stream). Justification: these never perform CDLL / .so load at import time; OSError paths for them are runtime (port open, serial errors) and already caught separately.
+  - Result: on this host, full suite collects and 113 pass; `test_pipeline.py` prints all 10 PASS.
+
+- **Stray version string (Task B)**: `tests/test_pipeline.py` no longer hard-codes "4.7.1"; imports `__version__` so it stays in lockstep forever. `tools/check_version_sync.py` green.
+
+- Cosmetic banner rev notes appended (not rewritten) to hal_hardware.py / hal_simulated.py.
+
+## Added
+
+- **Node receiver contract tests (Task C, P2 per NEXT_STEPS.md, SPEC-014.8)**: new `tests/test_node_receiver.py` (10 tests) exercising the public HTTP surface:
+  - `/api/v1/ingest`: happy path, malformed JSON (400), empty body (400), missing node_id stamping.
+  - `/api/v1/ingest/radoneye`: missing required fields (422), non-numeric radon (422), valid staging to secondary JSONL (202 + SPEC-015-PENDING note).
+  - `/api/v1/health`: 200 + stats.
+  - Writer-failure injection: raises → 500 (storage kill condition exercised).
+  - Concurrent POSTs (8 workers): all succeed, registry lock + no crashes.
+- All test functions/classes carry SPEC-014.8 (or cross-ref 014.4/5/6) docstrings.
+- `specs/SPEC-014.md` extended with `## Test Coverage` section for SPEC-014.8.
+- Coverage on `layer3_telemetry/node_receiver.py` lifted from 0 % (now meaningfully exercised). `pixel_node_bridge.py` coverage remains high.
+
+## Compliance & Validation
+
+- Full canonical contract (§2 of work order) executed at baseline (Task A collection failure reproduced), after Task A, after B/C, and before every commit.
+- 113 passed / ruff clean / pip check / version-sync clean / orphan_checker clean / repo_guard clean.
+- No new SPEC-IDs minted without `specs/SPEC-*.md` backing.
+- No metrology changes, no Tier-1 promotion of Tier-2/RadonEye data, no amplifier lockout relaxation.
+- Git: atomic commits (Task A with 4.8.1 bump, Task B, Task C), ff-only, post-push re-verification of full contract on clean fetch.
+
+## Deliverables (committed + pushed)
+
+- `docs/audits/GROK_WORK_REPORT_2026-06-11.md`
+- `TURNOVER_2026-06-11_Grok_NodeBridgeHardening.md` (at root)
+- `CHANGELOG.md` (prepended 4.8.1 section)
+- `RELEASE_NOTES_v5.0.0.md` (this file)
+- `docs/collaboration/NEXT_STEPS.md` updated (P2 items marked done, new "Done in this session" block, points to P1 hardware-truth on Pi 5 next)
+
+## Residual Risks / Deferred
+
+- This host remains simulator-only; no hardware-truth evidence written to `docs/validation-logs/`.
+- RadonEye endpoint stays explicitly secondary/quarantine-only (SPEC-015 stub exists but calibration baseline ratification is future hardware session work).
+- Next priority (per TURNOVER): P1 "Hardware Truth Path" on the Pi 5 (PlutoSDRplus + LBE-1421 + PPS validation).
+
+The pushed tree is clean, remote-synced, and the full §2 contract is green on the post-push checkout.
+
+**End of 4.8.1 release notes.** Safe for field simulator use; hardware sessions remain the source of truth for metrology claims.# DSLV-ZPDI Release Notes — Rev 5.0.0
+
+**Release Date:** 2026-06-15  
+**Milestone:** Tier-1 RF metrology hardware pivot to PlutoSDR+ class devices  
+**Status:** Beta — software architecture complete, hardware qualification pending physical verification gates
+
+## Summary
+
+Rev 5.0.0 replaces the PlutoSDRplus as the canonical Tier-1 RF metrology target
+with a capability-based qualification model centered on the HamGeek AD9363
+PlutoSDR+ class device and the Leo Bodnar LBE-1421 GPSDO. The PlutoSDRplus
+remains supported as an optional legacy backend and historical performance
+floor.
+
+This is a major architectural refactor:
+
+- Timing authority, SDR backend, frequency translation, and qualification
+  policy are now decoupled and composable.
+- Timing evidence is represented explicitly and granularly; no more misleading
+  `phase_lock_verified` Boolean.
+- HDF5 finalization is atomic and includes an event hash chain.
+- Production HMAC key handling is hardened and fails closed.
+
+## New Components
+
+| Component | Path | SPEC |
+|-----------|------|------|
+| Composed HAL | `src/dslv_zpdi/layer1_ingestion/hardware_hal.py` | SPEC-005A.HAL |
+| Timing subpackage | `src/dslv_zpdi/layer1_ingestion/timing/` | SPEC-005A.TIMING |
+| SDR backend subpackage | `src/dslv_zpdi/layer1_ingestion/sdr/` | SPEC-004A |
+| Pluto IIO backend | `src/dslv_zpdi/layer1_ingestion/sdr/pluto_iio.py` | SPEC-004A.PLUTO |
+| Qualification engine | `src/dslv_zpdi/layer1_ingestion/sdr/qualification.py` | SPEC-004A.QUAL |
+| Frequency translation | `src/dslv_zpdi/layer1_ingestion/frequency_translation/` | SPEC-004A.FREQ |
+| Key provider | `src/dslv_zpdi/core/key_provider.py` | SPEC-018 |
+| Config models | `src/dslv_zpdi/config_models.py` | SPEC-004A.CONFIG |
+| CLI package | `src/dslv_zpdi/cli/` | SPEC-011.CLI |
+| Node profiles | `config/node_profiles/` | SPEC-004A |
+
+## Validation
+
+- 143 tests pass in simulator mode.
+- Orphan checker, version sync, and repo guard pass.
+- ruff lint passes.
+
+## Known Limitations / Remaining Physical Gates
+
+- Exact HamGeek PCB revision: UNVERIFIED_PHYSICAL_PROPERTY
+- Timing connector family (U.FL/MMCX/etc.): UNVERIFIED_PHYSICAL_PROPERTY
+- 10 MHz/PPS direction and electrical levels: UNVERIFIED_PHYSICAL_PROPERTY
+- SDR PPS input reaching FPGA fabric: UNVERIFIED_PHYSICAL_PROPERTY
+- External reference software detection on the device: UNVERIFIED_PHYSICAL_PROPERTY
+
+Primary institutional output remains fail-closed until these gates pass.
+# DSLV-ZPDI v5.1.0 (Consolidation & Housekeeping)
+**Date:** 2026-07-18
+
+This is a consolidation release focused on integrating the Pi5 node work (`tools/zpdi_conditions/`) and executing a do-no-harm housekeeping pass on the repository.
+
+- **No behavior change to Pluto/GPSDO stack**. The operational SDR/timing paths remain locked and active.
+- **HackRF legacy support reaffirmed**. Backwards compatibility with HackRF paths has been verified and retained.
+- Dependabot PRs with failing CI tests have been closed as stale.
+
+All tests remain green (184/184) and the version strings are synchronized.
+# DSLV-ZPDI Release Notes — Rev 5.2.0
+
+**Release Date:** 2026-07-28
+**Milestone:** Demodulation engine, Full Duplex MIMO vectoring, and mobile-node dashboard refinements
+**Status:** Beta — builds on the Rev 5.0.0 PlutoSDR+ / LBE-1421 Tier-1 architecture
+
+## Summary
+
+Rev 5.2.0 extends the Rev 5.x Tier-1 stack with an intelligent demodulation
+engine and a Full Duplex MIMO vectoring framework, and folds in the Rev 5.1.0
+mobile-node and TUI refinements (including the standalone `ZPDI_CONDITIONS`
+conditions dashboard). Dashboard defaults are tuned for live SDR monitoring
+out of the box.
+
+## New in 5.2.0
+
+- **Demodulation engine** (`layer1_ingestion`) — supports audio, data, video,
+  and telemetry formats with auto-presets.
+- **Full Duplex MIMO Vectoring framework** — spatial multiplexing and signal
+  vectoring.
+
+### Changed
+
+- Dashboard default configs: Live SDR enabled, gain 0.0, raw modulation,
+  sweep mode, center freq 3 GHz, span 40 MHz, plasma palette, LNA 30, VGA 30,
+  noise floor -75.0 dBm, ceiling -70.0 dBm.
+- Dashboard banner disabled by default.
+
+## Carried forward from 5.1.0 (Mobile Node and TUI Refinements)
+
+- New standalone dashboard package `tools/zpdi_conditions/` aggregating live
+  space weather, surface weather, barometric, aerosol, and ionizing-radiation
+  metrics for the Penrose, CO tracking footprint (NOAA SWPC, Open-Meteo,
+  NMDB neutron monitor, EPA RadNet Colorado Springs).
+- Rich two-column TUI optimized for a 10" touchscreen with per-metric refresh
+  intervals, self-checking collectors, launch script, and desktop icon.
+- No SDR, GPSDO, or radio hardware access; runs in parallel with the main
+  `dslv-zpdi` stack without conflicts.
+- Mobile node WSS transport: exponential-backoff circuit breaker and corrected
+  default ingest URI (`ws://127.0.0.1:8443/`).
+
+## Validation
+
+- `pytest` suite green on simulator (`DEV_SIMULATOR=1`); ruff, mypy,
+  orphan-checker, repo-guard, and version-sync all clean.
+- Hardware-dependent claims remain gated on physical verification per
+  `AGENTS.md` doctrine.
+# DSLV-ZPDI v5.3.0
+
+## Zero-Copy Binary Ingestion & Hardware-Anchored Chain of Custody Refactor
+
+This major release implements a complete end-to-end binary payload ingestion pipeline, removing all intermediate text/JSON serialization from SDR capture to HDF5 storage.
+
+### Key Changes
+*   **Zero-Copy Binary Pipeline:** Raw SDR data is now directly packed into structured binary structs without intermediate JSON processing, significantly reducing CPU overhead.
+*   **Hardware-Anchored Cryptographic Hashing:** BLAKE2b hashing is now performed immediately upon payload generation directly on the binary buffer, enforcing a zero-trust hardware-anchored chain of custody.
+*   **Strict Binary Coherence Engine:** The layer-2 Coherence Engine and DualStreamRouter were refactored to work seamlessly with binary configurations, accepting pre-extracted metrics and routing efficiently without un-packaging the primary streams.
+*   **100% Test Suite Stability:** Resolved all legacy `test_payload.py` and `test_pipeline.py` assumptions. All 230 system and integration tests are verified passing for the new binary structure.
+*   **Dashboard Preservation:** The peripheral Layer-3 dashboards remain fully operational. `quarantine.jsonl` and `health.json` outputs remain decoupled from the primary `HDF5Writer`, ensuring dashboards continue parsing without conflict.
+*   **Dependency Update:** Rebuilt and upgraded the local `.venv` dependencies, including `h5py`, `numpy`, `msgpack`, and `cryptography` to support native binary interactions.
