@@ -79,7 +79,7 @@ class KeyCfg:
 @dataclass
 class DashboardConfig:
     refresh: float = 0.2
-    fps: int = 15
+    fps: int = 30
     show_banner: bool = False
     service_unit: str = "dslv-zpdi"
     source_path: str = ""

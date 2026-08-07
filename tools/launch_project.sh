@@ -161,10 +161,28 @@ if [ -n "$SUDO" ]; then
     $SUDO systemctl daemon-reload
     sleep 3
     for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service dslv-zpdi-webdash.service dslv-zpdi-tier1.service; do
-        SAY "  - start $unit"
-        $SUDO systemctl start "$unit" || WARN "failed to start $unit"
-        # generous pause between dependent unit starts so each finishes init
-        # before the next one is asked to come up
+        SAY "  - starting $unit"
+        RETRY=0
+        MAX_RETRIES=3
+        SUCCESS=0
+        while [ $RETRY -lt $MAX_RETRIES ]; do
+            $SUDO systemctl start "$unit" || true
+            # generous pause to let the service initialize
+            sleep 5
+            if systemctl is-active --quiet "$unit"; then
+                OK "$unit initialized and running"
+                SUCCESS=1
+                break
+            else
+                RETRY=$((RETRY+1))
+                WARN "$unit failed or hung (attempt $RETRY/$MAX_RETRIES). Pausing, then retrying..."
+                # additional pause before retry
+                sleep 5
+            fi
+        done
+        if [ $SUCCESS -eq 0 ]; then
+            DIE "STARTUP HALTED: Failed on step '$unit'. The process could not stabilize after $MAX_RETRIES attempts. Check logs: journalctl -u $unit"
+        fi
         sleep 3
     done
     sleep 3

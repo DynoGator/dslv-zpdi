@@ -26,6 +26,7 @@ import os
 import select
 import shutil
 import signal
+import subprocess
 import sys
 import termios
 import time
@@ -112,38 +113,38 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     keys = Text(no_wrap=True, overflow="ellipsis")
     if compact:
         legend = [
-            ("q",    "quit"),
-            ("SPC",  "pause"),
-            ("m",    "wf-mode"),
-            ("r",    "sdr"),
-            ("p",    "palette"),
-            ("s",    "spec"),
-            ("g/v",  "LNA/VGA"),
-            ("</>",  "tune"),
-            ("z/x",  "zoom"),
-            ("c/t",  "layout"),
-            ("h",    "banner"),
+            ("q",    "Quit"),
+            ("SPC",  "Pause"),
+            ("m",    "WF-Mode"),
+            ("r",    "Real-SDR"),
+            ("p",    "Palette"),
+            ("s",    "Spectrum"),
+            ("g/v",  "Gain"),
+            ("</>",  "Tune"),
+            ("z/x",  "Zoom"),
+            ("c/t",  "Layout"),
+            ("h",    "Banner"),
         ]
     else:
         legend = [
-            ("q",    "quit"),
-            ("space", "pause"),
-            ("m",    "wf-mode"),
-            ("d",    "mod"),
-            ("r",    "real-sdr"),
-            ("p",    "palette"),
-            ("s",    "spectrum"),
-            ("[/]",  "floor±"),
-            ("{/}",  "ceil±"),
-            ("h",    "banner"),
-            ("c",    "compact"),
-            ("t",    "10\" layout"),
-            ("g/v",  "LNA/VGA-gain"),
-            ("a",    "amp"),
-            ("+/-",  "gain-step"),
-            ("</>",  "tune-coarse"),
-            (",/.",  "tune-fine"),
-            ("z/x",  "zoom"),
+            ("q",       "Quit Dashboard"),
+            ("space",   "Pause Data"),
+            ("m",       "Cycle Waterfall Mode"),
+            ("d",       "Cycle Modulation"),
+            ("r",       "Toggle Real SDR"),
+            ("p",       "Cycle Palette"),
+            ("s",       "Toggle Spectrum View"),
+            ("[/]",     "Adj Floor ±"),
+            ("{/}",     "Adj Ceil ±"),
+            ("h",       "Toggle Banner"),
+            ("c",       "Toggle Compact Layout"),
+            ("t",       "Toggle 10\" Layout"),
+            ("g/v",     "Cycle LNA/VGA Gain"),
+            ("a",       "Toggle Amp"),
+            ("+/-",     "Gain Step ±"),
+            ("</>",     "Tune Coarse ±"),
+            (",/.",     "Tune Fine ±"),
+            ("z/x",     "Zoom In/Out"),
         ]
     for k, desc in legend:
         keys.append("[", style="dim")
@@ -642,8 +643,25 @@ class Dashboard:
             if "demod" in self._panels:
                 p = self._panels["demod"]
                 p.is_active = not getattr(p, "is_active", False)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"Demodulation: {'ON' if p.is_active else 'OFF'}")
+                if p.is_active:
+                    import subprocess
+                    import sys
+                    import os
+                    profile = getattr(p, "active_profile", "ADS-B")
+                    mimo_tx = getattr(p, "mimo_tx", False)
+                    # Get path to demod_app.py relative to app.py
+                    demod_script = os.path.join(os.path.dirname(__file__), "demod_app.py")
+                    cmd = ["lxterminal", "--title", "DSLV-ZPDI :: Demodulation Interface", "-e", f"{sys.executable} {demod_script} --profile '{profile}' {'--tx' if mimo_tx else ''}"]
+                    try:
+                        subprocess.Popen(cmd)
+                        msg = "Demodulation Interface Launched"
+                    except Exception as e:
+                        msg = f"Failed to launch Demod: {e}"
+                    if "notifications" in self._panels:
+                        self._panels["notifications"].push("INFO", msg)
+                else:
+                    if "notifications" in self._panels:
+                        self._panels["notifications"].push("INFO", "Demodulation: OFF")
         elif k == "T":
             if "demod" in self._panels:
                 p = self._panels["demod"]
