@@ -1,53 +1,50 @@
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.venv/
-env/
-.env
-.secrets/
-.vscode/
-.idea/
-.DS_Store
-data/
-output/
-*.bak
-*.h5
-*.hdf5
-*.json
-*.log
-!docs/validation-logs/*.log
-config/local_*.yaml
-*.egg-info/
-.pytest_cache/
-.ruff_cache/
 
-# coverage artifacts
+*$py.class
+# agent baseline / hardware evidence artifacts
+# agent workspaces (not source of truth)
+artifacts/
+*.bak
+build/
+# build artifacts
+CLAUDE-HOME/
+config/email.yaml
+config/local_*.yaml
+config/sensor_location.yaml
 .coverage
 .coverage.*
+# coverage artifacts
 coverage.xml
-htmlcov/
-
-# build artifacts
-build/
-dist/
-
-# agent workspaces (not source of truth)
-GEMINI-HOME/
-CLAUDE-HOME/
-.grok/
-
-# runtime artifacts
-logs/
-*.pid
-
-# user-level runtime config (example stays in tree)
-config/sensor_location.yaml
-config/email.yaml
-
 # dashboard stdout capture files (runtime artifacts)
-tools/dash_out.txt
+data/
+dist/
+!docs/validation-logs/*.log
+.DS_Store
+*.egg-info/
+.env
+env/
+GEMINI-HOME/
+.grok/
+*.h5
+*.hdf5
+hmac.key
+htmlcov/
+.idea/
+*.json
+*.key
+*.log
+logs/
+output/
+*.pid
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+# runtime artifacts
+.secrets/
+system_state_vector/
 tools/dash_out_headless.txt
-
-# agent baseline / hardware evidence artifacts
-artifacts/
+tools/dash_out.txt
+# user-level runtime config (example stays in tree)
+.venv/
+venv/
+.vscode/
