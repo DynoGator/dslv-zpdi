@@ -1,3 +1,4 @@
+# Tags are immutable. Never re-tag. Cut a patch release instead.
 name: Release Workflow
 
 on:
