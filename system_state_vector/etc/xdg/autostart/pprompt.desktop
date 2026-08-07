@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=pprompt
-Comment=Prompt to change default password if ssh enabled
-NoDisplay=true
-Exec=sh /usr/bin/pprompt.sh
-NotShowIn=GNOME;KDE;XFCE;

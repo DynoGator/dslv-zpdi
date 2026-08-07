@@ -1,9 +1,0 @@
-#!/bin/sh
-
-[ -x /usr/sbin/chronyd ] || exit 0
-
-if [ -S /run/chrony/chronyd.sock ]; then
-    chronyc onoffline > /dev/null 2>&1
-fi
-
-exit 0

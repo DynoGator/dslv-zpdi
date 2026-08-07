@@ -1,3 +1,0 @@
-auth required pam_unix.so
-auth required pam_allow_desktopuser.so
-account required pam_unix.so

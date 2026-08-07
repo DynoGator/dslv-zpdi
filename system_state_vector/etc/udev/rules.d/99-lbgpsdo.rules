@@ -1,5 +1,0 @@
-# Leo Bodnar GPSDO devices
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1dd2", ATTRS{idProduct}=="2210", GROUP="dialout", MODE="0660"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1dd2", ATTRS{idProduct}=="2211", GROUP="dialout", MODE="0660"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1dd2", ATTRS{idProduct}=="2443", GROUP="dialout", MODE="0660"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1dd2", ATTRS{idProduct}=="2444", GROUP="dialout", MODE="0660"

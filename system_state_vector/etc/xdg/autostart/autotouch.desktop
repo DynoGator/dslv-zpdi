@@ -1,7 +1,0 @@
-[Desktop Entry]
-Name=Auto Touch Configure
-Comment=Automatically create touch screen association
-Exec=/usr/bin/autotouch
-Terminal=false
-Type=Application
-NoDisplay=true

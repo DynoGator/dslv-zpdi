@@ -1,2 +1,0 @@
-# Allow dialout group to access PPS devices (GPIO18 PPS input from LBE-1421 GPSDO)
-KERNEL=="pps[0-9]*", GROUP="dialout", MODE="0660"

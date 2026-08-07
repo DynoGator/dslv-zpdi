@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=DSLV-ZPDI Operations Center
-Comment=DynoGatorLabs Operations Dashboard (autostart)
-Exec=bash -c "sleep 10 && exec lxterminal --no-remote --title='DSLV-ZPDI Boot' --geometry=120x40 -e /home/dynogator/dslv-zpdi/tools/boot_orchestrator.py"
-Terminal=false
-Categories=Science;Network;
-X-GNOME-Autostart-enabled=true
-StartupNotify=false

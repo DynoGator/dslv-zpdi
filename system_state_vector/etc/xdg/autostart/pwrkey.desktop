@@ -1,7 +1,0 @@
-[Desktop Entry]
-Name=Power Key Inhibit
-Comment=Inhibit the power key while desktop runs
-Exec=systemd-inhibit --what=handle-power-key rpi-gui-nop
-Terminal=false
-Type=Application
-NoDisplay=true
