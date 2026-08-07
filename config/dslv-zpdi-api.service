@@ -1,0 +1,20 @@
+[Unit]
+Description=DSLV-ZPDI FastAPI Server (port 8000)
+After=network.target dslv-zpdi.service
+Wants=dslv-zpdi.service
+
+[Service]
+Type=simple
+User=dynogator
+Group=dynogator
+WorkingDirectory=/home/dynogator/dslv-zpdi
+EnvironmentFile=/home/dynogator/dslv-zpdi/.env
+ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python zpdi_web_server.py
+Environment=PYTHONUNBUFFERED=1
+Environment=ZPDI_WEB_HOST=0.0.0.0
+Environment=ZPDI_WEB_PORT=8000
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -61,6 +61,7 @@ async def latest():
 @app.websocket("/ws/live")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    print("WebSocket connected from:", websocket.client)
     try:
         import asyncio
         last_sent_ts = 0
