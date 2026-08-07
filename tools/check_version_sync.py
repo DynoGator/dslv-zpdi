@@ -76,3 +76,5 @@ if init_version != project_version:
     )
 
 print(f"[OK] Version sync clean: {project_version}")
+
+# TODO: Assert README Revision:/Date: match the latest git tag

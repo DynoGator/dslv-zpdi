@@ -42,7 +42,7 @@ Keyboard controls while the dashboard is running:
 | Ionizing Radiation | Secondary Cosmic Ray Flux | NMDB real-time neutron monitor text | 15 min |
 
 All sources are public HTTP endpoints. The dashboard does not use libiio,
-SoapySDR, HackRF, PlutoSDR, or any local RF hardware.
+SoapySDR, HackRF (legacy/optional), PlutoSDR, or any local RF hardware.
 
 ## Configuration
 

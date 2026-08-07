@@ -54,7 +54,7 @@ Web dashboard `/api/status` reflects the live state above. The Rich TUI dashboar
 
 ## 5. Known Limitations at Reboot
 
-- The **waterfall panel** in the Rich TUI dashboard uses `hackrf_sweep` for real-time spectrum data. No HackRF is connected to this node (only PlutoSDR+), so the waterfall defaults to SIM mode and is the only simulated dashboard element. All other dashboard telemetry is real.
+- The **waterfall panel** in the Rich TUI dashboard uses `hackrf_sweep` for real-time spectrum data. No HackRF (legacy/optional) is connected to this node (only PlutoSDR+), so the waterfall defaults to SIM mode and is the only simulated dashboard element. All other dashboard telemetry is real.
 - The 1024×600 touchscreen layout has been configured but not visually verified in this session.
 - The node is intentionally in **mono-node dev mode**; the 4-node confirmation gate is bypassed.
 

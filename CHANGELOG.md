@@ -30,7 +30,7 @@
 ### Fixed
 - Fixed ingestion pipeline PPS qualification parameter parsing for Tier-1 external reference profiles.
 - Resolved `UnboundLocalError` scoping bug in `hal_factory.py` preventing PlutoSDR backend fallback.
-- Added support and SPEC-004A.HACKRF compliance for HackRF and LibreSDR backends.
+- Added support and SPEC-004A.HackRF (legacy/optional) compliance for HackRF (legacy/optional) and LibreSDR backends.
 - Repaired real-SDR hardware detection probes in `dashboard/panels/hardware.py` to gracefully degrade on failure.
 
 ## [5.1.0] — Mobile Node and TUI Refinements (2026-07-28)
@@ -85,7 +85,7 @@
 - `pytest` 184 passed, 1 skipped; orphan/version-sync/repo-guard clean.
 
 ### Caveats
-- Rich TUI waterfall panel remains SIM because no HackRF is connected; all
+- Rich TUI waterfall panel remains SIM because no HackRF (legacy/optional) is connected; all
   other dashboard data is real.
 - Touchscreen layout not visually verified in this session.
 
@@ -1349,7 +1349,7 @@ Primary institutional output remains fail-closed until these gates pass.
 This is a consolidation release focused on integrating the Pi5 node work (`tools/zpdi_conditions/`) and executing a do-no-harm housekeeping pass on the repository.
 
 - **No behavior change to Pluto/GPSDO stack**. The operational SDR/timing paths remain locked and active.
-- **HackRF legacy support reaffirmed**. Backwards compatibility with HackRF paths has been verified and retained.
+- **HackRF (legacy/optional) legacy support reaffirmed**. Backwards compatibility with HackRF (legacy/optional) paths has been verified and retained.
 - Dependabot PRs with failing CI tests have been closed as stale.
 
 All tests remain green (184/184) and the version strings are synchronized.

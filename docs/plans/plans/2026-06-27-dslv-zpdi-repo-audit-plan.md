@@ -358,7 +358,7 @@ The canonical production node for this repository is:
 - **Clocking:** LBE-1421 10 MHz Out2 → PlutoSDR+ CLKIN
 - **PPS:** LBE-1421 1 PPS Out1 → Raspberry Pi GPIO 18
 
-Other hardware (HackRF One, Pixel 9 Pro XL mobile node, etc.) is supported as Tier-2 or experimental configurations.
+Other hardware (HackRF (legacy/optional) One, Pixel 9 Pro XL mobile node, etc.) is supported as Tier-2 or experimental configurations.
 ```
 
 - [ ] **Step 2: Insert or update Tier-1 block in `AGENTS.md`**
@@ -385,7 +385,7 @@ Do not mark physical hardware validation as passing unless it was actually run a
 Search for old primary-node phrasing:
 
 ```bash
-grep -Rni "hackrf.*primary\|primary.*hackrf\|lbe-1420.*tier-1\|tier-1.*lbe-1420" docs/ README.md AGENTS.md || true
+grep -Rni "HackRF (legacy/optional).*primary\|primary.*HackRF (legacy/optional)\|lbe-1420.*tier-1\|tier-1.*lbe-1420" docs/ README.md AGENTS.md || true
 ```
 
 If any false positives appear, fix them. If nothing appears, no changes needed.

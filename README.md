@@ -2,8 +2,8 @@
 
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
 **Revision:** Rev 5.3.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
-**Date:** 2026-07-28
-**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
+**Date:** 2026-08-06
+**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF (legacy/optional) moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
 
 ---
 
@@ -12,29 +12,6 @@
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
 
 **Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/PlutoSDRplus). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
-
----
-
-## ☠️ Toolchain & Export Controls ☢️
-
-```text
-       _.-^^---....,,--       
-   _--                  --_   
-  <                        >) 
-  |                         | 
-   \._                   _./  
-      ```--. . , ; .--'''       
-            | |   |             
-         .-=||  | |=-.   
-         `-=#$%&%$#=-'   
-            | ;  :|     
-   _____.,-#%&$@%#&#~,._____
-```
-
-*This institutional-grade FPGA timing pipeline was synthesized and developed using:*
-- **Vivado 2022.2 (Zynq-7000-only image)** 
-
-> **WARNING:** *AMD/Xilinx Vivado is dual-use, export-controlled technology (EAR). You will need an authorized, compliance-cleared AMD account to download the toolchain required to build this bitstream. Unauthorized distribution is a violation of federal export laws.*
 
 ---
 
@@ -755,7 +732,7 @@ python -m dashboard
 ### Waterfall is stuck on `SIM` even after pressing `r`
 
 - PlutoSDR+ is not reachable at `ip:192.168.2.1`. Verify the network link and run `iio_info -u ip:192.168.2.1`.
-- Legacy HackRF only: run `hackrf_info` — if it fails, check USB connection.
+- Legacy HackRF (legacy/optional) only: run `hackrf_info` — if it fails, check USB connection.
 - If the SDR is detected but sweep fails, check the error label in the waterfall title bar.
 
 ### Pipeline running in SIMULATOR when I expect HARDWARE
@@ -917,3 +894,9 @@ By locking the PlutoSDR+ ADC directly to the GPS constellation via 10 MHz `EXT_R
 - **Repository:** https://github.com/DynoGator/dslv-zpdi
 - **License:** MIT
 - **SPEC compliance:** All modules carry SPEC-ID docstrings. `tools/orphan_checker.py` enforces compliance at commit time.
+
+## Glossary
+
+- **PlutoSDR+**: The primary HamGeek AD9363 unit.
+- **PlutoSDRplus (legacy)**: The legacy optional unit with a blown amplifier.
+- **HackRF (legacy/optional)**: Legacy optional SDR hardware.

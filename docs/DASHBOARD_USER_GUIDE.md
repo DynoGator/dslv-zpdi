@@ -20,7 +20,7 @@ The dashboard features real-time polling to ensure maximum situational awareness
 *   **Tier 2 Devices**: Probes known devices (e.g., Pixel 9 Pro XL) to ensure they are connected and responsive on the network.
 
 ### SDR Hardware & Demodulation
-*   **Active Device Selection**: Allows you to instantly switch the pipeline between PlutoSDR (IIO), LibreSDR, and HackRF One. 
+*   **Active Device Selection**: Allows you to instantly switch the pipeline between PlutoSDR (IIO), LibreSDR, and HackRF (legacy/optional) One. 
 *   **Hardware Status**: Shows if the device is reachable and its current tuning.
 *   **Demodulation Presets**: We have loaded standard frequency profiles for field use:
     *   **VHF Airband (120 MHz, AM)**: Best for listening to local aviation traffic.

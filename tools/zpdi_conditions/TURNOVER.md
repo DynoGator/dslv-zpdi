@@ -42,7 +42,7 @@ desktop icon labeled **ZPDI_CONDITIONS** or by running
   `Metric.error`. The UI renders the error in red inside the metric's card.
   The dashboard never crashes because one source is down.
 - **No hardware access:** Only `urllib.request`, `json`, `csv`, and `io` are
-  used for network I/O. No libiio / SoapySDR / Pluto / HackRF imports.
+  used for network I/O. No libiio / SoapySDR / Pluto / HackRF (legacy/optional) imports.
 
 ## Adding a New Metric
 

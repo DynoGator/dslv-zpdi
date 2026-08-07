@@ -13,7 +13,7 @@
 - v5.1.0 consolidation release tagged.
 - Dependabot triage: all failed CI on own branches → none merged, hardware-adjacent pins held.
 - Installers verified PASS (`install_dslv_zpdi.sh` Rev 5.0.0-PLUTO-LBE1421, `install_zpdi_mobile.sh` Rev 5).
-- HackRF legacy compat verified (3 tests, `99-hackrf.rules` intact).
+- HackRF (legacy/optional) legacy compat verified (3 tests, `99-HackRF (legacy/optional).rules` intact).
 
 ## STATE SUMMARY
 
@@ -25,7 +25,7 @@
 ## OPEN ITEMS
 - **HARDWARE GATES USER-BLOCKED:** DynoGator explicitly not ready for hardware dev/validation. Do not schedule.
 - **Dependabot deps:** Held for hardware qualification window.
-- **HackRF→Pluto reintegration:** Deferred by user (compat retained).
+- **HackRF (legacy/optional)→Pluto reintegration:** Deferred by user (compat retained).
 
 ## LESSONS LEARNED
 - CI-before-merge always.

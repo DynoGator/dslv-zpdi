@@ -371,7 +371,7 @@ sudo reboot
 
 ### 9.6 Caveats
 
-- The Rich TUI **waterfall panel** requires `hackrf_sweep`; no HackRF is connected, so it remains in SIM mode. All other dashboard data is real.
+- The Rich TUI **waterfall panel** requires `hackrf_sweep`; no HackRF (legacy/optional) is connected, so it remains in SIM mode. All other dashboard data is real.
 - Touchscreen glyph/layout has been configured but not visually verified.
 - Mono-node dev mode remains active until deliberately reverted for production.
 

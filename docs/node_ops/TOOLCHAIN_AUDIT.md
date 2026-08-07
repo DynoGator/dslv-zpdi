@@ -137,7 +137,7 @@
 - **TPM2 / OP-TEE on Pi 5** for sealed HMAC key storage.
 - **Grafana + Prometheus Node Exporter** for long-term trend dashboards off-node.
 - **`phc2sys`** or custom kernel PTP if a hardware PTP-capable NIC is added.
-- **SoapySDR** if HackRF / RTL-SDR / other backends need to be supported alongside Pluto.
+- **SoapySDR** if HackRF (legacy/optional) / RTL-SDR / other backends need to be supported alongside Pluto.
 - **`nftables`** rules in `config/os-hardening/nftables-dslv-zpdi.rules` should be reviewed and enabled for field deployment.
 
 ## 5. Operational Verification Commands
