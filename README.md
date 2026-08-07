@@ -17,19 +17,23 @@ DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates
 
 ## ☠️ Toolchain & Export Controls ☢️
 
-```text
-       _.-^^---....,,--       
-   _--                  --_   
-  <                        >) 
-  |                         | 
-   \._                   _./  
-      ```--. . , ; .--'''       
-            | |   |             
-         .-=||  | |=-.   
-         `-=#$%&%$#=-'   
-            | ;  :|     
-   _____.,-#%&$@%#&#~,._____
-```
+~~~
+            _.-^^---....,,--_
+        _--                    --_
+       <      PHASE COHERENCE     >)
+       |       FAILURE, 1954      |
+        \._      (colorized)    _./
+           ```--. . , ; .--'''
+                 | |   |
+              .-=||  | |=-.
+              `-=#$%&%$#=-'
+                 | ;  :|
+        _____.,-#%&$@%#&#~,._____
+
+   THIS IS WHAT TWO NODES DISAGREEING ABOUT TIME LOOKS LIKE.
+   LOCK YOUR CLOCKS. DUCK AND COVER IS NOT A TIMING STRATEGY.
+~~~
+
 
 *This institutional-grade FPGA timing pipeline was synthesized and developed using:*
 - **Vivado 2022.2 (Zynq-7000-only image)** 
@@ -39,6 +43,22 @@ DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates
 ---
 
 ## Architecture
+
+~~~
+                , - ~ ~ ~ - ,
+            , '       |       ' ,
+          ,       \   |   /       ,
+         ,         \  |  /         ,
+         ,   ----.   (o)   .----   ,
+         ,         /  |  \         ,
+          ,       /   |   \       ,
+            ,         |         ,
+              ' - , _ _ _ ,  '
+
+        KCET-ATLAS COHERENCE ENGINE
+     "Splitting hairs, not atoms, since 2026."
+~~~
+
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -376,6 +396,20 @@ Keybinding quick-reference, live UTC timestamp, and a blinking pulse indicator.
 
 ## Waterfall Explained
 
+~~~
+        ______________________________________________________
+       |  CONELRAD  ::  CIVIL DEFENSE RADIO  ::  EST. 1953    |
+       |                                                      |
+       |   540    640     800    1000    1240    1400  kHz    |
+       |    |     (CD)     |       |      (CD)     |          |
+       |    |______|_______|_______|_______|_______|          |
+       |                                                      |
+       |   IN THE EVENT OF ACTUAL ANOMALY, LEAVE THE RF       |
+       |   SPECTRUM EXACTLY AS WEIRD AS YOU FOUND IT.         |
+       |______________________________________________________|
+~~~
+
+
 The waterfall is a rolling 2D frequency-power display and the primary real-time sensor view.
 
 ### What It Shows
@@ -662,6 +696,8 @@ If hardware initialization fails (PlutoSDRplus not detected, PPS device missing)
 
 ### Baseline Learning FSM (SPEC-009)
 
+*72 hours of learning before it trusts you. The FSM has been hurt before.*
+
 The coherence engine runs a state machine before committing data to the PRIMARY stream:
 
 ```
@@ -706,6 +742,26 @@ bash tools/preflight.sh
 ---
 
 ## Troubleshooting
+
+~~~
+     .-----------------------------------------.
+     |  *************************************  |
+     |  *              FALLOUT              *  |
+     |  *              SHELTER              *  |
+     |  *           _____________           *  |
+     |  *           \   |   |   /           *  |
+     |  *             \  |   |  /           *  |
+     |  *              \ |   | /            *  |
+     |  *          ----+--+--+----          *  |
+     |  *              / |   | \            *  |
+     |  *             /  |   |  \           *  |
+     |  *           /___|___|___\           *  |
+     |  *                                   *  |
+     |  *    CAPACITY: 1 GPSDO, 4 NERVES    *  |
+     |  *************************************  |
+     '-----------------------------------------'
+~~~
+
 
 ### Dashboard crashes immediately on launch
 

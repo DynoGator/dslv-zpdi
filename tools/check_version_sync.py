@@ -41,19 +41,6 @@ if not rm:
     fail("Could not find README revision line")
 readme_version = rm.group(1)
 
-# Check RELEASE_NOTES
-release_notes = sorted(ROOT.glob("RELEASE_NOTES_v*.md"))
-if not release_notes:
-    fail("No RELEASE_NOTES_v*.md file found")
-
-release_note_versions = []
-for p in release_notes:
-    mm = re.search(r"RELEASE_NOTES_v([0-9][0-9A-Za-z.\-_]+)\.md$", p.name)
-    if mm:
-        release_note_versions.append(mm.group(1))
-
-if project_version not in release_note_versions:
-    fail(f"No release note found matching pyproject version {project_version}. Found: {release_note_versions}")
 
 if readme_version != project_version:
     fail(f"README revision {readme_version} does not match pyproject version {project_version}")

@@ -1,5 +1,20 @@
 # Security Policy
 
+~~~
+   .============================================================.
+   |  ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL                   |
+   |  =======================================================   |
+   |  > AUTHORIZED PERSONNEL ONLY                               |
+   |  > TIMING AUTHORITY: LBE-1421 GPSDO                        |
+   |  > ATTEMPTS REMAINING: 3                                   |
+   |  > HINT: THE PASSWORD IS NOT "hunter2"                     |
+   |                                                            |
+   |  UNAUTHORIZED ACCESS WILL BE LOGGED, TIMESTAMPED WITH      |
+   |  ATOMIC PRECISION, AND MOCKED AT THE NEXT STANDUP.         |
+   '============================================================'
+~~~
+
+
 DSLV-ZPDI is an institutional-grade RF/metrology field instrument. Data integrity
 and evidence trustworthiness are first-class security properties, alongside the
 usual software concerns.

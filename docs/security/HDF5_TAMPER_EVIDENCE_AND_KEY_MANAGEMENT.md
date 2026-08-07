@@ -1,5 +1,20 @@
 # HDF5 Tamper-Evidence and Key Management
 
+~~~
+   .============================================================.
+   |  ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL                   |
+   |  =======================================================   |
+   |  > AUTHORIZED PERSONNEL ONLY                               |
+   |  > TIMING AUTHORITY: LBE-1421 GPSDO                        |
+   |  > ATTEMPTS REMAINING: 3                                   |
+   |  > HINT: THE PASSWORD IS NOT "hunter2"                     |
+   |                                                            |
+   |  UNAUTHORIZED ACCESS WILL BE LOGGED, TIMESTAMPED WITH      |
+   |  ATOMIC PRECISION, AND MOCKED AT THE NEXT STANDUP.         |
+   '============================================================'
+~~~
+
+
 INCIDENT 2026-08-07: An HMAC-SHA256 attestation key was committed to the public repository inside system_state_vector/. The key is considered compromised. Rotate the key on all nodes before the next PRIMARY-stream commit, then scrub history per `git filter-repo --invert-paths --path system_state_vector/etc/dslv-zpdi/hmac.key`. Rotation and the history scrub are manual, human-gated steps.
 
 ## Terminology
