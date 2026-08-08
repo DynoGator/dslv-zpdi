@@ -24,15 +24,23 @@ from rich.align import Align
 from rich.progress import Progress, BarColumn, TextColumn
 
 class DemodApp:
-    def __init__(self, profile: str = "ADS-B", rx_only: bool = True):
+    def __init__(self, profile: str = "ADS-B", rx_only: bool = True, freq_hz: float = None, bw_hz: float = None, gain_db: float = None):
         self.console = Console()
         self.profile = profile
         self.rx_only = rx_only
         self.running = True
         self.paused = False
-        self.freq_hz = 1090000000
-        self.bandwidth_hz = 2000000
-        self.gain_db = 49.6
+        
+        self._setup_profile()
+        
+        # Override with synced values if provided
+        if freq_hz is not None:
+            self.freq_hz = freq_hz
+        if bw_hz is not None:
+            self.bandwidth_hz = bw_hz
+        if gain_db is not None:
+            self.gain_db = gain_db
+            
         self.squelch = -40.0
         self.snr = 15.0
         
@@ -245,9 +253,9 @@ class DemodApp:
         else:
             footer_text.append(f"[{time.strftime('%H:%M:%S UTC')}]  ", style="dim")
             if self.restricted_unlocked:
-                footer_text.append("Q: Quit | F: Freq | B: BW | G: Gain | S: Squelch | L: Listen | T: TX | V: Vector | H: Hopping", style="bold bright_yellow")
+                footer_text.append("Q: Quit | S: Squelch | L: Listen | T: TX | V: Vector | H: Hopping", style="bold bright_yellow")
             else:
-                footer_text.append("Q: Quit | F/f: Freq ± | B/b: BW ± | G/g: Gain ± | S/s: Squelch ± | L: Listen On/Off | Space: Pause", style="bold bright_white")
+                footer_text.append("Q: Quit | S/s: Squelch ± | L: Listen On/Off | Space: Pause (Freq/Gain synced with Dashboard)", style="bold bright_white")
         
         layout["footer"].update(Panel(Align.center(footer_text), style="bright_black"))
         
@@ -292,18 +300,6 @@ class DemodApp:
                             elif self.restricted_unlocked and (key == 'h' or key == 'H'):
                                 self.hopping_monitor_active = not self.hopping_monitor_active
                                 self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] Freq Hopping Monitor {'ACTIVE' if self.hopping_monitor_active else 'OFF'}")
-                            elif key == 'G':
-                                self.gain_db += 1.0
-                            elif key == 'g':
-                                self.gain_db -= 1.0
-                            elif key == 'F':
-                                self.freq_hz += 100000
-                            elif key == 'f':
-                                self.freq_hz -= 100000
-                            elif key == 'B':
-                                self.bandwidth_hz += 10000
-                            elif key == 'b':
-                                self.bandwidth_hz -= 10000
                             elif key == 'S':
                                 self.squelch += 1.0
                             elif key == 's':
@@ -326,7 +322,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", default="ADS-B", help="Initial demodulation profile")
     parser.add_argument("--tx", action="store_true", help="Enable TX (Warning: Restricted)")
+    parser.add_argument("--freq", type=float, default=None, help="Sync frequency with dashboard")
+    parser.add_argument("--bw", type=float, default=None, help="Sync bandwidth with dashboard")
+    parser.add_argument("--gain", type=float, default=None, help="Sync gain with dashboard")
     args = parser.parse_args()
     
-    app = DemodApp(profile=args.profile, rx_only=not args.tx)
+    app = DemodApp(profile=args.profile, rx_only=not args.tx, freq_hz=args.freq, bw_hz=args.bw, gain_db=args.gain)
     app.run()

@@ -649,9 +649,16 @@ class Dashboard:
                     import os
                     profile = getattr(p, "active_profile", "ADS-B")
                     mimo_tx = getattr(p, "mimo_tx", False)
+                    
+                    wf = self._panels.get("waterfall")
+                    freq_arg = f"--freq {wf.center_hz}" if wf else ""
+                    bw_arg = f"--bw {wf.span_hz}" if wf else ""
+                    gain_arg = f"--gain {wf.lna_gain}" if wf else ""
+                    
                     # Get path to demod_app.py relative to app.py
                     demod_script = os.path.join(os.path.dirname(__file__), "demod_app.py")
-                    cmd = ["lxterminal", "--title", "DSLV-ZPDI :: Demodulation Interface", "-e", f"{sys.executable} {demod_script} --profile '{profile}' {'--tx' if mimo_tx else ''}"]
+                    cmd_str = f"{sys.executable} {demod_script} --profile '{profile}' {freq_arg} {bw_arg} {gain_arg} {'--tx' if mimo_tx else ''}"
+                    cmd = ["lxterminal", "--title", "DSLV-ZPDI :: Demodulation Interface", "-e", cmd_str]
                     try:
                         subprocess.Popen(cmd)
                         msg = "Demodulation Interface Launched"

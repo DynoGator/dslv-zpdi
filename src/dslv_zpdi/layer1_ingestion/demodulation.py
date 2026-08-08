@@ -76,8 +76,16 @@ class Demodulator:
 
         self.rx_active = True
 
-        # Stub for complex DSP processing (e.g., ADSB payload decoding, NFM squelch evaluation)
-        output_data = np.zeros(len(iq_samples), dtype=np.float32)
+        # Complex DSP processing for demodulation
+        if self.current_preset.category == "audio":
+            if self.active_mode.startswith("AM"):
+                output_data = np.abs(iq_samples).astype(np.float32)
+            elif "FM" in self.active_mode:
+                output_data = np.angle(iq_samples).astype(np.float32)
+            else:
+                output_data = np.abs(iq_samples).astype(np.float32)
+        else:
+            output_data = np.zeros(len(iq_samples), dtype=np.float32)
 
         return {
             "status": "active",
