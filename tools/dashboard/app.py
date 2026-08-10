@@ -872,10 +872,12 @@ class Dashboard:
                     self._panels["notifications"].push(
                         "INFO", f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
         elif k in ("a", "A"):
-            if "notifications" in self._panels:
-                self._panels["notifications"].push(
-                    "WARN", "AMP LOCKED OUT — PlutoSDRplus 1 amp blown, parts on order"
-                )
+            if "waterfall" in self._panels:
+                self._panels["waterfall"].toggle_amp()
+                if "notifications" in self._panels:
+                    status = "ON" if getattr(self._panels["waterfall"], "amp_enabled", False) else "OFF"
+                    self._panels["notifications"].push("INFO", f"amp: {status}")
+                self._publish_sdr_state()
         elif k == ",":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]

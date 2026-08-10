@@ -717,9 +717,8 @@ class WaterfallPanel:
         self.modulation = mods[(i + 1) % len(mods)]
 
     def toggle_amp(self):
-        # AMP LOCKOUT — PlutoSDRplus 1 front-end amp is blown; parts on order.
-        # Do not enable under any circumstances until the amp is replaced.
-        pass
+        self.amp_enabled = not self.amp_enabled
+        self._restart_stream_if_running()
 
     def resize(self, width: int):
         w = max(20, int(width))
