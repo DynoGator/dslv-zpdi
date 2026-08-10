@@ -48,15 +48,18 @@ class SDRAudioStreamer:
         self._detect_player()
 
     def _detect_player(self):
-        if shutil.which("aplay"):
+        if shutil.which("paplay"):
+            self.player_cmd = ["paplay", "--raw", f"--rate={self.sample_rate}", "--channels=1", "--format=s16le"]
+            self.player_name = "paplay (PulseAudio)"
+        elif shutil.which("pw-play"):
+            self.player_cmd = ["pw-play", "--rate", str(self.sample_rate), "--channels", "1", "--format", "s16", "-"]
+            self.player_name = "pw-play (PipeWire)"
+        elif shutil.which("aplay"):
             self.player_cmd = ["aplay", "-t", "raw", "-r", str(self.sample_rate), "-c", "1", "-f", "S16_LE", "-q", "-"]
             self.player_name = "aplay (ALSA)"
         elif shutil.which("ffplay"):
             self.player_cmd = ["ffplay", "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(self.sample_rate), "-ac", "1", "-i", "-"]
             self.player_name = "ffplay (FFmpeg)"
-        elif shutil.which("pw-play"):
-            self.player_cmd = ["pw-play", "--rate", str(self.sample_rate), "--channels", "1", "--format", "s16", "-"]
-            self.player_name = "pw-play (PipeWire)"
         else:
             self.player_cmd = None
             self.player_name = None
@@ -329,6 +332,10 @@ class DemodApp:
     def _render(self) -> Layout:
         if hasattr(self, "state_mgr"):
             self.state_mgr.sync_from_disk(self)
+            if hasattr(self, "center_hz"):
+                self.freq_hz = self.center_hz
+            if hasattr(self, "demod_profile"):
+                self.profile = self.demod_profile
         self._generate_mock_data()
         layout = self._build_layout()
         
