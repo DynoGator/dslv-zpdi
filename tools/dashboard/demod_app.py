@@ -22,6 +22,14 @@ from rich.table import Table
 from rich.align import Align
 from rich.progress import Progress, BarColumn, TextColumn
 
+try:
+    from dashboard.sdr_state import SDRStateManager
+except ImportError:
+    try:
+        from sdr_state import SDRStateManager
+    except ImportError:
+        from tools.dashboard.sdr_state import SDRStateManager
+
 
 class SDRAudioStreamer:
     """
@@ -187,6 +195,19 @@ class DemodApp:
         self.decoded_data = []
 
         self.audio_streamer = None
+        self.state_mgr = SDRStateManager(owner_name="demod_app.py")
+        self.state_mgr.sync_from_disk(self)
+
+        # Publish state to RAM disk
+        self.state_mgr.write_state({
+            "center_hz": self.freq_hz,
+            "bandwidth_hz": self.bandwidth_hz,
+            "gain_db": self.gain_db,
+            "squelch_db": self.squelch,
+            "demod_profile": self.profile,
+            "mimo_tx": not self.rx_only,
+            "paused": self.paused,
+        })
 
         self._keyboard_mode = None
         self._orig_attrs = None
@@ -306,6 +327,8 @@ class DemodApp:
         return layout
 
     def _render(self) -> Layout:
+        if hasattr(self, "state_mgr"):
+            self.state_mgr.sync_from_disk(self)
         self._generate_mock_data()
         layout = self._build_layout()
         
@@ -439,11 +462,15 @@ class DemodApp:
                                     self.audio_streamer.stop()
                             elif key == ' ':
                                 self.paused = not self.paused
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("paused", self.paused)
                             elif key == '\x18' or key == '*': # Ctrl+X or '*' used as triggers since Ctrl+8 is non-standard
                                 self.pin_entry_mode = True
                                 self.pin_buffer = ""
                             elif self.restricted_unlocked and (key == 't' or key == 'T'):
                                 self.rx_only = not self.rx_only
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("mimo_tx", not self.rx_only)
                                 self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] MIMO TX {'Disabled' if self.rx_only else 'ENABLED'}")
                             elif self.restricted_unlocked and (key == 'v' or key == 'V'):
                                 self.fox_hunt_active = not self.fox_hunt_active
@@ -453,8 +480,12 @@ class DemodApp:
                                 self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] Freq Hopping Monitor {'ACTIVE' if self.hopping_monitor_active else 'OFF'}")
                             elif key == 'S':
                                 self.squelch += 1.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("squelch_db", self.squelch)
                             elif key == 's':
                                 self.squelch -= 1.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("squelch_db", self.squelch)
                             elif key == 'l' or key == 'L':
                                 if self.audio_streamer and self.audio_streamer.is_running():
                                     self.audio_streamer.stop()
@@ -468,6 +499,8 @@ class DemodApp:
                                     else:
                                         self.audio_streamer = None
                                         self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] LISTEN MODE: FAILED (No supported audio sink found)")
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("audio_active", bool(self.audio_streamer and self.audio_streamer.is_running()))
                     
                     live.update(self._render())
                     time.sleep(0.1)

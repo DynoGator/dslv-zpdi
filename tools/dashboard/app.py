@@ -63,6 +63,14 @@ from dashboard.panels.system import SystemPanel
 from dashboard.panels.waterfall import WaterfallPanel
 from dashboard.panels.weather import SpaceWeatherPanel
 
+try:
+    from dashboard.sdr_state import SDRStateManager
+except ImportError:
+    try:
+        from sdr_state import SDRStateManager
+    except ImportError:
+        from tools.dashboard.sdr_state import SDRStateManager
+
 
 def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     s = state or {}
@@ -429,6 +437,9 @@ class Dashboard:
         self._panels["demod"] = self.demod_p
 
         self.paused = False
+        self.state_mgr = SDRStateManager(owner_name="app.py")
+        self._publish_sdr_state()
+
         self._panels_cfg = cfg.panels
         self.layout = build_layout(
             self.show_banner,
@@ -445,6 +456,22 @@ class Dashboard:
         self._live: Any = None
         self._input_mode: str | None = None
         self._input_buffer: str = ""
+
+    def _publish_sdr_state(self):
+        wf = self._panels.get("waterfall")
+        demod_panel = self._panels.get("demod")
+        state = {
+            "center_hz": float(wf.center_hz) if wf else 80_000_000.0,
+            "bandwidth_hz": float(wf.span_hz) if wf else 20_000_000.0,
+            "gain_db": float(wf.lna_gain) if wf else 24.0,
+            "paused": self.paused,
+        }
+        if demod_panel:
+            state["demod_profile"] = getattr(demod_panel, "active_profile", "FM Radio")
+            state["audio_active"] = getattr(demod_panel, "is_active", False)
+            state["mimo_tx"] = getattr(demod_panel, "mimo_tx", False)
+        if hasattr(self, "state_mgr"):
+            self.state_mgr.write_state(state)
 
     # keyboard raw mode ---
     def _enter_raw(self):
@@ -496,6 +523,9 @@ class Dashboard:
             return None
 
     def _render(self):
+        if hasattr(self, "state_mgr"):
+            self.state_mgr.sync_from_disk(self)
+
         if self.waterfall_only:
             if "waterfall" in self._panels:
                 wf_l = self._get_layout("waterfall")
@@ -592,6 +622,7 @@ class Dashboard:
                         pass
                 self._input_mode = None
                 self._input_buffer = ""
+                self._publish_sdr_state()
             elif k in ("BACKSPACE", "\x7f", "\b"):
                 self._input_buffer = self._input_buffer[:-1]
             elif k == "\x1b":
@@ -607,6 +638,7 @@ class Dashboard:
             self.paused = not self.paused
             if "notifications" in self._panels:
                 self._panels["notifications"].push("INFO", "paused" if self.paused else "resumed")
+            self._publish_sdr_state()
         elif k in ("m", "M"):
             if "waterfall" in self._panels:
                 self._wf_idx = (self._wf_idx + 1) % len(self._wf_modes)
@@ -639,6 +671,7 @@ class Dashboard:
                 p.active_profile = profile_map[k]
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"Profile selected: {p.active_profile}")
+                self._publish_sdr_state()
         elif k in ("\n", "\r"):
             if "demod" in self._panels:
                 p = self._panels["demod"]
@@ -669,6 +702,7 @@ class Dashboard:
                 else:
                     if "notifications" in self._panels:
                         self._panels["notifications"].push("INFO", "Demodulation: OFF")
+                self._publish_sdr_state()
         elif k == "T":
             if "demod" in self._panels:
                 p = self._panels["demod"]
@@ -678,6 +712,7 @@ class Dashboard:
                         self._panels["notifications"].push("WARN", "MIMO TX Enabled (RESTRICTED)")
                     else:
                         self._panels["notifications"].push("INFO", "MIMO TX Disabled")
+                self._publish_sdr_state()
         elif k in ("c", "C"):
             if not self.waterfall_only:
                 self.compact = not self.compact
@@ -743,63 +778,74 @@ class Dashboard:
                 if "notifications" in self._panels:
                     self._panels["notifications"].push(
                         "INFO", f"zoom in: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
+                self._publish_sdr_state()
         elif k == "DOWN":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].zoom(2.0)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push(
                         "INFO", f"zoom out: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
+                self._publish_sdr_state()
         elif k == "LEFT":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(-int(wf.span_hz * 0.1))
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"tune -: {wf.center_hz / 1e6:.2f}MHz")
+                self._publish_sdr_state()
         elif k == "RIGHT":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(int(wf.span_hz * 0.1))
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"tune +: {wf.center_hz / 1e6:.2f}MHz")
+                self._publish_sdr_state()
         elif k == "+":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_gain(1)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+                self._publish_sdr_state()
         elif k == "-":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_gain(-1)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+                self._publish_sdr_state()
         elif k == "<":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(-int(wf.span_hz * 0.1))
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"tune: {wf.center_hz / 1e6:.2f}MHz")
+                self._publish_sdr_state()
         elif k == ">":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(int(wf.span_hz * 0.1))
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"tune: {wf.center_hz / 1e6:.2f}MHz")
+                self._publish_sdr_state()
         elif k in ("z", "Z"):
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.zoom(0.5)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"zoom in: {wf.span_hz / 1e6:.1f}MHz")
+                self._publish_sdr_state()
         elif k in ("x", "X"):
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.zoom(2.0)
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"zoom out: {wf.span_hz / 1e6:.1f}MHz")
+                self._publish_sdr_state()
         elif k in ("g", "G"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_gain()
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+                self._publish_sdr_state()
         elif k in ("v", "V"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_vga_gain()
@@ -822,12 +868,14 @@ class Dashboard:
                 wf.tune(-int(wf.span_hz * 0.01))
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"tune fine-: {wf.center_hz / 1e6:.3f}MHz")
+                self._publish_sdr_state()
         elif k == ".":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(int(wf.span_hz * 0.01))
                 if "notifications" in self._panels:
                     self._panels["notifications"].push("INFO", f"tune fine+: {wf.center_hz / 1e6:.3f}MHz")
+                self._publish_sdr_state()
 
     def run(self):
         self._boot_animation()
