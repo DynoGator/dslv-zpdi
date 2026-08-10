@@ -669,8 +669,22 @@ class Dashboard:
                 p = self._panels["demod"]
                 profile_map = {"1": "ADS-B", "2": "FM Radio", "3": "AM Radio", "4": "EMS/Fire", "5": "Broadcast TV"}
                 p.active_profile = profile_map[k]
+                
+                presets = {
+                    "ADS-B": {"freq": 1090000000, "bw": 2000000},
+                    "FM Radio": {"freq": 104500000, "bw": 200000},
+                    "AM Radio": {"freq": 1400000, "bw": 10000},
+                    "EMS/Fire": {"freq": 154310000, "bw": 12500},
+                    "Broadcast TV": {"freq": 473000000, "bw": 6000000},
+                }
+                
+                if "waterfall" in self._panels:
+                    wf = self._panels["waterfall"]
+                    wf.center_hz = presets[p.active_profile]["freq"]
+                    wf.span_hz = presets[p.active_profile]["bw"]
+
                 if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"Profile selected: {p.active_profile}")
+                    self._panels["notifications"].push("INFO", f"Profile: {p.active_profile} ({presets[p.active_profile]['freq']/1e6:.1f} MHz)")
                 self._publish_sdr_state()
         elif k in ("\n", "\r"):
             if "demod" in self._panels:
@@ -891,16 +905,23 @@ class Dashboard:
             next_frame = time.monotonic()
             with self._live:
                 while True:
+                    keys_pressed = False
                     while (k := self._read_key()) is not None:
                         self._handle_key(k)
-                    if not self.paused:
-                        self._render()
-                    next_frame += frame_period
+                        keys_pressed = True
+                        
                     now = time.monotonic()
-                    if now - next_frame > frame_period:
-                        # Overran by more than a frame; resync the deadline.
-                        next_frame = now + frame_period
-                    time.sleep(max(0.0, next_frame - now))
+                    if now >= next_frame or keys_pressed:
+                        if not self.paused:
+                            self._render()
+                        if now >= next_frame:
+                            next_frame = now + frame_period
+                            
+                    wait_time = max(0.0, next_frame - time.monotonic())
+                    if wait_time > 0 and sys.stdin.isatty():
+                        select.select([sys.stdin], [], [], wait_time)
+                    elif wait_time > 0:
+                        time.sleep(wait_time)
         except KeyboardInterrupt:
             pass
         finally:

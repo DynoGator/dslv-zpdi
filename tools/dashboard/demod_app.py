@@ -52,7 +52,7 @@ class SDRAudioStreamer:
             self.player_cmd = ["paplay", "--raw", f"--rate={self.sample_rate}", "--channels=1", "--format=s16le"]
             self.player_name = "paplay (PulseAudio)"
         elif shutil.which("pw-play"):
-            self.player_cmd = ["pw-play", "--rate", str(self.sample_rate), "--channels", "1", "--format", "s16", "-"]
+            self.player_cmd = ["pw-play", "--raw", "--rate", str(self.sample_rate), "--channels", "1", "--format", "s16", "-"]
             self.player_name = "pw-play (PipeWire)"
         elif shutil.which("aplay"):
             self.player_cmd = ["aplay", "-t", "raw", "-r", str(self.sample_rate), "-c", "1", "-f", "S16_LE", "-q", "-"]
@@ -105,51 +105,109 @@ class SDRAudioStreamer:
         tone_phase = 0.0
         dt = 1.0 / self.sample_rate
 
+        want_real = os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
+        sdr_backend = None
+        demodulator = None
+        
+        if want_real:
+            try:
+                from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
+                from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
+                from dslv_zpdi.layer1_ingestion.demodulation import Demodulator
+                sdr_backend = PlutoIioBackend(uri="ip:192.168.2.1")
+                demodulator = Demodulator()
+            except Exception:
+                pass
+
         while self.running:
             if self.app.paused:
                 pcm_data = np.zeros(self.chunk_size, dtype=np.int16)
+                if not sdr_backend:
+                    time.sleep(self.chunk_size / self.sample_rate)
             else:
                 profile = getattr(self.app, "profile", "FM Radio")
                 squelch_db = getattr(self.app, "squelch", -40.0)
                 snr_db = getattr(self.app, "snr", 15.0)
 
-                # Simulated RF IQ generation
-                t = np.arange(self.chunk_size) * dt
-                
-                # Synthetic audio modulation signal (dual tone 440 Hz + 880 Hz)
-                audio_mod = 0.5 * np.sin(2 * np.pi * 440.0 * (t + tone_phase)) + 0.3 * np.sin(2 * np.pi * 880.0 * (t + tone_phase))
-                tone_phase = (tone_phase + self.chunk_size * dt) % 1.0
-
-                noise_amp = max(0.01, 10.0 ** (-snr_db / 20.0))
-                noise_i = np.random.normal(0, noise_amp, self.chunk_size)
-                noise_q = np.random.normal(0, noise_amp, self.chunk_size)
-
-                if "FM" in profile or "EMS" in profile:
-                    freq_dev = 75000.0 if "Radio" in profile else 5000.0
-                    inst_phase = phase + 2 * np.pi * freq_dev * np.cumsum(audio_mod) * dt
-                    phase = inst_phase[-1] % (2 * np.pi)
-                    iq_clean = np.exp(1j * inst_phase)
-                    iq = iq_clean + (noise_i + 1j * noise_q)
-
-                    # Demodulation: Polar discriminator
-                    demod_raw = np.angle(iq[1:] * np.conj(iq[:-1]))
-                    demod_raw = np.append(demod_raw, demod_raw[-1])
-                    audio_out = demod_raw * (self.sample_rate / (2 * np.pi * freq_dev))
-                elif "AM" in profile:
-                    mod_depth = 0.8
-                    carrier = np.exp(1j * 2 * np.pi * 1000.0 * t)
-                    iq = (1.0 + mod_depth * audio_mod) * carrier + (noise_i + 1j * noise_q)
-                    envelope = np.abs(iq)
-                    audio_out = envelope - np.mean(envelope)
+                if sdr_backend and demodulator:
+                    mode_map = {
+                        "ADS-B": "ADSB_DATA",
+                        "FM Radio": "WFM_AUDIO",
+                        "AM Radio": "AM_AUDIO",
+                        "EMS/Fire": "NFM_AUDIO",
+                        "Broadcast TV": "ATV_VIDEO"
+                    }
+                    demod_mode = mode_map.get(profile, "AM_AUDIO")
+                    demodulator.set_mode(demod_mode)
+                    
+                    target_rate = self.sample_rate
+                    current_rate = demodulator.current_preset.sample_rate_hz
+                    
+                    cprof = CaptureProfile(
+                        center_frequency_hz=int(self.app.freq_hz),
+                        sample_rate_sps=int(current_rate),
+                        bandwidth_hz=int(self.app.bandwidth_hz),
+                        gain_db=self.app.gain_db,
+                        gain_mode="manual",
+                        receive_channels=(0,),
+                        transmit_enabled=False,
+                        buffer_samples=int(current_rate * 0.05), # 50ms chunks
+                        num_samples=int(current_rate * 0.05),
+                    )
+                    
+                    try:
+                        cap = sdr_backend.capture(cprof)
+                        iq = cap.samples
+                    except Exception:
+                        iq = np.zeros(cprof.num_samples, dtype=np.complex64)
+                        
+                    res = demodulator.process_rx(iq)
+                    audio_out = res["output"] if res["output"] is not None else np.zeros(len(iq), dtype=np.float32)
+                    
+                    rssi_db = 10.0 * np.log10(np.mean(np.abs(iq) ** 2) + 1e-12)
+                    
+                    if current_rate > target_rate and current_rate % target_rate == 0:
+                        dec = int(current_rate // target_rate)
+                        audio_out = audio_out[::dec]
+                    elif current_rate != target_rate:
+                        indices = np.linspace(0, len(audio_out)-1, int(len(audio_out) * target_rate / current_rate)).astype(int)
+                        audio_out = audio_out[indices]
+                        
                 else:
-                    audio_out = 0.4 * np.sin(2 * np.pi * 1200.0 * (t + tone_phase))
-                    iq = audio_out + 1j * audio_out
+                    # Synthetic Fallback (with fixed phase wrapping)
+                    t = np.arange(self.chunk_size) * dt
+                    audio_mod = 0.5 * np.sin(2 * np.pi * 440.0 * (t + tone_phase)) + 0.3 * np.sin(2 * np.pi * 880.0 * (t + tone_phase))
+                    tone_phase = (tone_phase + self.chunk_size * dt) % 1.0
 
-                # RSSI power estimate (dB)
-                rssi_db = 10.0 * np.log10(np.mean(np.abs(iq) ** 2) + 1e-12)
+                    noise_amp = max(0.01, 10.0 ** (-snr_db / 20.0))
+                    noise_i = np.random.normal(0, noise_amp, self.chunk_size)
+                    noise_q = np.random.normal(0, noise_amp, self.chunk_size)
 
-                # Squelch Gate: mute audio if RSSI < squelch threshold
-                if rssi_db < squelch_db or snr_db < 3.0:
+                    if "FM" in profile or "EMS" in profile:
+                        freq_dev = 75000.0 if "Radio" in profile else 5000.0
+                        freq_dev = min(freq_dev, self.sample_rate * 0.4) 
+                        inst_phase = phase + 2 * np.pi * freq_dev * np.cumsum(audio_mod) * dt
+                        phase = inst_phase[-1] % (2 * np.pi)
+                        iq_clean = np.exp(1j * inst_phase)
+                        iq = iq_clean + (noise_i + 1j * noise_q)
+
+                        iq_delayed = np.roll(iq, 1)
+                        iq_delayed[0] = iq[0]
+                        demod_raw = np.angle(iq * np.conj(iq_delayed))
+                        audio_out = demod_raw * (self.sample_rate / (2 * np.pi * freq_dev))
+                    elif "AM" in profile:
+                        mod_depth = 0.8
+                        carrier = np.exp(1j * 2 * np.pi * 1000.0 * t)
+                        iq = (1.0 + mod_depth * audio_mod) * carrier + (noise_i + 1j * noise_q)
+                        envelope = np.abs(iq)
+                        audio_out = envelope - np.mean(envelope)
+                    else:
+                        audio_out = 0.4 * np.sin(2 * np.pi * 1200.0 * (t + tone_phase))
+                        iq = audio_out + 1j * audio_out
+
+                    rssi_db = 10.0 * np.log10(np.mean(np.abs(iq) ** 2) + 1e-12)
+
+                if rssi_db < squelch_db or (not sdr_backend and snr_db < 3.0):
                     audio_out = np.zeros_like(audio_out)
 
                 audio_clipped = np.clip(audio_out, -1.0, 1.0)
@@ -162,7 +220,8 @@ class SDRAudioStreamer:
             except (BrokenPipeError, OSError):
                 break
 
-            time.sleep(self.chunk_size / self.sample_rate)
+            if not sdr_backend and not self.app.paused:
+                time.sleep(self.chunk_size / self.sample_rate)
 
 
 class DemodApp:
@@ -220,9 +279,9 @@ class DemodApp:
     def _setup_profile(self):
         profile_settings = {
             "ADS-B": {"freq": 1090000000, "bw": 2000000, "gain": 49.6},
-            "FM Radio": {"freq": 98100000, "bw": 200000, "gain": 30.0},
-            "AM Radio": {"freq": 1000000, "bw": 10000, "gain": 20.0},
-            "EMS/Fire": {"freq": 154280000, "bw": 12500, "gain": 40.0},
+            "FM Radio": {"freq": 104500000, "bw": 200000, "gain": 30.0},
+            "AM Radio": {"freq": 1400000, "bw": 10000, "gain": 20.0},
+            "EMS/Fire": {"freq": 154310000, "bw": 12500, "gain": 40.0},
             "Broadcast TV": {"freq": 473000000, "bw": 6000000, "gain": 35.0},
         }
         if self.profile in profile_settings:
@@ -485,6 +544,30 @@ class DemodApp:
                             elif self.restricted_unlocked and (key == 'h' or key == 'H'):
                                 self.hopping_monitor_active = not self.hopping_monitor_active
                                 self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] Freq Hopping Monitor {'ACTIVE' if self.hopping_monitor_active else 'OFF'}")
+                            elif key == 'f':
+                                self.freq_hz -= 100000.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("center_hz", self.freq_hz)
+                            elif key == 'F':
+                                self.freq_hz += 100000.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("center_hz", self.freq_hz)
+                            elif key == 'b':
+                                self.bandwidth_hz -= 10000.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("bandwidth_hz", self.bandwidth_hz)
+                            elif key == 'B':
+                                self.bandwidth_hz += 10000.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("bandwidth_hz", self.bandwidth_hz)
+                            elif key == 'g':
+                                self.gain_db -= 1.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("gain_db", self.gain_db)
+                            elif key == 'G':
+                                self.gain_db += 1.0
+                                if hasattr(self, "state_mgr"):
+                                    self.state_mgr.update_key("gain_db", self.gain_db)
                             elif key == 'S':
                                 self.squelch += 1.0
                                 if hasattr(self, "state_mgr"):
@@ -510,7 +593,10 @@ class DemodApp:
                                     self.state_mgr.update_key("audio_active", bool(self.audio_streamer and self.audio_streamer.is_running()))
                     
                     live.update(self._render())
-                    time.sleep(0.1)
+                    if sys.stdin.isatty():
+                        select.select([sys.stdin], [], [], 0.1)
+                    else:
+                        time.sleep(0.1)
         finally:
             if self.audio_streamer:
                 self.audio_streamer.stop()

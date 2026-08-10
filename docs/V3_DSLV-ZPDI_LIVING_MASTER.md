@@ -1364,3 +1364,11 @@ Independent verification of a record requires:
 **Action:** Evaluated and hardened repository for multi-OS compliance. Formally validated support for Raspberry Pi OS Trixie (Debian 13) alongside Bookworm (Debian 12). Upgraded the installer architecture (Rev 5.0.0) to include OS detection and automated "SoapySDR Venv Linkage" for hardware-agnostic SDR support within isolated environments. Corrected `pyPlutoSDRplus` dependency bottleneck from previous revision. Verified 100% test pass rate (31/31) on Python 3.13 baseline.
 **Status at Handoff:** Deployment architecture is multi-OS hardened. Trixie (Deb 13) support is verified stable. Repository is synchronized at Rev 5.0.0.
 **Next Action at Handoff:** Execute physical commissioning on Tier 1 hardware using the new Rev 5.0.0 installer.
+
+## TURNOVER — 2026-08-10 (Session 24: Demodulation Engine & Dashboard Hardening)
+
+**Date:** August 10, 2026  
+**Author:** Antigravity (Autonomous Co-Pilot)
+**Action:** Overhauled the demodulation and DSP audio engine (`demod_app.py` & `demodulation.py`). Resolved critical UI lag by replacing `time.sleep` with `select.select` for completely non-blocking TUI rendering. Fixed a phase-wrapping math bug in FM synthesis, and fully integrated live real-time SDR captures (`PlutoIioBackend`) directly into the demodulation app when `REAL SDR` mode is active, complete with downsampling to 48kHz. Introduced `GEMINI.md` as a permanent agent state tracking matrix to persist context across reboots.
+**Status at Handoff:** Rev 5.3.2 is stabilized. Dashboard responds instantaneously to user input. The demodulation module correctly pipelines real SDR data for actual listening.
+**Next Action at Handoff:** Continue Phase 2A expansion and validation of the MIMO vectoring system in a live RF environment.

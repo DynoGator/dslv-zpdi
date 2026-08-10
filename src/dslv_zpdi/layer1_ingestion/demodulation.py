@@ -80,8 +80,19 @@ class Demodulator:
         if self.current_preset.category == "audio":
             if self.active_mode.startswith("AM"):
                 output_data = np.abs(iq_samples).astype(np.float32)
+                output_data = output_data - np.mean(output_data)
             elif "FM" in self.active_mode:
-                output_data = np.angle(iq_samples).astype(np.float32)
+                # Polar discriminator for FM
+                iq_delayed = np.roll(iq_samples, 1)
+                iq_delayed[0] = iq_samples[0]
+                output_data = np.angle(iq_samples * np.conj(iq_delayed)).astype(np.float32)
+            elif self.active_mode.startswith("LSB") or self.active_mode.startswith("USB") or self.active_mode.startswith("CW"):
+                # BFO mixing for SSB and CW
+                bfo_freq = self.current_preset.params.get("bfo", 0)
+                sr = self.current_preset.sample_rate_hz
+                t = np.arange(len(iq_samples)) / sr
+                bfo_signal = np.exp(1j * 2 * np.pi * bfo_freq * t)
+                output_data = np.real(iq_samples * bfo_signal).astype(np.float32)
             else:
                 output_data = np.abs(iq_samples).astype(np.float32)
         else:

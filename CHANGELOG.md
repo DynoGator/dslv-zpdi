@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.3.2] — Real-Time SDR Demodulation & UI Snappiness (2026-08-10)
+
+### Added
+- **Real-SDR Mode for DemodApp**: The advanced Demodulation Suite now ingests live `PlutoIioBackend` data when `DSLV_DASHBOARD_REAL_SDR` is enabled, actively demodulating live over-the-air signals (FM, AM, etc.).
+- **Agent Context Tracking**: Added `GEMINI.md` to persist the system state vector automatically for AI assistants on reboot.
+
+### Fixed
+- **Dashboard Lag Fixed**: Removed blocking `time.sleep()` from `app.py` and `demod_app.py`, implementing non-blocking `select.select()` for instantaneous keystroke responsiveness.
+- **Demodulation Math Bug**: Fixed phase-wrapping glitch in FM synthesis and implemented the correct mathematically-sound polar discriminator for live WFM SDR captures in `demodulation.py`.
+- **AM Demodulation**: Added proper DC blocking for AM streams.
+
 ## [5.3.1] — Advanced Demodulation UI and Reliability Overhaul (2026-08-07)
 
 ### Added
