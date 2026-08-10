@@ -1,8 +1,3 @@
-"""
-DSLV-ZPDI Demodulation & SDR Control Interface
-Standalone, feature-rich module for RF signal demodulation.
-"""
-
 import os
 import sys
 import time
@@ -12,7 +7,11 @@ import select
 import shutil
 import argparse
 import random
+import subprocess
+import threading
 from typing import Any
+
+import numpy as np
 
 from rich.console import Console, Group
 from rich.layout import Layout
@@ -22,6 +21,138 @@ from rich.text import Text
 from rich.table import Table
 from rich.align import Align
 from rich.progress import Progress, BarColumn, TextColumn
+
+
+class SDRAudioStreamer:
+    """
+    Real-time audio streaming engine for DSLV-ZPDI Demodulation.
+    Generates simulated RF IQ data, performs FM/AM demodulation and squelch gating,
+    and streams 48 kHz 16-bit mono PCM audio to an aplay/ffplay stdin subprocess.
+    """
+    def __init__(self, app):
+        self.app = app
+        self.running = False
+        self.thread = None
+        self.proc = None
+        self.player_name = None
+        self.sample_rate = 48000
+        self.chunk_size = 2048
+        self._detect_player()
+
+    def _detect_player(self):
+        if shutil.which("aplay"):
+            self.player_cmd = ["aplay", "-t", "raw", "-r", str(self.sample_rate), "-c", "1", "-f", "S16_LE", "-q", "-"]
+            self.player_name = "aplay (ALSA)"
+        elif shutil.which("ffplay"):
+            self.player_cmd = ["ffplay", "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(self.sample_rate), "-ac", "1", "-i", "-"]
+            self.player_name = "ffplay (FFmpeg)"
+        elif shutil.which("pw-play"):
+            self.player_cmd = ["pw-play", "--rate", str(self.sample_rate), "--channels", "1", "--format", "s16", "-"]
+            self.player_name = "pw-play (PipeWire)"
+        else:
+            self.player_cmd = None
+            self.player_name = None
+
+    def start(self) -> bool:
+        if self.running or not self.player_cmd:
+            return False
+        self.running = True
+        try:
+            self.proc = subprocess.Popen(
+                self.player_cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        except Exception:
+            self.running = False
+            return False
+
+        self.thread = threading.Thread(target=self._stream_loop, daemon=True)
+        self.thread.start()
+        return True
+
+    def stop(self):
+        self.running = False
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+        if self.proc:
+            try:
+                if self.proc.stdin:
+                    self.proc.stdin.close()
+                self.proc.terminate()
+                self.proc.wait(timeout=0.5)
+            except Exception:
+                pass
+            self.proc = None
+
+    def is_running(self) -> bool:
+        return bool(self.running and self.proc and self.proc.poll() is None)
+
+    def _stream_loop(self):
+        phase = 0.0
+        tone_phase = 0.0
+        dt = 1.0 / self.sample_rate
+
+        while self.running:
+            if self.app.paused:
+                pcm_data = np.zeros(self.chunk_size, dtype=np.int16)
+            else:
+                profile = getattr(self.app, "profile", "FM Radio")
+                squelch_db = getattr(self.app, "squelch", -40.0)
+                snr_db = getattr(self.app, "snr", 15.0)
+
+                # Simulated RF IQ generation
+                t = np.arange(self.chunk_size) * dt
+                
+                # Synthetic audio modulation signal (dual tone 440 Hz + 880 Hz)
+                audio_mod = 0.5 * np.sin(2 * np.pi * 440.0 * (t + tone_phase)) + 0.3 * np.sin(2 * np.pi * 880.0 * (t + tone_phase))
+                tone_phase = (tone_phase + self.chunk_size * dt) % 1.0
+
+                noise_amp = max(0.01, 10.0 ** (-snr_db / 20.0))
+                noise_i = np.random.normal(0, noise_amp, self.chunk_size)
+                noise_q = np.random.normal(0, noise_amp, self.chunk_size)
+
+                if "FM" in profile or "EMS" in profile:
+                    freq_dev = 75000.0 if "Radio" in profile else 5000.0
+                    inst_phase = phase + 2 * np.pi * freq_dev * np.cumsum(audio_mod) * dt
+                    phase = inst_phase[-1] % (2 * np.pi)
+                    iq_clean = np.exp(1j * inst_phase)
+                    iq = iq_clean + (noise_i + 1j * noise_q)
+
+                    # Demodulation: Polar discriminator
+                    demod_raw = np.angle(iq[1:] * np.conj(iq[:-1]))
+                    demod_raw = np.append(demod_raw, demod_raw[-1])
+                    audio_out = demod_raw * (self.sample_rate / (2 * np.pi * freq_dev))
+                elif "AM" in profile:
+                    mod_depth = 0.8
+                    carrier = np.exp(1j * 2 * np.pi * 1000.0 * t)
+                    iq = (1.0 + mod_depth * audio_mod) * carrier + (noise_i + 1j * noise_q)
+                    envelope = np.abs(iq)
+                    audio_out = envelope - np.mean(envelope)
+                else:
+                    audio_out = 0.4 * np.sin(2 * np.pi * 1200.0 * (t + tone_phase))
+                    iq = audio_out + 1j * audio_out
+
+                # RSSI power estimate (dB)
+                rssi_db = 10.0 * np.log10(np.mean(np.abs(iq) ** 2) + 1e-12)
+
+                # Squelch Gate: mute audio if RSSI < squelch threshold
+                if rssi_db < squelch_db or snr_db < 3.0:
+                    audio_out = np.zeros_like(audio_out)
+
+                audio_clipped = np.clip(audio_out, -1.0, 1.0)
+                pcm_data = (audio_clipped * 24000.0).astype(np.int16)
+
+            try:
+                if self.proc and self.proc.stdin:
+                    self.proc.stdin.write(pcm_data.tobytes())
+                    self.proc.stdin.flush()
+            except (BrokenPipeError, OSError):
+                break
+
+            time.sleep(self.chunk_size / self.sample_rate)
+
 
 class DemodApp:
     def __init__(self, profile: str = "ADS-B", rx_only: bool = True, freq_hz: float = None, bw_hz: float = None, gain_db: float = None):
@@ -54,6 +185,8 @@ class DemodApp:
 
         self.logs = []
         self.decoded_data = []
+
+        self.audio_streamer = None
 
         self._keyboard_mode = None
         self._orig_attrs = None
@@ -128,10 +261,18 @@ class DemodApp:
 
     def _build_layout(self) -> Layout:
         layout = Layout()
+        try:
+            _, term_rows = shutil.get_terminal_size()
+        except Exception:
+            term_rows = 30
+
+        header_size = 3 if term_rows >= 20 else 1
+        footer_size = 3 if term_rows >= 20 else 1
+
         layout.split_column(
-            Layout(name="header", size=3),
+            Layout(name="header", size=header_size),
             Layout(name="main", ratio=1),
-            Layout(name="footer", size=3)
+            Layout(name="footer", size=footer_size)
         )
         
         layout["main"].split_row(
@@ -141,25 +282,25 @@ class DemodApp:
         
         if self.restricted_unlocked:
             layout["left_panel"].split_column(
-                Layout(name="controls", size=10),
-                Layout(name="restricted_controls", size=6),
-                Layout(name="metrics", size=8),
-                Layout(name="logs", ratio=1)
+                Layout(name="controls", ratio=4),
+                Layout(name="restricted_controls", ratio=3),
+                Layout(name="metrics", ratio=3),
+                Layout(name="logs", ratio=4)
             )
             layout["right_panel"].split_column(
-                Layout(name="visual", ratio=2),
-                Layout(name="vector_data", ratio=1),
-                Layout(name="data", ratio=1)
+                Layout(name="visual", ratio=3),
+                Layout(name="vector_data", ratio=2),
+                Layout(name="data", ratio=2)
             )
         else:
             layout["left_panel"].split_column(
-                Layout(name="controls", size=10),
-                Layout(name="metrics", size=8),
-                Layout(name="logs", ratio=1)
+                Layout(name="controls", ratio=4),
+                Layout(name="metrics", ratio=3),
+                Layout(name="logs", ratio=4)
             )
             layout["right_panel"].split_column(
-                Layout(name="visual", ratio=2),
-                Layout(name="data", ratio=1)
+                Layout(name="visual", ratio=3),
+                Layout(name="data", ratio=2)
             )
             
         return layout
@@ -179,6 +320,13 @@ class DemodApp:
         layout["header"].update(Panel(Align.center(header_text), style="bright_blue"))
         
         # Controls
+        audio_active = bool(self.audio_streamer and self.audio_streamer.is_running())
+        if audio_active:
+            sink_name = getattr(self.audio_streamer, "player_name", "PCM Sink") or "PCM Sink"
+            audio_status = f"[bold bright_green]🔊 STREAMING ({sink_name})[/]"
+        else:
+            audio_status = "[dim bright_black]🔇 MUTED (Press L)[/]"
+
         ctrl_table = Table.grid(padding=(0, 2))
         ctrl_table.add_column(style="bright_yellow")
         ctrl_table.add_column(style="bright_white")
@@ -186,6 +334,7 @@ class DemodApp:
         ctrl_table.add_row("[B] Bandwidth", f"{self.bandwidth_hz/1e6:.3f} MHz")
         ctrl_table.add_row("[G] Gain", f"{self.gain_db:.1f} dB")
         ctrl_table.add_row("[S] Squelch", f"{self.squelch:.1f} dB")
+        ctrl_table.add_row("[L] Audio Output", audio_status)
         ctrl_table.add_row("[SPACE] Pause", "PAUSED" if self.paused else "ACTIVE")
         layout["controls"].update(Panel(ctrl_table, title="[bold bright_white]SDR CONTROLS", border_style="bright_blue"))
         
@@ -286,6 +435,8 @@ class DemodApp:
                         else:
                             if key.lower() == 'q':
                                 self.running = False
+                                if self.audio_streamer:
+                                    self.audio_streamer.stop()
                             elif key == ' ':
                                 self.paused = not self.paused
                             elif key == '\x18' or key == '*': # Ctrl+X or '*' used as triggers since Ctrl+8 is non-standard
@@ -305,17 +456,24 @@ class DemodApp:
                             elif key == 's':
                                 self.squelch -= 1.0
                             elif key == 'l' or key == 'L':
-                                listen_on = "LISTEN MODE: ACTIVE (Audio routed to default device)"
-                                listen_off = "LISTEN MODE: OFF (Data decoding only)"
-                                current = next((l for l in self.logs if "LISTEN MODE" in l), listen_off)
-                                if current == listen_off:
-                                    self.logs.insert(0, listen_on)
+                                if self.audio_streamer and self.audio_streamer.is_running():
+                                    self.audio_streamer.stop()
+                                    self.audio_streamer = None
+                                    self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] LISTEN MODE: OFF (Data decoding only)")
                                 else:
-                                    self.logs.insert(0, listen_off)
+                                    self.audio_streamer = SDRAudioStreamer(self)
+                                    if self.audio_streamer.start():
+                                        player_name = self.audio_streamer.player_name or "Audio Sink"
+                                        self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] LISTEN MODE: ACTIVE (Streaming via {player_name})")
+                                    else:
+                                        self.audio_streamer = None
+                                        self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] LISTEN MODE: FAILED (No supported audio sink found)")
                     
                     live.update(self._render())
                     time.sleep(0.1)
         finally:
+            if self.audio_streamer:
+                self.audio_streamer.stop()
             self._exit_raw()
 
 if __name__ == "__main__":
