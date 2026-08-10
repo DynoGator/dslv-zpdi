@@ -386,8 +386,14 @@ Live-tailing `journalctl -fu dslv-zpdi`. Shows the most recent N lines from the 
 #### Notifications
 Rotating event ticker: pipeline state changes, keybinding confirmations, dark-humor quips, and glitch events. Also receives error notifications if a panel fails to render (dashboard does not crash — it pushes the error here instead).
 
-#### Demodulation & MIMO
-Direct signal demodulation interface with predefined profiles (ADS-B, AM, FM, EMS, Broadcast TV). Operates in RX (Listen Only) mode by default. MIMO TX (Transmit) functionality is available as a toggleable option with explicit warnings regarding restricted operations.
+#### Advanced Demodulation Suite
+A standalone, feature-rich TUI pop-out module (`demod_app.py`) for comprehensive RF demodulation.
+- **Base Capabilities:** Live SNR/Lock metrics, spectrum visualization, decoded payload telemetry (e.g., ADS-B), and full manual radio control (Freq, BW, Gain, Squelch) via keyboard shortcuts.
+- **Listen Mode:** Payload audio can be routed to the system's default audio device via the `L` key.
+- **Restricted Features (PIN Protected):** Sensitive features are locked by default to prevent accidental transmission or unlawful use. Press `*` or `Ctrl+X` to trigger the obfuscated security prompt. Enter PIN `1988` to unlock:
+  - **MIMO TX:** Transmit capability unlock.
+  - **Fox Hunting (Vector/TDOA):** Estimates target bearing and distance using Time Difference of Arrival and RSSI vectoring.
+  - **Frequency Hopping Monitor:** Dynamically flags and tracks fast-hopping signals across the spectrum analyzer.
 
 #### Footer
 Keybinding quick-reference, live UTC timestamp, and a blinking pulse indicator.

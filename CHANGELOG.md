@@ -1,5 +1,21 @@
 # Changelog
 
+## [5.3.1] — Advanced Demodulation UI and Reliability Overhaul (2026-08-07)
+
+### Added
+- **Standalone Advanced Demodulation Suite (`demod_app.py`)**: A comprehensive rich TUI pop-out module.
+- **PIN-Protected Restricted Menu**: Obfuscated feature unlocking via hotkeys (`*` or `Ctrl+X`) requiring PIN `1988` to unlock sensitive features.
+- **Fox Hunting (TDOA/RSSI Vectoring)**: Live target vectoring estimation and reporting added to restricted systems.
+- **Frequency Hopping Monitor**: Automated detection and tracking of fast-hopping emitters on the baseband spectrum view.
+- **Advanced Radio Controls**: Full manual capability to adjust frequency (`F`), bandwidth (`B`), gain (`G`), and squelch (`S`) dynamically in the DemodApp.
+- **Listen Mode**: Direct audio routing toggle (`L`) added to DemodApp.
+
+### Changed
+- Refactored `tools/launch_project.sh` to introduce highly robust, self-healing service initialization. Replaced blind `start` commands with chronological check-and-retry loops (up to 3 attempts with 5-second pauses) and explicit failure diagnosis.
+- Substantially improved Dashboard function footer/legend clarity, switching to expanded descriptions for better user experience.
+- Increased default `fps` in `dashboard.toml` to 30 for enhanced UI responsiveness and reduced input latency.
+- Refined dashboard initialization script (`launch.sh`) and system state icons mapping on the desktop.
+
 ## [5.3.0] — Zero-Copy Binary Ingestion Refactor (2026-08-06)
 
 ### Added
