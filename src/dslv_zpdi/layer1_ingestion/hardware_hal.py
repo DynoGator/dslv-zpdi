@@ -231,10 +231,26 @@ class HardwareHAL(BaseHAL):
             "external" if clock_att and clock_att.external_reference_configured else "internal"
         )
 
+        demod_audio_preview = []
+        try:
+            self.demodulator.set_mode("WFM_AUDIO")
+            demod_res = self.demodulator.process_rx(result.samples)
+            if demod_res and demod_res.get("output") is not None:
+                demod_audio_preview = demod_res["output"][:64].tolist()
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self.mimo_engine, 'process_rx'):
+                self.mimo_engine.process_rx(result.samples)
+        except Exception:
+            pass
+
         raw_value: dict[str, Any] = {
             "iq_samples": [[float(x.real), float(x.imag)] for x in result.samples[:64]],
             "iq_digest": _sha256_samples(result.samples[:64]),
             "iq_preview_count": min(64, len(result.samples)),
+            "demod_audio_preview": demod_audio_preview,
             "center_freq": result.center_frequency_hz,
             "sample_rate": result.effective_sample_rate_sps,
             "bandwidth_mhz": result.rf_bandwidth_hz / 1e6,

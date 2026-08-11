@@ -23,6 +23,20 @@ WEB_PORT = int(os.environ.get("ZPDI_WEB_PORT", "8000"))
 
 app = FastAPI(title="dslv-zpdi Web Server")
 
+# Centralized SDR State for TUI IPC
+current_sdr_state: dict[str, Any] = {
+    "center_hz": 98_100_000.0,
+    "bandwidth_hz": 200_000.0,
+    "gain_db": 30.0,
+    "squelch_db": -40.0,
+    "demod_profile": "FM Radio",
+    "audio_active": False,
+    "mimo_tx": False,
+    "paused": False,
+    "updated_by": "initialization",
+    "timestamp": 0.0,
+}
+
 class HealthStatus(BaseModel):
     status: str
     last_sample_ts: int | None
@@ -57,6 +71,15 @@ async def latest():
     if not latest_data:
         return {"error": "No data available"}
     return latest_data
+
+@app.get("/state")
+async def get_state():
+    return current_sdr_state
+
+@app.post("/state")
+async def update_state(updates: dict):
+    current_sdr_state.update(updates)
+    return current_sdr_state
 
 @app.websocket("/ws/live")
 async def websocket_endpoint(websocket: WebSocket):

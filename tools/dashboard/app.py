@@ -149,6 +149,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
             ("t",       "Toggle 10\" Layout"),
             ("g/v",     "Cycle LNA/VGA Gain"),
             ("a",       "Toggle Amp"),
+            ("e",       "Launch Cam"),
             ("+/-",     "Gain Step ±"),
             ("</>",     "Tune Coarse ±"),
             (",/.",     "Tune Fine ±"),
@@ -704,7 +705,8 @@ class Dashboard:
                     
                     # Get path to demod_app.py relative to app.py
                     demod_script = os.path.join(os.path.dirname(__file__), "demod_app.py")
-                    cmd_str = f"{sys.executable} {demod_script} --profile '{profile}' {freq_arg} {bw_arg} {gain_arg} {'--tx' if mimo_tx else ''}"
+                    wrapper = os.path.join(os.path.dirname(__file__), "launch_demod_wrapper.sh")
+                    cmd_str = f"bash {wrapper} {sys.executable} {demod_script} --profile '{profile}' {freq_arg} {bw_arg} {gain_arg} {'--tx' if mimo_tx else ''}"
                     cmd = ["lxterminal", "--title", "DSLV-ZPDI :: Demodulation Interface", "-e", cmd_str]
                     try:
                         subprocess.Popen(cmd)
@@ -878,6 +880,20 @@ class Dashboard:
                     status = "ON" if getattr(self._panels["waterfall"], "amp_enabled", False) else "OFF"
                     self._panels["notifications"].push("INFO", f"amp: {status}")
                 self._publish_sdr_state()
+        elif k in ("e", "E"):
+            import subprocess
+            import sys
+            import os
+            cam_script = os.path.join(os.path.dirname(__file__), "cam_app.py")
+            cmd_str = f"{sys.executable} {cam_script}"
+            cmd = ["lxterminal", "--title", "DSLV-ZPDI :: Tamper-Evident Cam", "-e", cmd_str]
+            try:
+                subprocess.Popen(cmd)
+                msg = "Tamper-Evident Cam Interface Launched"
+            except Exception as e:
+                msg = f"Failed to launch Cam: {e}"
+            if "notifications" in self._panels:
+                self._panels["notifications"].push("INFO", msg)
         elif k == ",":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]

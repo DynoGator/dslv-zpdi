@@ -1,27 +1,16 @@
 """
 DSLV-ZPDI Unified SDR State Manager
 Provides IPC synchronization between app.py (Main Dashboard), demod_app.py (Demod Interface),
-and external services via atomic JSON file operations in RAM-disk (/dev/shm).
+and external services via REST API to zpdi_web_server.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import urllib.request
+import urllib.error
 import time
-from pathlib import Path
 from typing import Any, Dict
-
-SHM_STATE_PATH = Path("/dev/shm/dslv_sdr_state.json")
-FALLBACK_STATE_PATH = Path("/tmp/dslv_sdr_state.json")
-
-
-def get_state_path() -> Path:
-    """Return /dev/shm path if available and writable, else /tmp path."""
-    if Path("/dev/shm").exists() and os.access("/dev/shm", os.W_OK):
-        return SHM_STATE_PATH
-    return FALLBACK_STATE_PATH
-
 
 DEFAULT_SDR_STATE: Dict[str, Any] = {
     "center_hz": 98_100_000.0,
@@ -36,61 +25,47 @@ DEFAULT_SDR_STATE: Dict[str, Any] = {
     "timestamp": 0.0,
 }
 
-
 class SDRStateManager:
     """
-    Manages atomic shared RAM-disk state synchronization between processes.
+    Manages shared state synchronization between processes via REST API.
     Guarantees that tuning, gain, squelch, and profile changes in one TUI
-    are immediately reflected in all active dashboard processes.
+    are reflected centrally.
     """
 
     def __init__(self, owner_name: str = "unknown"):
         self.owner_name = owner_name
-        self.state_path = get_state_path()
         self.last_seen_timestamp: float = 0.0
+        self.base_url = "http://127.0.0.1:8000/state"
         self._ensure_initial_state()
 
     def _ensure_initial_state(self) -> None:
-        """Create the state file with default values if it doesn't exist yet."""
-        if not self.state_path.exists():
-            state = dict(DEFAULT_SDR_STATE)
-            state["timestamp"] = time.time()
-            state["updated_by"] = self.owner_name
-            self.write_state(state)
+        pass # Managed by the server
 
     def read_state(self) -> Dict[str, Any]:
-        """Atomically read shared state from RAM disk."""
-        if not self.state_path.exists():
-            return dict(DEFAULT_SDR_STATE)
+        """Read shared state from REST API."""
         try:
-            with open(self.state_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data
+            req = urllib.request.Request(self.base_url, method="GET")
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                return json.loads(resp.read().decode())
         except Exception:
             return dict(DEFAULT_SDR_STATE)
 
     def write_state(self, updates: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Atomically write updated state to RAM disk using temporary file replacement.
+        Write updated state to REST API.
         """
         current = self.read_state()
         current.update(updates)
         current["timestamp"] = time.time()
         current["updated_by"] = self.owner_name
-
-        tmp_path = self.state_path.with_suffix(f".tmp.{os.getpid()}")
         try:
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(current, f, indent=2)
-            os.replace(tmp_path, self.state_path)
-            self.last_seen_timestamp = current["timestamp"]
+            req = urllib.request.Request(self.base_url, data=json.dumps(current).encode(), headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                data = json.loads(resp.read().decode())
+                self.last_seen_timestamp = data.get("timestamp", 0.0)
+                return data
         except Exception:
-            if tmp_path.exists():
-                try:
-                    tmp_path.unlink()
-                except Exception:
-                    pass
-        return current
+            return current
 
     def update_key(self, key: str, value: Any) -> None:
         """Convenience helper to update a single state parameter."""
@@ -98,7 +73,7 @@ class SDRStateManager:
 
     def sync_from_disk(self, target_obj: Any, force: bool = False) -> bool:
         """
-        Poll disk state. If updated by another process (or if force=True), copy attributes onto target_obj.
+        Poll REST API state. If updated by another process (or if force=True), copy attributes onto target_obj.
         Returns True if state was applied.
         """
         state = self.read_state()
@@ -148,3 +123,4 @@ class SDRStateManager:
                 dp.is_active = state["audio_active"]
             if "mimo_tx" in state:
                 dp.mimo_tx = state["mimo_tx"]
+

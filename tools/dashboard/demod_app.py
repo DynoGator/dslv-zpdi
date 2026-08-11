@@ -114,7 +114,18 @@ class SDRAudioStreamer:
                 from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
                 from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
                 from dslv_zpdi.layer1_ingestion.demodulation import Demodulator
-                sdr_backend = PlutoIioBackend(uri="ip:192.168.2.1")
+                sdr_uri = os.environ.get("ZPDI_SDR_URI")
+                if not sdr_uri:
+                    try:
+                        from dslv_zpdi.config_loader import load_node_profile
+                        prof = load_node_profile()
+                        if hasattr(prof, "sdr") and hasattr(prof.sdr, "uri"):
+                            sdr_uri = prof.sdr.uri
+                    except Exception:
+                        pass
+                if not sdr_uri:
+                    sdr_uri = "ip:192.168.2.1"
+                sdr_backend = PlutoIioBackend(uri=sdr_uri)
                 demodulator = Demodulator()
             except Exception:
                 pass
