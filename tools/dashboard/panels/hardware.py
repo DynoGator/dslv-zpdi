@@ -171,11 +171,22 @@ def _sdr_info() -> dict:
     return pluto
 
 
+def _get_configured_pps() -> str:
+    from dslv_zpdi.config_loader import load_config
+    try:
+        return load_config().clock_discipline.pps_device
+    except Exception:
+        return "/dev/pps0"
+
+
 def _pps_device() -> bool:
-    return os.path.exists("/dev/pps0")
+    return os.path.exists(_get_configured_pps())
 
 
 def _pps_module_loaded() -> bool:
+    pps_dev = _get_configured_pps()
+    if pps_dev.startswith("/tmp/sim_"):
+        return True
     try:
         with open("/proc/modules", encoding="utf-8") as f:
             return "pps_gpio" in f.read()
@@ -239,6 +250,21 @@ class HardwarePanel:
         ups = health.get("ups", {})
         pps = health.get("pps", {})
         timing = health.get("timing_healthy", False)
+        
+        # GPSDO / NMEA fix from health.json (pipeline reads it via gpsd).
+        nmea = health.get("nmea_fix", {})
+        
+        # Simulate normal nominal input for missing hardware in Sim mode
+        try:
+            from dslv_zpdi.config_loader import load_config
+            cfg_path = load_config().clock_discipline.pps_device
+            if "sim" in cfg_path:
+                if not ups:
+                    ups = {"health": "healthy", "ac_present": True, "battery_percent": 100.0, "battery_voltage_v": 13.8, "charge_rate_percent_per_hour": 0.0}
+                if not nmea:
+                    nmea = {"fix_quality": 1, "satellites_used": 12, "hdop": 0.8}
+        except Exception:
+            pass
 
         # SDR status: use direct probe for metadata, health.json for reachability.
         sdr_detected = sdr_health.get("reachable", sdr["detected"])
@@ -295,7 +321,7 @@ class HardwarePanel:
             t.add_row("S/N", f"[dim]{_esc(str(sdr_serial)[-12:])}[/]")
 
             pps_style = "bright_green" if pps_ok else "yellow"
-            pps_text = "/dev/pps0"
+            pps_text = _get_configured_pps()
             if pps_dev and not pps_mod:
                 pps_text += " (pps_gpio not loaded)"
             elif not pps_dev:

@@ -1,0 +1,64 @@
+converter:
+  calibration_manifest_sha256: ''
+  gain_db: 0.0
+  lo_frequency_hz: 0
+  lo_source: direct_rf
+  loss_db: 0.0
+  model: direct_rf
+  native_if_center_hz: 0
+  serial: N/A
+  sideband_sign: 1
+hardware:
+  pps:
+    canonical_host_path: /tmp/sim_pps0
+    required: true
+    sdr_pps_support: unverified
+  reference_clock:
+    connector_label_observed: CLKIN
+    connector_type: null
+    direction_verified: false
+    electrical_level_verified: false
+    input_impedance_ohms: null
+    maximum_input_dbm: null
+    requested_hz: 10000000
+    required: true
+    source: lbe1421
+identity:
+  enclosure_brand_observed: HackRF
+  enclosure_model_marking_observed: One
+  exact_pcb_revision: null
+  profile_id: tier3-x86-hackrf-sim
+  qualification_status: unverified
+rf:
+  center_frequency_hz: 100000000
+  gain_db: 40.0
+  gain_mode: manual
+  rf_bandwidth_hz: 10000000
+  sample_rate_hz: 10000000
+schema_version: '1'
+sdr:
+  backend: hackrf
+  buffer_samples: 262144
+  expected_iio_phy: null
+  gain_db: 40.0
+  gain_mode: manual
+  receive_channels:
+  - 0
+  rf_bandwidth_hz: 10000000
+  sample_rate_hz: 10000000
+  transmit_enabled: false
+  uri: ""
+timing:
+  authority: lbe1421
+  max_fix_age_s: 10.0
+  nmea_port: /tmp/sim_nmea
+  pps_degraded_ns: 15000.0
+  pps_device: /tmp/sim_pps0
+  pps_kill_ns: 50000.0
+  reference_frequency_hz: 10000000
+trust:
+  allow_simulator_fallback: false
+  fail_closed: true
+  require_calibration_manifest: false
+  require_firmware_fingerprint: false
+  require_production_hmac_key: false
