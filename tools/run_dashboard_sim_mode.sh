@@ -84,8 +84,7 @@ python3 tools/dashboard/app.py
 
 # 4. Teardown & Cleanup
 echo "=========================================="
-echo "Shutting down services..."
+echo "Dashboard exited. Triggering graceful shutdown..."
 echo "=========================================="
-kill $SIM_PID 2>/dev/null || true
-wait $SIM_PID 2>/dev/null || true
-echo "[OK] DSLV-ZPDI Shutdown Complete."
+bash tools/winding_down_dslv.sh
+echo "[OK] Exiting."
