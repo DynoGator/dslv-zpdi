@@ -779,7 +779,7 @@ FAN
     fi
 
 
-fi
+
 
 if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
     log_info "Installing operations dashboard dependencies"
