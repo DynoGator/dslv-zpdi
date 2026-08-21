@@ -892,9 +892,12 @@ The Pi 5 + PlutoSDR+ + LBE-1421 stack is the Phase 2A/2B reference. Alternative 
 - Intel NUC + LimeSDR + M.2 timing card
 - Any Linux SBC + CLKIN-capable SDR (like PlutoSDR+) + GPS-disciplined 10 MHz source
 
-### Tier 2 / Testbed (RTL-SDR)
+### Tier 2 / Mobile Nodes (Pixel 9 Pro XL)
 
-The RTL-SDR (v3/v4) is relegated to Tier 2 / Testbed only. It lacks external clock input and cannot achieve hardware-level phase coherence. **RTL-SDR data MUST NOT enter the Tier 1 primary stream.**
+The **Pixel 9 Pro XL (GrapheneOS)** is fully integrated as a Tier 2 mobile swarm node. It runs the Termux/PRoot telemetry daemon (`zpdi_mobile_node`) and contributes secondary stream telemetry (magnetometer, GPS, camera orientation hashes) directly into the Tier 1 ingestion pipeline over the `10.42.0.1:8080` local dashboard network.
+
+*Note: The RTL-SDR (v3/v4) is also relegated to Tier 2 / Testbed only as it lacks external clock input. Tier 2 data streams (including the Pixel telemetry) MUST NOT enter the Tier 1 primary stream and are routed to the secondary quarantined HDF5 branches.*
+
 
 ---
 

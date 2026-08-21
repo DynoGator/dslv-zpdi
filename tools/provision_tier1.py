@@ -3,7 +3,7 @@ SPEC-004A.1-PROVISION | Tier 1 Provisioning & Validation (Rev 5.0.0)
 Automates hardware-readiness checks for Anchor Nodes (PlutoSDR+/LBE-1421 focus).
 
 Rev 5.0.0: Pivot to HamGeek PlutoSDR+ + Leo Bodnar LBE-1421 GPSDO.
-PlutoSDRplus support is retained as a legacy/optional check only.
+
 """
 
 import argparse
@@ -48,7 +48,9 @@ def check_rp1_voltage_guard() -> bool:
         with open(cal_path, encoding="utf-8") as f:
             content = f.read()
             if "LBE-1421" in content:
-                print("[HARD] LBE-1421 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used.")
+                print(
+                    "[HARD] LBE-1421 native 3.3V — NO level shifter. RP1 damage risk if 5V GPSDO used."
+                )
                 return True
     return True  # Soft pass if calibration file absent
 
@@ -56,21 +58,18 @@ def check_rp1_voltage_guard() -> bool:
 def check_soapy_sdr():
     """
     ARCH-PHASE-2A-PIVOT §5 — Verify SoapySDR installation and PlutoSDR+ module.
-    HackRF is reported only as a legacy option.
     """
     try:
         import SoapySDR
+
         results = SoapySDR.Device.enumerate()
 
         pluto_found = any("pluto" in str(result).lower() for result in results)
-        hackrf_found = any("hackrf" in str(result).lower() for result in results)
 
         if pluto_found:
             print("[*] SoapySDR installed with PlutoSDR+ support.")
             return True
         print("[!] SoapySDR installed but PlutoSDR+ not enumerated.")
-        if hackrf_found:
-            print("    HackRF (legacy) enumerated.")
         print("    Install: sudo apt install soapysdr-module-plutosdr")
         return False
     except ImportError:
@@ -90,38 +89,13 @@ def check_iio_binding() -> bool:
     return False
 
 
-def check_hackrf_presence():
-    """
-    SPEC-004A.1 — Ensure HackRF One is connected (legacy / optional).
-
-    Rev 5.0.0: HackRF is the legacy minimum reference floor. Tier-1 nodes
-    using PlutoSDR+ do not require a HackRF. Missing tools/device is a
-    warning, not a hard failure.
-    """
-    try:
-        res = subprocess.run(["PlutoSDRplus_info"], capture_output=True, text=True, check=False)
-        if res.returncode == 0:
-            print("[*] PlutoSDRplus detected via PlutoSDRplus_info.")
-            for line in res.stdout.split('\n')[:5]:
-                if line.strip() and 'Serial' in line:
-                    print(f"    {line.strip()}")
-            return True
-        else:
-            print("[WARN] HackRF One NOT found (legacy optional device).")
-            print("    Ensure HackRF is connected via USB 3.0 and powered if in use.")
-            return True
-    except FileNotFoundError:
-        print("[WARN] hackrf_info not found. HackRF support is optional/legacy.")
-        print("    Tier-1 PlutoSDR+ nodes do not require HackRF.")
-        return True
-
-
 def check_pluto_presence():
     """
     SPEC-005A.HAL-PLUTO — Ensure PlutoSDR+ is reachable via IIO network context.
     """
     try:
         import iio
+
         uri = os.environ.get("DSLV_SDR_URI", "ip:192.168.3.80")
         ctx = iio.Context(uri)
         ad9361 = ctx.find_device("ad9361-phy")
@@ -154,54 +128,6 @@ def check_pluto_presence():
         return False
 
 
-def check_plutosdrplus_clock_source():
-    """
-    ARCH-PHASE-2A-PIVOT §5.1 — Verify PlutoSDRplus is receiving external 10 MHz reference.
-
-    Critical: Without external clock, phase coherence is impossible.
-    Implements "Silent Traitor" detection - PlutoSDRplus silently falls back to internal osc.
-    """
-    try:
-        # Try SoapySDR first (preferred)
-        try:
-            import SoapySDR
-            device = SoapySDR.Device(dict(driver="PlutoSDRplus"))
-            clock_source = device.getClockSource()
-
-            if clock_source == "external":
-                print("[*] PlutoSDRplus clock source: EXTERNAL (GPSDO locked) ✅")
-                print("    Phase-lock verified. SDR slaved to GPSDO 10MHz reference.")
-                return True
-            else:
-                print(f"[!] PlutoSDRplus clock source: {clock_source.upper()} (NOT GPSDO locked) ❌")
-                print("    Connect GPSDO 10 MHz SMA → PlutoSDRplus CLKIN port.")
-                return False
-        except ImportError:
-            pass
-
-        # Fallback to PlutoSDRplus_debug
-        res = subprocess.run(
-            ["PlutoSDRplus_debug", "--clock_source"],
-            capture_output=True, text=True, check=False, timeout=5
-        )
-        if res.returncode == 0:
-            output = res.stdout.lower()
-            if "external" in output or "clkin" in output:
-                print("[*] PlutoSDRplus clock source: EXTERNAL (GPSDO locked) ✅")
-                return True
-            elif "internal" in output:
-                print("[!] PlutoSDRplus clock source: INTERNAL (not GPSDO locked) ❌")
-                print("    [SILENT TRAITOR DETECTED] Verify GPSDO 10 MHz → CLKIN")
-                return False
-
-        print("[WARN] Cannot verify PlutoSDRplus clock source automatically.")
-        print("       Manually verify: GPSDO 10 MHz → PlutoSDRplus CLKIN")
-        return True  # Don't fail provisioning for this
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        print("[WARN] PlutoSDRplus_debug not available for clock verification.")
-        return True
-
-
 def check_pps_device():
     """
     SPEC-004A.3 — Verify PPS device is available.
@@ -217,20 +143,20 @@ def check_pps_device():
 
 def check_udev_rules():
     """
-    Check for PPS and PlutoSDRplus udev rules.
+    Check for PPS and PlutoSDR udev rules.
     """
     rules_found = []
     if os.path.exists("/etc/udev/rules.d/99-pps.rules"):
         rules_found.append("PPS")
-    if os.path.exists("/etc/udev/rules.d/52-PlutoSDRplus.rules"):
-        rules_found.append("PlutoSDRplus")
+    if os.path.exists("/etc/udev/rules.d/53-adi-plutosdr.rules"):
+        rules_found.append("PlutoSDR")
 
-    if rules_found:
-        print(f"[*] udev rules found: {', '.join(rules_found)}")
-        return True
-
-    print("[WARN] udev rules incomplete. Some devices might require root.")
-    return False
+    if not rules_found:
+        print("[!] No custom udev rules found.")
+        print("    Run: sudo ./install_dslv_zpdi.sh to install rules.")
+        return False
+    print(f"[*] udev rules installed: {', '.join(rules_found)} ✅")
+    return True
 
 
 def check_python_dependencies():
@@ -247,12 +173,6 @@ def check_python_dependencies():
     if not check_soapy_sdr():
         all_ok = False
 
-    # pyhackrf is only required for legacy HackRF support.
-    if importlib.util.find_spec("pyhackrf") is not None:
-        print("[*] pyhackrf Python library installed (legacy fallback).")
-    else:
-        print("[INFO] pyhackrf not installed — only needed for legacy HackRF support.")
-
     return all_ok
 
 
@@ -261,16 +181,16 @@ def check_chrony_pps_config():
     ARCH-PHASE-2A-PIVOT §4.3 — Verify chrony is configured for PPS priority.
     """
     try:
-        with open('/etc/chrony/chrony.conf') as f:
+        with open("/etc/chrony/chrony.conf") as f:
             config = f.read()
 
-        if 'refclock PPS /dev/pps0' in config:
+        if "refclock PPS /dev/pps0" in config:
             print("[*] Chrony configured for PPS priority ✅")
             return True
         else:
             print("[!] Chrony NOT configured for PPS priority.")
             print("    Add to /etc/chrony/chrony.conf:")
-            print('    refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust')
+            print("    refclock PPS /dev/pps0 lock NMEA poll 4 prefer trust")
             return False
     except FileNotFoundError:
         print("[!] Chrony config not found.")
@@ -282,10 +202,10 @@ def check_pps_gpio_overlay():
     ARCH-PHASE-2A-PIVOT §4.2 — Verify PPS-GPIO overlay is configured.
     """
     try:
-        with open('/boot/firmware/config.txt') as f:
+        with open("/boot/firmware/config.txt") as f:
             config = f.read()
 
-        if 'dtoverlay=pps-gpio' in config:
+        if "dtoverlay=pps-gpio" in config:
             print("[*] PPS-GPIO overlay configured ✅")
             return True
         else:
@@ -304,6 +224,7 @@ def check_nmea_telemetry(serial_port="/dev/ttyACM0"):
     """
     try:
         import serial as pyserial
+
         ser = pyserial.Serial(serial_port, 9600, timeout=2)
         line = ser.readline().decode("ascii", errors="ignore").strip()
         ser.close()
@@ -359,7 +280,9 @@ def check_hal_factory_lock() -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="DSLV-ZPDI Tier 1 Provisioning")
-    parser.add_argument("--field", action="store_true", help="Auto-launch 72 h baseline capture after audit")
+    parser.add_argument(
+        "--field", action="store_true", help="Auto-launch 72 h baseline capture after audit"
+    )
     parser.add_argument("--simulator", action="store_true", help="Run in simulator mode")
     args = parser.parse_args()
 
@@ -393,9 +316,10 @@ def main():
         ("Chrony PPS Config", check_chrony_pps_config()),
         ("PPS GPIO Overlay", check_pps_gpio_overlay()),
         ("Python Dependencies", check_python_dependencies()),
-        ("PlutoSDRplus/HackRF (legacy)", check_hackrf_presence()),
     ]
-    print("[INFO] Realigning local metrology plasmoids to prevent temporal drift... (jk, calibrating SDRs)")
+    print(
+        "[INFO] Realigning local metrology plasmoids to prevent temporal drift... (jk, calibrating SDRs)"
+    )
 
     # Run the check_timing utility
     try:

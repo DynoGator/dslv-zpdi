@@ -14,7 +14,7 @@
 # Release notes (5.0.0):
 #   - Canonical Tier-1 SDR is now the HamGeek PlutoSDR+ (libiio / AD9361)
 #   - LBE-1421 GPSDO provides 10 MHz reference + 1 PPS
-#   - PlutoSDRplus support is legacy/optional only
+#   - HackRF support has been completely removed
 #   - Treats `pip check` as warn-only (Trixie venvs flag spurious dist conflicts)
 #   - Runs Tier 1 hardware audit non-fatally in --simulator mode
 #   - Soft-fails on usbguard/auditd/apt-mark hold gaps
@@ -722,15 +722,6 @@ AUDIT
         log_warn "auditd not installed -- skipping audit rule install"
     fi
 
-    # 10b. PlutoSDRplus udev rules -- ship the project's rules from
-    #      config/os-hardening/99-PlutoSDRplus.rules so the device is usable
-    #      by anyone in the plugdev group without sudo.
-    if [[ -f "${INSTALL_DIR}/config/os-hardening/99-PlutoSDRplus.rules" ]]; then
-        install -m 0644 "${INSTALL_DIR}/config/os-hardening/99-PlutoSDRplus.rules" \
-            /etc/udev/rules.d/99-dslv-PlutoSDRplus.rules
-        soft "udev rules reloaded" udevadm control --reload-rules
-        soft "udev triggered for usb subsystem" udevadm trigger --subsystem-match=usb
-        log_ok "PlutoSDRplus udev rules installed (/etc/udev/rules.d/99-dslv-PlutoSDRplus.rules)"
     fi
 
     # 10c. Ensure invoking user is in plugdev so PlutoSDRplus / serial dongles
