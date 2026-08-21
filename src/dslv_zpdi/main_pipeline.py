@@ -50,7 +50,7 @@ def _ingest_loop(hal, args, state, ingest_q):
                         pps_device = getattr(pps_listener, "_device", "/dev/pps0")
                         logger.error(
                             "No 1PPS edge on %s within timeout — check GPSDO Output 1 "
-                            "wiring to GPIO 24 (dtoverlay pps-gpio,gpiopin=24)",
+                            "wiring to GPIO 8 (dtoverlay pps-gpio,gpiopin=8)",
                             pps_device,
                         )
 
@@ -191,7 +191,9 @@ def main():
 
     t_ingest = threading.Thread(target=_ingest_loop, args=(hal, args, state, ingest_q), daemon=True)
     t_process = threading.Thread(
-        target=_process_loop, args=(hal, monitor, writer, ingest_q, state, health_reporter), daemon=True
+        target=_process_loop,
+        args=(hal, monitor, writer, ingest_q, state, health_reporter),
+        daemon=True,
     )
 
     def _sig_handler(signum, _frame):

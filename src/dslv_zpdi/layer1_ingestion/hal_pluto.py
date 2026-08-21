@@ -226,18 +226,14 @@ class PlutoHAL(BaseHAL):
             try:
                 # Try the device-level attribute first.
                 if "rx_pll_locked" in self._ad9361.attrs:
-                    hw_pll_locked = (
-                        str(self._ad9361.attrs["rx_pll_locked"].value).strip() == "1"
-                    )
+                    hw_pll_locked = str(self._ad9361.attrs["rx_pll_locked"].value).strip() == "1"
                 else:
                     # Fallback: some firmwares expose it on the RX_LO channel.
                     rx_lo = self._ad9361.find_channel("altvoltage0", True)
                     if rx_lo:
                         for attr_name in ("pll_locked", "pll_lock"):
                             if attr_name in rx_lo.attrs:
-                                hw_pll_locked = (
-                                    str(rx_lo.attrs[attr_name].value).strip() == "1"
-                                )
+                                hw_pll_locked = str(rx_lo.attrs[attr_name].value).strip() == "1"
                                 break
             except Exception as e:
                 result["warnings"].append(f"IIO PLL read error: {e}")

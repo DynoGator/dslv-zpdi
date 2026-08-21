@@ -25,7 +25,7 @@ The DSLV-ZPDI Tier-1 master node has been successfully configured for hardware o
 | Component | Model | Status | Details |
 |-----------|-------|--------|---------|
 | **SDR** | HamGeek PlutoSDR+ (ADALM-PLUTO) | ✅ Operational | Connected via USB 3.0; IIO backend active |
-| **GPSDO** | Leo Bodnar LBE-1421 | ✅ Detected | Output 1 (1 PPS) → GPIO 18; Output 2 (10 MHz) → PlutoSDR Ext Ref |
+| **GPSDO** | Leo Bodnar LBE-1421 | ✅ Detected | Output 1 (1 PPS) → GPIO 8; Output 2 (10 MHz) → PlutoSDR Ext Ref |
 | **AI Accelerator** | Hailo-8 Pi-Hat+ (26 TOPS) | ✅ Loaded | PCIe Gen 3; firmware loaded (/dev/hailo0) |
 | **UPS** | Geekworm x1202 (4x VTC6) | ✅ Functional | 94.65% charge; MAX17048 IC responds on I2C:1 |
 | **Camera** | ArduCam 12MP Module 3 | ✅ Enabled | CSI Port 0; libcamera-apps installed |
@@ -45,9 +45,9 @@ dtparam=fan_temp3=40000 (40°C → 100%)
 
 #### PPS/GPIO Integration
 ```
-GPIO 18: PPS input from LBE-1421 Output 1
+GPIO 8: PPS input from LBE-1421 Output 1
 GPIO 12, 14: GPSDO clock outputs (configured per user spec)
-dtoverlay=pps-gpio,gpiopin=18 (Linux kernel PPS driver)
+dtoverlay=pps-gpio,gpiopin=8 (Linux kernel PPS driver)
 /dev/pps0: Active, group:dialout (0660 permissions)
 ```
 
@@ -252,7 +252,7 @@ All critical configurations persist across system reboots:
 ### Immediate (Before Production Deployment)
 1. **GPSDO Lock Verification** (15–60 min)
    - Monitor `chrony tracking` until GPS fix achieved
-   - Verify 1 PPS signal on GPIO 18 with oscilloscope (if available)
+   - Verify 1 PPS signal on GPIO 8 with oscilloscope (if available)
    - Check PlutoSDR Ext Ref input for 10 MHz square wave
    - Once locked, PPS jitter should drop to <100 ns
 
@@ -340,7 +340,7 @@ chronyc tracking
 chronyc sources -v
 
 # Verify hardware connection:
-# - GPSDO Output 1 (1 PPS) → Pi GPIO 18
+# - GPSDO Output 1 (1 PPS) → Pi GPIO 8
 # - GPSDO Output 2 (10 MHz) → PlutoSDR EXT_REF_CLK
 ```
 

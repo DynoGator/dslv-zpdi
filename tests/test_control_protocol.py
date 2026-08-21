@@ -48,9 +48,9 @@ def _make_envelope(
         "target_node_id": target_node_id,
         "capability": capability,
         "issued_at": (issued_at or now).isoformat().replace("+00:00", "Z"),
-        "expires_at": (expires_at or (now + timedelta(seconds=60))).isoformat().replace(
-            "+00:00", "Z"
-        ),
+        "expires_at": (expires_at or (now + timedelta(seconds=60)))
+        .isoformat()
+        .replace("+00:00", "Z"),
         "nonce": nonce or _nonce(),
         "parameters": parameters or {},
     }

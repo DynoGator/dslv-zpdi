@@ -2,7 +2,7 @@
 
 **Session:** Evaluate and repair broken pipeline; refine and visually polish dashboard UI  
 **Operator:** Kimi Code CLI (Engineering Collaborator)  
-**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending arrival) + 5" DSI  
+**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending arrival) + 10" Lenovo HDMI touchscreen  
 **Branch:** `main` — committed and pushed to GitHub  
 
 ---
@@ -128,7 +128,7 @@ sudo systemctl status dslv-zpdi.service --no-pager
 Expected: `Active: active (running)` instead of `226/NAMESPACE`.
 
 ### 5.2 Verify the dashboard
-If on the 5" DSI, the autostart will fire after ~10 s. If on an external monitor:
+If on the 10" Lenovo HDMI touchscreen, the autostart will fire after ~10 s. If on an external monitor:
 
 ```bash
 cd ~/dslv-zpdi

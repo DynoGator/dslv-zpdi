@@ -111,7 +111,9 @@ class HDF5Writer:
         """SPEC-007 — Process single packet through router and persist."""
         decision = self.router.route(payload_obj)
         if decision.packet is not None:
-            integrity_ok = self.verify_packet_integrity(decision.packet, binary_payload, payload_obj)
+            integrity_ok = self.verify_packet_integrity(
+                decision.packet, binary_payload, payload_obj
+            )
             if not integrity_ok:
                 self.stats["integrity_failed"] += 1
                 # Reject primary write; log to secondary for forensics
@@ -133,7 +135,9 @@ class HDF5Writer:
             self.stats["rejected"] += 1
         return decision
 
-    def _write_primary(self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload):
+    def _write_primary(
+        self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload
+    ):
         """SPEC-007 — Write institutional-grade packet to HDF5 with attestation.
 
         Thread-safe: acquires self._write_lock so that concurrent ingest calls
@@ -146,7 +150,9 @@ class HDF5Writer:
         with self._write_lock:
             self._write_primary_locked(packet, binary_payload, payload_obj)
 
-    def _write_primary_locked(self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload):
+    def _write_primary_locked(
+        self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload
+    ):
         """Inner write — called with _write_lock held."""
         if self.current_file is None or self._file_size_exceeded():
             self._rotate_file()
@@ -168,6 +174,7 @@ class HDF5Writer:
 
         # Native binary storage
         import numpy as np
+
         grp.create_dataset("raw_payload", data=np.frombuffer(binary_payload, dtype=np.uint8))
 
         # Event hash chain
@@ -230,7 +237,9 @@ class HDF5Writer:
         self.event_count += 1
         logger.info("PRIMARY WRITE: %s (r_smooth=%.4f)", group_name, packet.r_smooth)
 
-    def _log_secondary(self, binary_payload: bytes, decision: RoutingDecision, payload_obj: IngestionPayload):
+    def _log_secondary(
+        self, binary_payload: bytes, decision: RoutingDecision, payload_obj: IngestionPayload
+    ):
         """SPEC-007 — Append quarantined packet to secondary exploratory JSONL stream."""
         quarantine_file = self.secondary_dir / "quarantine.jsonl"
         log_entry = {
@@ -376,7 +385,9 @@ class HDF5Writer:
         """SPEC-007 — Return pipeline statistics."""
         return {**self.stats, **self.router.stats}
 
-    def verify_packet_integrity(self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload) -> bool:
+    def verify_packet_integrity(
+        self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload
+    ) -> bool:
         """SPEC-010 — Verify payload checksum before persistence."""
         stored_checksum = payload_obj.payload_checksum
 

@@ -81,10 +81,10 @@ def _hilbert_phases(signal: np.ndarray) -> list[float]:
     h = np.zeros_like(spec)
     h[0] = spec[0]
     if fft_size % 2 == 0:
-        h[1: fft_size // 2] = 2.0 * spec[1: fft_size // 2]
+        h[1 : fft_size // 2] = 2.0 * spec[1 : fft_size // 2]
         h[fft_size // 2] = spec[fft_size // 2]
     else:
-        h[1: (fft_size + 1) // 2] = 2.0 * spec[1: (fft_size + 1) // 2]
+        h[1 : (fft_size + 1) // 2] = 2.0 * spec[1 : (fft_size + 1) // 2]
     analytic = np.fft.ifft(h)
     phases = np.angle(analytic[:n])
     return phases.tolist()
@@ -152,6 +152,7 @@ def _build_extracted_phases(sensor_name: str, reading: dict[str, Any]) -> list[f
 @dataclass
 class IngestionPayload:
     """SPEC-005A.1b — Hardened Universal Payload (Rev 3.5)"""
+
     spec_id: str = "SPEC-005A.1b"
     schema_version: str = "3.5"
     payload_uuid: str = ""
@@ -225,7 +226,7 @@ class IngestionPayload:
         # We'll use a struct and json dump for the variable sized fields
 
         raw_json = json.dumps(d, sort_keys=True, default=str)
-        binary_data = raw_json.encode('utf-8')
+        binary_data = raw_json.encode("utf-8")
 
         self.payload_checksum = hashlib.blake2b(binary_data, digest_size=32).hexdigest()
         self.checksum_algo = "blake2b"
@@ -234,7 +235,9 @@ class IngestionPayload:
 
 
 # SPEC-003A
-def build_mobile_payload(sensor_name: str, reading: dict[str, Any], location: dict[str, Any] | None = None) -> IngestionPayload:
+def build_mobile_payload(
+    sensor_name: str, reading: dict[str, Any], location: dict[str, Any] | None = None
+) -> IngestionPayload:
     """Translate a single termux-sensor reading into a canonical IngestionPayload.
 
     Mobile nodes are Tier-2; gps_locked defaults to False and pps_jitter_ns is

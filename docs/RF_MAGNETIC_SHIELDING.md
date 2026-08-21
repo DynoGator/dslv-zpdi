@@ -69,9 +69,9 @@ An **Industrial USB Optoisolator (Galvanic Isolator)** provides breaker-equivale
 
 ## 5. Securing the Pass-Throughs (The Leaks)
 
-The only things crossing bulkheads are the DSI ribbon, RF cables, and power.
+The only things crossing bulkheads are the HDMI ribbon, RF cables, and power.
 
-### 5.1 DSI Ribbon Cable
+### 5.1 HDMI Ribbon Cable
 
 Ribbon cables are notorious antennas.
 

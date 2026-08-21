@@ -19,6 +19,7 @@ from typing import Any
 
 try:
     import h5py
+
     _HAS_H5PY = True
 except ImportError:  # pragma: no cover
     _HAS_H5PY = False

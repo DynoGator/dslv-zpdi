@@ -140,7 +140,7 @@ health_check.sh        → 1 warning (GPSDO serial absent — expected, hardware
 
 **To Transition to Hardware Mode:**
 ```bash
-# 1. Wire LBE-1421: 10 MHz SMA → PlutoSDRplus CLKIN, 1 PPS → Pi 5 GPIO 18 (verify 3.3V)
+# 1. Wire LBE-1421: 10 MHz SMA → PlutoSDRplus CLKIN, 1 PPS → Pi 5 GPIO 8 (verify 3.3V)
 # 2. Connect LBE-1421 USB-C for NMEA telemetry
 # 3. Switch pipeline to hardware:
 sudo tools/toggle_simulator.sh off

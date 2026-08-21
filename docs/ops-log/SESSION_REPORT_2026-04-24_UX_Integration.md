@@ -2,7 +2,7 @@
 
 **Session:** UX integration & polish
 **Operator:** Joseph R. Fross
-**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending) + 5" DSI
+**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending) + 10" Lenovo HDMI touchscreen
 **Branch:** `main` (uncommitted — see "Change log" below)
 **Version:** v5.0.0 (unchanged) → working toward v5.0.0-ux
 
@@ -10,7 +10,7 @@
 
 Scope delivered:
 
-1. Dashboard compact layout tuned for the 800×480 DSI screen, with
+1. Dashboard compact layout tuned for the 800×480 HDMI screen, with
    auto-detection, a live `c` toggle, and launcher-aware geometry.
 2. HDF5 inspection tools installed (`hdf5-tools` apt, `h5py` +
    `h5glance` pip). `vitables` was removed because it forced a numpy 2
@@ -194,7 +194,7 @@ pip:   h5glance, folium, pandas, tables  installed (ViTables removed — see §2
 ### 5.2 Day-to-day usage
 
 - **Dashboard**: `DSLV-ZPDI.desktop` — unchanged. Now auto-detects the
-  DSI screen and switches to compact mode. Press `c` to toggle.
+  HDMI screen and switches to compact mode. Press `c` to toggle.
 - **Map**: `DSLV-ZPDI-Map.desktop` — regenerates and opens in Chromium.
 - **Send data**: `DSLV-ZPDI-Send-Data.desktop` — bundles + sends.
   Opens a terminal so you see the send log.
@@ -219,7 +219,7 @@ pip:   h5glance, folium, pandas, tables  installed (ViTables removed — see §2
 - **Compact dashboard is terminal-based.** At 800×480 with a 9-pt
   monospace font, we fit ≈ 92×24 cells — enough for the stacked
   layout but the waterfall gets tight. If you want more RF detail
-  on the DSI, toggle compact off (`c`) and scroll the terminal.
+  on the HDMI, toggle compact off (`c`) and scroll the terminal.
 
 ### 5.4 Follow-ups / nice-to-haves
 

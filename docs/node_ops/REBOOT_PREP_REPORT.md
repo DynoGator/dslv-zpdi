@@ -11,7 +11,7 @@ All telemetry flowing through the pipeline and dashboard is sourced from real ha
 
 | Subsystem | Source | Status |
 |-----------|--------|--------|
-| Clock discipline | LBE-1421 GPSDO 1 PPS → GPIO 18 → `/dev/pps0` → `chronyd` | **Stratum 1**, PPS1 selected, RMS offset ~786 ns |
+| Clock discipline | LBE-1421 GPSDO 1 PPS → GPIO 8 → `/dev/pps0` → `chronyd` | **Stratum 1**, PPS1 selected, RMS offset ~786 ns |
 | RF ingestion | PlutoSDR+ (AD9363 REV5) via Ethernet `ip:192.168.2.1` | **REAL**, `clock_src: external`, 0 transport errors |
 | GPS NMEA | LBE-1421 USB-C → `/dev/ttyACM0` → `gpsd` → TCP 2947 | Active, consumed by pipeline |
 | UPS / power | Geekworm X-1202 HAT, MAX17048 on I2C-1 0x36 | **Healthy**, 97.8% battery, AC present |

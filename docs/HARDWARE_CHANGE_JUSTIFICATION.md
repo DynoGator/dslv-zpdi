@@ -60,7 +60,7 @@ Connect the LBE-1421 via USB-C to the Pi 5. This provides power and establishes 
 
 **Interrupt Handling:** `/boot/firmware/config.txt` must invoke the `pps-gpio` overlay:
 ```
-dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
+dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0
 ```
 
 **Time Daemon:** `chrony` must prioritize `/dev/pps0` as the absolute UTC reference:

@@ -48,7 +48,7 @@ nothing added to commit but untracked files present (use "git add" to track)
 * df3f14f feat(node): add async metrology daemon zpdi_mobile_node.py
 * b7cd356 chore(scaffold): initialize dslv-zpdi tier-1 node workspace
 * fcf6bff (HEAD -> phase-2b/radon-metrology-fusion) docs: Phase 2B reporting deliverables (SESSION_REPORT, CHANGELOG v5.0.0, TURNOVER)
-* b554a36 docs: correct LBE-1420→LBE-1421 dual-output references in living master and build sheet; document second output independence
+* b554a36 docs: correct LBE-1421→LBE-1421 dual-output references in living master and build sheet; document second output independence
 * 18a6925 feat(dashboard): SPEC-021 — RADON + MOBILE/T2 + BCI panels with glitch aesthetic, new humor lines, zero regression to existing panels
 * 7c891ca feat(orchestrator): SPEC-020 — 48-hour radon session orchestrator with resume, finalize, human summary, and 8-test suite
 * 0ff6467 feat(layer2): SPEC-019 — Barometric Coherence Index engine with pilot thresholds, RH weighting, and 8-test suite

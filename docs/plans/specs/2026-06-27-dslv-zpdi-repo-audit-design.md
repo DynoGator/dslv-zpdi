@@ -93,8 +93,8 @@ Out of scope: physical firmware flashing, OS package updates, and changes that r
 ### 4.5 Hardware Docs Alignment
 
 - Audit `AGENTS.md`, `README.md`, `PHASE_2A_TIER_1_BUILD_SHEET.md`, `docs/hardware/LBE1421_PLUTO_WIRING.md`, `docs/PlutoSDR/*.md`, and `docs/operations/PLUTO_TIER1_DEPLOYMENT.md`.
-- Ensure every Tier-1 reference uses the canonical stack: Raspberry Pi 5, HamGeek PlutoSDR+ (AD9363, 1 GB), Leo Bodnar LBE-1421 GPSDO, with LBE-1421 10 MHz → Pluto CLKIN and LBE-1421 1 PPS → Pi GPIO 18.
-- Remove any stale references that imply HackRF (legacy/optional) One or older LBE-1420/LBE-1421 confusion as the primary node.
+- Ensure every Tier-1 reference uses the canonical stack: Raspberry Pi 5, HamGeek PlutoSDR+ (AD9363, 1 GB), Leo Bodnar LBE-1421 GPSDO, with LBE-1421 10 MHz → Pluto CLKIN and LBE-1421 1 PPS → Pi GPIO 8.
+- Remove any stale references that imply HackRF (legacy/optional) One or older LBE-1421/LBE-1421 confusion as the primary node.
 - Add a short “Tier-1 Reference Node” block near the top of README and AGENTS.
 
 ### 4.6 ASCII Art & RF Humor

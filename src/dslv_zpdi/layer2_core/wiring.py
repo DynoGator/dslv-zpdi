@@ -7,6 +7,7 @@ Rev 3.1 FIXES:
   - Phase extraction REMOVED (phases come from Layer 1 via extracted_phases)
   - No scipy imports (Layer 2 is hardware-agnostic)
 """
+
 import os
 
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
@@ -18,21 +19,15 @@ def _load_baseline_config() -> dict:
     """SPEC-009 — Load baseline learning parameters from environment."""
     cfg: dict = {}
     try:
-        cfg["baseline_duration_hours"] = float(
-            os.getenv("DSLV_BASELINE_HOURS", "72")
-        )
+        cfg["baseline_duration_hours"] = float(os.getenv("DSLV_BASELINE_HOURS", "72"))
     except ValueError:
         cfg["baseline_duration_hours"] = 72.0
     try:
-        cfg["min_baseline_samples"] = int(
-            os.getenv("DSLV_MIN_BASELINE_SAMPLES", "240")
-        )
+        cfg["min_baseline_samples"] = int(os.getenv("DSLV_MIN_BASELINE_SAMPLES", "240"))
     except ValueError:
         cfg["min_baseline_samples"] = 240
     try:
-        cfg["min_confirming_nodes"] = int(
-            os.getenv("DSLV_MIN_CONFIRMING_NODES", "4")
-        )
+        cfg["min_confirming_nodes"] = int(os.getenv("DSLV_MIN_CONFIRMING_NODES", "4"))
     except ValueError:
         cfg["min_confirming_nodes"] = 4
     cfg["baseline_state_path"] = os.getenv(
@@ -70,7 +65,7 @@ def wire_to_coherence(payload: IngestionPayload) -> CoherencePacket | None:
         "modality": payload.modality,
         "timestamp_utc": payload.timestamp_utc,
         "payload_uuid": payload.payload_uuid,
-        "trust_state": payload.trust_state
+        "trust_state": payload.trust_state,
     }
 
     phases = payload.extracted_phases or []
@@ -94,8 +89,13 @@ def wire_mobile_to_coherence(payload: IngestionPayload) -> CoherencePacket | Non
         SensorModality(modality_str)
     except ValueError:
         if modality_str not in {
-            "accel", "magnetometer", "barometer",
-            "gyroscope", "rotation_vector", "geomagnetic_rotation", "gravity",
+            "accel",
+            "magnetometer",
+            "barometer",
+            "gyroscope",
+            "rotation_vector",
+            "geomagnetic_rotation",
+            "gravity",
         }:
             return None
 
@@ -108,7 +108,7 @@ def wire_mobile_to_coherence(payload: IngestionPayload) -> CoherencePacket | Non
         "modality": payload.modality,
         "timestamp_utc": payload.timestamp_utc,
         "payload_uuid": payload.payload_uuid,
-        "trust_state": payload.trust_state
+        "trust_state": payload.trust_state,
     }
 
     phases = payload.extracted_phases or []

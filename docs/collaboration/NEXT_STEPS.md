@@ -58,7 +58,7 @@ See "Done In The 2026-06-11..." block + TURNOVER for details. Next work here onl
 
 ## Priority 3 - Dashboard And Field Operations
 
-- Validate the 7 inch DSI layout on real hardware and capture screenshots or validation logs.
+- Validate the 7 inch HDMI layout on real hardware and capture screenshots or validation logs.
 - Exercise `tools/launch_project.sh`, `tools/preflight.sh`, and systemd units after a cold boot.
 - Confirm PlutoSDRplus amplifier lockout remains enforced in both pipeline and dashboard paths.
 

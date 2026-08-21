@@ -25,14 +25,14 @@ def print_rp1_warning():
 The Pi 5's RP1 southbridge utilizes STRICTLY 3.3V logic.
 
 The LBE-1421 GPSDO outputs a 3.3V CMOS square wave natively,
-making it DIRECTLY compatible with Pi 5 GPIO 24 — NO level-
+making it DIRECTLY compatible with Pi 5 GPIO 8 — NO level-
 shifter or voltage divider is required.
 
 If using an ALTERNATIVE GPSDO with 5V CMOS output, you MUST use:
    - A logic level shifter, OR
    - A voltage divider (e.g., 10kΩ/20kΩ resistor network)
 
-Connecting 5V directly to GPIO 24 will cause CATASTROPHIC
+Connecting 5V directly to GPIO 8 will cause CATASTROPHIC
 damage to the RP1 chip and render the Pi 5 inoperable.
 """)
     print("=" * 60)
@@ -210,7 +210,7 @@ def check_pps_device():
         print("[*] PPS device /dev/pps0 found.")
         return True
     print("[!] PPS device /dev/pps0 NOT found.")
-    print("    Ensure GPSDO 1 PPS → GPIO 24 and dtoverlay=pps-gpio enabled.")
+    print("    Ensure GPSDO 1 PPS → GPIO 8 and dtoverlay=pps-gpio enabled.")
     print("    REBOOT REQUIRED after adding overlay to /boot/firmware/config.txt")
     return False
 
@@ -291,7 +291,7 @@ def check_pps_gpio_overlay():
         else:
             print("[!] PPS-GPIO overlay NOT configured.")
             print("    Add to /boot/firmware/config.txt:")
-            print("    dtoverlay=pps-gpio,gpiopin=24,assert_falling_edge=0")
+            print("    dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0")
             return False
     except FileNotFoundError:
         print("[!] /boot/firmware/config.txt not found.")
@@ -375,7 +375,7 @@ def main():
     print("Hardware Stack: Pi 5 + HamGeek PlutoSDR+ + Leo Bodnar LBE-1421 GPSDO")
     print("Required Wiring:")
     print("  - GPSDO Out2 (10 MHz) → PlutoSDR+ EXT_REF_CLK (hardware ADC lock)")
-    print("  - GPSDO Out1 (1 PPS) → Pi 5 GPIO 24 (UTC timestamp)")
+    print("  - GPSDO Out1 (1 PPS) → Pi 5 GPIO 8 (UTC timestamp)")
     print("  - PlutoSDR+ data → Pi 5 USB 3.0 / Ethernet (192.168.3.80)")
     print("  - ⚠️  VERIFY 3.3V LOGIC LEVEL BEFORE CONNECTING PPS!")
     print()
@@ -435,7 +435,7 @@ def main():
         print()
         print("Critical checks:")
         print("  1. Is GPSDO Out2 (10 MHz) connected to PlutoSDR+ EXT_REF_CLK?")
-        print("  2. Is GPSDO Out1 (1 PPS) connected to Pi 5 GPIO 24 (with 3.3V logic)?")
+        print("  2. Is GPSDO Out1 (1 PPS) connected to Pi 5 GPIO 8 (with 3.3V logic)?")
         print("  3. Is the PlutoSDR+ / LibreSDR reachable at ip:192.168.3.80 from the Pi 5?")
         print("  4. Has the system been rebooted after config.txt changes?")
         sys.exit(1)

@@ -4,7 +4,7 @@ Reads current SDR parameters from environment variables and a runtime
 override JSON file.  Write operations persist new values to the runtime
 override file; they are applied on the next daemon restart.
 
-The authoritative SDR (HackRF / PlutoSDR on the Pi 5) is not touched
+The authoritative SDR (PlutoSDR on the Pi 5) is not touched
 here.  This adapter reflects the Tier-2 mobile node's own sensor config.
 """
 

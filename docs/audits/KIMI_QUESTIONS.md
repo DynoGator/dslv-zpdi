@@ -22,11 +22,11 @@
 
 ## Q2: LBE-1421 dual-output wiring — second output role
 
-**Context:** The tasking order says "Output 1 → PlutoSDRplus CLKIN; the second output is available as an independent reference." The README says "LBE-1421 `Output` → PlutoSDRplus `CLKIN`" (vague on which output). The living master says "10 MHz reference signal from LBE-1421 `Out2` port → PlutoSDRplus `CLKIN`" and "1 PPS signal from LBE-1421 `Out1` port → Raspberry Pi 5 GPIO 18".
+**Context:** The tasking order says "Output 1 → PlutoSDRplus CLKIN; the second output is available as an independent reference." The README says "LBE-1421 `Output` → PlutoSDRplus `CLKIN`" (vague on which output). The living master says "10 MHz reference signal from LBE-1421 `Out2` port → PlutoSDRplus `CLKIN`" and "1 PPS signal from LBE-1421 `Out1` port → Raspberry Pi 5 GPIO 8".
 
 **Observation:** If Out2 is the 10 MHz reference and Out1 is 1 PPS, then the "second output" (Out2) is already used for PlutoSDRplus. But the tasking says Output 1 → PlutoSDRplus CLKIN and the second output is spare. There's a naming mismatch.
 
-**My read:** The living master is the more detailed doc. Out1 = 1 PPS to Pi GPIO. Out2 = 10 MHz to PlutoSDRplus CLKIN. The tasking order's "dual-output" point is that the LBE-1421 has TWO independent outputs (unlike the old LBE-1420 single-output). The second output (Out2) is the 10 MHz, and it's independent from Out1. This means you could repurpose Out2 to a different frequency or use it as a verification tap.
+**My read:** The living master is the more detailed doc. Out1 = 1 PPS to Pi GPIO. Out2 = 10 MHz to PlutoSDRplus CLKIN. The tasking order's "dual-output" point is that the LBE-1421 has TWO independent outputs (unlike the old LBE-1421 single-output). The second output (Out2) is the 10 MHz, and it's independent from Out1. This means you could repurpose Out2 to a different frequency or use it as a verification tap.
 
 **Decision made:** I will document that Out2 is the 10 MHz reference to PlutoSDRplus CLKIN, and that because the LBE-1421 has two independent outputs, Out2 can be reconfigured (e.g., to a second frequency for verification) without affecting the 1 PPS on Out1. I will also add a runtime timing-health cross-check that compares PPS timestamps against the NMEA-reported UTC to detect GPSDO health degradation.
 

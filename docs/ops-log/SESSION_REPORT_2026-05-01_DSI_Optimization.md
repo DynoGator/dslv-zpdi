@@ -1,13 +1,13 @@
-# SESSION REPORT — 2026-05-01 (DSI OPTIMIZATION & TELEMETRY WIRING)
+# SESSION REPORT — 2026-05-01 (HDMI OPTIMIZATION & TELEMETRY WIRING)
 
 **Operator:** Gemini CLI (Senior Software Engineer)  
-**Target:** DSLV-ZPDI Tier 1 Anchor (Raspberry Pi 5 / 5" DSI)  
+**Target:** DSLV-ZPDI Tier 1 Anchor (Raspberry Pi 5 / 10" Lenovo HDMI touchscreen)  
 **Status:** COMPLETED / HARDENED
 
 ---
 
 ## Executive Summary
-This session focused on transforming the DSLV-ZPDI dashboard into a professional-grade field tool for the 5" DSI/HDMI hardware baseline. The primary goals were to ensure readability on small screens, enhance the waterfall diagnostic utility, and wire real-time Kuramoto coherence metrics from the production pipeline into the TUI.
+This session focused on transforming the DSLV-ZPDI dashboard into a professional-grade field tool for the 10" Lenovo HDMI touchscreen/HDMI hardware baseline. The primary goals were to ensure readability on small screens, enhance the waterfall diagnostic utility, and wire real-time Kuramoto coherence metrics from the production pipeline into the TUI.
 
 ## Changes Implemented
 
@@ -36,4 +36,4 @@ This session focused on transforming the DSLV-ZPDI dashboard into a professional
 - **Telemetry Loop:** Verified `main_pipeline.py` correctly updates the `health.json` endpoint with coherence data.
 
 ---
-**DSLV-ZPDI v5.0.0-DSI is now field-ready.**
+**DSLV-ZPDI v5.0.0-HDMI is now field-ready.**

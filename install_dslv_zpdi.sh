@@ -302,7 +302,7 @@ EOF
 
 # DSLV-ZPDI PPS Configuration (Rev 5.0+)
 # WARNING: Pi 5 RP1 uses 3.3V logic. Verify GPSDO output voltage before connecting.
-dtoverlay=pps-gpio,gpiopin=24,assert_falling_edge=0
+dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0
 EOF
                 log_warn "PPS overlay added to $FIRMWARE_CONFIG"
                 log_warn "REBOOT REQUIRED for PPS to take effect"

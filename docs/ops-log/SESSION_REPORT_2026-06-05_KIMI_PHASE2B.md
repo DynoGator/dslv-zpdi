@@ -74,7 +74,7 @@ Five remote branches found:
 | `tools/dashboard/app.py` | Imported + instantiated 3 new panels; updated layout builder + render loop | Dashboard surfacing |
 | `tools/dashboard/config.py` | Added `radon`, `mobile`, `bci` to `PanelsCfg` | Panel toggle support |
 | `tools/dashboard/humor.py` | Added 11 radon-themed snark lines | Aesthetic continuity |
-| `V3_DSLV-ZPDI_LIVING_MASTER.md` | Fixed LBE-1420→LBE-1421 typos | Doc accuracy |
+| `V3_DSLV-ZPDI_LIVING_MASTER.md` | Fixed LBE-1421→LBE-1421 typos | Doc accuracy |
 | `PHASE_2A_TIER_1_BUILD_SHEET.md` | Added dual-output architecture section | Hardware clarity |
 | `pyproject.toml` | Added `bleak>=0.21.0` dependency | BLE support |
 | `requirements.txt` | Added `bleak>=0.21.0` | Lock-file parity |
@@ -161,7 +161,7 @@ Green before every commit.
 
 ### GPSDO
 - **Expected:** Leo Bodnar LBE-1421 (dual-output)
-- **Documentation corrected:** README and build sheet already reflected LBE-1421 correctly. Living master had two typos (`LBE-1421 replaces deprecated LBE-1421` and `single-output GPSDO e.g., LBE-1421`) — both corrected to `LBE-1420`.
+- **Documentation corrected:** README and build sheet already reflected LBE-1421 correctly. Living master had two typos (`LBE-1421 replaces deprecated LBE-1421` and `single-output GPSDO e.g., LBE-1421`) — both corrected to `LBE-1421`.
 - **Second output:** Documented as available for future expansion (verification tap or second device discipline). Not wired in Phase 2B.
 
 ### RadonEye Pro

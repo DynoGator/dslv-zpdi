@@ -11,6 +11,7 @@ The router categorises them by coherence score:
   0.15 <= r_smooth < 0.40 → structured_background_tier2
   r_smooth < 0.15         → noise_tier2
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -121,6 +122,7 @@ class SecondaryLog:
                 src.replace(dst)
         # Gzip current file to .1.gz
         import gzip
+
         rotated = self._path.parent / f"{self._path.name}.1.gz"
         with self._path.open("rb") as f_in:
             with gzip.open(rotated, "wb") as f_out:

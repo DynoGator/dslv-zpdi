@@ -70,7 +70,9 @@ class RadonSample:
     provenance: dict[str, Any] = field(default_factory=dict)
     hardware_tier: int = 2
 
-    def to_ingestion_payload(self, node_id: str = "PI5-ALPH", sensor_id: str = "RD200P-01") -> IngestionPayload:
+    def to_ingestion_payload(
+        self, node_id: str = "PI5-ALPH", sensor_id: str = "RD200P-01"
+    ) -> IngestionPayload:
         """SPEC-015.2 — Serialize to Layer 1 ingestion contract."""
         from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
@@ -390,7 +392,9 @@ class RadonEyeIngestor:
             except Exception as exc:
                 logger.debug("RadonEye HTTP failed (%s), falling back to simulator", exc)
             if self.optional_hardware:
-                logger.info("[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development")
+                logger.info(
+                    "[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development"
+                )
             sample = self.sim.read()
             sample.provenance["optional_equipment"] = True
             return sample
@@ -405,7 +409,9 @@ class RadonEyeIngestor:
         except Exception as exc:
             logger.debug("RadonEye BLE failed (%s), falling back to simulator", exc)
         if self.optional_hardware:
-            logger.info("[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development")
+            logger.info(
+                "[OPTIONAL EQUIPMENT] RadonEye Pro hardware not connected — utilizing simulated stream for uninterrupted development"
+            )
         sample = self.sim.read()
         sample.provenance["optional_equipment"] = True
         return sample

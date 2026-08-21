@@ -42,12 +42,17 @@ class TestPipelineAdapterStatus:
     def test_no_pid_files_returns_inactive(self, tmp_path, monkeypatch):
         monkeypatch.setenv("DSLV_REPO_ROOT", str(tmp_path))
         import dslv_zpdi.control.adapters.pipeline as m
+
         monkeypatch.setattr(m, "REPO_ROOT", tmp_path)
-        monkeypatch.setattr(m, "_PID_FILES", {
-            "mobile_node": tmp_path / ".zpdi_daemon.pid",
-            "tier1_server": tmp_path / ".zpdi_tier1.pid",
-            "web_dashboard": tmp_path / ".zpdi_webdash.pid",
-        })
+        monkeypatch.setattr(
+            m,
+            "_PID_FILES",
+            {
+                "mobile_node": tmp_path / ".zpdi_daemon.pid",
+                "tier1_server": tmp_path / ".zpdi_tier1.pid",
+                "web_dashboard": tmp_path / ".zpdi_webdash.pid",
+            },
+        )
         monkeypatch.setattr(m, "_SUPERVISOR_LOG", tmp_path / "supervisor.log")
 
         result = PipelineAdapter().status()
@@ -56,14 +61,19 @@ class TestPipelineAdapterStatus:
 
     def test_live_process_shows_active(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.pipeline as m
+
         pid = os.getpid()
         pid_file = tmp_path / ".zpdi_daemon.pid"
         pid_file.write_text(str(pid))
-        monkeypatch.setattr(m, "_PID_FILES", {
-            "mobile_node": pid_file,
-            "tier1_server": tmp_path / ".missing.pid",
-            "web_dashboard": tmp_path / ".missing2.pid",
-        })
+        monkeypatch.setattr(
+            m,
+            "_PID_FILES",
+            {
+                "mobile_node": pid_file,
+                "tier1_server": tmp_path / ".missing.pid",
+                "web_dashboard": tmp_path / ".missing2.pid",
+            },
+        )
         monkeypatch.setattr(m, "_SUPERVISOR_LOG", tmp_path / "supervisor.log")
 
         result = PipelineAdapter().status()
@@ -74,6 +84,7 @@ class TestPipelineAdapterStatus:
 class TestPipelineAdapterStop:
     def test_stop_signals_supervisor_when_found(self, monkeypatch):
         import dslv_zpdi.control.adapters.pipeline as m
+
         monkeypatch.setattr(m, "_find_supervisor_pid", lambda: 12345)
         killed = {}
         monkeypatch.setattr(os, "kill", lambda pid, sig: killed.update({"pid": pid, "sig": sig}))
@@ -85,19 +96,26 @@ class TestPipelineAdapterStop:
 
     def test_stop_falls_back_to_pid_files_when_supervisor_not_found(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.pipeline as m
+
         monkeypatch.setattr(m, "_find_supervisor_pid", lambda: None)
 
         pid = os.getpid()
         pid_file = tmp_path / ".zpdi_daemon.pid"
         pid_file.write_text(str(pid))
-        monkeypatch.setattr(m, "_PID_FILES", {
-            "mobile_node": pid_file,
-            "tier1_server": tmp_path / ".missing.pid",
-            "web_dashboard": tmp_path / ".missing2.pid",
-        })
+        monkeypatch.setattr(
+            m,
+            "_PID_FILES",
+            {
+                "mobile_node": pid_file,
+                "tier1_server": tmp_path / ".missing.pid",
+                "web_dashboard": tmp_path / ".missing2.pid",
+            },
+        )
 
         killed = []
-        monkeypatch.setattr(os, "kill", lambda p, sig: killed.append((p, sig)) if sig != 0 else None)
+        monkeypatch.setattr(
+            os, "kill", lambda p, sig: killed.append((p, sig)) if sig != 0 else None
+        )
 
         result = PipelineAdapter().stop()
         assert result["acknowledged"] is True
@@ -105,10 +123,15 @@ class TestPipelineAdapterStop:
 
     def test_stop_returns_error_when_no_processes_found(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.pipeline as m
+
         monkeypatch.setattr(m, "_find_supervisor_pid", lambda: None)
-        monkeypatch.setattr(m, "_PID_FILES", {
-            "mobile_node": tmp_path / ".missing.pid",
-        })
+        monkeypatch.setattr(
+            m,
+            "_PID_FILES",
+            {
+                "mobile_node": tmp_path / ".missing.pid",
+            },
+        )
 
         result = PipelineAdapter().stop()
         assert result["acknowledged"] is False
@@ -118,6 +141,7 @@ class TestPipelineAdapterStop:
 class TestPipelineAdapterStartRotate:
     def test_start_writes_marker(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.pipeline as m
+
         marker = tmp_path / "logs" / ".start_pipeline_requested"
         monkeypatch.setattr(m, "_START_MARKER", marker)
 
@@ -127,6 +151,7 @@ class TestPipelineAdapterStartRotate:
 
     def test_rotate_writes_marker(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.pipeline as m
+
         marker = tmp_path / "logs" / ".rotate_output_requested"
         monkeypatch.setattr(m, "_ROTATE_MARKER", marker)
 
@@ -141,6 +166,7 @@ class TestPipelineAdapterStartRotate:
 class TestSdrAdapter:
     def test_status_returns_defaults_when_no_config(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", tmp_path / "sdr.json")
         monkeypatch.delenv("ZPDI_SDR_DEVICE", raising=False)
 
@@ -150,6 +176,7 @@ class TestSdrAdapter:
 
     def test_set_mode_persists_to_config(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         cfg_path = tmp_path / "sdr.json"
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", cfg_path)
 
@@ -160,6 +187,7 @@ class TestSdrAdapter:
 
     def test_set_center_frequency_persists(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         cfg_path = tmp_path / "sdr.json"
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", cfg_path)
 
@@ -169,6 +197,7 @@ class TestSdrAdapter:
 
     def test_set_sample_rate_persists(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         cfg_path = tmp_path / "sdr.json"
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", cfg_path)
 
@@ -177,6 +206,7 @@ class TestSdrAdapter:
 
     def test_set_gain_persists(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         cfg_path = tmp_path / "sdr.json"
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", cfg_path)
 
@@ -185,6 +215,7 @@ class TestSdrAdapter:
 
     def test_status_reads_runtime_overrides(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         cfg_path = tmp_path / "sdr.json"
         cfg_path.write_text(json.dumps({"mode": "simulated", "center_frequency_hz": 99_000_000}))
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", cfg_path)
@@ -196,6 +227,7 @@ class TestSdrAdapter:
 
     def test_writes_accumulate_in_config(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.sdr as m
+
         cfg_path = tmp_path / "sdr.json"
         monkeypatch.setattr(m, "_RUNTIME_CONFIG", cfg_path)
 
@@ -212,6 +244,7 @@ class TestSdrAdapter:
 class TestHdf5AdapterMissingFile:
     def test_summary_missing_file(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.hdf5_query as m
+
         monkeypatch.setattr(m, "HDF5_PATH", tmp_path / "nonexistent.h5")
 
         result = Hdf5Adapter().summary()
@@ -219,6 +252,7 @@ class TestHdf5AdapterMissingFile:
 
     def test_export_missing_file(self, tmp_path, monkeypatch):
         import dslv_zpdi.control.adapters.hdf5_query as m
+
         monkeypatch.setattr(m, "HDF5_PATH", tmp_path / "nonexistent.h5")
 
         result = Hdf5Adapter().export_segment()
@@ -233,7 +267,9 @@ class TestHdf5AdapterLiveFile:
     def _check(self):
         if importlib.util.find_spec("h5py") is None:
             pytest.skip("h5py not available")
-        hdf5_path = Path(os.environ.get("ZPDI_HDF5_PATH", "/home/dynogator/dslv-zpdi/data/zpdi_stream.h5"))
+        hdf5_path = Path(
+            os.environ.get("ZPDI_HDF5_PATH", "/home/dynogator/dslv-zpdi/data/zpdi_stream.h5")
+        )
         if not hdf5_path.exists():
             pytest.skip("live HDF5 file not present")
 

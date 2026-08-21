@@ -10,7 +10,7 @@
 This Pi 5 was commissioned as a Tier-1 institutional anchor node for the DSLV-ZPDI network. The following systems were installed, configured, and verified:
 
 1. **GPSDO-disciplined timing**
-   - LBE-1421 1 PPS output wired to GPIO 18 (header pin 12).
+   - LBE-1421 1 PPS output wired to GPIO 8 (header pin 12).
    - `pps-gpio` overlay active; `/dev/pps0` confirmed.
    - `gpsd` owns `/dev/ttyACM0`; `chronyd` is Stratum 1 locked to PPS.
 

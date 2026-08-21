@@ -2,7 +2,7 @@
 
 **Session:** UX integration final sweep + reboot prep
 **Operator:** Joseph R. Fross
-**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending) + 5" DSI
+**Platform:** Raspberry Pi 5 + PlutoSDRplus + LBE-1421 GPSDO (pending) + 10" Lenovo HDMI touchscreen
 **Branch:** `main` — clean working tree, 4 commits ahead of `origin/main`
 
 ## 1. Work performed (this session)
@@ -11,7 +11,7 @@ Two working phases rolled into one commit:
 
 **Phase A — Build-out** (already reported in
 `SESSION_REPORT_2026-04-24_UX_Integration.md`):
-- 5" DSI compact dashboard layout with runtime `c` toggle
+- 10" Lenovo HDMI touchscreen compact dashboard layout with runtime `c` toggle
 - HDF5 analysis toolchain (`hdf5-tools`, `h5glance`, `folium`, `pandas`)
 - Interactive satellite map (Folium + ESRI World Imagery + OSM)
 - Gmail-backed auto-email with pluggable backend abstraction
@@ -20,11 +20,11 @@ Two working phases rolled into one commit:
 - Regression rollback: numpy 2.x → 1.26.4 to keep `pyPlutoSDRplus` happy
 
 **Phase B — Inspection pass & polish**:
-- Added `compact_banner()` so the DSI banner slot no longer truncates
+- Added `compact_banner()` so the HDMI banner slot no longer truncates
 - Banner preference preserved across the `c` (compact) toggle
 - Adaptive compact row sizing — banner / status / waterfall / bottom
   now scale with terminal height (24 / 28 / 32+ rows)
-- Launcher bumped DSI geometry from 92×24 to 92×28 to reclaim useful
+- Launcher bumped HDMI geometry from 92×24 to 92×28 to reclaim useful
   waterfall real estate
 - Map aggregator now returns **latest-first** events — newest HDF5
   files by mtime and tail of quarantine JSONL rather than head
@@ -34,7 +34,7 @@ Two working phases rolled into one commit:
   and pin popups
 - End-to-end smoke test confirmed all 4 layout permutations build,
   numpy 1.26 + PlutoSDRplus still importable, map renders, email bundles
-- Everything committed as `53693c1 feat(ux): 5" DSI polish +
+- Everything committed as `53693c1 feat(ux): 10" Lenovo HDMI touchscreen polish +
   interactive map + auto-email pipeline` (23 files, +2665 / -54)
 
 **Phase C — Reboot prep** (this turnover):
@@ -46,7 +46,7 @@ Two working phases rolled into one commit:
 - Verified systemd chain (dslv-zpdi, preflight, tuning) enabled —
   will come back on reboot
 - Verified autostart (`~/.config/autostart/dslv-zpdi-dashboard.desktop`)
-  still chains to `launch_project.sh`, which now auto-detects the DSI
+  still chains to `launch_project.sh`, which now auto-detects the HDMI
   and uses compact mode
 - **Live capture processes NOT killed** — reboot will handle shutdown
   cleanly; killing them now would only lose the current buffered
@@ -58,7 +58,7 @@ Four commits ahead of `origin/main`, **push pending** — this session
 has no GitHub credential material:
 
 ```
-53693c1 feat(ux): 5" DSI polish + interactive map + auto-email pipeline
+53693c1 feat(ux): 10" Lenovo HDMI touchscreen polish + interactive map + auto-email pipeline
 a50191c fix(launcher): harden clean-boot sequence for reliable dual-window startup
 f4dc821 Robustness update: Improved dashboard, added project launcher,
         and updated autostart. Moved logs to persistent storage.
@@ -132,13 +132,13 @@ After the Pi comes back up, walk through this in order:
 
 1. **Log in to the desktop.** The autostart timer waits 10 s then
    fires `tools/launch_project.sh`, which:
-   - Detects the DSI (800×480) via xrandr
+   - Detects the HDMI (800×480) via xrandr
    - Kills any stale SDR processes
    - Restarts the systemd chain (tuning → preflight → pipeline)
-   - Opens a single compact dashboard terminal (no dual windows on DSI)
+   - Opens a single compact dashboard terminal (no dual windows on HDMI)
 2. **Confirm the dashboard shows** the 2×2 status grid + waterfall.
    Press `c` to toggle wide layout if you're on an external display
-   instead of the DSI.
+   instead of the HDMI.
 3. **Sanity-check the pipeline** — the Pipeline panel should read
    `◉ active/running` and the HDF5 file count should advance over time.
 4. **Push the pending commits** (from your interactive shell — this

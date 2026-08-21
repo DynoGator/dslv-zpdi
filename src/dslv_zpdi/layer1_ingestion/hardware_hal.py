@@ -195,14 +195,20 @@ class HardwareHAL(BaseHAL):
         timing = self.timing_authority.attest()
 
         profile_cfg = self._profile
-        center_freq = center_freq if center_freq is not None else (
-            profile_cfg.rf.center_frequency_hz if profile_cfg else 100e6
+        center_freq = (
+            center_freq
+            if center_freq is not None
+            else (profile_cfg.rf.center_frequency_hz if profile_cfg else 100e6)
         )
-        sample_rate = sample_rate if sample_rate is not None else (
-            profile_cfg.rf.sample_rate_hz if profile_cfg else 10e6
+        sample_rate = (
+            sample_rate
+            if sample_rate is not None
+            else (profile_cfg.rf.sample_rate_hz if profile_cfg else 10e6)
         )
-        num_samples = num_samples if num_samples is not None else (
-            profile_cfg.sdr.buffer_samples if profile_cfg else 16384
+        num_samples = (
+            num_samples
+            if num_samples is not None
+            else (profile_cfg.sdr.buffer_samples if profile_cfg else 16384)
         )
         gain_db = profile_cfg.rf.gain_db if profile_cfg else 0.0
 
@@ -241,7 +247,7 @@ class HardwareHAL(BaseHAL):
             pass
 
         try:
-            if hasattr(self.mimo_engine, 'process_rx'):
+            if hasattr(self.mimo_engine, "process_rx"):
                 self.mimo_engine.process_rx(result.samples)
         except Exception:
             pass

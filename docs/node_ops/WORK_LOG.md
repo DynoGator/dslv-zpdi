@@ -10,7 +10,7 @@
 
 Install and configure `dslv-zpdi` on a Raspberry Pi 5 as a Tier-1 RF-metrology anchor node, integrating:
 
-- Leo Bodnar LBE-1421 GPSDO (1 PPS to GPIO 18, 10 MHz to PlutoSDR+ REF)
+- Leo Bodnar LBE-1421 GPSDO (1 PPS to GPIO 8, 10 MHz to PlutoSDR+ REF)
 - HamGeek / LibreSDR PlutoSDR+ (AD9363 REV5) via Ethernet at `192.168.2.1`
 - Geekworm X-1202 UPS HAT with 4× Sony VTC6 18650 cells
 - 10" Lenovo HDMI touchscreen (1024×600)
@@ -35,7 +35,7 @@ Key facts:
 
 ### 3.1 Timing & GPSDO
 
-- `/boot/firmware/config.txt`: `dtoverlay=pps-gpio,gpiopin=18` confirmed active.
+- `/boot/firmware/config.txt`: `dtoverlay=pps-gpio,gpiopin=8` confirmed active.
 - `/dev/pps0` present and producing edges.
 - `chrony` locked to PPS via `refclock PPS /dev/pps0` and `refclock SHM 0` for GPS NMEA.
 - `PpsListener` rewritten to read `/sys/class/pps/pps0/assert` instead of the unreliable `PPS_FETCH` ioctl on this Pi 5 kernel. Jitter computed from kernel timestamps (not userspace arrival time).

@@ -115,9 +115,9 @@ class IngestionPayload:
         """SPEC-005A.5 — Pack core telemetry into fixed binary struct and append IQ buffer."""
         flags = 0
         if self.gps_locked:
-            flags |= (1 << 0)
+            flags |= 1 << 0
         if self.calibration_valid:
-            flags |= (1 << 1)
+            flags |= 1 << 1
 
         # Pack structured header
         header = self._struct.pack(
@@ -126,11 +126,11 @@ class IngestionPayload:
             self.pps_jitter_ns,
             self.calibration_age_s,
             self.drift_percent,
-            self.payload_uuid.encode()[:32].ljust(32, b'\0'),
-            self.node_id.encode()[:16].ljust(16, b'\0'),
-            self.sensor_id.encode()[:16].ljust(16, b'\0'),
-            self.modality.encode()[:16].ljust(16, b'\0'),
-            flags
+            self.payload_uuid.encode()[:32].ljust(32, b"\0"),
+            self.node_id.encode()[:16].ljust(16, b"\0"),
+            self.sensor_id.encode()[:16].ljust(16, b"\0"),
+            self.modality.encode()[:16].ljust(16, b"\0"),
+            flags,
         )
 
         iq_bytes = b""
@@ -141,6 +141,7 @@ class IngestionPayload:
             if isinstance(iq, list):
                 # Flatten the list of complex floats
                 import itertools
+
                 flat = list(itertools.chain.from_iterable(iq))
                 iq_bytes = struct.pack(f"<{len(flat)}f", *flat)
             elif isinstance(iq, bytes):

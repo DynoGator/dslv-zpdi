@@ -8,6 +8,6 @@ swarm telemetry (Layer 3).
 ``pyproject.toml`` by ``tools/check_version_sync.py``.
 """
 
-__version__ = "5.3.0"
+__version__ = "5.3.2"
 
 __all__ = ["__version__"]

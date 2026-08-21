@@ -8,7 +8,7 @@
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  LBE-1421 GPSDO ──┬── 1 PPS ──▶ GPIO 18 ──▶ /dev/pps0 ──▶ chrony (Stratum 1) │
+│  LBE-1421 GPSDO ──┬── 1 PPS ──▶ GPIO 8 ──▶ /dev/pps0 ──▶ chrony (Stratum 1) │
 │                   │                                                         │
 │                   └── 10 MHz ──▶ PlutoSDR+ EXT_REF_CLK (physical, unverified)│
 │                                                                             │

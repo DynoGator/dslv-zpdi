@@ -24,6 +24,7 @@ def _make_key() -> bytes:
 
 def _encrypt(key: bytes, plaintext: bytes) -> dict:
     import secrets
+
     aesgcm = AESGCM(key)
     nonce = secrets.token_bytes(12)
     ct = aesgcm.encrypt(nonce, plaintext, None)
@@ -86,6 +87,7 @@ def _get_process_fn():
     import importlib
 
     import tier1_ingestion_server as m
+
     importlib.reload(m)
     return m._process_message
 
@@ -94,8 +96,8 @@ def _get_process_fn():
 # SHA-256 integrity tests
 # ---------------------------------------------------------------------------
 
-class TestSHA256Integrity:
 
+class TestSHA256Integrity:
     def setup_method(self):
         self._fn = _get_process_fn()
 
@@ -118,7 +120,9 @@ class TestSHA256Integrity:
         """Payloads without sha256 are accepted (field is optional on wire)."""
         body = _make_body()
         body["hmac"] = _sign(
-            json.dumps({k: v for k, v in body.items()}, sort_keys=True, separators=(",", ":")).encode(),
+            json.dumps(
+                {k: v for k, v in body.items()}, sort_keys=True, separators=(",", ":")
+            ).encode(),
             HMAC_SECRET,
         )
         msg = json.dumps(body, sort_keys=True, separators=(",", ":"))
@@ -134,8 +138,8 @@ class TestSHA256Integrity:
 # HMAC verification tests
 # ---------------------------------------------------------------------------
 
-class TestHMACVerification:
 
+class TestHMACVerification:
     def setup_method(self):
         self._fn = _get_process_fn()
 
@@ -166,8 +170,8 @@ class TestHMACVerification:
 # AES-256-GCM decryption tests
 # ---------------------------------------------------------------------------
 
-class TestAESDecryption:
 
+class TestAESDecryption:
     def setup_method(self):
         self._fn = _get_process_fn()
 
@@ -213,21 +217,24 @@ class TestAESDecryption:
 # Fusion engine tests
 # ---------------------------------------------------------------------------
 
-class TestOrientationFusion:
 
+class TestOrientationFusion:
     def test_stability_one_before_warmup(self):
         from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+
         t = OrientationTracker()
         assert t.stability() == 1.0  # No samples yet
 
     def test_stability_one_after_single_push(self):
         from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+
         t = OrientationTracker()
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
         assert t.stability() == 1.0  # Only one sample — no delta
 
     def test_stability_identity_quaternion(self):
         from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+
         t = OrientationTracker()
         identity = {"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0}
         t.push(identity)
@@ -237,6 +244,7 @@ class TestOrientationFusion:
     def test_stability_90_degree_rotation(self):
         """90° rotation between samples → stability ≈ cos(45°) ≈ 0.707."""
         from dslv_zpdi.layer2_core.fusion_engine import OrientationTracker
+
         t = OrientationTracker()
         # q1 = identity
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
@@ -251,6 +259,7 @@ class TestOrientationFusion:
             OrientationTracker,
             apply_orientation_weight,
         )
+
         t = OrientationTracker()
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
@@ -266,6 +275,7 @@ class TestOrientationFusion:
             OrientationTracker,
             apply_orientation_weight,
         )
+
         t = OrientationTracker()
         t.push({"x": 0.0, "y": 0.0, "z": 0.0, "cos_value": 1.0})
         s45 = math.sqrt(2) / 2
@@ -278,8 +288,8 @@ class TestOrientationFusion:
 # End-to-end pipeline: mobile payload → tier1 processing → route
 # ---------------------------------------------------------------------------
 
-class TestEndToEnd:
 
+class TestEndToEnd:
     def setup_method(self):
         self._fn = _get_process_fn()
 

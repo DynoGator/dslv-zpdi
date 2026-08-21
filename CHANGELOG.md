@@ -448,8 +448,8 @@ was changed.
 
 ### Fixed
 - **27 pre-existing SPEC-ID orphan gaps** — `node_receiver.py` (7), `pps_listener.py` (8), `nmea_stream.py` (8), `hal_hardware.py` (1), plus creation of real `specs/SPEC-014.md`. `orphan_checker.py` now green.
-- **LBE-1420→LBE-1421 typos** in `V3_DSLV-ZPDI_LIVING_MASTER.md` — two instances where dual-output GPSDO was misidentified as single-output.
-- **Dual-output architecture clarity** in `PHASE_2A_TIER_1_BUILD_SHEET.md` — new section documenting LBE-1421 Out1 (1 PPS → GPIO 18) and Out2 (10 MHz → PlutoSDRplus CLKIN) independence.
+- **LBE-1421→LBE-1421 typos** in `V3_DSLV-ZPDI_LIVING_MASTER.md` — two instances where dual-output GPSDO was misidentified as single-output.
+- **Dual-output architecture clarity** in `PHASE_2A_TIER_1_BUILD_SHEET.md` — new section documenting LBE-1421 Out1 (1 PPS → GPIO 8) and Out2 (10 MHz → PlutoSDRplus CLKIN) independence.
 
 ### Changed
 - `tools/dashboard/app.py` — imports + instantiates 3 new panels; layout builder and render loop updated. Toggle keys `4` (RADON), `5` (MOBILE), `6` (BCI) added.
@@ -705,7 +705,7 @@ All notable changes to the DSLV-ZPDI project will be documented in this file.
 ## [4.5.0] - 2026-04-24
 
 ### Added
-- Dashboard v2: 5" DSI-optimized layout, NOAA space-weather panel, storm/anomaly/weather/waterfall panels, TOML config.
+- Dashboard v2: 10" Lenovo HDMI touchscreen-optimized layout, NOAA space-weather panel, storm/anomaly/weather/waterfall panels, TOML config.
 - Auto-email telemetry pipeline (`tools/mailer/`): SMTP/SendGrid/SES backends, daily/alert dispatch, interactive configuration TUI.
 - Interactive geospatial mapping (`tools/mapping/`): Folium HTML maps, HDF5 aggregation, quick-launch scripts.
 - Project launcher (`tools/launch_project.sh`) with clean-boot preflight, dual-window spawn, and simulator toggle.
@@ -1055,7 +1055,7 @@ LBE-1421 hardened operations stack with fully instrumented dashboard, automated 
 
 ## Added
 - **Dashboard v2** (`tools/dashboard/`)
-  - 5" DSI-optimized layout with compact/full banner modes and startup animation.
+  - 10" Lenovo HDMI touchscreen-optimized layout with compact/full banner modes and startup animation.
   - NOAA Space Weather integration (`noaa.py`) for real-time Kp, solar wind, and aurora alerts.
   - New panels: RF Anomaly, Storm Watch, Weather Overlay, Waterfall spectrogram, enhanced Hardware/Logs/Notifications/Pipeline/System views.
   - `config.py` with TOML-based runtime configuration (`config/dashboard.toml.example`).
@@ -1241,7 +1241,7 @@ full suite validates with `DEV_SIMULATOR=1` and no physical hardware.
 
 - Closed 27 pre-existing SPEC-ID orphan gaps (`node_receiver`, `pps_listener`,
   `nmea_stream`, `hal_hardware`) and added real `specs/SPEC-014.md`.
-- Corrected LBE-1420 → LBE-1421 dual-output references in the living master and
+- Corrected LBE-1421 → LBE-1421 dual-output references in the living master and
   build sheet.
 
 ## Validation

@@ -12,7 +12,7 @@ Rationale: Achieve hardware-level ADC phase coherence by locking the SDR samplin
 
 ## Physical Connections
 1. GPSDO 10 MHz SMA Output → PlutoSDRplus CLKIN (hardware ADC phase-lock)
-2. GPSDO 1 PPS → Pi 5 GPIO 18 (pps-gpio kernel module)
+2. GPSDO 1 PPS → Pi 5 GPIO 8 (pps-gpio kernel module)
 
 ## Software Implementation
 - HAL: `hal_hardware.py` - PlutoSDRplus support with pyPlutoSDRplus

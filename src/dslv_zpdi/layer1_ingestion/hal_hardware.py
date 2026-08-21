@@ -5,7 +5,7 @@ Raspberry Pi 5 + PlutoSDRplus + Leo Bodnar LBE-1421 GPSDO.
 
 This implementation achieves hardware-level ADC phase coherence by:
 1. 10 MHz reference from GPSDO → PlutoSDRplus CLKIN (hardware ADC lock)
-2. 1 PPS from GPSDO → GPIO 24 (UTC epoch anchoring)
+2. 1 PPS from GPSDO → GPIO 8 (UTC epoch anchoring)
 
 Rev 5.0-FORGE: Implemented SoapySDR for hardware agnosticism per Gemini review.
 Added "Silent Traitor" clock failure mitigation per ARCH-PHASE-2A-PIVOT.
@@ -96,7 +96,7 @@ class HardwareHAL(BaseHAL):
     - PlutoSDRplus with CLKIN port for 10 MHz GPSDO reference
     - Leo Bodnar LBE-1421 GPSDO (Out2=10 MHz reference, Out1=1 PPS)
     - GPSDO Out2 (10 MHz) → PlutoSDRplus CLKIN (hardware ADC phase-lock, 50 Ω)
-    - GPSDO Out1 (1 PPS) → Pi 5 GPIO 24 (UTC timestamp interrupt)
+    - GPSDO Out1 (1 PPS) → Pi 5 GPIO 8 (UTC timestamp interrupt)
     - Power Budget: 250 mA ±10 % @ 5 V USB-C + 30 mA antenna port (active)
     - Stability: 1 × 10⁻¹² @ 1000 s (no frequency/phase jumps on GPS loss)
 
@@ -120,7 +120,7 @@ class HardwareHAL(BaseHAL):
 
         Args:
             pps_device: Path to kernel PPS character device (default /dev/pps0).
-                        GPIO 24 is claimed by the pps-gpio kernel driver; access
+                        GPIO 8 is claimed by the pps-gpio kernel driver; access
                         goes through this device, not libgpiod.
             nmea_port:  Serial port for LBE-1421 NMEA telemetry (default /dev/ttyACM0).
         """
@@ -294,7 +294,9 @@ class HardwareHAL(BaseHAL):
             device.close()
             self._clock_verified = True
         except Exception as e:
-            raise ClockVerificationError(f"Could not initialize PlutoSDRplus via pyPlutoSDRplus: {e}") from e
+            raise ClockVerificationError(
+                f"Could not initialize PlutoSDRplus via pyPlutoSDRplus: {e}"
+            ) from e
 
     def verify_tier1_phase_lock(self) -> dict:
         """
@@ -396,7 +398,7 @@ class HardwareHAL(BaseHAL):
         The PPS signal provides UTC epoch anchoring for the GPS-locked ADC samples.
 
         CRITICAL: Pi 5 RP1 southbridge uses 3.3V logic. Verify GPSDO PPS output
-        does not exceed 3.3V before connecting to GPIO 24.
+        does not exceed 3.3V before connecting to GPIO 8.
 
         Args:
             pps_device: Path to PPS device (default: /dev/pps0)
@@ -583,7 +585,9 @@ class HardwareHAL(BaseHAL):
             calibration_age_s=0.0,
             drift_percent=0.0,
             source_path=(
-                "/dev/PlutoSDRplus0" if (SOAPYSDR_AVAILABLE or PYPlutoSDRplus_AVAILABLE) else "sdr_unavailable"
+                "/dev/PlutoSDRplus0"
+                if (SOAPYSDR_AVAILABLE or PYPlutoSDRplus_AVAILABLE)
+                else "sdr_unavailable"
             ),
             trust_state="ASSEMBLED",
             hardware_tier=1,
@@ -649,7 +653,9 @@ class HardwareHAL(BaseHAL):
                 "driver": "SoapySDR",
             }
 
-    def _ingest_pyplutosdrplus(self, center_freq: float, sample_rate: float, num_samples: int) -> dict:
+    def _ingest_pyplutosdrplus(
+        self, center_freq: float, sample_rate: float, num_samples: int
+    ) -> dict:
         """
         pyPlutoSDRplus fallback ingestion.
         """

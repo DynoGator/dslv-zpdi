@@ -35,7 +35,7 @@
   - See: `docs/PLUTO_SDR_FIRMWARE_GUIDE.md`, `docs/PlutoSDR/`
 - **GPSDO Metrology Clock:**
   - Hardware: Leo Bodnar LBE-1421
-  - Out 1 (1 PPS) → Pi 5 GPIO 18 (UTC anchoring)
+  - Out 1 (1 PPS) → Pi 5 GPIO 8 (UTC anchoring)
   - Out 2 (10 MHz) → PlutoSDR+ CLKIN (Hardware phase lock)
   - See: `docs/hardware/LBE1421_PLUTO_WIRING.md`
 - **Mobile Tier-2 C2 Node:**

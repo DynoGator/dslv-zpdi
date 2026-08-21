@@ -71,7 +71,7 @@ Do **not** use a passive tee to split PPS to the host and SDR without:
 ## Wiring Diagram (Tentative)
 
 ```
-LBE-1421 Out1 (1 PPS)  --[verified cable]-->  host GPIO 18 / /dev/pps0
+LBE-1421 Out1 (1 PPS)  --[verified cable]-->  host GPIO 8 / /dev/pps0
 LBE-1421 Out2 (10 MHz) --[verified cable]-->  HamGeek 10M timing input
                                                (only after verification)
 ```

@@ -20,7 +20,7 @@ graph TD
     end
     
     subgraph "Compute: Raspberry Pi 5"
-        GPIO18[GPIO 18 / Pin 12]
+        GPIO18[GPIO 8 / Pin 12]
         GND[GND / Pin 14]
         USB3[USB 3.0 Port]
         USBC_PWR[USB-C Power Port]
@@ -38,7 +38,7 @@ graph TD
 ```text
 LBE-1421 GPSDO                      Raspberry Pi 5 (GPIO Header)
 +-----------------------+           +------------------------------+
-| [Out 1]  (1 PPS)      |---------->| [Pin 12] (GPIO 18 / PPS IN)  |
+| [Out 1]  (1 PPS)      |---------->| [Pin 12] (GPIO 8 / PPS IN)  |
 |                       |           |                              |
 | [GND]                 |---BRIDGE--| [Pin 14] (Ground)            |
 +-----------------------+           +------------------------------+
@@ -65,7 +65,7 @@ PlutoSDRplus SDR
 
 2.  **SMA-to-GPIO Adapter:**
     *   Use an SMA-to-DuPont jumper adapter or sacrifice an SMA pigtail.
-    *   **Signal (Center):** Connect to GPIO 18 (Physical Pin 12).
+    *   **Signal (Center):** Connect to GPIO 8 (Physical Pin 12).
     *   **Shield (Outer):** Connect to a Pi 5 Ground pin (e.g., Physical Pin 14).
 
 3.  **Termination:**

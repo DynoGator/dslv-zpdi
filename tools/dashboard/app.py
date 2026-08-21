@@ -178,7 +178,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
 
 
 def _is_compact() -> bool:
-    """Compact mode for 7" DSI (800×480 ≈ 92×30 cols/rows) and smaller screens."""
+    """Compact mode for 10" Lenovo HDMI touchscreen (800×480 ≈ 92×30 cols/rows) and smaller screens."""
     if os.getenv("DSLV_DASHBOARD_COMPACT", "0").strip() in ("1", "true", "yes"):
         return True
     return False
@@ -966,7 +966,7 @@ def main(cfg=None):
     parser.add_argument("--no-banner", action="store_true", help="hide startup banner")
     parser.add_argument("--no-boot", action="store_true", help="skip boot animation")
     parser.add_argument("--waterfall-only", action="store_true", help="render only the waterfall panel")
-    parser.add_argument("--compact", action="store_true", help='force compact layout (5" DSI)')
+    parser.add_argument("--compact", action="store_true", help='force compact layout (10" Lenovo HDMI touchscreen)')
     parser.add_argument("--wide", action="store_true", help="force wide layout (disable compact auto-detect)")
     parser.add_argument("--ten-inch", action="store_true", help='force 10" touchscreen two-column layout')
     parser.add_argument("--no-real-sdr", action="store_true", help="start with real-SDR mode OFF (default is ON)")

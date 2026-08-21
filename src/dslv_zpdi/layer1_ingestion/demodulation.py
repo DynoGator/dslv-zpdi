@@ -11,10 +11,18 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 class DemodulationPreset:
     """SPEC-023.1 — Value holder for a demodulation preset (name, category, rates, params)."""
 
-    def __init__(self, name: str, category: str, sample_rate_hz: int, bandwidth_hz: int, params: dict[str, Any]):
+    def __init__(
+        self,
+        name: str,
+        category: str,
+        sample_rate_hz: int,
+        bandwidth_hz: int,
+        params: dict[str, Any],
+    ):
         self.name = name
         self.category = category  # "audio", "data", "video", "telemetry"
         self.sample_rate_hz = sample_rate_hz
@@ -30,15 +38,29 @@ class Demodulator:
 
     PRESETS = {
         "AM_AUDIO": DemodulationPreset("AM", "audio", 48000, 10000, {"squelch": -60.0}),
-        "NFM_AUDIO": DemodulationPreset("NFM", "audio", 48000, 12500, {"squelch": -60.0, "deemphasis": 75e-6}),
-        "WFM_AUDIO": DemodulationPreset("WFM", "audio", 192000, 200000, {"squelch": -60.0, "deemphasis": 50e-6}),
-        "LSB_AUDIO": DemodulationPreset("LSB", "audio", 48000, 3000, {"squelch": -70.0, "bfo": -1500}),
-        "USB_AUDIO": DemodulationPreset("USB", "audio", 48000, 3000, {"squelch": -70.0, "bfo": 1500}),
+        "NFM_AUDIO": DemodulationPreset(
+            "NFM", "audio", 48000, 12500, {"squelch": -60.0, "deemphasis": 75e-6}
+        ),
+        "WFM_AUDIO": DemodulationPreset(
+            "WFM", "audio", 192000, 200000, {"squelch": -60.0, "deemphasis": 50e-6}
+        ),
+        "LSB_AUDIO": DemodulationPreset(
+            "LSB", "audio", 48000, 3000, {"squelch": -70.0, "bfo": -1500}
+        ),
+        "USB_AUDIO": DemodulationPreset(
+            "USB", "audio", 48000, 3000, {"squelch": -70.0, "bfo": 1500}
+        ),
         "CW_AUDIO": DemodulationPreset("CW", "audio", 48000, 500, {"squelch": -80.0, "bfo": 700}),
-        "APRS_DATA": DemodulationPreset("AFSK1200", "data", 48000, 15000, {"baud": 1200, "mark": 1200, "space": 2200}),
+        "APRS_DATA": DemodulationPreset(
+            "AFSK1200", "data", 48000, 15000, {"baud": 1200, "mark": 1200, "space": 2200}
+        ),
         "BPSK31_DATA": DemodulationPreset("BPSK", "data", 8000, 3000, {"baud": 31.25}),
-        "ATV_VIDEO": DemodulationPreset("AM_VIDEO", "video", 6000000, 6000000, {"sync_detect": True}),
-        "QAM_TELEMETRY": DemodulationPreset("QAM16", "telemetry", 1000000, 1000000, {"constellation": 16}),
+        "ATV_VIDEO": DemodulationPreset(
+            "AM_VIDEO", "video", 6000000, 6000000, {"sync_detect": True}
+        ),
+        "QAM_TELEMETRY": DemodulationPreset(
+            "QAM16", "telemetry", 1000000, 1000000, {"constellation": 16}
+        ),
         "ADSB_DATA": DemodulationPreset("ADSB", "data", 2000000, 2000000, {"freq": 1090000000}),
     }
 
@@ -86,7 +108,11 @@ class Demodulator:
                 iq_delayed = np.roll(iq_samples, 1)
                 iq_delayed[0] = iq_samples[0]
                 output_data = np.angle(iq_samples * np.conj(iq_delayed)).astype(np.float32)
-            elif self.active_mode.startswith("LSB") or self.active_mode.startswith("USB") or self.active_mode.startswith("CW"):
+            elif (
+                self.active_mode.startswith("LSB")
+                or self.active_mode.startswith("USB")
+                or self.active_mode.startswith("CW")
+            ):
                 # BFO mixing for SSB and CW
                 bfo_freq = self.current_preset.params.get("bfo", 0)
                 sr = self.current_preset.sample_rate_hz
@@ -103,7 +129,7 @@ class Demodulator:
             "mode": self.active_mode,
             "category": self.current_preset.category,
             "output": output_data,
-            "metadata": self.current_preset.params
+            "metadata": self.current_preset.params,
         }
 
     def process_tx(self, payload: bytes) -> np.ndarray | None:

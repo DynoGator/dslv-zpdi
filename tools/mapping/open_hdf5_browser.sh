@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI HDF5 data browser.
 #
-# Opens a terminal sized for the DSI screen and lets the user pick an
+# Opens a terminal sized for the HDMI screen and lets the user pick an
 # HDF5 file to inspect with h5ls / h5dump. Not fancy — it's an escape
 # hatch into the raw telemetry when the dashboard isn't enough.
 set -Eeuo pipefail

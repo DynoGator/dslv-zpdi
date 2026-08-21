@@ -356,7 +356,7 @@ The canonical production node for this repository is:
 - **SDR:** HamGeek PlutoSDR+ (AD9363, 1 GB RAM)
 - **Timing:** Leo Bodnar LBE-1421 GPSDO
 - **Clocking:** LBE-1421 10 MHz Out2 → PlutoSDR+ CLKIN
-- **PPS:** LBE-1421 1 PPS Out1 → Raspberry Pi GPIO 18
+- **PPS:** LBE-1421 1 PPS Out1 → Raspberry Pi GPIO 8
 
 Other hardware (HackRF (legacy/optional) One, Pixel 9 Pro XL mobile node, etc.) is supported as Tier-2 or experimental configurations.
 ```
@@ -374,7 +374,7 @@ Verified local notes identify this current Tier-1 profile:
 - HamGeek PlutoSDR+ 1 GB / AD9363 at `ip:192.168.3.80`.
 - Leo Bodnar LBE-1421 GPSDO.
 - LBE-1421 10 MHz Out2 to PlutoSDR+ CLKIN.
-- LBE-1421 1 PPS Out1 to Pi GPIO 18.
+- LBE-1421 1 PPS Out1 to Pi GPIO 8.
 - Pixel 9 Pro XL GrapheneOS as the Tier-2 mobile node.
 
 Do not mark physical hardware validation as passing unless it was actually run against the node and the command output was recorded.

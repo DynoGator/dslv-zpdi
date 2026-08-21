@@ -11,7 +11,7 @@
 
 This is a Tier-1 RF-metrology anchor node for the DSLV-ZPDI project. It:
 
-- Disciplines its clock to a Leo Bodnar LBE-1421 GPSDO (1 PPS on GPIO 18).
+- Disciplines its clock to a Leo Bodnar LBE-1421 GPSDO (1 PPS on GPIO 8).
 - Uses the GPSDO 10 MHz output to externally reference a PlutoSDR+ (AD9363 REV5).
 - Captures IQ data, runs a coherence scorer, and routes events to a SHA-256/HMAC-secured HDF5 pipeline.
 - Publishes live telemetry to a web dashboard on port 8080 and a Rich TUI dashboard on the touchscreen.

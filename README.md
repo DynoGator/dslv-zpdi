@@ -1,7 +1,7 @@
 # DSLV-ZPDI (Distributed Sensor Locational Vectoring)
 
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
-**Revision:** Rev 5.3.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
+**Revision:** Rev 5.3.2 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
 **Date:** 2026-08-06
 **Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF (legacy/optional) moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
 
@@ -96,7 +96,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 |---------------------|-------------------------------|------------------------------------------------------------------|
 | Tier 1 Compute      | Raspberry Pi 5 (16 GB)        | FFT processing, HDF5 storage, hotspot AP, pipeline anchor        |
 | Mobile Node         | Pixel 9 Pro XL (GrapheneOS)   | Remote swarm telemetry over PiRepo Wi-Fi (10.42.0.x)            |
-| Display             | 7" DSI (800×480)              | On-device Rich TUI dashboard                                     |
+| Display             | 10" Lenovo HDMI touchscreen (800×480)              | On-device Rich TUI dashboard                                     |
 | SDR                 | HamGeek PlutoSDR+ (AD9361)    | RF ingestion, 70 MHz – 6 GHz, dual TRX, external CLKIN     |
 | Legacy SDR          | PlutoSDRplus                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, optional) |
 | Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
@@ -108,7 +108,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Out2` (10 MHz) → PlutoSDR+ `EXT_REF_CLK`
    Hardware ADC is now phase-locked to GPS constellation. USB jitter is irrelevant.
-2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 18 (physical pin 12).
+2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 8 (physical pin 24).
    Bridge ground between GPSDO and Pi. No level-shifter needed — LBE-1421 outputs 3.3 V CMOS natively.
 3. **Power & Telemetry:** USB-C · LBE-1421 → Pi 5 (powers GPSDO; exposes virtual serial `/dev/ttyACM0` for NMEA)
 4. **SDR Data:** USB/Ethernet · PlutoSDR+ → Pi 5 USB 3.0 (IQ data transfer — timing separate from USB jitter)
@@ -133,7 +133,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 - SMA Male-to-Male 50 Ω coax, ≤ 1 ft
 - Female-to-female jumper wire (2.54 mm pitch) for PPS
 - GPS antenna with clear sky view
-- 7" DSI display (800×480) — optional; dashboard runs headless if absent
+- 10" Lenovo HDMI touchscreen display (800×480) — optional; dashboard runs headless if absent
 
 **Mobile node (optional but supported)**
 - Google Pixel 9 Pro XL running GrapheneOS + Termux + proot-distro (Debian)
@@ -166,7 +166,7 @@ git clone https://github.com/DynoGator/dslv-zpdi.git
 cd dslv-zpdi
 
 # Enable PPS GPIO overlay (LBE-1421 is 3.3 V CMOS — no level-shifter needed)
-echo "dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0" | sudo tee -a /boot/firmware/config.txt
+echo "dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0" | sudo tee -a /boot/firmware/config.txt
 sudo reboot
 
 # Full hardened install
@@ -309,7 +309,7 @@ bash tools/dashboard/launch.sh
 
 # CLI flags:
 python -m dashboard --help
-python -m dashboard --compact          # Force compact (5" DSI) layout
+python -m dashboard --compact          # Force compact (10" Lenovo HDMI touchscreen) layout
 python -m dashboard --wide             # Force wide layout
 python -m dashboard --no-banner        # Hide ASCII banner
 python -m dashboard --no-boot          # Skip boot animation
@@ -345,7 +345,7 @@ The dashboard **auto-launches** at desktop login if installed with `--dashboard`
 ├──────────────────────────────── FOOTER ─────────────────────────────────┤
 ```
 
-**Compact mode** (< 110 columns, or 5" DSI screen, or `--compact`):
+**Compact mode** (< 110 columns, or 10" Lenovo HDMI touchscreen screen, or `--compact`):
 ```
 ┌─ System │ Pipeline │ Hardware ─┐
 │─ RF Anomaly │ Weather │ Storm ─│
@@ -815,14 +815,14 @@ Common causes:
 ```bash
 # Check overlay is loaded:
 grep pps /boot/firmware/config.txt
-# Expected: dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
+# Expected: dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0
 
 # Check kernel module:
 lsmod | grep pps
 # Expected: pps_gpio, pps_core
 
 # If missing, add overlay and reboot:
-echo "dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0" | sudo tee -a /boot/firmware/config.txt
+echo "dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0" | sudo tee -a /boot/firmware/config.txt
 sudo reboot
 ```
 

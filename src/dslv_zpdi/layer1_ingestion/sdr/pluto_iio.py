@@ -280,7 +280,9 @@ class PlutoIioBackend(SdrBackend):
                 "Pluto read-back for center_frequency_hz empty or divergent; using fallback"
             )
         if applied_sample_rate != profile.sample_rate_sps:
-            logger.debug("Pluto read-back for sampling_frequency empty or divergent; using fallback")
+            logger.debug(
+                "Pluto read-back for sampling_frequency empty or divergent; using fallback"
+            )
 
         applied = AppliedConfiguration(
             center_frequency_hz=applied_center,
@@ -406,11 +408,7 @@ class PlutoIioBackend(SdrBackend):
     def health(self) -> SdrHealth:
         """SPEC-004A.PLUTO — Return current health snapshot."""
         reachable = self._ctx is not None
-        ext_ref = (
-            self._applied.external_clock_configured
-            if self._applied is not None
-            else False
-        )
+        ext_ref = self._applied.external_clock_configured if self._applied is not None else False
         return SdrHealth(
             backend_name=self.backend_name,
             uri=self.uri,

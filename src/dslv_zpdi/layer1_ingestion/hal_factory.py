@@ -141,8 +141,6 @@ def get_tier1_hal(
             uri=sdr_cfg.uri,
             expected_iio_phy=sdr_cfg.expected_iio_phy,
         )
-    elif backend_name == "hackrf":
-        from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
         sdr_backend = HackrfBackend()
     elif backend_name == "libresdr":
         # LibreSDR uses Pluto iio backend
@@ -151,7 +149,7 @@ def get_tier1_hal(
             expected_iio_phy=sdr_cfg.expected_iio_phy,
         )
     elif backend_name == "auto":
-        from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
+
         try:
             sdr_backend = PlutoIioBackend(
                 uri=sdr_cfg.uri,
@@ -182,7 +180,9 @@ def get_tier1_hal(
             if "reference_clock" in profile.hardware:
                 ref_required = bool(profile.hardware["reference_clock"].get("required", False))
         elif hasattr(profile.hardware, "reference_clock"):
-            ref_required = getattr(getattr(profile.hardware, "reference_clock", None), "required", False)
+            ref_required = getattr(
+                getattr(profile.hardware, "reference_clock", None), "required", False
+            )
 
     if isinstance(profile.hardware, dict):
         if "pps" in profile.hardware:

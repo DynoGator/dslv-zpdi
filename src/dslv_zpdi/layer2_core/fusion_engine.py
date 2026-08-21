@@ -31,6 +31,7 @@ a 180° flip yields 0.
 When fewer than two quaternion samples are buffered (startup), w_orient = 1.0
 (no penalty applied — trust the raw phase coherence).
 """
+
 from __future__ import annotations
 
 import math

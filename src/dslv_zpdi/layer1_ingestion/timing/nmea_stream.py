@@ -51,7 +51,11 @@ class NmeaStream:
         # NMEA sentences over gpsd's TCP service.
         self._gpsd_match = re.match(r"^gpsd://([^:/]+)(?::(\d+))?$", port)
         self._gpsd_host = self._gpsd_match.group(1) if self._gpsd_match else None
-        self._gpsd_port = int(self._gpsd_match.group(2)) if self._gpsd_match and self._gpsd_match.group(2) else 2947
+        self._gpsd_port = (
+            int(self._gpsd_match.group(2))
+            if self._gpsd_match and self._gpsd_match.group(2)
+            else 2947
+        )
 
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -111,7 +115,10 @@ class NmeaStream:
         except OSError as exc:
             logger.warning(
                 "NmeaStream: gpsd connection to %s:%d failed: %s — retry in %.0f s",
-                host, port, exc, self._retry_delay,
+                host,
+                port,
+                exc,
+                self._retry_delay,
             )
             self._stop.wait(self._retry_delay)
             return
@@ -127,7 +134,8 @@ class NmeaStream:
         except Exception as exc:  # pylint: disable=broad-except
             logger.warning(
                 "NmeaStream: gpsd reader error: %s — retry in %.0f s",
-                exc, self._retry_delay,
+                exc,
+                self._retry_delay,
             )
             self._stop.wait(self._retry_delay)
         finally:
@@ -249,7 +257,7 @@ def parse_gga(sentence: str) -> dict | None:
     if "*" in sentence:
         star = sentence.rfind("*")
         body = sentence[1:star]
-        chk_str = sentence[star + 1: star + 3]
+        chk_str = sentence[star + 1 : star + 3]
         computed = 0
         for ch in body:
             computed ^= ord(ch)

@@ -171,7 +171,7 @@ Updated `DynoGator/DynoGator` README.md:
 
 2. **Physical Assembly:**
    - LBE-1421 SMA Output → PlutoSDRplus CLKIN (RF phase lock)
-   - LBE-1421 1 PPS → Pi 5 GPIO 18 (no level-shifter needed)
+   - LBE-1421 1 PPS → Pi 5 GPIO 8 (no level-shifter needed)
    - LBE-1421 USB-C → Pi 5 (power + NMEA telemetry)
    - Run: `python tools/provision_tier1.py` to validate
 

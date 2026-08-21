@@ -40,7 +40,7 @@
   - Firmware: 4.23.0
   - Status: Ready for inference
   
-- **Arducam v3**: DSI camera interface
+- **Arducam v3**: HDMI camera interface
   - Status: Installed, ready to activate after reboot
   
 - **Geekworm X-1202 UPS**: Battery backup
@@ -136,7 +136,7 @@ RPi5 + Kernel (6.18.34)
 │   ├── PlutoSDR+ (USB IIO @ usb:)
 │   ├── LBE1421 (GPSDO/PPS @ /dev/pps0)
 │   ├── Hailo-8 (PCIe AI)
-│   └── Arducam v3 (DSI Camera)
+│   └── Arducam v3 (HDMI Camera)
 └── Storage
     └── HDF5 RF samples (./data/)
 ```

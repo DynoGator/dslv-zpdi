@@ -57,7 +57,6 @@ hardware = [
     # installed via apt for native IIO and SoapySDR Pluto support.
     # This group reserves the namespace for any future PyPI-hosted bindings.
     "dslv-zpdi[pluto]",
-    "dslv-zpdi[hackrf]",
 ]
 dev = [
     "pytest>=7.0.0",

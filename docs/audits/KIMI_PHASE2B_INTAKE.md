@@ -58,7 +58,7 @@ Nodes missing SPEC-ID: 27 total
 1. **Coherence pinned at r1.00 / R1.00** — The dashboard shows `Coh r1.00 R1.00` which suggests a degenerate null distribution in the Kuramoto coherence engine. **I will NOT depend on this for the BCI.** The BCI will compute its own cross-correlation independently.
 2. **GPS `fix=?` (unlocked)** — LBE-1421 not reporting a fix. I will add degraded-mode indicators and ensure the radon session orchestrator stamps timing-health into the manifest.
 3. **Chrony RMS wandering** — Timing discipline is loose. I will surface timing health in the session manifest and dashboard.
-4. **LBE-1420 vs LBE-1421 doc mismatch** — The `V3_DSLV-ZPDI_LIVING_MASTER.md` still references LBE-1420 in some places. The README correctly says LBE-1421. I will correct the living master.
+4. **LBE-1421 vs LBE-1421 doc mismatch** — The `V3_DSLV-ZPDI_LIVING_MASTER.md` still references LBE-1421 in some places. The README correctly says LBE-1421. I will correct the living master.
 5. **SPEC-014 is a placeholder stub** — Needed for node_receiver.py compliance.
 
 ---

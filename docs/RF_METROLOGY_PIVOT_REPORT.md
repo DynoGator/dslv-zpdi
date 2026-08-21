@@ -34,7 +34,7 @@ This pivot achieves **hardware-level ADC phase coherence** by injecting an atomi
 
 **Key Implementation Details:**
 - GPSDO 10 MHz reference → PlutoSDRplus CLKIN port (hardware ADC lock)
-- GPSDO 1 PPS → GPIO 18 (pps-gpio kernel module)
+- GPSDO 1 PPS → GPIO 8 (pps-gpio kernel module)
 - Phase extraction from GPS-locked IQ samples
 - `verify_gpsdo_lock()` method for clock source verification
 - Graceful degradation if pyPlutoSDRplus not installed
@@ -263,7 +263,7 @@ OK: no rogue nodes and no orphaned SPEC claims.
 
 2. **Physical Assembly**
    - GPSDO 10 MHz SMA → PlutoSDRplus CLKIN
-   - GPSDO 1 PPS → Pi 5 GPIO 18
+   - GPSDO 1 PPS → Pi 5 GPIO 8
    - Run: `python tools/provision_tier1.py` to validate
 
 3. **72-Hour Baseline (SPEC-009)**

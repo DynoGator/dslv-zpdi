@@ -9,6 +9,7 @@ missing GPS fix or permission denial never blocks the sensor stream.
 Location fixes are written to a shared async-safe structure for
 Layer-1 enrichment.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +35,7 @@ DEFAULT_GPS_ACCURACY_M = float(os.environ.get("ZPDI_GPS_ACCURACY_M", "50.0"))
 @dataclass
 class LocationFix:
     """SPEC-003A"""
+
     latitude: float
     longitude: float
     altitude: float | None = None
@@ -95,8 +97,10 @@ class GPSPoller:
         for provider in ("gps", "network", "passive"):
             cmd = [
                 TERMUX_LOCATION_BIN,
-                "-p", provider,
-                "-r", "once",
+                "-p",
+                provider,
+                "-r",
+                "once",
             ]
             try:
                 proc = await asyncio.create_subprocess_exec(
@@ -150,7 +154,11 @@ class GPSPoller:
                     return fix
                 else:
                     # Accuracy too poor — keep it as fallback but keep trying
-                    log.debug("termux-location (%s) accuracy %.1fm exceeds threshold", provider, fix.accuracy)
+                    log.debug(
+                        "termux-location (%s) accuracy %.1fm exceeds threshold",
+                        provider,
+                        fix.accuracy,
+                    )
                     # Store as tentative but don't return yet
                     await self._set_latest(fix)
             except (FileNotFoundError, OSError) as exc:
@@ -166,8 +174,13 @@ class GPSPoller:
             fix = await self._poll_once()
             if fix is not None:
                 await self._set_latest(fix)
-                log.debug("GPS fix updated: %.6f, %.6f (±%.1fm %s)", fix.latitude,
-                          fix.longitude, fix.accuracy or -1, fix.provider)
+                log.debug(
+                    "GPS fix updated: %.6f, %.6f (±%.1fm %s)",
+                    fix.latitude,
+                    fix.longitude,
+                    fix.accuracy or -1,
+                    fix.provider,
+                )
                 self._backoff = 1.0
             else:
                 log.debug("GPS fix unavailable — retry in %.1fs", self._backoff)

@@ -1,6 +1,5 @@
 """Unit tests for IngestionPayload contract."""
 
-
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
 

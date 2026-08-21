@@ -55,7 +55,7 @@ The GPSDO outputs a **1 Pulse-Per-Second (PPS)** signal via jumper to the Raspbe
 
 The Pi 5's **RP1 southbridge** utilizes strictly **3.3V logic**. The **LBE-1421 outputs a 3.3V CMOS square wave natively**, making it directly compatible with Pi 5 GPIO without level-shifting.
 
-**No voltage divider or level-shifter is required** for the LBE-1421 → GPIO 18 PPS connection.
+**No voltage divider or level-shifter is required** for the LBE-1421 → GPIO 8 PPS connection.
 
 *Note: If using an alternative GPSDO with 5V CMOS output, a level-shifter or voltage divider (e.g., 10kΩ/20kΩ) is mandatory to prevent RP1 damage.*
 
@@ -81,9 +81,9 @@ To map the PPS signal to the OS kernel on the Pi 5 architecture, the `/boot/firm
 1. **Append the device tree overlay:**
 
 ```text
-# Map PPS signal to GPIO 18 (Rev 5.0)
+# Map PPS signal to GPIO 8 (Rev 5.0)
 # WARNING: Pi 5 RP1 uses 3.3V logic. Verify GPSDO output voltage before connecting.
-dtoverlay=pps-gpio,gpiopin=18,assert_falling_edge=0
+dtoverlay=pps-gpio,gpiopin=8,assert_falling_edge=0
 ```
 
 *(Note: `assert_falling_edge` may require toggling to `1` pending physical signal analysis with `ppstest`).*
@@ -193,7 +193,7 @@ print(f"Clock source: {status['clock_source']}")
    - [ ] Verify GPSDO 10 MHz output level (~1Vpp into 50Ω)
    - [ ] Verify GPSDO 1 PPS output level (3.3V or level-shifted)
    - [ ] Connect 10 MHz SMA → PlutoSDRplus CLKIN
-   - [ ] Connect 1 PPS → GPIO 18 (via level shifter if needed)
+   - [ ] Connect 1 PPS → GPIO 8 (via level shifter if needed)
    - [ ] Connect GPS antenna to GPSDO
    - [ ] Connect PlutoSDRplus to Pi 5 USB 3.0
    - [ ] Apply power to GPSDO (wait for GPS lock)

@@ -165,7 +165,7 @@ SPEC-001 through SPEC-003 are canonically defined in Section 1.3 above.
 
 **SYSTEM FUNCTION:** Achieve hardware-level ADC phase coherence by locking the SDR sampling clock directly to the GPS constellation via an external GPSDO, eliminating all USB bus jitter and software timing intermediaries from the phase measurement chain.
 **OPERATIONAL INTENT:** Tier 1 nodes MUST use a GPS-Disciplined Oscillator (GPSDO) providing a 10 MHz reference signal injected into the SDR's external clock input (`CLKIN`), phase-locking the ADC at the analog level. A separate 1 PPS output from the GPSDO provides UTC epoch anchoring to the host compute board via GPIO hardware interrupt. This is "RF Metrology" timing — the measurement instrument itself is GPS-locked, not merely the computer's system clock.
-**PHASE 2A PRIMARY TARGET:** Leo Bodnar LBE-1421 GPSDO → 10 MHz SMA out to PlutoSDRplus `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 18 via `pps-gpio` kernel module and `chronyd`.
+**PHASE 2A PRIMARY TARGET:** Leo Bodnar LBE-1421 GPSDO → 10 MHz SMA out to PlutoSDRplus `CLKIN` port; 1 PPS out to Raspberry Pi 5 GPIO 8 via `pps-gpio` kernel module and `chronyd`.
 **FORBIDDEN:** Reliance on USB bus timing for phase coherence. Any configuration where the SDR ADC clock is derived from the SDR's internal oscillator during institutional data collection. Software-only timestamping (NTP/PTP without hardware PPS interrupt) for Tier 1 primary stream.
 **MANDATORY:** External 10 MHz reference locked to GPS constellation feeding SDR CLKIN; 1 PPS hardware interrupt on host GPIO; `chronyd` configured with PPS refclock for < 1µs UTC accuracy; verification of ADC lock via `PlutoSDRplus_debug` or equivalent tool.
 **KILL CONDITION:** Any Tier 1 node collecting institutional data with an unlocked (free-running) ADC oscillator.
@@ -284,7 +284,7 @@ To achieve unprecedented situational awareness without an impossible budget, the
 - **Phase 2A Primary Compute:** Raspberry Pi 5 (16GB).
 - **SDR (The Eye):** PlutoSDRplus (PortaPack optional/irrelevant for headless operation). 20 MHz bandwidth, 1 MHz – 6 GHz range.
 - **Clock Authority:** Leo Bodnar LBE-1421 GPSDO (or equivalent GPS-disciplined 10 MHz oscillator).
-- **Timing Wiring (Rev 5.0):** 10 MHz reference signal from LBE-1421 `Out2` port (set to 10,000,000 Hz) → PlutoSDRplus `CLKIN` port (hardware ADC lock, 50 Ω termination recommended). 1 PPS signal from LBE-1421 `Out1` port (set to 1 PPS mode) → Raspberry Pi 5 GPIO 18 (Physical Pin 12) via `pps-gpio` kernel module. LBE-1421 provides a native 100 ms 3.3 V CMOS pulse (1.65 V into 50 Ω) which is perfectly matched to Pi 5 logic levels without level-shifters. This configuration eliminates all USB bus jitter from the phase measurement chain; the ADC sampling clock is derived directly from the GPS constellation with no software intermediaries.
+- **Timing Wiring (Rev 5.0):** 10 MHz reference signal from LBE-1421 `Out2` port (set to 10,000,000 Hz) → PlutoSDRplus `CLKIN` port (hardware ADC lock, 50 Ω termination recommended). 1 PPS signal from LBE-1421 `Out1` port (set to 1 PPS mode) → Raspberry Pi 5 GPIO 8 (Physical Pin 12) via `pps-gpio` kernel module. LBE-1421 provides a native 100 ms 3.3 V CMOS pulse (1.65 V into 50 Ω) which is perfectly matched to Pi 5 logic levels without level-shifters. This configuration eliminates all USB bus jitter from the phase measurement chain; the ADC sampling clock is derived directly from the GPS constellation with no software intermediaries.
 - **Role:** The unassailable truth engines. These nodes produce the primary institutional output with hardware-locked phase coherence.
 - **Hardware Agnosticism:** Any hardware meeting the SPEC-004A.2 criteria is equally valid for Tier 1. The Pi 5 + PlutoSDRplus + Leo Bodnar is the Phase 2A reference implementation, not a mandate. See Section 3.2, SPEC-004A.2 for the full permissible hardware list.
 
@@ -711,7 +711,7 @@ def ingest_gps_pps(
     mono_ns = time.monotonic_ns()
     
     # In production, this uses fcntl.ioctl on pps_device (SPEC-004A.3)
-    # The LBE-1421 provides 1 PPS to GPIO 18 (RP1 3.3V compatible)
+    # The LBE-1421 provides 1 PPS to GPIO 8 (RP1 3.3V compatible)
     pps_time_ns = time.time_ns()
     pps_jitter_ns = 450.0  # Simulated low jitter (< 1µs)
 

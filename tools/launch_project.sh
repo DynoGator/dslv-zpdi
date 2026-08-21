@@ -229,8 +229,8 @@ done
 sleep 3
 
 # Screen-aware geometry.
-# - 5" DSI (800x480): compact terminals that actually fit the screen.
-# - 10" DSI/touch (1280x800): single large terminal using the two-column layout.
+# - 10" Lenovo HDMI touchscreen (800x480): compact terminals that actually fit the screen.
+# - 10" HDMI/touch (1280x800): single large terminal using the two-column layout.
 # - anything larger: original wide layout with separate waterfall window.
 SCREEN_W=0
 SCREEN_H=0
@@ -242,7 +242,7 @@ SCREEN_W=${SCREEN_W:-0}
 SCREEN_H=${SCREEN_H:-0}
 if [ "${SCREEN_W:-0}" -le 1024 ] && [ "${SCREEN_H:-0}" -le 600 ] \
    && [ "${SCREEN_W:-0}" -gt 0 ]; then
-    # 5" DSI: single fullscreen window, compact layout, no second terminal.
+    # 10" Lenovo HDMI touchscreen: single fullscreen window, compact layout, no second terminal.
     GEO_MAIN="92x30+0+0"
     GEO_WF="92x30+0+0"
     COMPACT_MODE=1
@@ -303,10 +303,10 @@ if [ -z "$TERMCMD" ]; then
 fi
 
 if [ "$COMPACT_MODE" = "1" ]; then
-    # 7" DSI: single fullscreen window — the main dashboard embeds the
+    # 10" Lenovo HDMI touchscreen: single fullscreen window — the main dashboard embeds the
     # waterfall panel, so no separate waterfall window is needed.
     # Spawning two windows on an 800x480 screen just fights for space.
-    SAY "  - opening single dashboard window (7\" DSI compact mode) ($TERMCMD)"
+    SAY "  - opening single dashboard window (7\" HDMI compact mode) ($TERMCMD)"
     case "$TERMCMD" in
         lxterminal)
             nohup lxterminal --no-remote --title="$TITLE_MAIN" --geometry="$GEO_MAIN" -e "$DASH" \
