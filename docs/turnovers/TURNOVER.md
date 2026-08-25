@@ -1,5 +1,9 @@
 # Turnover Notes — DSLV-ZPDI Tier-1 Pi 5 Node
 
+**Latest Session:** [TURNOVER_2026-08-25_Tier1_ZeroTouch.md](TURNOVER_2026-08-25_Tier1_ZeroTouch.md)
+
+# Turnover Notes — DSLV-ZPDI Tier-1 Pi 5 Node
+
 **Date:** 2026-07-09  
 **Node hostname:** `raspberrypi`  
 **Hardware:** Raspberry Pi 5 16 GB + HamGeek PlutoSDR+ (AD9363 REV5) + Leo Bodnar LBE-1421 + Geekworm X-1202 UPS + 10" Lenovo HDMI touchscreen  
