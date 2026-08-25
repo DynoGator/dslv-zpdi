@@ -1,5 +1,15 @@
 # Changelog
 
+## [5.3.3] — Tier 1 Installer Reliability & Hardware Support (2026-08-25)
+
+### Added
+- **Tier 1 Installer Upgrades**: `install_dslv_zpdi.sh` now configures the `end0` network interface via NetworkManager, auto-generates production HMAC keys, and deploys `99-gpio.rules` for sysfs permissions automatically to ensure 0-touch deployment on Debian Trixie.
+- **HamGeek Pluto+ Support**: Included `52-PlutoSDRplus.rules` udev rules explicitly targeting 0456:b673 to support custom Zynq SDR nodes without sudo.
+
+### Fixed
+- **Dashboard Boot Crash**: Resolved a fatal `SyntaxError` in `waterfall.py` caused by a stray control character and fixed a class naming typo (`PlutoSweepStream` -> `PlutoSDRplusSweepStream`) that crashed the TUI when `REAL_SDR` was invoked.
+- **Mobile Node Discovery**: Updated `.env.example` to explicitly surface the Tier 2 `DSLV_PIXEL_STATUS_URL` configuration to prevent the bridge from trying to poll dead legacy subnets.
+
 ## [5.3.2] — Real-Time SDR Demodulation & UI Snappiness (2026-08-10)
 
 ### Added
