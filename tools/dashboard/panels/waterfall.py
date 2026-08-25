@@ -622,7 +622,7 @@ class WaterfallPanel:
         ]
         self._have_hackrf = hackrf_present()
         self._hackrf_stream = HackrfSweepStream()
-        self._pluto_stream = PlutoSweepStream()
+        self._pluto_stream = PlutoSDRplusSweepStream()
         self._active_real: str | None = None  # 'pluto' or 'hackrf' when live
         self._want_real = True
         self._stream_retry_at = 0.0

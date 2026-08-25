@@ -709,6 +709,19 @@ BLK
         log_warn "usbguard not installed -- skipping USB allow-list step"
     fi
 
+    if [[ ! -d /etc/dslv-zpdi ]]; then
+        install -d -m 0755 /etc/dslv-zpdi
+    fi
+
+    # Generate a default HMAC key if one does not exist (required for production pipeline)
+    if [[ ! -f /etc/dslv-zpdi/hmac.key ]]; then
+        log_info "Generating default production HMAC key"
+        head -c 32 /dev/urandom | xxd -p -c 32 > /etc/dslv-zpdi/hmac.key
+        chown "$REAL_USER:$REAL_USER" /etc/dslv-zpdi/hmac.key
+        chmod 0600 /etc/dslv-zpdi/hmac.key
+        log_ok "Generated /etc/dslv-zpdi/hmac.key"
+    fi
+
     # 10. Auditd monitoring (SPEC-011.2) -- soft-fail
     if command -v augenrules >/dev/null 2>&1; then
         log_info "Configuring auditd for project directory"
@@ -722,6 +735,21 @@ AUDIT
         log_warn "auditd not installed -- skipping audit rule install"
     fi
 
+    # 10b. PlutoSDRplus udev rules -- ship the project's rules from
+    #      config/os-hardening/52-PlutoSDRplus.rules so the device is usable
+    #      by anyone in the plugdev group without sudo.
+    if [[ -f "${INSTALL_DIR}/config/os-hardening/52-PlutoSDRplus.rules" ]]; then
+        install -m 0644 "${INSTALL_DIR}/config/os-hardening/52-PlutoSDRplus.rules" \
+            /etc/udev/rules.d/52-PlutoSDRplus.rules
+        soft "udev rules reloaded" udevadm control --reload-rules
+        soft "udev triggered for usb subsystem" udevadm trigger --subsystem-match=usb
+        log_ok "PlutoSDRplus udev rules installed (/etc/udev/rules.d/52-PlutoSDRplus.rules)"
+    fi
+
+    if [[ -f "${INSTALL_DIR}/config/os-hardening/99-gpio.rules" ]]; then
+        install -m 0644 "${INSTALL_DIR}/config/os-hardening/99-gpio.rules" \
+            /etc/udev/rules.d/99-gpio.rules
+        log_ok "GPIO udev rules installed (/etc/udev/rules.d/99-gpio.rules)"
     fi
 
     # 10c. Ensure invoking user is in plugdev so PlutoSDRplus / serial dongles
@@ -732,6 +760,16 @@ AUDIT
         else
             log_ok "user $REAL_USER already in plugdev"
         fi
+    fi
+
+    # 10d. Setup PlutoSDR Ethernet Connection on end0
+    log_info "Configuring end0 for PlutoSDR network"
+    if command -v nmcli >/dev/null; then
+        nmcli con add type ethernet ifname end0 con-name PlutoSDR ipv4.method manual ipv4.addresses 192.168.2.10/24 2>/dev/null || nmcli con mod PlutoSDR ipv4.addresses 192.168.2.10/24
+        nmcli con up PlutoSDR 2>/dev/null || true
+        log_ok "PlutoSDR network profile created on end0 (192.168.2.10/24)"
+    else
+        log_warn "nmcli not found, skipping end0 configuration"
     fi
 
     # 11. Air-Gap Hardening (Day 3) -- compute FIRMWARE_CONFIG here too,

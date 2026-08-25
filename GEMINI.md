@@ -3,13 +3,18 @@
 This file serves as the permanent active state vector for Antigravity (AGY) sessions on this node. It provides immediate context upon reboot or session restart.
 
 ## 🎯 Current Objective
-**Validate the recent UI & Frequency Sync Fixes and continue with Phase 2A Pipeline Expansion.**
-- The user is currently testing the lag fixes applied to the `time.sleep()` blocking calls in `app.py` and `demod_app.py` (now using `select.select()`).
-- Next step: Await user confirmation on the UI responsiveness and proceed to expand telemetry hooks into the `HardwareHAL.demodulator.process(iq)` pipeline or tune the MIMO vectoring matrix.
+**Develop and Verify Tier 3 x86 Hardware Profile (HackRF + Simulated GPSDO)**
+- Successfully created a parallel fork (`feature/tier3-x86-hackrf-sim`) to lower the entry cost for users with HackRFs and x86 hardware.
+- Designed `tools/lbe1421_simulator.py` to mock the LBE-1421 GPSDO timing streams (NMEA + PPS) via PTY and sysfs emulation.
+- Verified dashboard operations and pipeline ingestion on Debian 13 (NUC Box G2, Intel N100) using a physical HackRF One with software-simulated GPS timing.
+- Corrected UI elements in `app.py`, `pipeline.py`, and `hardware.py` to reflect fully nominal states for simulated timing inputs.
+- Developed `WINDING_DOWN_DSLV` architecture to gracefully capture processes, stop services, and sync IO blocks before system shutdown.
+- All additions committed and pushed to `DynoGator/dslv-zpdi` under branch `feature/tier3-x86-hackrf-sim`. System prepped for reboot.
 
-## 🛠️ Project State: DSLV-ZPDI Rev 5.2.0
-- **Hardware:** LibreSDR Rev.5 is reliably assigned to `ip:192.168.2.1` via libiio. System is stable.
-- **SDR Config:** Default `center_hz` is 100 MHz for testing.
+## 🛠️ Project State: DSLV-ZPDI Rev 5.2.0 (x86 HackRF Branch)
+- **Hardware:** Intel NUC Box G2 (Debian 13 x86_64) + HackRF One + Simulated LBE-1421 GPSDO.
+- **Timing:** `tools/lbe1421_simulator.py` active (provides `/tmp/sim_nmea` and `/tmp/sim_pps0`).
+- **SDR Config:** Profile `tier3_x86_hackrf_sim.yaml` active. Default `center_hz` is 100 MHz.
 - **Demodulation:** Intelligent automatic presets (AM, NFM, WFM, LSB, USB, CW, APRS, etc.) are integrated in `src/dslv_zpdi/layer1_ingestion/demodulation.py`.
 - **MIMO Vectoring:** Integrated with Full Duplex enabled by default for MIMO-ready SDRs.
 - **Local Presets (Penrose, CO):** 

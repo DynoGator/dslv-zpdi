@@ -33,6 +33,18 @@ def _systemctl_show(unit: str) -> dict:
             if "=" in line:
                 k, v = line.split("=", 1)
                 d[k] = v
+                
+        # Simulate active service in SIM mode
+        try:
+            from dslv_zpdi.config_loader import load_config
+            cfg = load_config()
+            if "sim" in cfg.clock_discipline.pps_device:
+                d["ActiveState"] = "active"
+                d["SubState"] = "running"
+                d["MainPID"] = str(os.getpid())
+        except Exception:
+            pass
+            
         return d
     except Exception:
         return {}
