@@ -1,0 +1,4 @@
+# DSLV-ZPDI: Grant non-root access to PPS character devices.
+# Install to: /etc/udev/rules.d/99-dslv-pps.rules
+# Required for: PPS listener thread in the pipeline (reads /dev/pps0)
+SUBSYSTEM=="pps", MODE="0664", GROUP="dialout"

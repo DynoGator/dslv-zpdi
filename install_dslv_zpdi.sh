@@ -877,6 +877,54 @@ DESK
     log_ok "Dashboard installed. Launch: ${INSTALL_DIR}/tools/dashboard/launch.sh"
 fi
 
+# ── System optimization configs (GPIO, sysctl, priority, limits) ───────
+log_info "Installing system optimization configs"
+
+# GPIO udev rule — required for X-1202 UPS monitor as non-root
+if [[ -f "${INSTALL_DIR}/config/system/99-dslv-gpio.rules" ]]; then
+    install -m 0644 "${INSTALL_DIR}/config/system/99-dslv-gpio.rules" /etc/udev/rules.d/
+    log_ok "GPIO udev rules installed"
+fi
+
+# PPS udev rule — required for non-root PPS listener access
+if [[ -f "${INSTALL_DIR}/config/system/99-dslv-pps.rules" ]]; then
+    install -m 0644 "${INSTALL_DIR}/config/system/99-dslv-pps.rules" /etc/udev/rules.d/
+    log_ok "PPS udev rules installed"
+fi
+udevadm control --reload-rules 2>/dev/null || true
+
+# Kernel tuning
+if [[ -f "${INSTALL_DIR}/config/system/99-dslv-zpdi-sysctl.conf" ]]; then
+    install -m 0644 "${INSTALL_DIR}/config/system/99-dslv-zpdi-sysctl.conf" /etc/sysctl.d/
+    sysctl --system >/dev/null 2>&1 || true
+    log_ok "Kernel sysctl tuning applied"
+fi
+
+# Systemd service priority drop-ins
+if [[ -f "${INSTALL_DIR}/config/system/dslv-priority.conf" ]]; then
+    for svc in dslv-zpdi dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi-webdash; do
+        install -d "/etc/systemd/system/${svc}.service.d"
+        install -m 0644 "${INSTALL_DIR}/config/system/dslv-priority.conf" \
+            "/etc/systemd/system/${svc}.service.d/dslv-priority.conf"
+    done
+    systemctl daemon-reload
+    log_ok "Service priority drop-ins installed (Nice=-10, CPUAffinity=1-3)"
+fi
+
+# PAM resource limits
+if [[ -f "${INSTALL_DIR}/config/system/99-dslv-limits.conf" ]]; then
+    install -m 0644 "${INSTALL_DIR}/config/system/99-dslv-limits.conf" /etc/security/limits.d/
+    log_ok "PAM resource limits installed (memlock=unlimited, rtprio=99)"
+fi
+
+# CPU governor — lock to performance
+if [[ -d /sys/devices/system/cpu/cpu0/cpufreq ]]; then
+    for cpu_dir in /sys/devices/system/cpu/cpu*/cpufreq; do
+        echo performance > "${cpu_dir}/scaling_governor" 2>/dev/null || true
+    done
+    log_ok "CPU governor set to performance"
+fi
+
 if [[ "$PASSWORDLESS_SUDO" -eq 1 ]]; then
     if [[ "$REAL_USER" == "root" ]]; then
         log_warn "--passwordless-sudo requested but SUDO_USER is root; skipping"
