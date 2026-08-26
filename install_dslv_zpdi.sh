@@ -823,6 +823,8 @@ FAN
 
 
 
+fi
+
 if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
     log_info "Installing operations dashboard dependencies"
     run_as_real_user "'$VENV_DIR/bin/python' -m pip install --quiet rich pyfiglet" \
