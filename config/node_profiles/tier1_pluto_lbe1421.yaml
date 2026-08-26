@@ -30,7 +30,7 @@ identity:
   profile_id: tier1-pluto-lbe1421
   qualification_status: unverified
 rf:
-  center_frequency_hz: 100000000
+  center_frequency_hz: 433000000
   gain_db: 62.0
   gain_mode: manual
   rf_bandwidth_hz: 10000000
