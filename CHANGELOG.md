@@ -4,6 +4,20 @@
 
 ### Added
 - **Audio Dependencies**: Added `alsa-utils` and `pulseaudio-utils` to the Tier 1 installer `BASE_PACKAGES` to ensure `demod_app.py` has a functional `aplay` or `paplay` backend for audio output on fresh installs.
+## [5.4.0] - 2026-08-26
+### Added
+- **Tier 1 Node Supervisor:** Engineered \`dslv_launch_supervisor.sh\`, a robust startup orchestrator that sequentially initializes and verifies the state of the Pi Alpha systemd service chain before attempting to launch the TUI dashboard.
+- **Mobile Node Bridge Verification:** Explicit process checks to guarantee the webdash API is bound and listening before downstream nodes attempt to connect.
+
+### Changed
+- Replaced the legacy \`launch_project.sh\` script completely in favor of the new supervisor.
+- Refactored TUI dashboard launch flow to inherently block duplicate sessions via process guards against \`dashboard.app\`.
+- Cleaned up python imports to fix a \`NameError\` and \`UnboundLocalError\` affecting dashboard state toggles.
+
+### Removed
+- Extraneous logging warnings regarding missing \`PlutoSDRplus-tools\`.
+- \`dslv-zpdi-tier1.service\` ghost systemd unit from launch targets.
+
 - **Service Boot Delays**: Increased startup delays in `launch_project.sh` to allow background services to fully initialize before the UI launches.
 
 ### Fixed
