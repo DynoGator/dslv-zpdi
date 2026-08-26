@@ -26,8 +26,8 @@ import os
 import select
 import shutil
 import signal
-import subprocess
-import sys
+
+
 import termios
 import time
 import tty
@@ -692,9 +692,8 @@ class Dashboard:
                 p = self._panels["demod"]
                 p.is_active = not getattr(p, "is_active", False)
                 if p.is_active:
-                    import subprocess
-                    import sys
-                    import os
+
+
                     profile = getattr(p, "active_profile", "ADS-B")
                     mimo_tx = getattr(p, "mimo_tx", False)
                     
@@ -881,9 +880,8 @@ class Dashboard:
                     self._panels["notifications"].push("INFO", f"amp: {status}")
                 self._publish_sdr_state()
         elif k in ("e", "E"):
-            import subprocess
-            import sys
-            import os
+
+
             cam_script = os.path.join(os.path.dirname(__file__), "cam_app.py")
             cmd_str = f"{sys.executable} {cam_script}"
             cmd = ["lxterminal", "--title", "DSLV-ZPDI :: Tamper-Evident Cam", "-e", cmd_str]
