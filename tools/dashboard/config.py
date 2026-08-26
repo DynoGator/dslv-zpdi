@@ -45,6 +45,7 @@ class PanelsCfg:
     logs: bool = True
     notifications: bool = True
     settings: bool = True
+    demod: bool = True
 
 
 @dataclass
