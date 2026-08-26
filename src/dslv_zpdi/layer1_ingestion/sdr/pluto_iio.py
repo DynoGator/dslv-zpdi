@@ -289,9 +289,10 @@ class PlutoIioBackend(SdrBackend):
         # IIO attribute cache hasn't refreshed yet. Trust the write, use fallback.
         _FREQ_DIVERGENCE_THRESHOLD = 10_000_000  # 10 MHz — catch stuck-at-boot-LO
         _BW_DIVERGENCE_THRESHOLD = 20_000_000    # 20 MHz — catch stuck-at-56MHz-BW
+        _GAIN_DIVERGENCE_THRESHOLD = 20.0        # dB — catch stuck-at-20dB boot default
 
-        _GAIN_DIVERGENCE_THRESHOLD = 20.0  # dB — catch stuck-at-20dB boot default
-
+        freq_divergent = abs(applied_center - profile.center_frequency_hz) > _FREQ_DIVERGENCE_THRESHOLD
+        bw_divergent = abs(applied_bandwidth - profile.bandwidth_hz) > _BW_DIVERGENCE_THRESHOLD
         gain_divergent = abs(applied_gain - profile.gain_db) > _GAIN_DIVERGENCE_THRESHOLD
 
         if freq_divergent:
