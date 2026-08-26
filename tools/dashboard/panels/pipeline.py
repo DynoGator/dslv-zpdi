@@ -282,7 +282,7 @@ class PipelinePanel:
             t.add_row("Svc", f"[{state_style}]{heartbeat} {state}[/] [dim]•[/] {up_s}{sim_tag}")
             # Row 2: Node + Jitter
             jit_s = _fmt_jitter(timing_jitter).strip()
-            t.add_row("Node", f"{node_id[:8]} [dim]•[/] {jit_s}{stale_tag}")
+            t.add_row("Node", f"{node_id} [dim]•[/] {jit_s}{stale_tag}")
             # Row 3: Coherence
             coh_sty = "bright_green" if r_smooth >= 0.4 else "yellow" if r_smooth >= 0.15 else "dim"
             t.add_row("Coh", f"[{coh_sty}]r{r_smooth:.2f}[/] [magenta]R{r_global:.2f}[/]")
