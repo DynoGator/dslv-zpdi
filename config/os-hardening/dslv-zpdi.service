@@ -13,6 +13,7 @@ Group=dynogator
 WorkingDirectory=/home/dynogator/dslv-zpdi
 ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python -m dslv_zpdi.main_pipeline --simulator
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/dslv-zpdi/.env
 EnvironmentFile=/home/dynogator/dslv-zpdi/.env
 Restart=on-failure
 RestartSec=30

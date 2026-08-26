@@ -619,6 +619,7 @@ WorkingDirectory=${INSTALL_DIR}
 ExecStart=${PIPE_EXEC}
 ${PIPE_ENV}
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-${INSTALL_DIR}/.env
 Restart=on-failure
 RestartSec=30
 ExecStartPre=/bin/sleep 3
