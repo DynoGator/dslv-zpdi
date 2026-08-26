@@ -965,3 +965,21 @@ By locking the PlutoSDR+ ADC directly to the GPS constellation via 10 MHz `EXT_R
 - **PlutoSDR+**: The primary HamGeek AD9363 unit.
 - **PlutoSDRplus (legacy)**: The legacy optional unit with a blown amplifier.
 - **HackRF (legacy/optional)**: Legacy optional SDR hardware.
+
+## Operations Dashboard (TUI)
+
+The DSLV-ZPDI stack includes a fully real-time Rich Terminal User Interface (TUI) to monitor node health, telemetry, pipeline status, and RF metrology parameters.
+To launch the dashboard cleanly and stop any hanging processes:
+- **Desktop Shortcut:** Double-click the `DSLV-ZPDI Operations Center` icon on your Desktop.
+- **Terminal:** Run `./tools/dashboard/launch.sh`
+
+### Secret Demodulation Interface
+The TUI includes a hardware-level audio demodulation menu for tuning and demodulating FM, AM, and SSB radio signals in real-time, complete with software de-emphasis filtering and decimation.
+- Press **`Enter`** on the main dashboard to invoke the Demod Menu.
+- Press **`Ctrl+X`** (or **`*`**) to open the restricted authorization prompt.
+- Enter PIN **`1988`** to unlock MIMO TX, Vector Fox Hunt, and Frequency Hopping Monitor.
+
+### Graceful Shutdown
+To cleanly un-export GPIO pins, halt systemd services, and flush all HDF5 buffers to disk:
+- **Desktop Shortcut:** Double click the **`DSLV Shutdown`** icon on the Pi Alpha Desktop.
+- **Terminal:** Run `sudo ./tools/graceful_shutdown.sh`
