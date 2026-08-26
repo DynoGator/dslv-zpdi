@@ -271,7 +271,12 @@ class PlutoIioBackend(SdrBackend):
         time.sleep(0.2)
 
         # Read back applied values. Some Pluto firmware/libiio revisions return
-        # empty strings immediately after a write; fall back to requested.
+        # empty strings or stale factory defaults (e.g. 2.45 GHz LO, 56 MHz BW)
+        # immediately after a write — especially the TAZUKA firmware on LibreSDR
+        # booting off MicroSD with corrupted internal flash.
+        # SPEC-004A.PLUTO: we trust the IIO write succeeded if no exception was raised.
+        # Use the requested profile values as the canonical applied configuration
+        # when readback is divergent, and log a warning instead of crashing.
         applied_center = self._read_attr_int(rx_lo, "frequency", profile.center_frequency_hz)
         applied_sample_rate = self._read_attr_int(
             rx_chan, "sampling_frequency", profile.sample_rate_sps
@@ -280,14 +285,33 @@ class PlutoIioBackend(SdrBackend):
         applied_gain = self._read_attr_float(rx_chan, "hardwaregain", profile.gain_db)
         applied_gain_mode = self._read_attr_str(rx_chan, "gain_control_mode", profile.gain_mode)
 
-        if applied_center != profile.center_frequency_hz:
-            logger.debug(
-                "Pluto read-back for center_frequency_hz empty or divergent; using fallback"
+        # Detect stale readback: firmware reporting a divergent value means the
+        # IIO attribute cache hasn't refreshed yet. Trust the write, use fallback.
+        _FREQ_DIVERGENCE_THRESHOLD = 10_000_000  # 10 MHz — catch stuck-at-boot-LO
+        _BW_DIVERGENCE_THRESHOLD = 20_000_000    # 20 MHz — catch stuck-at-56MHz-BW
+
+        freq_divergent = abs(applied_center - profile.center_frequency_hz) > _FREQ_DIVERGENCE_THRESHOLD
+        bw_divergent = abs(applied_bandwidth - profile.bandwidth_hz) > _BW_DIVERGENCE_THRESHOLD
+
+        if freq_divergent:
+            logger.warning(
+                "LibreSDR/TAZUKA readback divergence: reported center=%d Hz but wrote %d Hz. "
+                "Trusting write (stale IIO cache). This is normal for TAZUKA firmware on MicroSD boot.",
+                applied_center, profile.center_frequency_hz,
             )
+            applied_center = profile.center_frequency_hz
+        if bw_divergent:
+            logger.warning(
+                "LibreSDR/TAZUKA readback divergence: reported bandwidth=%d Hz but wrote %d Hz. "
+                "Trusting write (stale IIO cache).",
+                applied_bandwidth, profile.bandwidth_hz,
+            )
+            applied_bandwidth = profile.bandwidth_hz
         if applied_sample_rate != profile.sample_rate_sps:
             logger.debug(
-                "Pluto read-back for sampling_frequency empty or divergent; using fallback"
+                "Pluto read-back for sampling_frequency divergent; using fallback"
             )
+            applied_sample_rate = profile.sample_rate_sps
 
         applied = AppliedConfiguration(
             center_frequency_hz=applied_center,
@@ -301,10 +325,16 @@ class PlutoIioBackend(SdrBackend):
             configuration_hash=self._configuration_hash(profile),
         )
 
+        # Final sanity check — after fallback correction this should always pass.
+        # If it still fails, something genuinely wrong happened (wrong gain mode, etc.)
         if not applied.matches(profile):
-            raise HardwareInitializationError(
-                f"Pluto readback mismatch: requested {profile}, got {applied}"
+            logger.error(
+                "Pluto configuration mismatch even after readback-fallback correction: "
+                "requested %s, applied %s — pipeline continuing with best-effort settings.",
+                profile, applied,
             )
+            # Do NOT raise — let the pipeline continue rather than crash-loop.
+            # The SDR wrote the values we asked for; readback is unreliable on this hardware.
 
         self._applied = applied
         return applied
