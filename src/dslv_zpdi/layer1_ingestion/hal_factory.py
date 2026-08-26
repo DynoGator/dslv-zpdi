@@ -27,7 +27,6 @@ from dslv_zpdi.layer1_ingestion.hal_hardware import HardwareHAL as LegacyHardwar
 from dslv_zpdi.layer1_ingestion.hal_simulated import SimulatedHAL
 from dslv_zpdi.layer1_ingestion.hardware_hal import HardwareHAL
 from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
-from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
 from dslv_zpdi.layer1_ingestion.sdr.qualification import Tier1QualificationPolicy
 from dslv_zpdi.layer1_ingestion.sdr.simulated import SimulatedSdrBackend
 from dslv_zpdi.layer1_ingestion.timing.lbe1421 import LBE1421TimingAuthority
@@ -157,11 +156,7 @@ def get_tier1_hal(
             )
             sdr_backend.discover()
         except Exception:
-            try:
-                sdr_backend = HackrfBackend()
-                sdr_backend.discover()
-            except Exception:
-                raise ConfigurationError("No SDR found in auto mode")
+            raise ConfigurationError("No SDR found in auto mode")
     else:
         raise ConfigurationError(f"Unsupported SDR backend in profile: {backend_name}")
 
