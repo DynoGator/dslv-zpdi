@@ -175,12 +175,26 @@ class SDRAudioStreamer:
                     res = demodulator.process_rx(iq)
                     audio_out = res["output"] if res["output"] is not None else np.zeros(len(iq), dtype=np.float32)
                     
+                    if "FM" in profile or "EMS" in profile:
+                        freq_dev = 75000.0 if "Radio" in profile else 5000.0
+                        audio_out = audio_out * (current_rate / (2 * np.pi * freq_dev))
+                        # 75us de-emphasis for Broadcast FM
+                        if "Radio" in profile:
+                            alpha = 1.0 - np.exp(-1.0 / (current_rate * 75e-6))
+                            from scipy.signal import lfilter
+                            audio_out = lfilter([alpha], [1.0, -(1.0 - alpha)], audio_out)
+
                     rssi_db = 10.0 * np.log10(np.mean(np.abs(iq) ** 2) + 1e-12)
                     
                     if current_rate > target_rate and current_rate % target_rate == 0:
                         dec = int(current_rate // target_rate)
-                        audio_out = audio_out[::dec]
+                        # Anti-alias filter before decimation to prevent noise fold-back
+                        audio_out = np.convolve(audio_out, np.ones(dec)/dec, mode='same')[::dec]
                     elif current_rate != target_rate:
+                        # Simple linear interpolation for non-integer decimation (anti-alias by dec factor)
+                        dec_approx = max(1, int(current_rate / target_rate))
+                        if dec_approx > 1:
+                            audio_out = np.convolve(audio_out, np.ones(dec_approx)/dec_approx, mode='same')
                         indices = np.linspace(0, len(audio_out)-1, int(len(audio_out) * target_rate / current_rate)).astype(int)
                         audio_out = audio_out[indices]
                         
