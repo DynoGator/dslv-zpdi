@@ -25,7 +25,7 @@ done
 PLUTO_REACHABLE=0
 if command -v iio_info >/dev/null 2>&1; then
     for i in {1..30}; do
-        for PLUTO_URI in "${DSLV_SDR_URI:-usb:}" "ip:192.168.2.1" "ip:192.168.3.80"; do
+        for PLUTO_URI in "${DSLV_SDR_URI:-usb:}" "ip:192.168.2.1" "ip:192.168.3.1"; do
             if iio_info -u "$PLUTO_URI" >/dev/null 2>&1; then
                 LOG "PlutoSDR+ reachable at $PLUTO_URI"
                 PLUTO_REACHABLE=1
