@@ -27,6 +27,7 @@ from dslv_zpdi.layer1_ingestion.hal_hardware import HardwareHAL as LegacyHardwar
 from dslv_zpdi.layer1_ingestion.hal_simulated import SimulatedHAL
 from dslv_zpdi.layer1_ingestion.hardware_hal import HardwareHAL
 from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
+from dslv_zpdi.layer1_ingestion.sdr.hackrf import HackrfBackend
 from dslv_zpdi.layer1_ingestion.sdr.qualification import Tier1QualificationPolicy
 from dslv_zpdi.layer1_ingestion.sdr.simulated import SimulatedSdrBackend
 from dslv_zpdi.layer1_ingestion.timing.lbe1421 import LBE1421TimingAuthority
@@ -141,7 +142,6 @@ def get_tier1_hal(
             uri=sdr_cfg.uri,
             expected_iio_phy=sdr_cfg.expected_iio_phy,
         )
-        sdr_backend = HackrfBackend()
     elif backend_name == "libresdr":
         # LibreSDR uses Pluto iio backend
         sdr_backend = PlutoIioBackend(
