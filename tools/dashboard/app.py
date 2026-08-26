@@ -23,6 +23,8 @@ Keyboard:
 
 import argparse
 import os
+import sys
+import subprocess
 import select
 import shutil
 import signal
