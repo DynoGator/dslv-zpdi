@@ -218,7 +218,6 @@ require_cmd() {
 
 HARDENING_PACKAGES=(
     apparmor-profiles
-    usbguard
     auditd
 )
 
@@ -268,7 +267,7 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
     fi
     apt-get install -y "${BASE_PACKAGES[@]}" || log_fail "Failed to install base packages"
     # Hardening packages are nice-to-have; keep going even if they don't
-    # all install (e.g. usbguard pulled in mid-upgrade by a held kernel).
+    # all install (e.g. pulled in mid-upgrade by a held kernel).
     apt-get install -y "${HARDENING_PACKAGES[@]}" || \
         log_warn "Some hardening packages failed to install; usbguard/auditd steps will soft-skip"
 
@@ -695,22 +694,6 @@ BLK
     systemctl restart dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service || true
     log_ok "Systemd hardening chain installed and started"
 
-    # 9. USBGuard allow-listing (SPEC-011.1) -- soft-fail; the pipeline
-    #    works fine without USBGuard, and a half-installed usbguard would
-    #    otherwise abort the whole install on a fresh image.
-    if command -v usbguard >/dev/null 2>&1; then
-        log_info "Configuring USBGuard allow-list"
-        mkdir -p /etc/usbguard
-        if usbguard generate-policy > /etc/usbguard/rules.conf 2>/dev/null; then
-            grep -q "0456:b673" /etc/usbguard/rules.conf || \
-                echo "allow id 0456:b673 serial \"*\" name \"PlutoSDR\" with-interface all" \
-                    >> /etc/usbguard/rules.conf
-            soft "USBGuard service enabled" systemctl enable --now usbguard
-        else
-            log_warn "usbguard generate-policy failed (likely no USB devices visible to daemon yet) -- skipping"
-        fi
-    else
-        log_warn "usbguard not installed -- skipping USB allow-list step"
     fi
 
     if [[ ! -d /etc/dslv-zpdi ]]; then
