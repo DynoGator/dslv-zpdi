@@ -50,7 +50,7 @@ def _ingest_loop(hal, args, state, ingest_q):
                         pps_device = getattr(pps_listener, "_device", "/dev/pps0")
                         logger.error(
                             "No 1PPS edge on %s within timeout — check GPSDO Output 1 "
-                            "wiring to GPIO 8 (dtoverlay pps-gpio,gpiopin=8)",
+                            "wiring to GPIO 24 (physical pin 18, dtoverlay pps-gpio,gpiopin=24)",
                             pps_device,
                         )
 
