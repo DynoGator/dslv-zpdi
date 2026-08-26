@@ -10,7 +10,7 @@ waterfall that can be driven from a live `PlutoSDRplus_sweep` stream.
 
 | Command | What it does |
 |---|---|
-| `bash tools/launch_project.sh` | Full "nuke and pave" — kills stale SDR processes, restarts the systemd chain, opens the dashboard. |
+| `bash tools/dslv_launch_supervisor.sh` | Full "nuke and pave" — kills stale SDR processes, restarts the systemd chain, opens the dashboard. |
 | `bash tools/dashboard/launch.sh` | Just the dashboard, nothing else. |
 | `venv/bin/python -m dashboard --help` | Show CLI flags. |
 
@@ -139,7 +139,7 @@ top strip becomes two columns instead of three with no blank gap.
 * User in the `plugdev` group for PlutoSDRplus without sudo
 * `/lib/udev/rules.d/60-libPlutoSDRplus0.rules` installed by `libPlutoSDRplus0`
 
-`tools/launch_project.sh` checks all of these on boot and prints warnings.
+`tools/dslv_launch_supervisor.sh` checks all of these on boot and prints warnings.
 
 ## Troubleshooting
 
@@ -147,7 +147,7 @@ top strip becomes two columns instead of three with no blank gap.
   the banner is tuned to fit comfortably at ≥100 cols and the layout
   reserves `BANNER_HEIGHT` (11 rows) for it.
 * **"PlutoSDRplus…" never turns into "PlutoSDRplus"** — another process owns the
-  device. `tools/launch_project.sh` kills gqrx / sdrangel / rtl_* /
+  device. `tools/dslv_launch_supervisor.sh` kills gqrx / sdrangel / rtl_* /
   PlutoSDRplus_transfer before starting; re-run it. Or look at the error
   shown in the waterfall title bar.
 * **Log panel says "waiting for journald…"** — the systemd unit named in

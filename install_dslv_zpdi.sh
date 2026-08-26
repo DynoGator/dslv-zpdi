@@ -822,7 +822,7 @@ if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
         log_ok "dashboard package importable"
     fi
 
-    # Ensure logs dir exists -- launch_project.sh tees its output here
+    # Ensure logs dir exists -- dslv_launch_supervisor.sh tees its output here
     # and silently dies on first run if it doesn't.
     install -d -o "$REAL_USER" -g "$REAL_USER" "${INSTALL_DIR}/logs"
 
@@ -838,7 +838,7 @@ if [[ "$DASHBOARD_MODE" -eq 1 ]]; then
 Type=Application
 Name=DSLV-ZPDI Operations Center
 Comment=DynoGatorLabs Operations Dashboard (autostart)
-Exec=bash -c "sleep 25 && exec lxterminal --no-remote --title='DSLV-ZPDI Launcher' --geometry=92x28 -e ${INSTALL_DIR}/tools/launch_project.sh"
+Exec=bash -c "sleep 25 && exec lxterminal --no-remote --title='DSLV-ZPDI Launcher' --geometry=92x28 -e ${INSTALL_DIR}/tools/dslv_launch_supervisor.sh"
 Terminal=false
 Categories=Science;Network;
 X-GNOME-Autostart-enabled=true
@@ -857,7 +857,7 @@ Type=Application
 Name=DSLV-ZPDI Operations Center
 GenericName=DSLV-ZPDI Clean Launch
 Comment=Kill stale processes, restart the pipeline (tuning -> preflight -> pipeline), open the dashboard + waterfall
-Exec=env DSLV_LAUNCH_QUICK=1 lxterminal --no-remote --title="DSLV-ZPDI Launcher" --geometry=92x28 -e ${INSTALL_DIR}/tools/launch_project.sh
+Exec=env DSLV_LAUNCH_QUICK=1 lxterminal --no-remote --title="DSLV-ZPDI Launcher" --geometry=92x28 -e ${INSTALL_DIR}/tools/dslv_launch_supervisor.sh
 Icon=utilities-system-monitor
 Terminal=false
 Categories=System;Monitor;
@@ -873,7 +873,7 @@ DESK
     fi
 
     chmod +x "${INSTALL_DIR}/tools/dashboard/launch.sh" 2>/dev/null || true
-    chmod +x "${INSTALL_DIR}/tools/launch_project.sh" 2>/dev/null || true
+    chmod +x "${INSTALL_DIR}/tools/dslv_launch_supervisor.sh" 2>/dev/null || true
     log_ok "Dashboard installed. Launch: ${INSTALL_DIR}/tools/dashboard/launch.sh"
 fi
 
