@@ -791,17 +791,7 @@ FAN
     fi
 
     # 12. USB Power & Security
-    log_info "Setting usbcore.authorized_default=0 (speculative)"
-    # This prevents new USB devices from being authorized by default
-    if ! grep -q "usbcore.authorized_default=0" /etc/default/grub 2>/dev/null; then
-        # For Pi, we usually add to /boot/cmdline.txt
-        CMDLINE="/boot/firmware/cmdline.txt"
-        if [[ ! -f "$CMDLINE" ]]; then CMDLINE="/boot/cmdline.txt"; fi
-        if [[ -f "$CMDLINE" ]] && ! grep -q "usbcore.authorized_default=0" "$CMDLINE"; then
-            sed -i 's/$/ usbcore.authorized_default=0/' "$CMDLINE"
-            log_ok "USB authorized_default=0 added to $CMDLINE"
-        fi
-    fi
+    log_info "Skipping usbcore.authorized_default=0 (speculative, blocks SDR enumeration)"
 
 
 
