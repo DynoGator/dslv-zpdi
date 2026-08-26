@@ -119,50 +119,55 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
     _ind("PAL",  palette_nm, "bright_cyan")
     status.append(f"{ts} UTC", style="dim")
 
-    # ── Key legend ───────────────────────────────────────────────────────────
-    keys = Text(no_wrap=True, overflow="ellipsis")
-    if compact:
-        legend = [
-            ("q",    "Quit"),
-            ("SPC",  "Pause"),
-            ("m",    "WF-Mode"),
-            ("r",    "Real-SDR"),
-            ("p",    "Palette"),
-            ("s",    "Spectrum"),
-            ("g/v",  "Gain"),
-            ("</>",  "Tune"),
-            ("z/x",  "Zoom"),
-            ("c/t",  "Layout"),
-            ("h",    "Banner"),
-        ]
+    # ── Key legend / Toast ───────────────────────────────────────────────────
+    if s.get("toast_msg"):
+        toast_text = Text()
+        toast_text.append(f"  ⚡ {s['toast_msg']} ⚡  ", style="bold white on deep_sky_blue1")
+        keys = toast_text
     else:
-        legend = [
-            ("q",       "Quit Dashboard"),
-            ("space",   "Pause Data"),
-            ("m",       "Cycle Waterfall Mode"),
-            ("d",       "Cycle Modulation"),
-            ("r",       "Toggle Real SDR"),
-            ("p",       "Cycle Palette"),
-            ("s",       "Toggle Spectrum View"),
-            ("[/]",     "Adj Floor ±"),
-            ("{/}",     "Adj Ceil ±"),
-            ("h",       "Toggle Banner"),
-            ("c",       "Toggle Compact Layout"),
-            ("t",       "Toggle 10\" Layout"),
-            ("g/v",     "Cycle LNA/VGA Gain"),
-            ("a",       "Toggle Amp"),
-            ("e",       "Launch Cam"),
-            ("+/-",     "Gain Step ±"),
-            ("</>",     "Tune Coarse ±"),
-            (",/.",     "Tune Fine ±"),
-            ("z/x",     "Zoom In/Out"),
-        ]
-    for k, desc in legend:
-        keys.append("[", style="dim")
-        keys.append(k, style="bold bright_yellow")
-        keys.append("]", style="dim")
-        keys.append(desc, style="bright_white")
-        keys.append(" ", style="dim")
+        keys = Text(no_wrap=True, overflow="ellipsis")
+        if compact:
+            legend = [
+                ("q",    "Quit"),
+                ("SPC",  "Pause"),
+                ("m",    "WF-Mode"),
+                ("r",    "Real-SDR"),
+                ("p",    "Palette"),
+                ("s",    "Spectrum"),
+                ("g/v",  "Gain"),
+                ("</>",  "Tune"),
+                ("z/x",  "Zoom"),
+                ("c/t",  "Layout"),
+                ("h",    "Banner"),
+            ]
+        else:
+            legend = [
+                ("q",       "Quit Dashboard"),
+                ("space",   "Pause Data"),
+                ("m",       "Cycle Waterfall Mode"),
+                ("d",       "Cycle Modulation"),
+                ("r",       "Toggle Real SDR"),
+                ("p",       "Cycle Palette"),
+                ("s",       "Toggle Spectrum View"),
+                ("[/]",     "Adj Floor ±"),
+                ("{/}",     "Adj Ceil ±"),
+                ("h",       "Toggle Banner"),
+                ("c",       "Toggle Compact Layout"),
+                ("t",       "Toggle 10\" Layout"),
+                ("g/v",     "Cycle LNA/VGA Gain"),
+                ("a",       "Toggle Amp"),
+                ("e",       "Launch Cam"),
+                ("+/-",     "Gain Step ±"),
+                ("</>",     "Tune Coarse ±"),
+                (",/.",     "Tune Fine ±"),
+                ("z/x",     "Zoom In/Out"),
+            ]
+        for k, desc in legend:
+            keys.append("[", style="dim")
+            keys.append(k, style="bold bright_yellow")
+            keys.append("]", style="dim")
+            keys.append(desc, style="bright_white")
+            keys.append(" ", style="dim")
 
     if compact:
         content = Group(status, keys)
@@ -459,6 +464,8 @@ class Dashboard:
         self._live: Any = None
         self._input_mode: str | None = None
         self._input_buffer: str = ""
+        self._toast_msg: str | None = None
+        self._toast_expire: float = 0.0
 
     def _publish_sdr_state(self):
         wf = self._panels.get("waterfall")
@@ -571,6 +578,11 @@ class Dashboard:
         if footer_l:
             footer_l.update(footer_panel(self.compact, self._get_state()))
 
+    def _toast(self, msg: str, duration: float = 3.0):
+        self._toast_msg = msg
+        self._toast_expire = time.time() + duration
+        self._toast(msg)
+
     def _get_state(self) -> dict:
         wf = self._panels.get("waterfall")
         demod_panel = self._panels.get("demod")
@@ -579,6 +591,7 @@ class Dashboard:
         mimo_tx = getattr(demod_panel, "mimo_tx", False) if demod_panel else False
 
         return {
+            "toast_msg": self._toast_msg if time.time() < self._toast_expire else None,
             "input_mode":  self._input_mode,
             "input_buffer": self._input_buffer,
             "demod_profile": demod_profile,
@@ -619,8 +632,7 @@ class Dashboard:
                         if "waterfall" in self._panels:
                             self._panels["waterfall"].center_hz = int(hz)
                             self._panels["waterfall"]._restart_stream_if_running()
-                            if "notifications" in self._panels:
-                                self._panels["notifications"].push("INFO", f"freq set: {hz/1e6:.3f} MHz")
+                            self._toast(f"freq set: {hz/1e6:.3f} MHz")
                     except ValueError:
                         pass
                 self._input_mode = None
@@ -639,21 +651,18 @@ class Dashboard:
             raise KeyboardInterrupt
         if k == " ":
             self.paused = not self.paused
-            if "notifications" in self._panels:
-                self._panels["notifications"].push("INFO", "paused" if self.paused else "resumed")
+            self._toast("paused" if self.paused else "resumed")
             self._publish_sdr_state()
         elif k in ("m", "M"):
             if "waterfall" in self._panels:
                 self._wf_idx = (self._wf_idx + 1) % len(self._wf_modes)
                 self._panels["waterfall"].set_mode(self._wf_modes[self._wf_idx])
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"waterfall mode: {self._wf_modes[self._wf_idx]}")
+                self._toast(f"waterfall mode: {self._wf_modes[self._wf_idx]}")
         elif k in ("r", "R"):
             cur = os.getenv("DSLV_DASHBOARD_REAL_SDR", "0")
             new = "0" if cur == "1" else "1"
             os.environ["DSLV_DASHBOARD_REAL_SDR"] = new
-            if "notifications" in self._panels:
-                self._panels["notifications"].push("INFO", f"real SDR mode: {'ON' if new == '1' else 'OFF'}")
+            self._toast(f"real SDR mode: {'ON' if new == '1' else 'OFF'}")
         elif k in ("h", "H"):
             if not self.waterfall_only:
                 self._banner_pref = not self._banner_pref
@@ -662,8 +671,7 @@ class Dashboard:
                 self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, self.ten_inch, panels)
                 if self._live is not None:
                     self._live.update(self.layout)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"banner: {'shown' if self.show_banner else 'hidden'}")
+                self._toast(f"banner: {'shown' if self.show_banner else 'hidden'}")
         elif k == "f":
             self._input_mode = "freq"
             self._input_buffer = ""
@@ -686,8 +694,7 @@ class Dashboard:
                     wf.center_hz = presets[p.active_profile]["freq"]
                     wf.span_hz = presets[p.active_profile]["bw"]
 
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"Profile: {p.active_profile} ({presets[p.active_profile]['freq']/1e6:.1f} MHz)")
+                self._toast(f"Profile: {p.active_profile} ({presets[p.active_profile]['freq']/1e6:.1f} MHz)")
                 self._publish_sdr_state()
         elif k in ("\n", "\r"):
             if "demod" in self._panels:
@@ -714,21 +721,18 @@ class Dashboard:
                         msg = "Demodulation Interface Launched"
                     except Exception as e:
                         msg = f"Failed to launch Demod: {e}"
-                    if "notifications" in self._panels:
-                        self._panels["notifications"].push("INFO", msg)
+                    self._toast(msg)
                 else:
-                    if "notifications" in self._panels:
-                        self._panels["notifications"].push("INFO", "Demodulation: OFF")
+                    self._toast("Demodulation: OFF")
                 self._publish_sdr_state()
         elif k == "T":
             if "demod" in self._panels:
                 p = self._panels["demod"]
                 p.mimo_tx = not getattr(p, "mimo_tx", False)
-                if "notifications" in self._panels:
-                    if p.mimo_tx:
-                        self._panels["notifications"].push("WARN", "MIMO TX Enabled (RESTRICTED)")
-                    else:
-                        self._panels["notifications"].push("INFO", "MIMO TX Disabled")
+                if p.mimo_tx:
+                    self._toast("MIMO TX Enabled (RESTRICTED)")
+                else:
+                    self._toast("MIMO TX Disabled")
                 self._publish_sdr_state()
         elif k in ("c", "C"):
             if not self.waterfall_only:
@@ -743,8 +747,7 @@ class Dashboard:
                 self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, self.ten_inch, panels)
                 if self._live is not None:
                     self._live.update(self.layout)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"compact: {'ON' if self.compact else 'OFF'}")
+                self._toast(f"compact: {'ON' if self.compact else 'OFF'}")
         elif k in ("t", "T"):
             if not self.waterfall_only:
                 self.ten_inch = not self.ten_inch
@@ -756,124 +759,100 @@ class Dashboard:
                 self.layout = build_layout(self.show_banner, self.waterfall_only, self.compact, self.ten_inch, panels)
                 if self._live is not None:
                     self._live.update(self.layout)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"10\" layout: {'ON' if self.ten_inch else 'OFF'}")
+                self._toast(f"10\" layout: {'ON' if self.ten_inch else 'OFF'}")
         elif k == "[":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_floor(-5.0)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"floor: {self._panels['waterfall'].dbm_floor} dBm")
+                self._toast(f"floor: {self._panels['waterfall'].dbm_floor} dBm")
         elif k == "]":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_floor(5.0)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"floor: {self._panels['waterfall'].dbm_floor} dBm")
+                self._toast(f"floor: {self._panels['waterfall'].dbm_floor} dBm")
         elif k == "{":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_ceil(-5.0)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"ceil: {self._panels['waterfall'].dbm_ceil} dBm")
+                self._toast(f"ceil: {self._panels['waterfall'].dbm_ceil} dBm")
         elif k == "}":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_ceil(5.0)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"ceil: {self._panels['waterfall'].dbm_ceil} dBm")
+                self._toast(f"ceil: {self._panels['waterfall'].dbm_ceil} dBm")
         elif k in ("p", "P"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_palette()
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", "palette cycled")
+                self._toast("palette cycled")
         elif k in ("s", "S"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].show_spectrum = not self._panels["waterfall"].show_spectrum
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push(
-                        "INFO", f"spectrum: {'ON' if self._panels['waterfall'].show_spectrum else 'OFF'}")
+                self._toast(f"spectrum: {'ON' if self._panels['waterfall'].show_spectrum else 'OFF'}")
         elif k == "UP":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].zoom(0.5)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push(
-                        "INFO", f"zoom in: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
+                self._toast(f"zoom in: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
                 self._publish_sdr_state()
         elif k == "DOWN":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].zoom(2.0)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push(
-                        "INFO", f"zoom out: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
+                self._toast(f"zoom out: {self._panels['waterfall'].span_hz / 1e6:.1f}MHz")
                 self._publish_sdr_state()
         elif k == "LEFT":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(-int(wf.span_hz * 0.1))
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"tune -: {wf.center_hz / 1e6:.2f}MHz")
+                self._toast(f"tune -: {wf.center_hz / 1e6:.2f}MHz")
                 self._publish_sdr_state()
         elif k == "RIGHT":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(int(wf.span_hz * 0.1))
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"tune +: {wf.center_hz / 1e6:.2f}MHz")
+                self._toast(f"tune +: {wf.center_hz / 1e6:.2f}MHz")
                 self._publish_sdr_state()
         elif k == "+":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_gain(1)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+                self._toast(f"lna gain: {self._panels['waterfall'].lna_gain}dB")
                 self._publish_sdr_state()
         elif k == "-":
             if "waterfall" in self._panels:
                 self._panels["waterfall"].adjust_gain(-1)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+                self._toast(f"lna gain: {self._panels['waterfall'].lna_gain}dB")
                 self._publish_sdr_state()
         elif k == "<":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(-int(wf.span_hz * 0.1))
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"tune: {wf.center_hz / 1e6:.2f}MHz")
+                self._toast(f"tune: {wf.center_hz / 1e6:.2f}MHz")
                 self._publish_sdr_state()
         elif k == ">":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(int(wf.span_hz * 0.1))
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"tune: {wf.center_hz / 1e6:.2f}MHz")
+                self._toast(f"tune: {wf.center_hz / 1e6:.2f}MHz")
                 self._publish_sdr_state()
         elif k in ("z", "Z"):
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.zoom(0.5)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"zoom in: {wf.span_hz / 1e6:.1f}MHz")
+                self._toast(f"zoom in: {wf.span_hz / 1e6:.1f}MHz")
                 self._publish_sdr_state()
         elif k in ("x", "X"):
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.zoom(2.0)
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"zoom out: {wf.span_hz / 1e6:.1f}MHz")
+                self._toast(f"zoom out: {wf.span_hz / 1e6:.1f}MHz")
                 self._publish_sdr_state()
         elif k in ("g", "G"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_gain()
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"lna gain: {self._panels['waterfall'].lna_gain}dB")
+                self._toast(f"lna gain: {self._panels['waterfall'].lna_gain}dB")
                 self._publish_sdr_state()
         elif k in ("v", "V"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_vga_gain()
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"vga gain: {self._panels['waterfall'].vga_gain}dB")
+                self._toast(f"vga gain: {self._panels['waterfall'].vga_gain}dB")
         elif k in ("d", "D"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].cycle_modulation()
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push(
-                        "INFO", f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
+                self._toast(f"mod: {getattr(self._panels['waterfall'], 'modulation', 'RAW-SWEEP')}")
         elif k in ("a", "A"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].toggle_amp()
@@ -892,29 +871,25 @@ class Dashboard:
                 msg = "Tamper-Evident Cam Interface Launched"
             except Exception as e:
                 msg = f"Failed to launch Cam: {e}"
-            if "notifications" in self._panels:
-                self._panels["notifications"].push("INFO", msg)
+            self._toast(msg)
         elif k == ",":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(-int(wf.span_hz * 0.01))
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"tune fine-: {wf.center_hz / 1e6:.3f}MHz")
+                self._toast(f"tune fine-: {wf.center_hz / 1e6:.3f}MHz")
                 self._publish_sdr_state()
         elif k == ".":
             if "waterfall" in self._panels:
                 wf = self._panels["waterfall"]
                 wf.tune(int(wf.span_hz * 0.01))
-                if "notifications" in self._panels:
-                    self._panels["notifications"].push("INFO", f"tune fine+: {wf.center_hz / 1e6:.3f}MHz")
+                self._toast(f"tune fine+: {wf.center_hz / 1e6:.3f}MHz")
                 self._publish_sdr_state()
 
     def run(self):
         self._boot_animation()
         if "logs" in self._panels:
             self._panels["logs"].start()
-        if "notifications" in self._panels:
-            self._panels["notifications"].push("INFO", "dashboard online")
+        self._toast("dashboard online")
         self._enter_raw()
         try:
             self._live = Live(self.layout, console=self.console,
