@@ -290,8 +290,9 @@ class PlutoIioBackend(SdrBackend):
         _FREQ_DIVERGENCE_THRESHOLD = 10_000_000  # 10 MHz — catch stuck-at-boot-LO
         _BW_DIVERGENCE_THRESHOLD = 20_000_000    # 20 MHz — catch stuck-at-56MHz-BW
 
-        freq_divergent = abs(applied_center - profile.center_frequency_hz) > _FREQ_DIVERGENCE_THRESHOLD
-        bw_divergent = abs(applied_bandwidth - profile.bandwidth_hz) > _BW_DIVERGENCE_THRESHOLD
+        _GAIN_DIVERGENCE_THRESHOLD = 20.0  # dB — catch stuck-at-20dB boot default
+
+        gain_divergent = abs(applied_gain - profile.gain_db) > _GAIN_DIVERGENCE_THRESHOLD
 
         if freq_divergent:
             logger.warning(
@@ -307,6 +308,13 @@ class PlutoIioBackend(SdrBackend):
                 applied_bandwidth, profile.bandwidth_hz,
             )
             applied_bandwidth = profile.bandwidth_hz
+        if gain_divergent:
+            logger.warning(
+                "LibreSDR/TAZUKA readback divergence: reported gain=%.1f dB but wrote %.1f dB. "
+                "Trusting write (stale IIO cache).",
+                applied_gain, profile.gain_db,
+            )
+            applied_gain = profile.gain_db
         if applied_sample_rate != profile.sample_rate_sps:
             logger.debug(
                 "Pluto read-back for sampling_frequency divergent; using fallback"
