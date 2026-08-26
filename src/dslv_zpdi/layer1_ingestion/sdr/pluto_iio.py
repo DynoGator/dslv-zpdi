@@ -265,6 +265,11 @@ class PlutoIioBackend(SdrBackend):
         rx_chan.attrs["rf_bandwidth"].value = str(int(profile.bandwidth_hz))
         rx_chan.attrs["sampling_frequency"].value = str(int(profile.sample_rate_sps))
 
+        # Allow the AD9361 PLLs to re-lock and IIO attribute cache to refresh
+        # before readback. Without this, the LibreSDR firmware may return stale
+        # factory-default values (e.g., 2.45 GHz) immediately after a write.
+        time.sleep(0.2)
+
         # Read back applied values. Some Pluto firmware/libiio revisions return
         # empty strings immediately after a write; fall back to requested.
         applied_center = self._read_attr_int(rx_lo, "frequency", profile.center_frequency_hz)
