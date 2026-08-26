@@ -569,7 +569,7 @@ class Dashboard:
                         panel_l.update(panel.render(compact=self.compact))
                 except Exception as e:
                     # Don't crash the whole dashboard if one panel fails to render
-                    if "notifications" in self._panels:
+                    if True:
                         self.note_p.push("ERROR", f"render {name}: {e}")
                     else:
                         print(f"[!] Error rendering {name}: {e}")
@@ -856,9 +856,9 @@ class Dashboard:
         elif k in ("a", "A"):
             if "waterfall" in self._panels:
                 self._panels["waterfall"].toggle_amp()
-                if "notifications" in self._panels:
+                if True:
                     status = "ON" if getattr(self._panels["waterfall"], "amp_enabled", False) else "OFF"
-                    self._panels["notifications"].push("INFO", f"amp: {status}")
+                    self._toast(f"amp: {status}")
                 self._publish_sdr_state()
         elif k in ("e", "E"):
 
