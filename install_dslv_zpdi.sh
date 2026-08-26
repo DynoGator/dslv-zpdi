@@ -389,8 +389,8 @@ if [[ "$RUN_TIER1_AUDIT" -eq 1 ]]; then
     SYS_DIST_PACKAGES="/usr/lib/python3/dist-packages"
     
     if [[ -d "$SYS_DIST_PACKAGES" ]]; then
-        # Use find to locate SoapySDR related files in system dist-packages
-        mapfile -t SOAPY_FILES < <(find "$SYS_DIST_PACKAGES" -maxdepth 1 \( -name "SoapySDR*" -o -name "_SoapySDR*" \))
+        # Use find to locate SoapySDR and iio related files in system dist-packages
+        mapfile -t SOAPY_FILES < <(find "$SYS_DIST_PACKAGES" -maxdepth 1 \( -name "SoapySDR*" -o -name "_SoapySDR*" -o -name "iio.py" -o -name "iio_*" -o -name "_iio*" \))
         for f in "${SOAPY_FILES[@]}"; do
             target="$VENV_SITE_PACKAGES/$(basename "$f")"
             if [[ ! -e "$target" ]]; then
