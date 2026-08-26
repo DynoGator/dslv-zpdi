@@ -160,7 +160,7 @@ if [ -n "$SUDO" ]; then
     SAY "step 5/7 :: starting dslv-zpdi chain (tuning → preflight → pipeline)"
     $SUDO systemctl daemon-reload
     sleep 3
-    for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service dslv-zpdi-webdash.service dslv-zpdi-tier1.service; do
+    for unit in dslv-zpdi-tuning.service dslv-zpdi-preflight.service dslv-zpdi.service dslv-zpdi-webdash.service; do
         SAY "  - starting $unit"
         RETRY=0
         MAX_RETRIES=3
@@ -193,7 +193,7 @@ fi
 # --- 6. Verify chain health -------------------------------------------
 SAY "step 6/7 :: verifying service health"
 FAILED=0
-for unit in dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi dslv-zpdi-webdash dslv-zpdi-tier1; do
+for unit in dslv-zpdi-tuning dslv-zpdi-preflight dslv-zpdi dslv-zpdi-webdash; do
     STATE="$(systemctl is-active "$unit" 2>/dev/null || true)"
     case "$STATE" in
         active)   OK "$unit: active" ;;
@@ -210,6 +210,11 @@ sleep 3
 
 # --- 7. Launch dashboard + waterfall second window --------------------
 SAY "step 7/7 :: launching operations dashboard and waterfall window"
+if pgrep -f "dashboard.app" > /dev/null; then
+    SAY "dashboard already running, skipping launch to prevent duplicates"
+    exit 0
+fi
+
 
 TITLE_MAIN="DSLV-ZPDI :: DynoGatorLabs"
 TITLE_WF="DSLV-ZPDI :: WATERFALL"
