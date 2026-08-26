@@ -106,9 +106,9 @@ for unit in "${SERVICES[@]}"; do
     echo "  -> Starting ${unit}.service..."
     $SUDO systemctl start "${unit}.service"
     
-    # Wait for active state (up to 30 seconds)
+    # Wait for active state (up to 90 seconds to allow SDR boot)
     VERIFIED=0
-    for i in {1..15}; do
+    for i in {1..45}; do
         STATE=$(systemctl is-active "${unit}.service" 2>/dev/null || true)
         if [ "$STATE" = "active" ]; then
             log_ok "${unit} is ACTIVE and STABLE."
