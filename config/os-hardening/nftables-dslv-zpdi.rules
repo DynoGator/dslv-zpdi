@@ -23,7 +23,8 @@ table inet filter {
         ip6 nexthdr icmpv6 icmpv6 type { echo-request, echo-reply, destination-unreachable, packet-too-big, time-exceeded, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
 
         # Allow SSH (rate-limited)
-        tcp dport 22 limit rate 5/minute burst 10 packets accept
+        tcp dport 22 ct state new limit rate 5/minute burst 10 packets accept
+        tcp dport 22 ct state established,related accept
 
         # Drop everything else
         counter drop

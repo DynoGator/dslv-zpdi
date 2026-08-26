@@ -90,7 +90,7 @@ if [ -n "$SUDO" ]; then
     $SUDO systemctl stop dslv-zpdi-tuning.service    2>/dev/null || true
     sleep 3
     $SUDO systemctl stop dslv-zpdi-baseline.service  2>/dev/null || true
-    sleep 5
+    sleep 15
 fi
 
 # Clear any SWMR lock left by a crash to prep for clean launch
@@ -168,7 +168,7 @@ if [ -n "$SUDO" ]; then
         while [ $RETRY -lt $MAX_RETRIES ]; do
             $SUDO systemctl start "$unit" || true
             # generous pause to let the service initialize
-            sleep 5
+            sleep 15
             if systemctl is-active --quiet "$unit"; then
                 OK "$unit initialized and running"
                 SUCCESS=1
@@ -177,7 +177,7 @@ if [ -n "$SUDO" ]; then
                 RETRY=$((RETRY+1))
                 WARN "$unit failed or hung (attempt $RETRY/$MAX_RETRIES). Pausing, then retrying..."
                 # additional pause before retry
-                sleep 5
+                sleep 15
             fi
         done
         if [ $SUCCESS -eq 0 ]; then
@@ -337,16 +337,7 @@ elif [ "$TEN_INCH_MODE" = "1" ]; then
     sleep 3
     OK "launch complete — single dashboard dispatched (10\" side-by-side layout)"
 else
-    # 7a — waterfall second window FIRST so it's visible under the dashboard
-    SAY "  - opening waterfall window ($TERMCMD)"
-    spawn_terminal "$TITLE_WF" "$GEO_WF" \
-        "$DASH" --waterfall-only --no-boot
-    # generous pause so the first window registers on the display server
-    # before we fire the second one
-    sleep 5
-
-    # 7b — main dashboard (spawned the same way so both survive under
-    # lxterminal's single-instance behavior)
+    # Just spawn a single dashboard window in all cases to prevent "two dashboards" confusion
     SAY "  - opening operations dashboard ($TERMCMD)"
     case "$TERMCMD" in
         lxterminal)
@@ -360,5 +351,5 @@ else
                 >/dev/null 2>&1 & disown ;;
     esac
     sleep 3
-    OK "launch complete — dashboard + waterfall windows dispatched"
+    OK "launch complete — dashboard window dispatched"
 fi

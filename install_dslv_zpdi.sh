@@ -233,6 +233,8 @@ BASE_PACKAGES=(
     libusb-1.0-0-dev
     libiio-utils
     python3-libiio
+    alsa-utils
+    pulseaudio-utils
     libad9361-dev
 )
 
@@ -537,6 +539,8 @@ if [[ "$HARDEN_MODE" -eq 1 ]]; then
         firmware-brcm80211 firmware-atheros firmware-mediatek
         bluez bluez-firmware
         libiio0 libiio-dev python3-libiio
+    alsa-utils
+    pulseaudio-utils
         libad9361-0 libad9361-dev
         python3-soapysdr
         pps-tools chrony

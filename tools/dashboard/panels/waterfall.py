@@ -86,21 +86,21 @@ def _heat(v: float) -> str:
 
 class PlutoSDRplusSweepStream:
     """
-    Background thread wrapping `PlutoSDRplus_sweep` stdout.
+    Background thread wrapping PlutoIioBackend for live sweeps.
     """
 
     def __init__(self):
-        self._proc: subprocess.Popen | None = None
-        self._thread: threading.Thread | None = None
+        self._thread = None
         self._stop = threading.Event()
         self._lock = threading.Lock()
-        self._latest_row: list[float] | None = None
-        self._last_error: str | None = None
+        self._latest_row = None
+        self._last_error = None
         self._sweeps = 0
-        self._params: dict = {}
+        self._params = {}
+        self._backend = None
 
     def is_running(self) -> bool:
-        return self._proc is not None and self._proc.poll() is None
+        return self._thread is not None and self._thread.is_alive()
 
     def last_error(self) -> str | None:
         return self._last_error
@@ -118,137 +118,94 @@ class PlutoSDRplusSweepStream:
         amp: bool = False,
     ) -> bool:
         self.stop()
-        freq_min_mhz = max(1, int((center_hz - span_hz / 2) / 1e6))
-        freq_max_mhz = max(freq_min_mhz + 1, int((center_hz + span_hz / 2) / 1e6))
-        bin_width_hz = max(2500, int(span_hz / max(width, 1)))
         self._params = {
             "center_hz": center_hz,
             "span_hz": span_hz,
             "width": width,
-            "lna": lna,
-            "vga": vga,
-            "amp": amp,
-            "freq_min_mhz": freq_min_mhz,
-            "freq_max_mhz": freq_max_mhz,
-            "bin_width_hz": bin_width_hz,
         }
-        cmd = [
-            "PlutoSDRplus_sweep",
-            "-f", f"{freq_min_mhz}:{freq_max_mhz}",
-            "-w", str(bin_width_hz),
-            "-l", str(lna),
-            "-g", str(vga),
-        ]
-        if amp:
-            cmd += ["-a", "1"]
         self._stop.clear()
+        
         try:
-            self._proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-            )
+            import os
+            from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
+            sdr_uri = os.environ.get("ZPDI_SDR_URI", "ip:192.168.2.1")
+            self._backend = PlutoIioBackend(uri=sdr_uri)
         except Exception as e:
-            self._last_error = f"spawn failed: {e}"
-            self._proc = None
+            self._last_error = f"PlutoIioBackend failed: {e}"
+            self._backend = None
             return False
+
         self._last_error = None
+        import threading
         self._thread = threading.Thread(target=self._reader, daemon=True)
         self._thread.start()
         return True
 
     def stop(self):
         self._stop.set()
-        proc = self._proc
         thread = self._thread
-        self._proc = None
         self._thread = None
-        if proc is not None:
-            try:
-                proc.terminate()
-                proc.wait(timeout=1.0)
-            except Exception:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
         if thread is not None:
             thread.join(timeout=2.0)
+        
+        backend = self._backend
+        self._backend = None
+        if backend is not None:
+            try:
+                pass
+            except Exception:
+                pass
 
     def _reader(self):
-        assert self._proc is not None
-        assert self._proc.stdout is not None
-        width = int(self._params["width"])
-        freq_min_hz = self._params["freq_min_mhz"] * 1_000_000
-        freq_max_hz = self._params["freq_max_mhz"] * 1_000_000
-        span_hz = max(1, freq_max_hz - freq_min_hz)
-        accum = [-120.0] * width  # dBm
-        last_low = None
+        import numpy as np
+        import time
+        from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
         try:
-            for line in self._proc.stdout:
-                if self._stop.is_set():
+            while not self._stop.is_set():
+                if self._backend is None:
                     break
-                line = line.strip()
-                if not line:
-                    continue
-                parts = [p.strip() for p in line.split(",")]
-                if len(parts) < 7:
-                    continue
+                
+                center_hz = self._params["center_hz"]
+                span_hz = self._params["span_hz"]
+                width = self._params["width"]
+                
                 try:
-                    hz_low = float(parts[2])
-                    float(parts[3])  # validate hz_high column without binding it
-                    bin_w = float(parts[4])
-                    powers = [float(x) for x in parts[6:]]
-                except ValueError:
-                    continue
-                if last_low is not None and hz_low < last_low:
-                    self._publish(accum)
-                    accum = [-120.0] * width
-                last_low = hz_low
-                for i, p in enumerate(powers):
-                    freq = hz_low + i * bin_w
-                    if freq < freq_min_hz or freq > freq_max_hz:
-                        continue
-                    col = int((freq - freq_min_hz) / span_hz * (width - 1))
-                    if 0 <= col < width:
-                        if p > accum[col]:
-                            accum[col] = p
-            self._publish(accum)
+                    cprof = CaptureProfile(
+                        center_frequency_hz=center_hz,
+                        sample_rate_sps=max(int(span_hz), 1000000),
+                        bandwidth_hz=span_hz,
+                        gain_db=20,
+                        num_samples=2048,
+                    )
+                    cap = self._backend.capture(cprof)
+                    raw_iq = cap.samples
+                    window = np.hanning(len(raw_iq))
+                    spectrum = np.fft.fftshift(np.fft.fft(raw_iq * window))
+                    power = 20 * np.log10(np.abs(spectrum) + 1e-9)
+                    
+                    binned = np.interp(np.linspace(0, len(power)-1, width), np.arange(len(power)), power)
+                    row = [float(p) - 80.0 for p in binned]
+                    
+                    self._publish(row)
+                    time.sleep(0.1)
+                except Exception as e:
+                    self._last_error = f"read error: {e}"
+                    time.sleep(0.5)
         except Exception as e:
-            self._last_error = f"reader: {e}"
-        finally:
-            if self._proc and self._proc.stderr:
-                try:
-                    err = self._proc.stderr.read()
-                    if err and not self._last_error:
-                        self._last_error = err.strip().splitlines()[-1][:120]
-                except Exception:
-                    pass
+            self._last_error = f"reader thread: {e}"
 
-    def _publish(self, dbm_row: list[float]):
+    def _publish(self, dbm_row):
         if not dbm_row:
             return
         with self._lock:
             self._latest_row = dbm_row
         self._sweeps += 1
 
-    def pop_row(self) -> list[float] | None:
+    def pop_row(self):
         with self._lock:
             row = self._latest_row
             self._latest_row = None
         return row
-
-
-def plutosdrplus_present() -> bool:
-    try:
-        subprocess.check_output(
-            ["PlutoSDRplus_info"], stderr=subprocess.STDOUT, timeout=2, text=True
-        )
-        return True
-    except Exception:
-        return False
 
 
 def hackrf_present() -> bool:
