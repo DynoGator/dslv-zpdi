@@ -128,7 +128,9 @@ class CoherenceScorer:
     def start_baseline(self, started_utc: float | None = None) -> None:
         """SPEC-009 — Transition NOT_STARTED → LEARNING. Idempotent for LEARNING."""
         if self._baseline_state == BaselineState.LOCKED:
-            logger.warning("SPEC-009: Cannot restart baseline from LOCKED state")
+            # Baseline is already LOCKED (loaded from persisted state on startup).
+            # This is the normal, expected boot path — not an error.
+            logger.debug("SPEC-009: Baseline already LOCKED from persisted state; skipping re-learn")
             return
         if self._baseline_state == BaselineState.LEARNING:
             # Preserve accumulated samples and start time across restarts.

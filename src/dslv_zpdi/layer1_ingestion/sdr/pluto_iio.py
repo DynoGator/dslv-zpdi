@@ -405,8 +405,18 @@ class PlutoIioBackend(SdrBackend):
 
         try:
             buf = self._iio.Buffer(self._rx_dev, num_samples)
+            # Warmup refill: libiio kernel buffer rings from a stale process may
+            # return 0 bytes on the very first refill after a service restart.
+            # A single extra refill clears the stale ring without data loss.
             buf.refill()
             data = buf.read()
+            if len(data) == 0:
+                # Stale ring detected — do one more refill cycle to prime the DMA
+                logger.debug(
+                    "Pluto DMA warmup: empty buf.read() on first refill — retrying once to prime ring buffer"
+                )
+                buf.refill()
+                data = buf.read()
         except Exception as exc:
             self._transport_errors += 1
             raise HardwareInitializationError(f"libiio capture failed: {exc}") from exc
