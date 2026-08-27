@@ -5,7 +5,7 @@ Wants=dslv-zpdi.service
 
 [Service]
 Type=simple
-User=dynogator
+User=alphapi
 Group=dynogator
 WorkingDirectory=/home/alphapi/dslv-zpdi
 EnvironmentFile=/home/alphapi/dslv-zpdi/.env
