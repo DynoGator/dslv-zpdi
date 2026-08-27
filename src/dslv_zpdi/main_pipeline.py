@@ -160,7 +160,37 @@ def main():
         sys.exit(1)
 
     state = PipelineState()
-    hal = get_tier1_hal(profile, simulator=args.simulator)
+
+    def _sig_handler(signum, _frame):
+        logger.info(f"Shutdown signal {signum} received — draining pipeline.")
+        state.running = False
+
+    signal.signal(signal.SIGINT, _sig_handler)
+    signal.signal(signal.SIGTERM, _sig_handler)
+
+    # SPEC-014 | Initialize dashboard health reporter early to show WAIT state
+    health_reporter = HealthReporter(interval_sec=2.0)
+    health_reporter.start()
+    health_reporter.update({
+        "sdr": {"reachable": False, "status": "WAITING_FOR_HARDWARE", "mode": "UNKNOWN", "center_hz": 0},
+        "pipeline": {"active": False, "timing_healthy": False}
+    })
+
+    # Retry loop for SDR initialization to prevent crash-loops on warm reboots
+    hal = None
+    while state.running:
+        try:
+            hal = get_tier1_hal(profile, simulator=args.simulator)
+            health_reporter.update({"sdr": {"reachable": True, "status": "ONLINE"}})
+            break
+        except Exception as exc:
+            logger.warning("SDR not ready (%s). Retrying in 5s...", exc)
+            time.sleep(5)
+            
+    if not state.running or hal is None:
+        health_reporter.stop()
+        sys.exit(0)
+
 
     writer_kwargs: dict = {}
     if args.output:
@@ -183,9 +213,6 @@ def main():
     # SPEC-009 | Begin baseline learning for trust-tier primary routing.
     scorer.start_baseline()
 
-    # SPEC-014 | Initialize dashboard health reporter
-    health_reporter = HealthReporter(interval_sec=2.0)
-    health_reporter.start()
 
     ingest_q = queue.Queue(maxsize=1024)
 

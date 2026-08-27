@@ -615,6 +615,8 @@ Requires=dslv-zpdi-preflight.service
 Type=simple
 User=${REAL_USER}
 Group=${REAL_USER}
+RuntimeDirectory=dslv-zpdi
+RuntimeDirectoryMode=0755
 WorkingDirectory=${INSTALL_DIR}
 ExecStart=${PIPE_EXEC}
 ${PIPE_ENV}
@@ -646,6 +648,8 @@ Wants=dslv-zpdi.service
 Type=simple
 User=${REAL_USER}
 Group=${REAL_USER}
+RuntimeDirectory=dslv-zpdi
+RuntimeDirectoryMode=0755
 WorkingDirectory=${INSTALL_DIR}
 ExecStart=${INSTALL_DIR}/.venv/bin/python -m dashboard.web_server
 Environment=PYTHONUNBUFFERED=1
