@@ -10,7 +10,7 @@ StartLimitBurst=3
 [Service]
 Type=simple
 User=root
-Group=dynogator
+Group=root
 WorkingDirectory=/home/alphapi/dslv-zpdi
 ExecStart=/home/alphapi/dslv-zpdi/.venv/bin/python -m dashboard.web_server
 Environment=PYTHONUNBUFFERED=1

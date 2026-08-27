@@ -7,7 +7,7 @@ StartLimitBurst=3
 [Service]
 Type=simple
 User=root
-Group=dynogator
+Group=root
 SupplementaryGroups=i2c gpio
 WorkingDirectory=/home/alphapi/dslv-zpdi
 ExecStart=/home/alphapi/dslv-zpdi/.venv/bin/python /home/alphapi/dslv-zpdi/tools/x1202_ups_monitor.py

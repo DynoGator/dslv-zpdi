@@ -6,7 +6,7 @@ Wants=dslv-zpdi.service
 [Service]
 Type=simple
 User=root
-Group=dynogator
+Group=root
 WorkingDirectory=/home/alphapi/dslv-zpdi
 EnvironmentFile=/home/alphapi/dslv-zpdi/.env
 ExecStart=/home/alphapi/dslv-zpdi/.venv/bin/python zpdi_web_server.py
