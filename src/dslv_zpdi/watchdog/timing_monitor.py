@@ -30,10 +30,10 @@ class TimingMonitor:
         self._stop_event = Event()
         self._thread = None
         self.last_jitter_ns = float("inf")
-        # Optimistic startup: assume healthy until first reading proves otherwise.
-        # Prevents the start-up race where payloads are dropped while we wait
-        # for the first chronyc poll.
-        self.healthy = True
+        # SPEC-004A.3: Pessimistic startup: assume UNHEALTHY until first reading proves otherwise.
+        # This prevents the start-up race where unverified payloads are admitted
+        # before the first chronyc poll completes.
+        self.healthy = False
 
     def start(self):
         """Start monitoring thread."""
@@ -125,4 +125,5 @@ class TimingMonitor:
 
     def _trigger_timing_quarantine(self):
         """Emit signal to quarantine all Tier 1 data until timing recovers."""
-        # Integration point with MVIP-6 watchdog - to be refined in Phase 2B
+        self.healthy = False
+        logger.error("SPEC-004A.3: TIMING QUARANTINE ENGAGED - Jitter exceeded threshold")

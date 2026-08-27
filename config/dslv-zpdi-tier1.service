@@ -9,11 +9,11 @@ StartLimitBurst=3
 Type=simple
 User=dynogator
 Group=dynogator
-WorkingDirectory=/home/dynogator/dslv-zpdi
-EnvironmentFile=/home/dynogator/dslv-zpdi/.env
-ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python tier1_ingestion_server.py
+WorkingDirectory=/home/alphapi/dslv-zpdi
+EnvironmentFile=/home/alphapi/dslv-zpdi/.env
+ExecStart=/home/alphapi/dslv-zpdi/.venv/bin/python tier1_ingestion_server.py
 Environment=PYTHONUNBUFFERED=1
-Environment=PYTHONPATH=/home/dynogator/dslv-zpdi/src
+Environment=PYTHONPATH=/home/alphapi/dslv-zpdi/src
 Environment=ZPDI_SERVER_HOST=0.0.0.0
 Environment=ZPDI_SERVER_PORT=8443
 Restart=on-failure
@@ -24,7 +24,7 @@ ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=yes
 NoNewPrivileges=true
-ReadWritePaths=/home/dynogator/dslv-zpdi/output /home/dynogator/dslv-zpdi/logs /var/lib/dslv_zpdi /run/dslv-zpdi
+ReadWritePaths=/home/alphapi/dslv-zpdi/output /home/alphapi/dslv-zpdi/logs /var/lib/dslv_zpdi /run/dslv-zpdi
 
 StandardOutput=journal
 StandardError=journal

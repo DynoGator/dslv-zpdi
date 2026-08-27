@@ -12,6 +12,7 @@ from dslv_zpdi.core.states import RouteStream, TrustState
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
 from dslv_zpdi.layer2_core.coherence import CoherencePacket
 from dslv_zpdi.layer2_core.swarm_integrity import SwarmIntegrityMonitor
+from dslv_zpdi.contracts.tier1_policy import get_routing_thresholds
 from dslv_zpdi.layer2_core.wiring import coherence_engine, wire_to_coherence
 
 
@@ -27,8 +28,6 @@ class RoutingDecision:
 
 class DualStreamRouter:
     """SPEC-007.3 — Stateful router enforcing exactly two streams: PRIMARY and SECONDARY."""
-
-    CANDIDATE_RATIO = 0.5
 
     def __init__(self):
         self.stats = {"routed_primary": 0, "routed_secondary": 0}
@@ -61,10 +60,12 @@ class DualStreamRouter:
             )
 
         dynamic_threshold = baseline_status.get("threshold", 0.40)
-        candidate_threshold = dynamic_threshold * self.CANDIDATE_RATIO
+        thresholds = get_routing_thresholds(dynamic_threshold)
+        primary_threshold = thresholds["primary"]
+        candidate_threshold = thresholds["candidate"]
 
         # PRIMARY: confirmed event with r_smooth above threshold and event window
-        if pkt.r_smooth >= dynamic_threshold and pkt.event_window_id:
+        if pkt.r_smooth >= primary_threshold and pkt.event_window_id:
             pkt.trust_state = TrustState.PRIMARY_ACCEPTED.value
             self.stats["routed_primary"] += 1
             return RoutingDecision(

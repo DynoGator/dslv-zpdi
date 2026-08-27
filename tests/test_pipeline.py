@@ -133,7 +133,8 @@ def test_rotation():
 def test_baseline():
     scorer = CoherenceScorer()
     scorer.baseline_learning_mode = True
-    scorer.baseline_samples = [0.1, 0.12, 0.11, 0.13, 0.1, 0.11]
+    for r in [0.1, 0.12, 0.11, 0.13, 0.1, 0.11]:
+        scorer.update_baseline(r)
     scorer.finalize_baseline(force=True)
     assert not scorer.baseline_learning_mode
     assert 0.24 < scorer.dynamic_threshold < 0.26

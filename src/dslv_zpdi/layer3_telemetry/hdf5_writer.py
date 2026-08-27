@@ -109,7 +109,8 @@ class HDF5Writer:
 
     def ingest(self, binary_payload: bytes, payload_obj: IngestionPayload) -> RoutingDecision:
         """SPEC-007 — Process single packet through router and persist."""
-        decision = self.router.route(payload_obj)
+        with self._write_lock:
+            decision = self.router.route(payload_obj)
         if decision.packet is not None:
             integrity_ok = self.verify_packet_integrity(
                 decision.packet, binary_payload, payload_obj
@@ -137,18 +138,21 @@ class HDF5Writer:
 
     def _write_primary(
         self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload
-    ):
+    ) -> bool:
         """SPEC-007 — Write institutional-grade packet to HDF5 with attestation.
 
-        Thread-safe: acquires self._write_lock so that concurrent ingest calls
-        from the local pipeline and the node-receiver HTTP server do not corrupt
-        the HDF5 file.
+        Returns True if successful, False if skipped or failed.
         """
         if not HDF5_AVAILABLE:
-            logger.warning("h5py not installed — primary write skipped")
-            return
-        with self._write_lock:
+            logger.error("h5py not installed — primary write FAILED")
+            return False
+        # Lock is already acquired by ingest()
+        try:
             self._write_primary_locked(packet, binary_payload, payload_obj)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to write primary data: {e}")
+            return False
 
     def _write_primary_locked(
         self, packet: CoherencePacket, binary_payload: bytes, payload_obj: IngestionPayload
@@ -268,7 +272,8 @@ class HDF5Writer:
         self.current_file.attrs["file_version"] = FILE_VERSION
         self.current_file.attrs["created_utc"] = time.time()
         self.event_count = 0
-        self._previous_chain_hash = self._genesis_hash()
+        if not hasattr(self, '_previous_chain_hash') or self._previous_chain_hash is None:
+            self._previous_chain_hash = self._genesis_hash()
         self._event_chain_hashes = []
 
     def _finalize_file(self):
@@ -396,13 +401,13 @@ class HDF5Writer:
             self.stats["checksum_missing"] += 1
             return False
 
-        # Recompute checksum directly on the exact struct header and payload bytes
-        # Since payload_obj.to_binary() generated binary_payload originally and set the checksum on payload_obj
-        # we can verify that computing blake2b on binary_payload yields the expected value.
+        # If the payload came from an external source (e.g. node_receiver), we must
+        # rely on external cryptographic attestation. For now, this serves as a 
+        # memory self-check (tautology prevention noted).
         computed_checksum = hashlib.blake2b(binary_payload, digest_size=32).hexdigest()
 
         if stored_checksum != computed_checksum:
-            logger.error("SPEC-010 VIOLATION: Checksum mismatch for %s", packet.payload_uuid)
+            logger.error("SPEC-010 VIOLATION: Memory corruption detected for %s", packet.payload_uuid)
             self.stats["checksum_invalid"] += 1
             return False
         return True

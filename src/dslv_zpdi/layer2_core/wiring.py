@@ -12,6 +12,7 @@ import os
 
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
+from dslv_zpdi.contracts.tier1_policy import MIN_BASELINE_SAMPLES, BASELINE_DURATION_HOURS
 from .coherence import CoherencePacket, CoherenceScorer
 
 
@@ -19,13 +20,13 @@ def _load_baseline_config() -> dict:
     """SPEC-009 — Load baseline learning parameters from environment."""
     cfg: dict = {}
     try:
-        cfg["baseline_duration_hours"] = float(os.getenv("DSLV_BASELINE_HOURS", "72"))
+        cfg["baseline_duration_hours"] = float(os.getenv("DSLV_BASELINE_HOURS", str(BASELINE_DURATION_HOURS)))
     except ValueError:
-        cfg["baseline_duration_hours"] = 72.0
+        cfg["baseline_duration_hours"] = float(BASELINE_DURATION_HOURS)
     try:
-        cfg["min_baseline_samples"] = int(os.getenv("DSLV_MIN_BASELINE_SAMPLES", "240"))
+        cfg["min_baseline_samples"] = int(os.getenv("DSLV_MIN_BASELINE_SAMPLES", str(MIN_BASELINE_SAMPLES)))
     except ValueError:
-        cfg["min_baseline_samples"] = 240
+        cfg["min_baseline_samples"] = int(MIN_BASELINE_SAMPLES)
     try:
         cfg["min_confirming_nodes"] = int(os.getenv("DSLV_MIN_CONFIRMING_NODES", "4"))
     except ValueError:

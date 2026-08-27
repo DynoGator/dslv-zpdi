@@ -9,10 +9,10 @@ Type=simple
 User=dynogator
 Group=dynogator
 SupplementaryGroups=i2c gpio
-WorkingDirectory=/home/dynogator/dslv-zpdi
-ExecStart=/home/dynogator/dslv-zpdi/.venv/bin/python /home/dynogator/dslv-zpdi/tools/x1202_ups_monitor.py
+WorkingDirectory=/home/alphapi/dslv-zpdi
+ExecStart=/home/alphapi/dslv-zpdi/.venv/bin/python /home/alphapi/dslv-zpdi/tools/x1202_ups_monitor.py
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=/home/dynogator/dslv-zpdi/.env
+EnvironmentFile=/home/alphapi/dslv-zpdi/.env
 Restart=on-failure
 RestartSec=10
 MemoryMax=128M

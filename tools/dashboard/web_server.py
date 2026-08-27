@@ -557,6 +557,7 @@ def _get_status() -> dict:
         "timing_healthy": timing_healthy,
         "primary_written": stats.get("primary_written", 0),
         "integrity_failed": stats.get("integrity_failed", 0),
+        "min_nodes_required": int(os.getenv("DSLV_MIN_CONFIRMING_NODES", "4")),
     }
 
     status["sdr"] = {
