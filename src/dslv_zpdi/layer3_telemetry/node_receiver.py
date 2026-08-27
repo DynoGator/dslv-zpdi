@@ -284,10 +284,10 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
 def main() -> None:
     """SPEC-014 — Run the node receiver service entrypoint."""
     port = int(os.getenv("DSLV_RECEIVER_PORT", "5775"))
-    host = os.getenv("DSLV_RECEIVER_HOST", "127.0.0.1")
+    host = os.getenv("DSLV_RECEIVER_HOST", "0.0.0.0")
     app = create_app()
     logger.info("DSLV-ZPDI node receiver starting on %s:%d", host, port)
-    app.run(host=host, port=port, threaded=True)
+    app.run(host="0.0.0.0", port=port, threaded=True)
 
 
 if __name__ == "__main__":
