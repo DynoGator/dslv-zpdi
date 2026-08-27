@@ -73,6 +73,8 @@ class Demodulator:
     def set_mode(self, mode_key: str):
         if mode_key not in self.PRESETS:
             raise ValueError(f"Unknown demodulation mode: {mode_key}")
+        if mode_key == self.active_mode:
+            return  # Already in this mode — no-op, no log spam
         self.active_mode = mode_key
         self.current_preset = self.PRESETS[mode_key]
         logger.info(f"Demodulator mode set to {mode_key} ({self.current_preset.name})")

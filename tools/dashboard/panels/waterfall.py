@@ -1014,19 +1014,19 @@ class WaterfallPanel:
 
         src_label = {
             "PLUTO": "PLU",
-            "PLUTO-WAIT": "PLU…",
+            "PLUTO-WAIT": "PLU-INIT",
             "HACKRF": "HRF",
-            "HACKRF-WAIT": "HRF…",
-            "WAIT": "WAIT",
+            "HACKRF-WAIT": "HRF-INIT",
+            "WAIT": "INIT",
             "SIM": "SIM",
         }.get(self._last_source, "SIM") if self.compact else {
-            "PLUTO": "PLUTO",
-            "PLUTO-WAIT": "PLUTO…",
-            "HACKRF": "HACKRF",
-            "HACKRF-WAIT": "HACKRF…",
-            "WAIT": "WAITING",
-            "SIM": "SIM",
-        }.get(self._last_source, "SIM")
+            "PLUTO": "PlutoSDR+",
+            "PLUTO-WAIT": "PlutoSDR+ (initializing)",
+            "HACKRF": "HackRF",
+            "HACKRF-WAIT": "HackRF (initializing)",
+            "WAIT": "SDR initializing...",
+            "SIM": "SIMULATOR",
+        }.get(self._last_source, "SIMULATOR")
 
         mod_label = getattr(self, "modulation", "RAW") if self.compact else getattr(self, "modulation", "RAW-SWEEP")
 

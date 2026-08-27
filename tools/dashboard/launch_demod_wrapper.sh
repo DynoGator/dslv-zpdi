@@ -19,6 +19,8 @@ for i in {1..10}; do
 done
 
 echo "[SYSTEM] SDR Lock Freed. Launching Demodulation Module..."
+# The main pipeline is stopped, so it's safe to use the real SDR directly here.
+export DSLV_DASHBOARD_REAL_SDR="1"
 # Execute the passed command
 "$@"
 EXIT_CODE=$?
