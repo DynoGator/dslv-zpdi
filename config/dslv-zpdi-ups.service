@@ -6,7 +6,7 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
-User=alphapi
+User=root
 Group=dynogator
 SupplementaryGroups=i2c gpio
 WorkingDirectory=/home/alphapi/dslv-zpdi

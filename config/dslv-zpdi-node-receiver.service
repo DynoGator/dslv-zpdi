@@ -8,7 +8,7 @@ Wants=dslv-zpdi-preflight.service
 
 [Service]
 Type=simple
-User=alphapi
+User=root
 Group=dynogator
 WorkingDirectory=/home/alphapi/dslv-zpdi
 ExecStart=/home/alphapi/dslv-zpdi/.venv/bin/python -m dslv_zpdi.layer3_telemetry.node_receiver
