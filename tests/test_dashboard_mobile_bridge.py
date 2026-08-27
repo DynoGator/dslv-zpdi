@@ -4,14 +4,29 @@ import json
 import time
 from unittest.mock import patch
 
-from dashboard.app import _is_ten_inch, build_layout
-from dashboard.config import PanelsCfg
-from dashboard.mobile_bridge import (
-    MobileBridge,
-    coerce_gps,
-    coerce_magnetometer,
-    collect_mobile_telemetry,
+import pytest
+
+# Dashboard imports depend on optional packages (pyfiglet, etc.).
+# Skip gracefully rather than blocking all test collection.
+try:
+    from dashboard.app import _is_ten_inch, build_layout
+    from dashboard.config import PanelsCfg
+    from dashboard.mobile_bridge import (
+        MobileBridge,
+        coerce_gps,
+        coerce_magnetometer,
+        collect_mobile_telemetry,
+    )
+    _DASHBOARD_AVAILABLE = True
+except ImportError as _exc:
+    _DASHBOARD_AVAILABLE = False
+    _SKIP_REASON = f"dashboard optional deps unavailable: {_exc}"
+
+pytestmark = pytest.mark.skipif(
+    not _DASHBOARD_AVAILABLE,
+    reason=_SKIP_REASON if not _DASHBOARD_AVAILABLE else "",
 )
+
 
 
 class MockPanel:
