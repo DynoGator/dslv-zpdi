@@ -48,12 +48,12 @@ class SDRAudioStreamer:
         self._detect_player()
 
     def _detect_player(self):
-        if shutil.which("paplay"):
-            self.player_cmd = ["paplay", "--raw", f"--rate={self.sample_rate}", "--channels=1", "--format=s16le"]
-            self.player_name = "paplay (PulseAudio)"
-        elif shutil.which("pw-play"):
+        if shutil.which("pw-play"):
             self.player_cmd = ["pw-play", "--raw", "--rate", str(self.sample_rate), "--channels", "1", "--format", "s16", "-"]
             self.player_name = "pw-play (PipeWire)"
+        elif shutil.which("paplay"):
+            self.player_cmd = ["paplay", "--raw", f"--rate={self.sample_rate}", "--channels=1", "--format=s16le"]
+            self.player_name = "paplay (PulseAudio)"
         elif shutil.which("aplay"):
             self.player_cmd = ["aplay", "-t", "raw", "-r", str(self.sample_rate), "-c", "1", "-f", "S16_LE", "-q", "-"]
             self.player_name = "aplay (ALSA)"
@@ -63,7 +63,6 @@ class SDRAudioStreamer:
         else:
             self.player_cmd = None
             self.player_name = None
-
     def start(self) -> bool:
         if self.running or not self.player_cmd:
             return False
@@ -73,7 +72,7 @@ class SDRAudioStreamer:
                 self.player_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=open("/tmp/demod_audio_error.log", "w")
             )
         except Exception:
             self.running = False
@@ -242,7 +241,8 @@ class SDRAudioStreamer:
                 if self.proc and self.proc.stdin:
                     self.proc.stdin.write(pcm_data.tobytes())
                     self.proc.stdin.flush()
-            except (BrokenPipeError, OSError):
+            except (BrokenPipeError, OSError) as e:
+                open("/tmp/demod_pipe.log", "w").write(str(e))
                 break
 
             if not sdr_backend and not self.app.paused:

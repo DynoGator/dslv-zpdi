@@ -829,6 +829,7 @@ class WaterfallPanel:
                     raw_dbm = raw_row
                     row = self._normalize(raw_row)
                     got_row = True
+                    self._last_row_time = time.time()
             elif self._active_real == "hackrf":
                 raw_row = self._hackrf_stream.pop_row()
                 if raw_row is not None:
@@ -836,11 +837,22 @@ class WaterfallPanel:
                     raw_dbm = raw_row
                     row = self._normalize(raw_row)
                     got_row = True
+                    self._last_row_time = time.time()
         if row is None:
-            row = self._sim_row()
-            raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
             if self._want_real:
-                source = f"{self._active_real.upper()}-WAIT" if self._active_real else "WAIT"
+                now = time.time()
+                if not hasattr(self, "_last_row_time"):
+                    self._last_row_time = now
+                if now - self._last_row_time > 1.0:
+                    self._last_source = f"{self._active_real.upper()}-WAIT" if self._active_real else "WAIT"
+                return False
+            else:
+                row = self._sim_row()
+                raw_dbm = [self.dbm_floor + v * (self.dbm_ceil - self.dbm_floor) for v in row]
+                source = "SIM"
+        else:
+            self._last_row_time = time.time()
+            
         self._last_source = source
 
         with self._rows_lock:
