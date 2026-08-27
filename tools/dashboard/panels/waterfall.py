@@ -172,7 +172,7 @@ class PlutoSDRplusSweepStream:
                 try:
                     cprof = CaptureProfile(
                         center_frequency_hz=center_hz,
-                        sample_rate_sps=max(int(span_hz), 1000000),
+                        sample_rate_sps=max(int(span_hz), 2083334),
                         bandwidth_hz=span_hz,
                         gain_db=20,
                         num_samples=2048,

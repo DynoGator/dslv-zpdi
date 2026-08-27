@@ -118,18 +118,6 @@ def get_tier1_hal(
     if simulator or profile.trust.allow_simulator_fallback:
         simulator = True
 
-    # Timing authority
-    timing_cfg = profile.timing
-    if simulator:
-        timing_authority = SimulatedTimingAuthority(
-            reference_frequency_hz=timing_cfg.reference_frequency_hz
-        )
-    else:
-        timing_authority = LBE1421TimingAuthority(
-            pps_device=timing_cfg.pps_device,
-            nmea_port=timing_cfg.nmea_port,
-            reference_frequency_hz=timing_cfg.reference_frequency_hz,
-        )
 
     # SDR backend
     sdr_cfg = profile.sdr
@@ -159,6 +147,19 @@ def get_tier1_hal(
             raise ConfigurationError("No SDR found in auto mode")
     else:
         raise ConfigurationError(f"Unsupported SDR backend in profile: {backend_name}")
+
+    # Timing authority
+    timing_cfg = profile.timing
+    if simulator:
+        timing_authority = SimulatedTimingAuthority(
+            reference_frequency_hz=timing_cfg.reference_frequency_hz
+        )
+    else:
+        timing_authority = LBE1421TimingAuthority(
+            pps_device=timing_cfg.pps_device,
+            nmea_port=timing_cfg.nmea_port,
+            reference_frequency_hz=timing_cfg.reference_frequency_hz,
+        )
 
     # Frequency translation
     frequency_translation = _build_frequency_translation(profile)
