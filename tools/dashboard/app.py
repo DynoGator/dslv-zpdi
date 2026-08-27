@@ -173,7 +173,7 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
         content = Group(status, keys)
     else:
         brand = Text(
-            "DSLV-ZPDI :: DynoGatorLabs :: Tier 1 Anchor :: "
+            "DSLV-ZPDI :: DynoGatorLabs :: Alpha Node :: "
             '"If it moves, it gets coherence-scored."',
             style="italic dim bright_white",
             no_wrap=True,
@@ -581,7 +581,6 @@ class Dashboard:
     def _toast(self, msg: str, duration: float = 3.0):
         self._toast_msg = msg
         self._toast_expire = time.time() + duration
-        self._toast(msg)
 
     def _get_state(self) -> dict:
         wf = self._panels.get("waterfall")

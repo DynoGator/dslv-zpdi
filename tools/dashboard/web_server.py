@@ -275,7 +275,7 @@ async function refresh() {
 
     // Nodes Panel
     let nodeHtml='<h2>Swarm Nodes</h2>';
-    nodeHtml += row('Pi 5 Anchor', badge('ONLINE', true, false));
+    nodeHtml += row('Alpha Node', badge('ONLINE', true, false));
     (n.registered_nodes||[]).forEach(nd => {
       nodeHtml += '<hr>';
       nodeHtml += row(nd.node_id, badge(nd.online?'ONLINE':'OFFLINE', nd.online, !nd.online));

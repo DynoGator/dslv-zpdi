@@ -33,21 +33,21 @@ _TIERS = (
             "Zero-Point Data Integration  ::  GPS-Disciplined RF Metrology"
         ),
         "ANCHOR NODE  ::  KCET-ATLAS RUNTIME  ::  2026 DYNOGATORLABS",
-        "RF METROLOGY · COHERENCE ENGINE · TIER 1 ANCHOR",
+        "RF METROLOGY · COHERENCE ENGINE · ALPHA NODE",
     ),
     (
         80,
         "standard",
         "GPS-Disciplined RF Metrology · Coherence Engine",
         "ANCHOR · KCET-ATLAS · 2026 DYNOGATORLABS",
-        "RF METROLOGY · TIER 1 ANCHOR",
+        "RF METROLOGY · ALPHA NODE",
     ),
     (
         0,
         "mini",
         "RF Metrology · Coherence Engine",
         "KCET-ATLAS · 2026",
-        "TIER 1 ANCHOR",
+        "ALPHA NODE",
     ),
 )
 
@@ -126,7 +126,7 @@ def compact_banner() -> Panel:
     line1.append("◤ ", style=f"bold {NEON_CYAN}")
     line1.append("DSLV-ZPDI", style=f"bold {NEON_GREEN}")
     line1.append(" ◢ ", style=f"bold {NEON_CYAN}")
-    line1.append("Tier 1 Anchor", style=f"bold {AMBER}")
+    line1.append("Alpha Node", style=f"bold {AMBER}")
 
     line2 = Text(
         "RF Metrology · Coherence Engine · 2026",
