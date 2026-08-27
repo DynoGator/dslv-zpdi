@@ -18,6 +18,7 @@ from dslv_zpdi.config_models import NodeProfile
 from dslv_zpdi.layer1_ingestion.hal_factory import _build_key_provider, get_tier1_hal
 from dslv_zpdi.layer2_core.wiring import coherence_engine as scorer
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
+from dslv_zpdi.layer3_telemetry.sqlite_cache import SQLiteCache
 from dslv_zpdi.watchdog.health_reporter import HealthReporter
 from dslv_zpdi.watchdog.timing_monitor import TimingMonitor
 
@@ -70,7 +71,9 @@ def _ingest_loop(hal, args, state, ingest_q):
             time.sleep(0.1)
 
 
-def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter):
+import json
+
+def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter, sqlite_cache):
     """SPEC-011.2 | Processing consumer thread."""
     hw_tick = 0
     while state.running:
@@ -80,6 +83,19 @@ def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter):
             if not monitor.healthy:
                 payload.trust_state = "SECONDARY_QUARANTINED"
                 payload.quarantine_reason = "timing_unhealthy"
+
+            # SPEC-014 | Keep latest state updated in sqlite cache for web API
+            try:
+                # We need to serialize payload to json.
+                # IngestionPayload is a dataclass.
+                import dataclasses
+                payload_dict = dataclasses.asdict(payload)
+                # Ensure raw_value/samples etc are JSON serializable if needed
+                payload_json = json.dumps(payload_dict, default=str)
+                wall_ns = payload.timestamp_utc * 1e9 if payload.timestamp_utc else None
+                sqlite_cache.update(payload_json, int(wall_ns) if wall_ns else None)
+            except Exception as e:
+                logger.debug("Failed to cache latest state: %s", e)
 
             payload_bin = payload.to_binary()
             decision = writer.ingest(payload_bin, payload)
@@ -99,6 +115,10 @@ def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter):
                 "ticks": state.tick,
                 "baseline": bl,
                 "stats": writer.get_stats(),
+                "pipeline": {
+                    "active": state.running,
+                    "timing_healthy": monitor.healthy
+                }
             }
             if decision.packet:
                 update_data["coherence"] = {
@@ -213,13 +233,15 @@ def main():
     # SPEC-009 | Begin baseline learning for trust-tier primary routing.
     scorer.start_baseline()
 
+    sqlite_cache = SQLiteCache()
+    sqlite_cache.open()
 
     ingest_q = queue.Queue(maxsize=1024)
 
     t_ingest = threading.Thread(target=_ingest_loop, args=(hal, args, state, ingest_q), daemon=True)
     t_process = threading.Thread(
         target=_process_loop,
-        args=(hal, monitor, writer, ingest_q, state, health_reporter),
+        args=(hal, monitor, writer, ingest_q, state, health_reporter, sqlite_cache),
         daemon=True,
     )
 
@@ -260,6 +282,7 @@ def main():
     health_reporter.stop()
     monitor.stop()
     writer.close()
+    sqlite_cache.close()
     logger.info("Shutdown complete.")
 
 
