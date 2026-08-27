@@ -53,7 +53,11 @@ class TimingMonitor:
             try:
                 jitter = self._read_pps_jitter()
                 self.last_jitter_ns = jitter
+                was_healthy = self.healthy
                 self.healthy = jitter < self.threshold_ns
+
+                if self.healthy and not was_healthy and math.isfinite(self.last_jitter_ns):
+                    logger.info("SPEC-004A.3: TIMING QUARANTINE LIFTED - Jitter %d ns is within %d ns threshold", int(jitter), self.threshold_ns)
 
                 if not self.healthy:
                     if not math.isfinite(jitter):

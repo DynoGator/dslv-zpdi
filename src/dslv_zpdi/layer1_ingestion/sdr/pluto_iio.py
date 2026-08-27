@@ -134,8 +134,9 @@ class PlutoIioBackend(SdrBackend):
         try:
             rx_lo_chan = self._ad9361.find_channel("altvoltage0", True)
             if rx_lo_chan:
-                min_hz = int(rx_lo_chan.attrs.get("frequency_available", "0 0").value.split()[0])
-                max_hz = int(rx_lo_chan.attrs.get("frequency_available", "0 0").value.split()[-1])
+                avail = rx_lo_chan.attrs.get("frequency_available", "0 0").value.replace('[', '').replace(']', '')
+                min_hz = int(avail.split()[0])
+                max_hz = int(avail.split()[-1])
                 rx_lo = (min_hz, max_hz)
         except Exception as exc:  # pylint: disable=broad-except
             logger.debug("Could not read RX LO range: %s", exc)
@@ -146,7 +147,8 @@ class PlutoIioBackend(SdrBackend):
             if rx_chan:
                 rate_attr = rx_chan.attrs.get("sampling_frequency_available", None)
                 if rate_attr:
-                    sample_rates = [int(x) for x in rate_attr.value.split()]
+                    avail_rates = rate_attr.value.replace('[', '').replace(']', '')
+                    sample_rates = [int(x) for x in avail_rates.split()]
         except Exception as exc:  # pylint: disable=broad-except
             logger.debug("Could not read sample rates: %s", exc)
 
