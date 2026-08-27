@@ -31,9 +31,10 @@ import hashlib
 import json
 import logging
 import math
+import os
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -149,9 +150,9 @@ class PixelTrustScorer:
             flags.append("coarse_gps")
             score -= 0.2
 
-        # Magnetometer sanity
-        mag = data.get("magnetometer_ut")
-        if mag is None or len(mag) != 3:
+        # Magnetometer sanity — accept list, tuple, or {x,y,z}/{values:[...]}
+        mag = _coerce_mag(data.get("magnetometer_ut"))
+        if mag is None:
             flags.append("no_magnetometer")
             score -= 0.2
         else:
@@ -232,14 +233,15 @@ class PixelHttpTransport:
             logger.debug("Pixel poll latency: %.1f ms", latency_ms)
             received_utc = time.time()
             score, flags = trust_scorer.score(data, received_utc)
+            gps = data.get("gps") if isinstance(data.get("gps"), dict) else {}
 
             telem = PixelTelemetry(
                 timestamp_utc=float(data.get("timestamp_utc", received_utc)),
-                magnetometer_ut=data.get("magnetometer_ut"),
-                gps_lat=_safe_float(data.get("gps", {}).get("lat")),
-                gps_lon=_safe_float(data.get("gps", {}).get("lon")),
-                gps_alt=_safe_float(data.get("gps", {}).get("alt")),
-                gps_accuracy=_safe_float(data.get("gps", {}).get("accuracy")),
+                magnetometer_ut=_coerce_mag(data.get("magnetometer_ut")),
+                gps_lat=_safe_float(gps.get("lat", gps.get("latitude", data.get("latitude")))),
+                gps_lon=_safe_float(gps.get("lon", gps.get("longitude", data.get("longitude")))),
+                gps_alt=_safe_float(gps.get("alt", gps.get("altitude", data.get("altitude")))),
+                gps_accuracy=_safe_float(gps.get("accuracy", data.get("accuracy"))),
                 camera_frame_hash=data.get("camera_frame_hash"),
                 camera_frame_path=data.get("camera_frame_path"),
                 accelerometer=data.get("accelerometer"),
@@ -254,11 +256,18 @@ class PixelHttpTransport:
         except Exception as exc:
             logger.warning("Pixel HTTP poll failed: %s — returning cached/stale", exc)
             if self._last_good is not None:
-                stale = self._last_good
-                stale.trust_flags = list(stale.trust_flags) + ["hotspot_drop"]
-                stale.trust_score = max(0.0, stale.trust_score - 0.3)
-                stale.timestamp_utc = time.time()
-                return stale
+                # Copy — never mutate the last-good sample in place. Keep the
+                # original timestamp so dashboards see STALE, not a fake LIVE
+                # sample. Apply the hotspot penalty once per derived copy.
+                base = self._last_good
+                flags = list(base.trust_flags)
+                if "hotspot_drop" not in flags:
+                    flags.append("hotspot_drop")
+                return replace(
+                    base,
+                    trust_flags=flags,
+                    trust_score=max(0.0, base.trust_score - 0.3),
+                )
             # No cache — return empty telemetry with zero trust
             return PixelTelemetry(
                 timestamp_utc=time.time(),
@@ -345,19 +354,32 @@ class PixelNodeBridge:
         timeout_sec: float = 5.0,
         trust_threshold: float = 0.5,
         simulator: PixelSimulator | None = None,
+        allow_simulator: bool | None = None,
     ):
         self.trust_scorer = PixelTrustScorer()
         self.trust_threshold = trust_threshold
         self.http = PixelHttpTransport(host=host, port=http_port, timeout_sec=timeout_sec)
         self.sim = simulator or PixelSimulator()
+        if allow_simulator is None:
+            env_sim = os.getenv("DEV_SIMULATOR", "").strip().lower() in ("1", "true", "yes")
+            allow_simulator = env_sim or simulator is not None
+        self.allow_simulator = bool(allow_simulator)
 
     def poll(self) -> PixelTelemetry:
-        """Poll HTTP first; on total failure return simulator (never raises)."""
+        """Poll HTTP first; on total failure return simulator only when allowed.
+
+        Production (allow_simulator=False) returns the last cached sample or
+        an unreachable zero-trust record. Simulator fallback is gated so fake
+        NYC GPS cannot land in field HDF5 as mobile-node telemetry.
+        """
         telem = self.http.poll(self.trust_scorer)
         # If HTTP transport itself is dead (no connection at all), fall back to sim
         if "unreachable" in telem.trust_flags and "no_cache" in telem.trust_flags:
-            logger.info("Pixel bridge: HTTP totally unreachable, returning simulator")
-            return self.sim.poll(self.trust_scorer)
+            if self.allow_simulator:
+                logger.info("Pixel bridge: HTTP totally unreachable, returning simulator")
+                return self.sim.poll(self.trust_scorer)
+            logger.info("Pixel bridge: HTTP totally unreachable, simulator disabled")
+            return telem
         return telem
 
     def poll_sync(self) -> PixelTelemetry:
@@ -376,3 +398,30 @@ def _safe_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+# SPEC-016.8 — Normalize magnetometer samples from list / dict publishers
+def _coerce_mag(value: Any) -> list[float] | None:
+    """Return a 3-axis µT vector or None if the sample is unusable."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        if isinstance(value.get("values"), (list, tuple)):
+            value = value["values"]
+        elif all(k in value for k in ("x", "y", "z")):
+            value = [value["x"], value["y"], value["z"]]
+        else:
+            return None
+    try:
+        seq = list(value)
+    except TypeError:
+        return None
+    if len(seq) != 3:
+        return None
+    out: list[float] = []
+    for item in seq:
+        coerced = _safe_float(item)
+        if coerced is None:
+            return None
+        out.append(coerced)
+    return out

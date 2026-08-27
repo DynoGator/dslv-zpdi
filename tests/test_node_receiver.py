@@ -92,6 +92,37 @@ class TestNodeReceiverIngestContract:
         )
         assert resp.status_code == 200
 
+    def test_ingest_mobile_extra_fields_and_cannot_self_promote(self, app_client):
+        """SPEC-014.8 — Pixel schema 3.5 extras must not 500; hardware_tier is forced to 2."""
+        from dslv_zpdi.layer3_telemetry.node_receiver import _payload_from_swarm_json
+
+        client, _, secondary = app_client
+        payload = {
+            "node_id": "dslv-zpdi/mobile-tier2",
+            "payload_uuid": "mobile-extra-1",
+            "sensor_id": "MMC5616 Magnetometer",
+            "modality": "magnetometer",
+            "timestamp_utc": time.time(),
+            "raw_value": {"x": 1.0, "y": 2.0, "z": 3.0},
+            "hardware_tier": 1,
+            "schema_version": "3.5",
+            "spec_id": "SPEC-005A.1b",
+            "latitude": 38.4,
+            "longitude": -105.0,
+            "accuracy": 9.0,
+            "location_provider": "gps",
+        }
+        coerced = _payload_from_swarm_json(dict(payload))
+        assert coerced.hardware_tier == 2
+        assert coerced.raw_value.get("swarm_extras", {}).get("latitude") == 38.4
+        resp = client.post(
+            "/api/v1/ingest",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        assert (secondary / "node_registry.jsonl").exists()
+
 
 class TestNodeReceiverRadonEyeContract:
     """SPEC-014.8 — Tests for the RadonEye staging endpoint per SPEC-014.5 (secondary only)."""

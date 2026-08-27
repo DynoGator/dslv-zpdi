@@ -193,9 +193,8 @@ def _is_compact() -> bool:
 
 def _is_ten_inch() -> bool:
     """10\" touchscreen layout (about 1280x800 terminal, e.g. 160x45 cols/rows)."""
-    if os.getenv("DSLV_DASHBOARD_10IN", "1").strip() in ("1", "true", "yes"):
-        return True
-    return True
+    val = os.getenv("DSLV_DASHBOARD_10IN", "1").strip().lower()
+    return val in ("1", "true", "yes")
 
 
 def _enabled(names, panels):
@@ -222,8 +221,8 @@ def build_layout(
         # 10" touchscreen: two-column layout. Left column carries dense status
         # panels and the settings reference; the right column is dominated by
         # the waterfall with logs/notifications underneath.
-        left_names = _enabled(("system", "pipeline", "hardware", "settings"), panels)
-        right_bottom = _enabled(("logs", "notifications"), panels)
+        left_names = _enabled(("system", "pipeline", "hardware", "mobile"), panels)
+        right_bottom = _enabled(("logs", "notifications", "settings"), panels)
 
         root_rows: list[Layout] = []
         if show_banner:
@@ -747,7 +746,7 @@ class Dashboard:
                 if self._live is not None:
                     self._live.update(self.layout)
                 self._toast(f"compact: {'ON' if self.compact else 'OFF'}")
-        elif k in ("t", "T"):
+        elif k == "t":
             if not self.waterfall_only:
                 self.ten_inch = not self.ten_inch
                 if self.ten_inch:

@@ -26,6 +26,12 @@ try:
 except ImportError:
     FLASK_AVAILABLE = False
 
+from dashboard.mobile_bridge import (
+    _read_last_json_object,
+    collect_mobile_telemetry,
+    load_registered_nodes,
+)
+
 logger = logging.getLogger("dslv-zpdi.webdash")
 
 # ── Registered nodes (loaded from deployment.yaml if available) ───────────────
@@ -42,16 +48,8 @@ _BUILTIN_NODES = [
 ]
 
 def _load_registered_nodes() -> list:
-    try:
-        import yaml
-        cfg_path = Path(__file__).parents[2] / "config" / "deployment.yaml"
-        if cfg_path.exists():
-            with open(cfg_path) as f:
-                cfg = yaml.safe_load(f)
-            return cfg.get("nodes", {}).get("registered", [])
-    except Exception:
-        pass
-    return _BUILTIN_NODES
+    registered = load_registered_nodes()
+    return registered if registered else _BUILTIN_NODES
 
 # ── Global SDR State for Simulation / Control ──────────────────────────────────
 # This represents the user's selected configuration.
@@ -231,8 +229,15 @@ _HTML = """<!DOCTYPE html>
 <div id="ts">Last update: —</div>
 
 <script>
+function esc(s) {
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
 function row(label, val, cls) {
-  return '<div class="row"><span class="label">'+label+'</span><span class="val '+(cls||'')+'">'+val+'</span></div>';
+  return '<div class="row"><span class="label">'+esc(label)+'</span><span class="val '+(cls||'')+'">'+val+'</span></div>';
 }
 function badge(txt, ok, bad) {
   var c = ok ? 'badge-green' : (bad ? 'badge-red' : 'badge-yellow');
@@ -252,17 +257,17 @@ async function refresh() {
     const n = d.nodes || {};
     const sdr = d.sdr || {};
     const u = d.ups || {};
+    const m = d.mobile || {};
 
     // System Panel
     document.getElementById('c-system').innerHTML =
       '<h2>System</h2>'+
-      row('Hostname', s.hostname||'?','cyan')+
+      row('Hostname', esc(s.hostname||'?'),'cyan')+
       row('CPU', s.cpu_pct!=null?s.cpu_pct.toFixed(1)+'%':'?', s.cpu_pct>80?'bad':s.cpu_pct>60?'warn':'ok')+
       row('RAM', s.ram_pct!=null?s.ram_pct.toFixed(1)+'%':'?', s.ram_pct>85?'bad':s.ram_pct>70?'warn':'ok')+
       row('Temp', s.cpu_temp!=null?s.cpu_temp.toFixed(1)+'&deg;C':'?', s.cpu_temp>80?'bad':s.cpu_temp>70?'warn':'ok')+
-      row('Uptime', s.uptime||'?')+
-      row('Pi IP', s.pi_ip||'?','dim')+
-      '<div class="btn-group"><button class="btn-danger" onclick="sysShutdown()">System Poweroff</button></div>';
+      row('Uptime', esc(s.uptime||'?'))+
+      row('Pi IP', esc(s.pi_ip||'?'),'dim');
 
     // Pipeline Panel
     document.getElementById('c-pipeline').innerHTML =
@@ -275,12 +280,15 @@ async function refresh() {
 
     // Nodes Panel
     let nodeHtml='<h2>Swarm Nodes</h2>';
-    nodeHtml += row('Alpha Node', badge('ONLINE', true, false));
+    nodeHtml += row('Pi 5 Anchor', badge('LOCAL', true, false));
     (n.registered_nodes||[]).forEach(nd => {
       nodeHtml += '<hr>';
-      nodeHtml += row(nd.node_id, badge(nd.online?'ONLINE':'OFFLINE', nd.online, !nd.online));
+      nodeHtml += row(esc(nd.node_id), badge(nd.online?'ONLINE':'OFFLINE', nd.online, !nd.online));
       if(nd.online && nd.probe_ms!=null) nodeHtml+=row('Lat.', nd.probe_ms+'ms', nd.probe_ms<50?'ok':nd.probe_ms<200?'warn':'bad');
+      if(nd.last_seen_utc) nodeHtml+=row('Last seen', new Date(nd.last_seen_utc*1000).toUTCString(), 'dim');
     });
+    nodeHtml += '<hr>'+row('Mobile T2', badge(m.online?'ONLINE':'OFFLINE', m.online, !m.online));
+    if(m.trust_score!=null) nodeHtml+=row('Trust', Number(m.trust_score).toFixed(2), m.trust_score>=0.7?'ok':m.trust_score>=0.5?'warn':'bad');
     document.getElementById('c-nodes').innerHTML = nodeHtml;
 
     // Update SDR HW Status display (without overriding the whole card so we keep inputs)
@@ -411,105 +419,197 @@ def _probe_node(probe_url: str, timeout: float = 2.0) -> tuple[bool, int | None]
 def _get_pi_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("10.128.24.1", 80))
-        return s.getsockname()[0]
+        s.settimeout(0)
+        # UDP connect does not send packets; used only to resolve the egress IP.
+        s.connect(("1.1.1.1", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
     except Exception:
         return "?"
 
-def _get_status() -> dict:
-    status: dict = {}
-    health: dict = {}
 
-    # Check for health.json or assume active if processes are running
-    health_paths = ["/run/dslv-zpdi/health.json", "/tmp/health.json", "./logs/health.jsonl"]
+def _cpu_temp_c(temps: dict) -> float | None:
+    if not temps:
+        return None
+    for key in ("cpu_thermal", "soc_thermal", "coretemp"):
+        entries = temps.get(key) or []
+        if not entries:
+            continue
+        entry = entries[0]
+        val = getattr(entry, "current", None)
+        if val is None and isinstance(entry, dict):
+            val = entry.get("current")
+        if val is not None:
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return None
+    for entries in temps.values():
+        if not entries:
+            continue
+        entry = entries[0]
+        val = getattr(entry, "current", None)
+        if val is not None:
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _read_health() -> dict:
+    env_path = os.getenv("DSLV_HEALTH_JSON", "").strip()
+    health_paths = (
+        [env_path]
+        if env_path
+        else ["/run/dslv-zpdi/health.json", "/tmp/health.json", "./logs/health.jsonl"]
+    )
     for hpath in health_paths:
         try:
-            if os.path.exists(hpath):
-                # if it's jsonl, read last line
-                if hpath.endswith('.jsonl'):
-                    with open(hpath) as f:
-                        lines = f.readlines()
-                        if lines:
-                            health = json.loads(lines[-1])
-                else:
-                    with open(hpath) as f:
-                        health = json.load(f)
-                break
+            if not os.path.exists(hpath):
+                continue
+            if hpath.endswith(".jsonl"):
+                obj = _read_last_json_object(Path(hpath))
+                if obj:
+                    return obj
+            else:
+                with open(hpath, encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    return data
         except Exception:
-            pass
+            continue
+    return {}
 
-    # System Status
+
+def _load_registry_by_id() -> dict[str, dict]:
+    reg_path = Path(os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary")) / "node_registry.jsonl"
+    entries: dict[str, dict] = {}
+    if not reg_path.exists():
+        return entries
+    try:
+        with open(reg_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(entry, dict) and entry.get("node_id"):
+                    entries[str(entry["node_id"])] = entry
+    except OSError as exc:
+        logger.debug("Could not read telemetry nodes: %s", exc)
+    return entries
+
+
+def _shutdown_allowed(remote_addr: str | None) -> bool:
+    flag = os.getenv("DSLV_WEBDASH_ALLOW_SHUTDOWN", "").strip().lower() in ("1", "true", "yes")
+    return flag and remote_addr in ("127.0.0.1", "::1")
+
+
+def _get_status() -> dict:
+    status: dict = {}
+    health = _read_health()
+
     try:
         import psutil
         vm = psutil.virtual_memory()
         temps = psutil.sensors_temperatures() or {}
-        cpu_thermal = temps.get("cpu_thermal", [])
-        cpu_temp = cpu_thermal[0].current if cpu_thermal else 45.0
+        cpu_temp = _cpu_temp_c(temps)
         uptime_s = time.time() - psutil.boot_time()
         h, rem = divmod(int(uptime_s), 3600)
-        m, s = divmod(rem, 60)
+        m, _s = divmod(rem, 60)
         status["system"] = {
             "hostname": socket.gethostname(),
             "pi_ip": _get_pi_ip(),
             "cpu_pct": psutil.cpu_percent(interval=None),
             "ram_pct": vm.percent,
-            "cpu_temp": cpu_temp or 45.0,
+            "cpu_temp": cpu_temp,
             "uptime": f"{h}h {m}m",
         }
     except Exception:
-        status["system"] = {"hostname": socket.gethostname(), "pi_ip": _get_pi_ip(), "cpu_pct": 0, "ram_pct": 0, "cpu_temp": 0, "uptime": "0h 0m"}
+        status["system"] = {
+            "hostname": socket.gethostname(),
+            "pi_ip": _get_pi_ip(),
+            "cpu_pct": 0,
+            "ram_pct": 0,
+            "cpu_temp": None,
+            "uptime": "0h 0m",
+        }
 
-    # Enhanced Active Check: It shouldn't just rely on health.json being perfect.
     try:
         cr = subprocess.run(["pgrep", "-f", "tier1_ingestion_server.py"], capture_output=True)
-        active = (cr.returncode == 0) or bool(health)
+        active = (cr.returncode == 0) or bool(health.get("stats"))
     except Exception:
-        active = bool(health)
+        active = bool(health.get("stats"))
+
+    stats = health.get("stats") if isinstance(health.get("stats"), dict) else {}
+    timing_healthy = bool(health.get("timing_healthy", health.get("gps_locked", False)))
+    sdr_health = health.get("sdr") if isinstance(health.get("sdr"), dict) else {}
 
     status["pipeline"] = {
         "active": active,
-        "chrony_stratum": 3,
+        "chrony_stratum": health.get("chrony_stratum"),
         "receiver_port": int(os.getenv("DSLV_RECEIVER_PORT", "5775")),
-        "timing_healthy": True,
-        "primary_written": health.get("stats", {}).get("primary_written", 0),
-        "integrity_failed": health.get("stats", {}).get("integrity_failed", 0),
+        "timing_healthy": timing_healthy,
+        "primary_written": stats.get("primary_written", 0),
+        "integrity_failed": stats.get("integrity_failed", 0),
     }
 
-    # Use GLOBAL_SDR_CONFIG for SDR State
     status["sdr"] = {
-        "mode": "REAL",
+        "mode": sdr_health.get("mode", GLOBAL_SDR_CONFIG.get("preset")),
         "active_device": GLOBAL_SDR_CONFIG["active_device"],
         "center_hz": GLOBAL_SDR_CONFIG["center_hz"],
-        "reachable": True,  # Assume reachable if the daemon is up
+        "reachable": bool(sdr_health.get("reachable", False)),
     }
-    status["ups"] = health.get("ups", {"health": "healthy", "battery_percent": 98.5, "battery_voltage_v": 4.1, "ac_present": True})
+    ups = health.get("ups") if isinstance(health.get("ups"), dict) else None
+    status["ups"] = ups if ups else {"health": "absent"}
 
-    # Nodes
+    registry = _load_registry_by_id()
+    now = time.time()
     registered_node_cfgs = _load_registered_nodes()
     probed_nodes = []
     for nd in registered_node_cfgs:
+        node_id = nd.get("node_id", "unknown")
         online, latency = _probe_node(nd.get("probe_url", f"http://{nd.get('ip', '')}:5173/"))
+        last_seen = None
+        entry = registry.get(node_id)
+        if entry is None:
+            for rid, rent in registry.items():
+                if "mobile" in rid.lower() or "pixel" in rid.lower():
+                    entry = rent
+                    break
+        if entry is not None:
+            try:
+                last_seen = float(entry.get("last_seen_utc") or 0.0) or None
+            except (TypeError, ValueError):
+                last_seen = None
+        if not online and last_seen and (now - last_seen) <= 120:
+            online = True
         probed_nodes.append({
-            "node_id": nd.get("node_id", "unknown"),
+            "node_id": node_id,
             "online": online,
-            "probe_ms": latency
+            "probe_ms": latency,
+            "last_seen_utc": last_seen,
+            "last_seen_s": (now - last_seen) if last_seen else None,
         })
-    status["nodes"] = {"registered_nodes": probed_nodes}
+    telemetry_nodes = list(registry.values())
+    status["nodes"] = {
+        "registered_nodes": probed_nodes,
+        "telemetry_nodes": telemetry_nodes,
+    }
 
-    telemetry_nodes = []
-    reg_path = os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary") + "/node_registry.jsonl"
-    if os.path.exists(reg_path):
-        try:
-            with open(reg_path, "r") as f:
-                for line in f:
-                    try:
-                        telemetry_nodes.append(json.loads(line))
-                    except Exception:
-                        pass
-        except Exception as e:
-            logger.debug(f"Could not read telemetry nodes: {e}")
-    status["nodes"]["telemetry_nodes"] = telemetry_nodes
-
+    registry_path = Path(os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary")) / "node_registry.jsonl"
+    secondary_log = Path(os.getenv("ZPDI_SECONDARY_LOG", "logs/tier1_secondary.jsonl"))
+    status["mobile"] = collect_mobile_telemetry(
+        os.getenv("DSLV_PIXEL_STATUS_URL") or None,
+        registry_path,
+        secondary_log,
+        now=now,
+    )
     return status
 
 
@@ -579,9 +679,12 @@ def create_app() -> Flask:
 
     @app.route("/api/system/shutdown", methods=["POST"])
     def sys_shutdown():
-        logger.warning("System shutdown requested via web UI!")
+        # Unauthenticated LAN shutdown is forbidden. Opt-in from localhost only.
+        if not _shutdown_allowed(request.remote_addr):
+            logger.warning("Rejected dashboard shutdown from %s", request.remote_addr)
+            return jsonify({"error": "shutdown disabled"}), 403
+        logger.warning("System shutdown requested via web UI from localhost")
         try:
-            # We initiate a background task to shut down so the request can return
             subprocess.Popen(["sudo", "shutdown", "now", "-P"])
             return jsonify({"status": "shutting_down"})
         except Exception as e:
@@ -594,7 +697,7 @@ def create_app() -> Flask:
         <html><head><style>body{background:#0b0f19;color:#e2e8f0;font-family:sans-serif;padding:20px;}</style></head>
         <body>
         <h1>DSLV-ZPDI Dashboard User Guide</h1>
-        <p><b>System Panel</b>: View vital statistics of your Metrology Anchor Node. The poweroff button cleanly shuts down the host.</p>
+        <p><b>System Panel</b>: View vital statistics of your Metrology Anchor Node. Host poweroff is disabled on the LAN dashboard (localhost + DSLV_WEBDASH_ALLOW_SHUTDOWN=1 only).</p>
         <p><b>Pipeline Panel</b>: Monitor data ingestion and timing synchronization health.</p>
         <p><b>SDR Hardware Panel</b>: Select active SDR hardware (PlutoSDR, LibreSDR, HackRF One). Apply tuning presets (Airband, Marine, WX) for fast demodulation, and soft-reboot the SDR if unresponsive.</p>
         </body></html>

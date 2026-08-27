@@ -47,6 +47,12 @@ def test_quarantine_vs_kill():
     assert state2 == "KILLED"
 
 
+def test_mobile_killed_to_json_returns_none():
+    """SPEC-005A.4: structurally corrupt payloads are not serialized."""
+    p = IngestionPayload(payload_uuid=str(uuid.uuid4()))
+    assert p.to_json() is None
+
+
 def test_serialization_roundtrip():
     """SPEC-005A.3: JSON serialization preserves modality and checksum."""
     p = IngestionPayload(

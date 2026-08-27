@@ -34,7 +34,12 @@ class MobilePanel:
         age_str = f"{age_s:.0f}s" if age_s < 120 else f"{age_s/60:.0f}m" if age_s < 7200 else "—"
 
         mag = t.get("magnetometer_ut")
-        mag_str = f"{sum(v*v for v in mag)**0.5:.1f} µT" if mag else "—"
+        mag_str = "—"
+        if mag is not None:
+            try:
+                mag_str = f"{sum(float(v) * float(v) for v in mag) ** 0.5:.1f} µT"
+            except (TypeError, ValueError):
+                mag_str = "—"
 
         gps = t.get("gps", {})
         fix = gps.get("accuracy")

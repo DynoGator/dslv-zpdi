@@ -12,12 +12,18 @@ function App() {
   });
 
   useEffect(() => {
-    // Attempt to connect to the backend WebSocket
-    const ws = new WebSocket(`ws://${window.location.hostname}:8000/ws/live`);
+    const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsHost = window.location.hostname;
+    const wsPort = import.meta.env.VITE_ZPDI_WS_PORT || '8000';
+    const ws = new WebSocket(`${wsProto}://${wsHost}:${wsPort}/ws/live`);
     let lastUpdateTime = 0;
     
     ws.onopen = () => {
-      setTelemetry(prev => ({ ...prev, online: true, uplink: 'CONNECTED: ALPHA NODE', trustScore: 0.4 }));
+      setTelemetry(prev => ({
+        ...prev,
+        online: true,
+        uplink: `CONNECTED: ${wsHost}:${wsPort}`,
+      }));
     };
     
     ws.onmessage = (event) => {
@@ -73,12 +79,12 @@ function App() {
             <Wifi color="var(--text-highlight)" />
             <h3>Node Uplink</h3>
           </div>
-          <div className="metric-label">Target IPv4 (Alpha)</div>
-          <div className="metric-value" style={{ fontSize: '1.5rem' }}>10.29.134.69</div>
+          <div className="metric-label">Target host</div>
+          <div className="metric-value" style={{ fontSize: '1.5rem' }}>{window.location.hostname}</div>
           <div style={{ marginTop: '20px' }}>
             <div className="metric-label">Pipeline Connection</div>
             <div style={{ color: telemetry.online ? 'var(--text-highlight)' : 'var(--error-color)', fontWeight: 600, marginTop: '5px' }}>
-              {telemetry.online ? 'WS:// ACTIVE (Port 8443)' : 'OFFLINE'}
+              {telemetry.online ? telemetry.uplink : 'OFFLINE'}
             </div>
           </div>
         </motion.div>
@@ -100,7 +106,7 @@ function App() {
           <div style={{ marginTop: '20px' }}>
             <div className="metric-label">Baseband Rx Power</div>
             <div className="progress-bar-bg">
-              <div className="progress-bar-fill" style={{ width: `${Math.random() * 30 + 40}%` }} />
+              <div className="progress-bar-fill" style={{ width: `${Math.min(100, Math.max(0, telemetry.trustScore * 100))}%` }} />
             </div>
           </div>
         </motion.div>

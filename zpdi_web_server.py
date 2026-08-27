@@ -60,9 +60,10 @@ def get_latest_from_cache() -> dict[str, Any] | None:
 @app.get("/health", response_model=HealthStatus)
 async def health():
     latest = get_latest_from_cache()
+    last_ts = latest.get("timestamps", {}).get("wall_ns") if latest else None
     return {
-        "status": "online",
-        "last_sample_ts": latest.get("timestamps", {}).get("wall_ns") if latest else None
+        "status": "online" if latest else "degraded",
+        "last_sample_ts": last_ts,
     }
 
 @app.get("/latest")

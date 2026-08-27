@@ -64,6 +64,19 @@ class TestPixelTrustScorer:
         score, flags = scorer.score(data, received_utc=1749000000.0)
         assert "no_tamper_evidence" in flags
 
+    def test_dict_magnetometer_accepted(self):
+        scorer = PixelTrustScorer()
+        data = {
+            "timestamp_utc": 1749000000.0,
+            "magnetometer_ut": {"x": 30.0, "y": 10.0, "z": 40.0},
+            "gps": {"accuracy": 5.0},
+            "camera_frame_hash": "abcd",
+        }
+        score, flags = scorer.score(data, received_utc=1749000000.0)
+        assert "no_magnetometer" not in flags
+        assert "mag_anomaly" not in flags
+        assert score >= 0.8
+
 
 class TestPixelSimulator:
     def test_simulator_returns_telemetry(self):
@@ -110,8 +123,15 @@ class TestPixelHttpTransport:
         )
         t2 = transport.poll(scorer)
         assert "hotspot_drop" in t2.trust_flags
-        assert t2.trust_score < 0.6
+        assert t2.trust_score == pytest.approx(0.5)
         assert t2.gps_lat == 40.0
+        # Original timestamp must be preserved so dashboards show STALE, not LIVE.
+        assert t2.timestamp_utc == 1749000000.0
+        # Last-good cache is not mutated; repeated failures do not stack the penalty.
+        t3 = transport.poll(scorer)
+        assert t3.trust_flags.count("hotspot_drop") == 1
+        assert t3.trust_score == pytest.approx(0.5)
+        assert transport._last_good.trust_score == pytest.approx(0.8)
 
 
 class TestPixelNodeBridge:
@@ -131,10 +151,18 @@ class TestPixelNodeBridge:
         assert result.trust_score == 0.9
 
     def test_bridge_falls_back_to_sim(self):
-        bridge = PixelNodeBridge(host="127.0.0.1", http_port=59998)
+        bridge = PixelNodeBridge(host="127.0.0.1", http_port=59998, allow_simulator=True)
         result = bridge.poll()
         assert result.transport == "sim"
         assert result.trust_score > 0.0
+
+    def test_bridge_production_does_not_inject_simulator(self, monkeypatch):
+        monkeypatch.delenv("DEV_SIMULATOR", raising=False)
+        bridge = PixelNodeBridge(host="127.0.0.1", http_port=59998, allow_simulator=False)
+        result = bridge.poll()
+        assert result.transport == "http"
+        assert "unreachable" in result.trust_flags
+        assert result.gps_lat is None
 
     def test_payload_serialization(self):
         sim = PixelSimulator()

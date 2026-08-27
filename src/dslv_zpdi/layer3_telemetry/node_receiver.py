@@ -30,6 +30,7 @@ import logging
 import os
 import threading
 import time
+from dataclasses import fields as dc_fields
 from http import HTTPStatus
 
 try:
@@ -39,8 +40,10 @@ try:
 except ImportError:
     FLASK_AVAILABLE = False
 
-from dslv_zpdi.layer1_ingestion.payload import IngestionPayload
+from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 from dslv_zpdi.layer3_telemetry.hdf5_writer import HDF5Writer
+
+_INGEST_FIELDS = {f.name for f in dc_fields(IngestionPayload)}
 
 logger = logging.getLogger("dslv-zpdi.node-receiver")
 
@@ -88,6 +91,44 @@ def _update_node_registry(node_id: str) -> None:
             os.replace(tmp_path, reg_path)
     except OSError as exc:
         logger.warning("node registry update failed: %s", exc)
+
+
+# SPEC-014.3 — Coerce untrusted swarm JSON onto the canonical payload contract
+def _payload_from_swarm_json(payload: dict) -> IngestionPayload:
+    """SPEC-014 — Build an IngestionPayload from a swarm POST body.
+
+    Mobile nodes (SPEC-005A.1b / schema 3.5) send extra keys (lat/lon,
+    spec_id, location_provider, …) that the canonical dataclass rejects.
+    Extra fields are preserved under raw_value.swarm_extras. HTTP ingest is
+    always hardware_tier=2 — callers cannot self-promote to Tier 1.
+    """
+    extras = {k: v for k, v in payload.items() if k not in _INGEST_FIELDS}
+    known = {k: v for k, v in payload.items() if k in _INGEST_FIELDS}
+
+    raw = known.get("raw_value")
+    if not isinstance(raw, dict):
+        raw = {} if raw is None else {"value": raw}
+    if extras:
+        raw = {**raw, "swarm_extras": extras}
+    known["raw_value"] = raw
+    known["hardware_tier"] = 2
+
+    modality = known.get("modality") or "unknown"
+    try:
+        SensorModality(modality)
+    except ValueError:
+        raw = {**raw, "original_modality": modality}
+        known["raw_value"] = raw
+        known["modality"] = SensorModality.MAGNETOMETER.value
+
+    schema = known.get("schema_version")
+    if schema not in ("3.1", "3.2", "4.0"):
+        if schema is not None:
+            raw = {**raw, "original_schema_version": schema}
+            known["raw_value"] = raw
+        known["schema_version"] = "4.0"
+
+    return IngestionPayload(**known)
 
 
 # SPEC-014.2 — Lazy HDF5 writer singleton
@@ -141,7 +182,10 @@ def create_app(writer: HDF5Writer | None = None) -> Flask:
         payload.setdefault("sensor_id", "UNKNOWN")
         payload.setdefault("modality", "unknown")
         payload.setdefault("payload_uuid", "")
-        p = IngestionPayload(**payload)
+        try:
+            p = _payload_from_swarm_json(payload)
+        except (TypeError, ValueError) as exc:
+            return jsonify({"error": f"invalid payload: {exc}"}), HTTPStatus.BAD_REQUEST
         decision = _get_writer().ingest(p.to_binary(), p)
 
         # Update node registry so the web dashboard can track last-seen time.

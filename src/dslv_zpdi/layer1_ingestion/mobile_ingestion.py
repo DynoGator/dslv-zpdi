@@ -233,10 +233,23 @@ class IngestionPayload:
 
         return binary_data
 
-    def to_json(self) -> str:
-        """SPEC-005A.4 — Serialization Gate (JSON)"""
-        d = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return json.dumps(d, sort_keys=True, default=str)
+    def to_dict(self) -> dict[str, Any]:
+        """SPEC-005A.4 — Dictionary form of the mobile payload."""
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
+    def to_json(self) -> str | None:
+        """SPEC-005A.4 — Serialization Gate (JSON).
+
+        Calls validate() first. KILLED packets are dropped (returns None) so
+        the mobile node fan-out never serializes structurally corrupt samples.
+        """
+        state, reason = self.validate()
+        self.trust_state = state
+        if reason:
+            self.quarantine_reason = reason
+        if state == "KILLED":
+            return None
+        return json.dumps(self.to_dict(), sort_keys=True, default=str)
 
 
 # SPEC-003A
