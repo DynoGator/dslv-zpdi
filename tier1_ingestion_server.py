@@ -100,6 +100,10 @@ _node_last_registered: dict[str, float] = {}
 _NODE_REGISTRY_INTERVAL = 30.0
 
 
+import threading
+
+_node_registry_lock = threading.Lock()
+
 def _register_node_seen(node_id: str) -> None:
     """Update output/secondary/node_registry.jsonl so the web dashboard shows this node."""
     now = time.time()
@@ -108,19 +112,20 @@ def _register_node_seen(node_id: str) -> None:
     _node_last_registered[node_id] = now
     try:
         _NODE_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
-        entries: dict[str, dict] = {}
-        if _NODE_REGISTRY_PATH.exists():
-            with _NODE_REGISTRY_PATH.open() as fh:
-                for line in fh:
-                    try:
-                        e = json.loads(line)
-                        entries[e.get("node_id", "?")] = e
-                    except Exception:
-                        pass
-        entries[node_id] = {"node_id": node_id, "last_seen_utc": now}
-        with _NODE_REGISTRY_PATH.open("w") as fh:
-            for entry in entries.values():
-                fh.write(json.dumps(entry) + "\n")
+        with _node_registry_lock:
+            entries: dict[str, dict] = {}
+            if _NODE_REGISTRY_PATH.exists():
+                with _NODE_REGISTRY_PATH.open() as fh:
+                    for line in fh:
+                        try:
+                            e = json.loads(line)
+                            entries[e.get("node_id", "?")] = e
+                        except Exception:
+                            pass
+            entries[node_id] = {"node_id": node_id, "last_seen_utc": now}
+            with _NODE_REGISTRY_PATH.open("w") as fh:
+                for entry in entries.values():
+                    fh.write(json.dumps(entry) + "\n")
     except Exception as exc:
         log.debug("node registry update failed: %s", exc)
 
@@ -268,7 +273,12 @@ def _process_message(raw_message: str | bytes) -> _IngestResult:
 
     # --- 6. Route via SPEC-007 ---
     route = route_packet(body)
-    body["route"] = route
+    client_route = body.get("route")
+    if client_route is not None:
+        if client_route != route:
+            return _IngestResult(False, "Routing divergence: client route does not match server evaluation")
+    else:
+        body["route"] = route
 
     # --- 7. Persist to secondary log ---
     _secondary_log._write_sync(body)  # synchronous — called from async context via to_thread

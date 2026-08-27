@@ -233,6 +233,11 @@ class IngestionPayload:
 
         return binary_data
 
+    def to_json(self) -> str:
+        """SPEC-005A.4 — Serialization Gate (JSON)"""
+        d = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        return json.dumps(d, sort_keys=True, default=str)
+
 
 # SPEC-003A
 def build_mobile_payload(

@@ -589,7 +589,7 @@ def create_app() -> Flask:
 
 def main() -> None:
     port = int(os.getenv("DSLV_WEBDASH_PORT", "8080"))
-    host = os.getenv("DSLV_WEBDASH_HOST", "0.0.0.0")
+    host = os.getenv("DSLV_WEBDASH_HOST", "127.0.0.1")
     logging.basicConfig(level=logging.DEBUG)
     app = create_app()
     logger.info("DSLV-ZPDI interactive web dashboard starting on %s:%d", host, port)
