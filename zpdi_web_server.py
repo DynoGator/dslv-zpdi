@@ -60,7 +60,14 @@ def get_latest_from_cache() -> dict[str, Any] | None:
 @app.get("/health", response_model=HealthStatus)
 async def health():
     latest = get_latest_from_cache()
-    last_ts = latest.get("timestamps", {}).get("wall_ns") if latest else None
+    last_ts = None
+    if latest:
+        # Support both mobile payload format (timestamps.wall_ns) and Alpha Pi format (timestamp_utc)
+        if "timestamps" in latest and "wall_ns" in latest["timestamps"]:
+            last_ts = latest["timestamps"]["wall_ns"]
+        elif "timestamp_utc" in latest and latest["timestamp_utc"] is not None:
+            last_ts = int(latest["timestamp_utc"] * 1e9)
+            
     return {
         "status": "online" if latest else "degraded",
         "last_sample_ts": last_ts,
