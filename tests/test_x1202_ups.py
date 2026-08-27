@@ -2,7 +2,10 @@ import pytest
 from unittest.mock import MagicMock, patch
 import time
 
+smbus2 = pytest.importorskip("smbus2", reason="smbus2 not available (hardware-only dependency)")
+
 from dslv_zpdi.layer1_ingestion.x1202_ups import X1202UpsMonitor, UpsSample
+
 
 @patch("smbus2.SMBus")
 def test_ups_initialization_absent(mock_smbus):
