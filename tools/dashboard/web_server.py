@@ -443,7 +443,8 @@ def _get_status() -> dict:
         import psutil
         vm = psutil.virtual_memory()
         temps = psutil.sensors_temperatures() or {}
-        cpu_temp = temps.get("cpu_thermal", [{}])[0].get("current") if temps else 45.0
+        cpu_thermal = temps.get("cpu_thermal", [])
+        cpu_temp = cpu_thermal[0].current if cpu_thermal else 45.0
         uptime_s = time.time() - psutil.boot_time()
         h, rem = divmod(int(uptime_s), 3600)
         m, s = divmod(rem, 60)
@@ -494,6 +495,20 @@ def _get_status() -> dict:
             "probe_ms": latency
         })
     status["nodes"] = {"registered_nodes": probed_nodes}
+
+    telemetry_nodes = []
+    reg_path = os.getenv("DSLV_SECONDARY_OUTPUT_DIR", "./output/secondary") + "/node_registry.jsonl"
+    if os.path.exists(reg_path):
+        try:
+            with open(reg_path, "r") as f:
+                for line in f:
+                    try:
+                        telemetry_nodes.append(json.loads(line))
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.debug(f"Could not read telemetry nodes: {e}")
+    status["nodes"]["telemetry_nodes"] = telemetry_nodes
 
     return status
 

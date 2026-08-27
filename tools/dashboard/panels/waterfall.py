@@ -562,8 +562,8 @@ class WaterfallPanel:
         self.span_hz = span_hz
         self.mode = mode
         self.border_style = border_style
-        self.lna_gain = 30
-        self.vga_gain = 30
+        self.lna_gain = lna_gain
+        self.vga_gain = vga_gain
         self.amp_enabled = amp_enabled
         self.dbm_floor = -75.0
         self.dbm_ceil = -70.0
