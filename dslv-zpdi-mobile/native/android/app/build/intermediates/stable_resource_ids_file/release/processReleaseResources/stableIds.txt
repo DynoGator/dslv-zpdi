@@ -1,0 +1,11 @@
+labs.dynogator.dslvzpdi:xml/usb_device_filter = 0x7f050001
+labs.dynogator.dslvzpdi:xml/network_security_config = 0x7f050000
+labs.dynogator.dslvzpdi:style/Theme.Dslv = 0x7f040000
+labs.dynogator.dslvzpdi:string/app_version = 0x7f030001
+labs.dynogator.dslvzpdi:mipmap/ic_launcher_round = 0x7f020002
+labs.dynogator.dslvzpdi:string/app_name = 0x7f030000
+labs.dynogator.dslvzpdi:mipmap/ic_launcher = 0x7f020000
+labs.dynogator.dslvzpdi:color/ic_launcher_background = 0x7f010002
+labs.dynogator.dslvzpdi:color/dslv_primary = 0x7f010001
+labs.dynogator.dslvzpdi:mipmap/ic_launcher_foreground = 0x7f020001
+labs.dynogator.dslvzpdi:color/dslv_bg = 0x7f010000

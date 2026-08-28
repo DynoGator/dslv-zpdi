@@ -1,16 +1,29 @@
-# React + Vite
+# DSLV-ZPDI Pixel C2 (native Android)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Canonical native command dashboard for the Pixel 9 Pro XL.
 
-Currently, two official plugins are available:
+- **Package:** `labs.dynogator.dslvzpdi`
+- **Version:** 5.7.0
+- **APK:** `public/releases/DynoGatorLabs-DSLV-ZPDI-5.7.0.apk`
+- **Telemetry:** `http://127.0.0.1:8777/telemetry`
+- **C2 / CLI:** `http://127.0.0.1:8444/` (`dslv` in Termux)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This tree replaces the previous Capacitor PWA. Source of truth was merged from
+[DynoGator/scarlet-crisp-orbit-glade](https://github.com/DynoGator/scarlet-crisp-orbit-glade)
+(which already contained [DynoGator/dslv-zpdi_android](https://github.com/DynoGator/dslv-zpdi_android)).
 
-## React Compiler
+## Sideload (GrapheneOS)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Settings → Apps → Special app access → Install unknown apps → Termux → Allow.
+2. Open `public/releases/DynoGatorLabs-DSLV-ZPDI-5.7.0.apk` (or Download/).
+3. Grant location / nearby devices / sensors when the app asks.
+4. Termux → Settings → Allow external apps (already set on this node).
+5. Keep the app unrestricted for battery so :8777 and :8444 stay up.
 
-## Expanding the Oxlint configuration
+## Termux CLI
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```sh
+dslv status --json
+dslv sensors --json
+dslv help
+```

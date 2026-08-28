@@ -1,0 +1,43 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "DynoGatorLabs DSLV-ZPDI",
+      "hasCanvas": true,
+      "bodyTextLen": 829,
+      "bodyTextHash": "e2d39a1381d99bfade6568c00d3164b755d5d2bdffac40b5f10619ddaf422b19",
+      "bodyTextPrefix": "DYNOGATOR LABS DSLV-ZPDI — SIM · SIMULATOR Rev 5.7.0 · Pixel C2 ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "DynoGatorLabs DSLV-ZPDI",
+      "hasCanvas": true,
+      "bodyTextLen": 829,
+      "bodyTextHash": "e2d39a1381d99bfade6568c00d3164b755d5d2bdffac40b5f10619ddaf422b19",
+      "bodyTextPrefix": "DYNOGATOR LABS DSLV-ZPDI — SIM · SIMULATOR Rev 5.7.0 · Pixel C2 ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [
+    "BRAND WARNING: this looks like a game/canvas app but src/lib/og/site.json is missing \"type\": \"x:game\". X uses og:type=x:game to present the unfurl as a game card — set it in /workspace/src/lib/og/site.json per /workspace/.grok/skills/og/SKILL.md. Do not invent x:type or overload twitter:card as the game signal.",
+    "BRAND WARNING: this looks like a game/canvas app but /workspace/public/x-banner.jpg is missing. Games need a 50:11 X feed card (1200×264 JPEG) at public/x-banner.jpg — open /workspace/.grok/skills/og/SKILL.md and finish the brand-asset pass."
+  ],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "desktop: body text replaced (similar length, page start changed)"
+  ]
+}

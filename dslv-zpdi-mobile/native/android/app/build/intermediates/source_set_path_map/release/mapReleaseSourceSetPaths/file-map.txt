@@ -1,0 +1,7 @@
+labs.dynogator.dslvzpdi.app-pngs-0 /workspace/native/android/app/build/generated/res/pngs/release
+labs.dynogator.dslvzpdi.app-resValues-1 /workspace/native/android/app/build/generated/res/resValues/release
+labs.dynogator.dslvzpdi.app-packageReleaseResources-2 /workspace/native/android/app/build/intermediates/incremental/release/packageReleaseResources/merged.dir
+labs.dynogator.dslvzpdi.app-packageReleaseResources-3 /workspace/native/android/app/build/intermediates/incremental/release/packageReleaseResources/stripped.dir
+labs.dynogator.dslvzpdi.app-release-4 /workspace/native/android/app/build/intermediates/merged_res/release/mergeReleaseResources
+labs.dynogator.dslvzpdi.app-main-5 /workspace/native/android/app/src/main/res
+labs.dynogator.dslvzpdi.app-release-6 /workspace/native/android/app/src/release/res

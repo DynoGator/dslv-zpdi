@@ -1,42 +1,38 @@
 name: Build Android APK
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - "dslv-zpdi-mobile/**"
+      - ".github/workflows/android-build.yml"
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dslv-zpdi-mobile
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-    - name: Install JS dependencies
-      run: |
-        cd dslv-zpdi-mobile
-        npm install
-    - name: Build Web Assets
-      run: |
-        cd dslv-zpdi-mobile
-        npm run build
-    - name: set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
-    - name: Grant execute permission for gradlew
-      run: |
-        cd dslv-zpdi-mobile/android
-        chmod +x gradlew
-    - name: Build with Gradle
-      run: |
-        cd dslv-zpdi-mobile/android
-        ./gradlew assembleDebug
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug.apk
-        path: dslv-zpdi-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install JS dependencies
+        run: npm ci
+      - name: Build native WebView assets
+        run: npm run build:native
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Assemble debug APK
+        run: gradle -p native/android assembleDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: dslv-zpdi-mobile/native/android/app/build/outputs/apk/debug/app-debug.apk
