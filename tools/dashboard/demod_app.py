@@ -151,7 +151,7 @@ class SDRAudioStreamer:
                     demodulator.set_mode(demod_mode)
                     
                     target_rate = self.sample_rate
-                    current_rate = demodulator.current_preset.sample_rate_hz
+                    current_rate = max(2083334, int(self.app.bandwidth_hz * 2))
                     
                     cprof = CaptureProfile(
                         center_frequency_hz=int(self.app.freq_hz),
@@ -167,8 +167,9 @@ class SDRAudioStreamer:
                     
                     try:
                         cap = sdr_backend.capture(cprof)
-                        iq = cap.samples
-                    except Exception:
+                        iq = cap.samples / 2048.0
+                    except Exception as e:
+                        open("/tmp/err.log", "a").write(f"Cap error: {e}\n")
                         iq = np.zeros(cprof.num_samples, dtype=np.complex64)
                         
                     res = demodulator.process_rx(iq)
