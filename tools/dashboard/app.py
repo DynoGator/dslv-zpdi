@@ -126,17 +126,22 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
         keys = Text(no_wrap=True, overflow="ellipsis")
         if compact:
             legend = [
-                ("q",    "Quit"),
-                ("SPC",  "Pause"),
-                ("m",    "WF-Mode"),
-                ("r",    "Real-SDR"),
-                ("p",    "Palette"),
-                ("s",    "Spectrum"),
-                ("g/v",  "Gain"),
-                ("</>",  "Tune"),
-                ("z/x",  "Zoom"),
-                ("c/t",  "Layout"),
-                ("h",    "Banner"),
+                ("q",      "Quit"),
+                ("SPC",    "Pause"),
+                ("m",      "WF-Mode"),
+                ("r",      "Real-SDR"),
+                ("p",      "Palette"),
+                ("s",      "Spectrum"),
+                ("g/v",    "Gain"),
+                ("a",      "LNA Pwr"),
+                ("</>",    "Tune"),
+                ("z/x",    "Zoom"),
+                ("f",      "Freq"),
+                ("1-5",    "Presets"),
+                ("c/t",    "Layout"),
+                ("h",      "Banner"),
+                ("T",      "MIMO"),
+                ("e",      "Cam"),
             ]
         else:
             legend = [
@@ -158,7 +163,11 @@ def footer_panel(compact: bool = False, state: dict | None = None) -> Panel:
                 ("+/-",     "Gain Step ±"),
                 ("</>",     "Tune Coarse ±"),
                 (",/.",     "Tune Fine ±"),
+                ("Arrows",  "Pan & Zoom"),
                 ("z/x",     "Zoom In/Out"),
+                ("f",       "Set Frequency"),
+                ("1-5",     "Demod Presets"),
+                ("T",       "Toggle MIMO TX"),
             ]
         for k, desc in legend:
             keys.append("[", style="dim")
@@ -903,6 +912,8 @@ class Dashboard:
                     if now >= next_frame or keys_pressed:
                         if not self.paused:
                             self._render()
+                            if keys_pressed:
+                                self._live.refresh()
                         if now >= next_frame:
                             next_frame = now + frame_period
 
