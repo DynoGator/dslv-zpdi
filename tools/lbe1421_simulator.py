@@ -10,8 +10,9 @@ Useful for development pipelines or legacy SDR integration without a GPSDO attac
 
 import os
 import pty
-import time
 import threading
+import time
+
 
 def calculate_checksum(sentence: str) -> str:
     """Calculate the NMEA checksum."""
@@ -30,13 +31,13 @@ def pps_thread(stop_event: threading.Event, assert_path: str):
             nsec = int((now - sec) * 1e9)
             # Format: <sec>.<nsec>#<sequence>\n
             line = f"{sec}.{nsec:09d}#{seq}\n"
-            
+
             # Write to file and flush
             f.seek(0)
             f.write(line)
             f.flush()
             os.fsync(f.fileno())
-            
+
             seq += 1
             # Sleep until next second
             next_sec = sec + 1
@@ -52,19 +53,19 @@ def nmea_thread(stop_event: threading.Event, master_fd: int):
         body = f"GNGGA,{time_str},5130.0000,N,00000.0000,E,1,12,0.8,50.0,M,,,,"
         checksum = calculate_checksum(body)
         sentence = f"${body}*{checksum}\r\n"
-        
+
         try:
             os.write(master_fd, sentence.encode('ascii'))
         except OSError:
             break
-            
+
         time.sleep(1.0)
 
 def main():
     print("================================")
     print("===   LBE-1421 SIM MODE      ===")
     print("================================")
-    
+
     # 1. Setup PTY for NMEA
     master_fd, slave_fd = pty.openpty()
     slave_name = os.ttyname(slave_fd)
@@ -74,26 +75,26 @@ def main():
         pass
     os.symlink(slave_name, "/tmp/sim_nmea")
     print(f"[NMEA] Virtual serial port created at: {slave_name} -> /tmp/sim_nmea")
-    print(f"       => Configure your node profile with: nmea_port='/tmp/sim_nmea'\n")
+    print("       => Configure your node profile with: nmea_port='/tmp/sim_nmea'\n")
 
     # 2. Setup fake sysfs for PPS
     pps_dir = "/tmp/sim_pps0"
     os.makedirs(pps_dir, exist_ok=True)
     assert_path = os.path.join(pps_dir, "assert")
     print(f"[PPS]  Virtual sysfs assert file created at: {assert_path}")
-    print(f"       => Configure your node profile with: pps_device='/tmp/sim_pps0'\n")
-    
+    print("       => Configure your node profile with: pps_device='/tmp/sim_pps0'\n")
+
     stop_event = threading.Event()
-    
+
     t_pps = threading.Thread(target=pps_thread, args=(stop_event, assert_path), daemon=True)
     t_nmea = threading.Thread(target=nmea_thread, args=(stop_event, master_fd), daemon=True)
-    
+
     t_pps.start()
     t_nmea.start()
-    
+
     print("Sim Mode active. The pipeline will now ingest simulated timing metadata.")
     print("Press Ctrl+C to destroy the simulator when physical hardware arrives.")
-    
+
     try:
         while True:
             time.sleep(1)

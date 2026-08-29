@@ -124,9 +124,10 @@ class PlutoSDRplusSweepStream:
             "width": width,
         }
         self._stop.clear()
-        
+
         try:
             import os
+
             from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
             sdr_uri = os.environ.get("ZPDI_SDR_URI", "ip:192.168.2.1")
             self._backend = PlutoIioBackend(uri=sdr_uri)
@@ -147,7 +148,7 @@ class PlutoSDRplusSweepStream:
         self._thread = None
         if thread is not None:
             thread.join(timeout=2.0)
-        
+
         backend = self._backend
         self._backend = None
         if backend is not None:
@@ -157,18 +158,20 @@ class PlutoSDRplusSweepStream:
                 pass
 
     def _reader(self):
-        import numpy as np
         import time
+
+        import numpy as np
+
         from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
         try:
             while not self._stop.is_set():
                 if self._backend is None:
                     break
-                
+
                 center_hz = self._params["center_hz"]
                 span_hz = self._params["span_hz"]
                 width = self._params["width"]
-                
+
                 try:
                     cprof = CaptureProfile(
                         center_frequency_hz=center_hz,
@@ -182,10 +185,10 @@ class PlutoSDRplusSweepStream:
                     window = np.hanning(len(raw_iq))
                     spectrum = np.fft.fftshift(np.fft.fft(raw_iq * window))
                     power = 20 * np.log10(np.abs(spectrum) + 1e-9)
-                    
+
                     binned = np.interp(np.linspace(0, len(power)-1, width), np.arange(len(power)), power)
                     row = [float(p) - 80.0 for p in binned]
-                    
+
                     self._publish(row)
                     time.sleep(0.1)
                 except Exception as e:
@@ -852,7 +855,7 @@ class WaterfallPanel:
                 source = "SIM"
         else:
             self._last_row_time = time.time()
-            
+
         self._last_source = source
 
         with self._rows_lock:

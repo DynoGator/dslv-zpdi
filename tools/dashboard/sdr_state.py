@@ -7,12 +7,12 @@ and external services via REST API to zpdi_web_server.
 from __future__ import annotations
 
 import json
-import urllib.request
-import urllib.error
 import time
-from typing import Any, Dict
+import urllib.error
+import urllib.request
+from typing import Any
 
-DEFAULT_SDR_STATE: Dict[str, Any] = {
+DEFAULT_SDR_STATE: dict[str, Any] = {
     "center_hz": 98_100_000.0,
     "bandwidth_hz": 200_000.0,
     "gain_db": 30.0,
@@ -41,7 +41,7 @@ class SDRStateManager:
     def _ensure_initial_state(self) -> None:
         pass # Managed by the server
 
-    def read_state(self) -> Dict[str, Any]:
+    def read_state(self) -> dict[str, Any]:
         """Read shared state from REST API."""
         try:
             req = urllib.request.Request(self.base_url, method="GET")
@@ -50,7 +50,7 @@ class SDRStateManager:
         except Exception:
             return dict(DEFAULT_SDR_STATE)
 
-    def write_state(self, updates: Dict[str, Any]) -> Dict[str, Any]:
+    def write_state(self, updates: dict[str, Any]) -> dict[str, Any]:
         """
         Write updated state to REST API.
         """
@@ -85,7 +85,7 @@ class SDRStateManager:
                 return True
         return False
 
-    def apply_to_object(self, target_obj: Any, state: Dict[str, Any]) -> None:
+    def apply_to_object(self, target_obj: Any, state: dict[str, Any]) -> None:
         """Map shared state keys to target object attributes."""
         # For demod_app.py (DemodApp)
         if hasattr(target_obj, "freq_hz") and "center_hz" in state:

@@ -1,23 +1,19 @@
-import os
+import select
 import sys
+import termios
+import threading
 import time
 import tty
-import termios
-import select
-import shutil
-import argparse
-import subprocess
-import threading
 from pathlib import Path
-import cv2
 
-from rich.console import Console, Group
+import cv2
+from rich.align import Align
+from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
-from rich.text import Text
 from rich.table import Table
-from rich.align import Align
+from rich.text import Text
 
 try:
     from dashboard.sdr_state import SDRStateManager
@@ -38,7 +34,8 @@ class CamRecorder:
         self.frames_saved = 0
 
     def start(self):
-        if self.running: return
+        if self.running:
+            return
         self.running = True
         self.cap = cv2.VideoCapture(0)
         self.thread = threading.Thread(target=self._loop, daemon=True)
@@ -61,7 +58,7 @@ class CamRecorder:
                 small_frame = cv2.resize(frame, (320, 240))
                 cv2.imshow("DSLV-ZPDI Tamper-Evident Cam", small_frame)
                 cv2.waitKey(1)
-                
+
                 # Save frame for tamper evidence at specified FPS
                 now = time.time()
                 if now - last_save >= (1.0 / self.fps):
@@ -79,7 +76,7 @@ class CamApp:
         self.console = Console()
         self.running = True
         self.paused = False
-        
+
         self.fps_setting = 1.0 # 1 frame per second
         self.cam_active = False
         self.recorder = None
@@ -90,7 +87,8 @@ class CamApp:
         self._orig_attrs = None
 
     def _enter_raw(self):
-        if not sys.stdin.isatty(): return
+        if not sys.stdin.isatty():
+            return
         fd = sys.stdin.fileno()
         self._orig_attrs = termios.tcgetattr(fd)
         tty.setcbreak(fd)
@@ -101,12 +99,14 @@ class CamApp:
             termios.tcsetattr(self._keyboard_mode, termios.TCSADRAIN, self._orig_attrs)
 
     def _read_key(self) -> str | None:
-        if not sys.stdin.isatty(): return None
+        if not sys.stdin.isatty():
+            return None
         r, _, _ = select.select([sys.stdin], [], [], 0.0)
-        if not r: return None
+        if not r:
+            return None
         try:
             return sys.stdin.read(1)
-        except:
+        except Exception:
             return None
 
     def _build_layout(self) -> Layout:
@@ -124,16 +124,16 @@ class CamApp:
 
     def _render(self) -> Layout:
         layout = self._build_layout()
-        
+
         # Header
         status_str = "ACTIVE (RECORDING & POPUP)" if self.cam_active else "OFF (STANDBY)"
         status_style = "bold bright_green blink" if self.cam_active else "dim bright_black"
         header_text = Text()
         header_text.append("▓▓ DSLV-ZPDI CAMERA / TAMPER-EVIDENT MODULE ▓▓\n", style="bold bright_cyan")
-        header_text.append(f"STATUS: ", style="bright_white")
+        header_text.append("STATUS: ", style="bright_white")
         header_text.append(status_str, style=status_style)
         layout["header"].update(Panel(Align.center(header_text), style="bright_blue"))
-        
+
         # Controls
         ctrl_table = Table.grid(padding=(0, 2))
         ctrl_table.add_column(style="bright_yellow")
@@ -143,16 +143,16 @@ class CamApp:
         saved = self.recorder.frames_saved if self.recorder else 0
         ctrl_table.add_row("Frames Saved", str(saved))
         layout["controls"].update(Panel(ctrl_table, title="[bold bright_white]CAMERA CONTROLS", border_style="bright_cyan"))
-        
+
         # Logs
         log_text = Text("\n".join(self.logs), style="dim bright_white")
         layout["logs"].update(Panel(log_text, title="[bold bright_white]MODULE LOGS", border_style="bright_black"))
-        
+
         # Footer
         footer_text = Text()
         footer_text.append("Q: Quit | C: Toggle Camera | F/f: Adjust FPS ±", style="bold bright_white")
         layout["footer"].update(Panel(Align.center(footer_text), style="bright_black"))
-        
+
         return layout
 
     def run(self):
@@ -177,14 +177,16 @@ class CamApp:
                                 self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] Camera OFF - Standby mode")
                         elif key == 'F':
                             self.fps_setting = min(30.0, self.fps_setting + 0.5)
-                            if self.recorder: self.recorder.fps = self.fps_setting
+                            if self.recorder:
+                                self.recorder.fps = self.fps_setting
                         elif key == 'f':
                             self.fps_setting = max(0.1, self.fps_setting - 0.5)
-                            if self.recorder: self.recorder.fps = self.fps_setting
+                            if self.recorder:
+                                self.recorder.fps = self.fps_setting
 
                     if len(self.logs) > 15:
                         self.logs = self.logs[:15]
-                    
+
                     live.update(self._render())
                     if sys.stdin.isatty():
                         select.select([sys.stdin], [], [], 0.1)

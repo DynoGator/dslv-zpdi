@@ -402,7 +402,7 @@ class HDF5Writer:
             return False
 
         # If the payload came from an external source (e.g. node_receiver), we must
-        # rely on external cryptographic attestation. For now, this serves as a 
+        # rely on external cryptographic attestation. For now, this serves as a
         # memory self-check (tautology prevention noted).
         computed_checksum = hashlib.blake2b(binary_payload, digest_size=32).hexdigest()
 

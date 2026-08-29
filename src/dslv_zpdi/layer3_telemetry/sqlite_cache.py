@@ -7,6 +7,7 @@ import sqlite3
 import time
 from pathlib import Path
 
+
 class SQLiteCache:
     def __init__(self, path: Path | None = None) -> None:
         if path is None:

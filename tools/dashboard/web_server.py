@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 
 try:
     from flask import Flask, Response, jsonify, request
+    from flask_compress import Compress
     FLASK_AVAILABLE = True
 except ImportError:
     FLASK_AVAILABLE = False
@@ -619,6 +620,7 @@ def create_app() -> Flask:
         raise RuntimeError("Flask required.")
 
     app = Flask("dslv-zpdi-webdash")
+    Compress(app)
 
     @app.route("/")
     def index():

@@ -130,7 +130,7 @@ def insert_after(filepath, text_to_find, insertion):
     if not os.path.exists(filepath):
         print(f"Skipping {filepath}, does not exist")
         return
-    with open(filepath, "r") as f:
+    with open(filepath) as f:
         content = f.read()
     if insertion in content:
         return
@@ -157,7 +157,7 @@ insert_after(os.path.join(repo_root, "README.md"), "## Architecture", art_7e)
 
 # 7f
 # Replace the old cloud with the new cloud.
-old_cloud = """```text
+old_cloud = r"""```text
        _.-^^---....,,--       
    _--                  --_   
   <                        >) 
@@ -172,7 +172,7 @@ old_cloud = """```text
 ```"""
 
 readme_path = os.path.join(repo_root, "README.md")
-with open(readme_path, "r") as f:
+with open(readme_path) as f:
     readme_content = f.read()
 if old_cloud in readme_content:
     readme_content = readme_content.replace(old_cloud, art_7f)

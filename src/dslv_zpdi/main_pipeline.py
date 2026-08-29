@@ -4,6 +4,7 @@ Top-level integration: Tier-1 HAL -> Coherence -> HDF5 persistence.
 """
 
 from __future__ import annotations
+import json
 
 import argparse
 import logging
@@ -71,7 +72,8 @@ def _ingest_loop(hal, args, state, ingest_q):
             time.sleep(0.1)
 
 
-import json
+
+
 
 def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter, sqlite_cache):
     """SPEC-011.2 | Processing consumer thread."""
@@ -206,7 +208,7 @@ def main():
         except Exception as exc:
             logger.warning("SDR not ready (%s). Retrying in 5s...", exc)
             time.sleep(5)
-            
+
     if not state.running or hal is None:
         health_reporter.stop()
         sys.exit(0)

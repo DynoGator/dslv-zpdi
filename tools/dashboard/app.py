@@ -23,13 +23,11 @@ Keyboard:
 
 import argparse
 import os
-import sys
-import subprocess
 import select
 import shutil
 import signal
-
-
+import subprocess
+import sys
 import termios
 import time
 import tty
@@ -678,7 +676,7 @@ class Dashboard:
                 p = self._panels["demod"]
                 profile_map = {"1": "ADS-B", "2": "FM Radio", "3": "AM Radio", "4": "EMS/Fire", "5": "Broadcast TV"}
                 p.active_profile = profile_map[k]
-                
+
                 presets = {
                     "ADS-B": {"freq": 1090000000, "bw": 2000000},
                     "FM Radio": {"freq": 104500000, "bw": 200000},
@@ -686,7 +684,7 @@ class Dashboard:
                     "EMS/Fire": {"freq": 154310000, "bw": 12500},
                     "Broadcast TV": {"freq": 473000000, "bw": 6000000},
                 }
-                
+
                 if "waterfall" in self._panels:
                     wf = self._panels["waterfall"]
                     wf.center_hz = presets[p.active_profile]["freq"]
@@ -703,12 +701,12 @@ class Dashboard:
 
                     profile = getattr(p, "active_profile", "ADS-B")
                     mimo_tx = getattr(p, "mimo_tx", False)
-                    
+
                     wf = self._panels.get("waterfall")
                     freq_arg = f"--freq {wf.center_hz}" if wf else ""
                     bw_arg = f"--bw {wf.span_hz}" if wf else ""
                     gain_arg = f"--gain {wf.lna_gain}" if wf else ""
-                    
+
                     # Get path to demod_app.py relative to app.py
                     demod_script = os.path.join(os.path.dirname(__file__), "demod_app.py")
                     wrapper = os.path.join(os.path.dirname(__file__), "launch_demod_wrapper.sh")
@@ -900,14 +898,14 @@ class Dashboard:
                     while (k := self._read_key()) is not None:
                         self._handle_key(k)
                         keys_pressed = True
-                        
+
                     now = time.monotonic()
                     if now >= next_frame or keys_pressed:
                         if not self.paused:
                             self._render()
                         if now >= next_frame:
                             next_frame = now + frame_period
-                            
+
                     wait_time = max(0.0, next_frame - time.monotonic())
                     if wait_time > 0 and sys.stdin.isatty():
                         select.select([sys.stdin], [], [], wait_time)

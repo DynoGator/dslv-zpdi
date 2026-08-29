@@ -1,12 +1,12 @@
+import glob
 import os
 import re
-import glob
 
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 readme_path = os.path.join(repo_root, "README.md")
 check_sync_path = os.path.join(repo_root, "tools", "check_version_sync.py")
 
-with open(readme_path, "r") as f:
+with open(readme_path) as f:
     readme = f.read()
 
 # 1. Delete duplicate export controls
@@ -75,7 +75,7 @@ with open(readme_path, "w") as f:
     f.write(readme)
 
 # Update check_version_sync.py
-with open(check_sync_path, "r") as f:
+with open(check_sync_path) as f:
     check_sync = f.read()
 
 if "README Revision:/Date: match the latest git tag" not in check_sync:
@@ -85,14 +85,14 @@ if "README Revision:/Date: match the latest git tag" not in check_sync:
 
 # Apply Naming across all docs
 for filepath in glob.glob(os.path.join(repo_root, "**/*.md"), recursive=True):
-    with open(filepath, "r") as f:
+    with open(filepath) as f:
         content = f.read()
-    
+
     new_content = content
     # Standardize HackRF
     new_content = re.sub(r"(?i)\bHackRF\b(?!\s*\(legacy/optional\))", "HackRF (legacy/optional)", new_content)
     # We will assume PlutoSDR+ and PlutoSDRplus are already somewhat correct but let's ensure they are clear.
-    
+
     if new_content != content:
         with open(filepath, "w") as f:
             f.write(new_content)

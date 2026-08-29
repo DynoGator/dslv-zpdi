@@ -10,9 +10,9 @@ Rev 3.1 FIXES:
 
 import os
 
+from dslv_zpdi.contracts.tier1_policy import BASELINE_DURATION_HOURS, MIN_BASELINE_SAMPLES
 from dslv_zpdi.layer1_ingestion.payload import IngestionPayload, SensorModality
 
-from dslv_zpdi.contracts.tier1_policy import MIN_BASELINE_SAMPLES, BASELINE_DURATION_HOURS
 from .coherence import CoherencePacket, CoherenceScorer
 
 

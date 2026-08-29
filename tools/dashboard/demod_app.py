@@ -1,26 +1,23 @@
+import argparse
 import os
-import sys
-import time
-import tty
-import termios
+import random
 import select
 import shutil
-import argparse
-import random
 import subprocess
+import sys
+import termios
 import threading
-from typing import Any
+import time
+import tty
 
 import numpy as np
-
-from rich.console import Console, Group
+from rich.align import Align
+from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
-from rich.text import Text
 from rich.table import Table
-from rich.align import Align
-from rich.progress import Progress, BarColumn, TextColumn
+from rich.text import Text
 
 try:
     from dashboard.sdr_state import SDRStateManager
@@ -107,12 +104,12 @@ class SDRAudioStreamer:
         want_real = os.getenv("DSLV_DASHBOARD_REAL_SDR") == "1"
         sdr_backend = None
         demodulator = None
-        
+
         if want_real:
             try:
-                from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
-                from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
                 from dslv_zpdi.layer1_ingestion.demodulation import Demodulator
+                from dslv_zpdi.layer1_ingestion.sdr.capabilities import CaptureProfile
+                from dslv_zpdi.layer1_ingestion.sdr.pluto_iio import PlutoIioBackend
                 sdr_uri = os.environ.get("ZPDI_SDR_URI")
                 if not sdr_uri:
                     try:
@@ -149,10 +146,10 @@ class SDRAudioStreamer:
                     }
                     demod_mode = mode_map.get(profile, "AM_AUDIO")
                     demodulator.set_mode(demod_mode)
-                    
+
                     target_rate = self.sample_rate
                     current_rate = max(2083334, int(self.app.bandwidth_hz * 2))
-                    
+
                     cprof = CaptureProfile(
                         center_frequency_hz=int(self.app.freq_hz),
                         sample_rate_sps=int(current_rate),
@@ -164,17 +161,17 @@ class SDRAudioStreamer:
                         buffer_samples=int(current_rate * 0.05), # 50ms chunks
                         num_samples=int(current_rate * 0.05),
                     )
-                    
+
                     try:
                         cap = sdr_backend.capture(cprof)
                         iq = cap.samples / 2048.0
                     except Exception as e:
                         open("/tmp/err.log", "a").write(f"Cap error: {e}\n")
                         iq = np.zeros(cprof.num_samples, dtype=np.complex64)
-                        
+
                     res = demodulator.process_rx(iq)
                     audio_out = res["output"] if res["output"] is not None else np.zeros(len(iq), dtype=np.float32)
-                    
+
                     if "FM" in profile or "EMS" in profile:
                         freq_dev = 75000.0 if "Radio" in profile else 5000.0
                         audio_out = audio_out * (current_rate / (2 * np.pi * freq_dev))
@@ -185,7 +182,7 @@ class SDRAudioStreamer:
                             audio_out = lfilter([alpha], [1.0, -(1.0 - alpha)], audio_out)
 
                     rssi_db = 10.0 * np.log10(np.mean(np.abs(iq) ** 2) + 1e-12)
-                    
+
                     if current_rate > target_rate and current_rate % target_rate == 0:
                         dec = int(current_rate // target_rate)
                         # Anti-alias filter before decimation to prevent noise fold-back
@@ -197,7 +194,7 @@ class SDRAudioStreamer:
                             audio_out = np.convolve(audio_out, np.ones(dec_approx)/dec_approx, mode='same')
                         indices = np.linspace(0, len(audio_out)-1, int(len(audio_out) * target_rate / current_rate)).astype(int)
                         audio_out = audio_out[indices]
-                        
+
                 else:
                     # Synthetic Fallback (with fixed phase wrapping)
                     t = np.arange(self.chunk_size) * dt
@@ -210,7 +207,7 @@ class SDRAudioStreamer:
 
                     if "FM" in profile or "EMS" in profile:
                         freq_dev = 75000.0 if "Radio" in profile else 5000.0
-                        freq_dev = min(freq_dev, self.sample_rate * 0.4) 
+                        freq_dev = min(freq_dev, self.sample_rate * 0.4)
                         inst_phase = phase + 2 * np.pi * freq_dev * np.cumsum(audio_mod) * dt
                         phase = inst_phase[-1] % (2 * np.pi)
                         iq_clean = np.exp(1j * inst_phase)
@@ -257,9 +254,9 @@ class DemodApp:
         self.rx_only = rx_only
         self.running = True
         self.paused = False
-        
+
         self._setup_profile()
-        
+
         # Override with synced values if provided
         if freq_hz is not None:
             self.freq_hz = freq_hz
@@ -267,10 +264,10 @@ class DemodApp:
             self.bandwidth_hz = bw_hz
         if gain_db is not None:
             self.gain_db = gain_db
-            
+
         self.squelch = -40.0
         self.snr = 15.0
-        
+
         # Advanced/Restricted capabilities
         self.restricted_unlocked = False
         self.pin_entry_mode = False
@@ -342,12 +339,12 @@ class DemodApp:
     def _generate_mock_data(self):
         if self.paused:
             return
-            
+
         self.snr = random.uniform(5.0, 35.0)
-        
+
         if random.random() < 0.1:
             self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] Signal locked on {self.freq_hz/1e6:.3f} MHz (SNR: {self.snr:.1f} dB)")
-            
+
         if self.profile == "ADS-B" and random.random() < 0.3:
             icao = hex(random.randint(0x100000, 0xFFFFFF))[2:].upper()
             alt = random.randint(100, 400) * 100
@@ -355,14 +352,14 @@ class DemodApp:
             self.decoded_data.insert(0, f"ICAO: {icao} | ALT: {alt}ft | SPD: {spd}kts")
         elif random.random() < 0.2:
             self.decoded_data.insert(0, f"Decoded frame at {time.strftime('%H:%M:%S.%f')[:-3]} - SNR: {self.snr:.1f} dB")
-            
+
         if self.fox_hunt_active and random.random() < 0.4:
             bearing = random.randint(0, 359)
             dist = random.uniform(0.1, 5.0)
             self.vector_data.insert(0, f"TARGET AQUIRED -> TDOA Bearing: {bearing}° | Est Dist: {dist:.1f}km | RSSI: -{random.randint(30, 90)}dBm")
             if len(self.vector_data) > 10:
                 self.vector_data = self.vector_data[:10]
-            
+
         if len(self.logs) > 15:
             self.logs = self.logs[:15]
         if len(self.decoded_data) > 15:
@@ -383,12 +380,12 @@ class DemodApp:
             Layout(name="main", ratio=1),
             Layout(name="footer", size=footer_size)
         )
-        
+
         layout["main"].split_row(
             Layout(name="left_panel", ratio=1),
             Layout(name="right_panel", ratio=2)
         )
-        
+
         if self.restricted_unlocked:
             layout["left_panel"].split_column(
                 Layout(name="controls", ratio=4),
@@ -411,7 +408,7 @@ class DemodApp:
                 Layout(name="visual", ratio=3),
                 Layout(name="data", ratio=2)
             )
-            
+
         return layout
 
     def _render(self) -> Layout:
@@ -423,17 +420,17 @@ class DemodApp:
                 self.profile = self.demod_profile
         self._generate_mock_data()
         layout = self._build_layout()
-        
+
         # Header
         mode_str = "RX ONLY (RESTRICTED)" if self.rx_only else "TX/RX MIMO ENABLED"
         mode_style = "bold bright_green" if self.rx_only else "bold bright_red blink"
-        
+
         header_text = Text()
         header_text.append("▓▓ DSLV-ZPDI ADVANCED DEMODULATION INTERFACE ▓▓\n", style="bold bright_cyan")
         header_text.append(f"PROFILE: {self.profile} | MODE: ", style="bright_white")
         header_text.append(mode_str, style=mode_style)
         layout["header"].update(Panel(Align.center(header_text), style="bright_blue"))
-        
+
         # Controls
         audio_active = bool(self.audio_streamer and self.audio_streamer.is_running())
         if audio_active:
@@ -452,7 +449,7 @@ class DemodApp:
         ctrl_table.add_row("[L] Audio Output", audio_status)
         ctrl_table.add_row("[SPACE] Pause", "PAUSED" if self.paused else "ACTIVE")
         layout["controls"].update(Panel(ctrl_table, title="[bold bright_white]SDR CONTROLS", border_style="bright_blue"))
-        
+
         if self.restricted_unlocked:
             restr_table = Table.grid(padding=(0, 2))
             restr_table.add_column(style="bold bright_red")
@@ -461,31 +458,30 @@ class DemodApp:
             restr_table.add_row("[V] Vector Hunt", "ACTIVE (TDOA/RSSI)" if self.fox_hunt_active else "OFF")
             restr_table.add_row("[H] Freq Hopping", "MONITORING" if self.hopping_monitor_active else "OFF")
             layout["restricted_controls"].update(Panel(restr_table, title="[bold bright_red]RESTRICTED SYSTEMS", border_style="bright_red"))
-            
+
             vector_text = Text("\n".join(self.vector_data), style="bold bright_yellow")
             layout["vector_data"].update(Panel(vector_text, title="[bold bright_red]TARGET VECTORING (TDOA)", border_style="bright_red"))
-        
+
         # Metrics
         metric_table = Table.grid(padding=(0, 2))
         metric_table.add_column(style="bright_cyan")
         metric_table.add_column()
-        
+
         snr_bar = "█" * int(min(20, max(0, self.snr)) / 2) + "░" * (10 - int(min(20, max(0, self.snr)) / 2))
         snr_color = "bright_green" if self.snr > 15 else ("bright_yellow" if self.snr > 8 else "bright_red")
-        
+
         metric_table.add_row("SNR", f"[{snr_color}]{snr_bar} {self.snr:.1f} dB[/]")
         metric_table.add_row("Lock", "[bold bright_green]LOCKED" if self.snr > 8 else "[bold bright_red]SEARCHING")
         metric_table.add_row("Data Rate", f"[{snr_color}]{max(0, (self.snr - 8) * 10):.1f} kbps[/]")
         layout["metrics"].update(Panel(metric_table, title="[bold bright_white]LIVE METRICS", border_style="bright_cyan"))
-        
+
         # Logs
         log_text = Text("\n".join(self.logs), style="dim bright_white")
         layout["logs"].update(Panel(log_text, title="[bold bright_white]SYSTEM LOGS", border_style="bright_black"))
-        
+
         # Visual (Spectrum mock)
         visual_text = Text()
         for i in range(12):
-            line = ""
             for j in range(60):
                 if not self.paused and self.snr > 10:
                     val = random.random() * (self.snr / 35.0)
@@ -495,23 +491,33 @@ class DemodApp:
                         val += 0.8  # Random hopping spikes
                 else:
                     val = random.random() * 0.2
-                    
-                if val > 0.8: char = "█"; color = "bright_red"
-                elif val > 0.6: char = "▆"; color = "bright_yellow"
-                elif val > 0.4: char = "▄"; color = "bright_green"
-                elif val > 0.2: char = "▂"; color = "bright_cyan"
-                else: char = " "; color = "dim bright_black"
+
+                if val > 0.8:
+                    char = "█"
+                    color = "bright_red"
+                elif val > 0.6:
+                    char = "▆"
+                    color = "bright_yellow"
+                elif val > 0.4:
+                    char = "▄"
+                    color = "bright_green"
+                elif val > 0.2:
+                    char = "▂"
+                    color = "bright_cyan"
+                else:
+                    char = " "
+                    color = "dim bright_black"
                 visual_text.append(char, style=color)
             visual_text.append("\n")
         layout["visual"].update(Panel(Align.center(visual_text, vertical="middle"), title="[bold bright_white]BASEBAND SPECTRUM", border_style="bright_green"))
-        
+
         # Data
         data_text = Text("\n".join(self.decoded_data), style="bold bright_green")
         layout["data"].update(Panel(data_text, title="[bold bright_white]DECODED TELEMETRY", border_style="bright_magenta"))
-        
+
         # Footer
         footer_text = Text()
-        
+
         if self.pin_entry_mode:
             footer_text.append(f"RESTRICTED ACCESS: ENTER PIN -> {self.pin_buffer}█", style="bold bright_red blink")
         else:
@@ -520,9 +526,9 @@ class DemodApp:
                 footer_text.append("Q: Quit | S: Squelch | L: Listen | T: TX | V: Vector | H: Hopping", style="bold bright_yellow")
             else:
                 footer_text.append("Q: Quit | S/s: Squelch ± | L: Listen On/Off | Space: Pause (Freq/Gain synced with Dashboard)", style="bold bright_white")
-        
+
         layout["footer"].update(Panel(Align.center(footer_text), style="bright_black"))
-        
+
         return layout
 
     def run(self):
@@ -617,7 +623,7 @@ class DemodApp:
                                         self.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] LISTEN MODE: FAILED (No supported audio sink found)")
                                 if hasattr(self, "state_mgr"):
                                     self.state_mgr.update_key("audio_active", bool(self.audio_streamer and self.audio_streamer.is_running()))
-                    
+
                     live.update(self._render())
                     if sys.stdin.isatty():
                         select.select([sys.stdin], [], [], 0.1)
@@ -636,6 +642,6 @@ if __name__ == "__main__":
     parser.add_argument("--bw", type=float, default=None, help="Sync bandwidth with dashboard")
     parser.add_argument("--gain", type=float, default=None, help="Sync gain with dashboard")
     args = parser.parse_args()
-    
+
     app = DemodApp(profile=args.profile, rx_only=not args.tx, freq_hz=args.freq, bw_hz=args.bw, gain_db=args.gain)
     app.run()

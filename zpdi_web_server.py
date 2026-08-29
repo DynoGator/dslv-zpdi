@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 
 # Configuration from environment
@@ -22,6 +23,7 @@ WEB_HOST = os.environ.get("ZPDI_WEB_HOST", "127.0.0.1")
 WEB_PORT = int(os.environ.get("ZPDI_WEB_PORT", "8000"))
 
 app = FastAPI(title="dslv-zpdi Web Server")
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Centralized SDR State for TUI IPC
 current_sdr_state: dict[str, Any] = {
@@ -67,7 +69,7 @@ async def health():
             last_ts = latest["timestamps"]["wall_ns"]
         elif "timestamp_utc" in latest and latest["timestamp_utc"] is not None:
             last_ts = int(latest["timestamp_utc"] * 1e9)
-            
+
     return {
         "status": "online" if latest else "degraded",
         "last_sample_ts": last_ts,

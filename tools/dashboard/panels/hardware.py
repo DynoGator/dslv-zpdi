@@ -250,10 +250,10 @@ class HardwarePanel:
         ups = health.get("ups", {})
         pps = health.get("pps", {})
         timing = health.get("timing_healthy", False)
-        
+
         # GPSDO / NMEA fix from health.json (pipeline reads it via gpsd).
         nmea = health.get("nmea_fix", {})
-        
+
         # Simulate normal nominal input for missing hardware in Sim mode
         try:
             from dslv_zpdi.config_loader import load_config

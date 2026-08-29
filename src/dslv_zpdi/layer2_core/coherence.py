@@ -13,9 +13,9 @@ import cmath
 import json
 import logging
 import os
+import threading
 import time
 import uuid
-import threading
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
@@ -73,19 +73,19 @@ class CoherenceScorer:
         self.global_events: list[dict[str, Any]] = []
         self.event_cooldown_s = event_cooldown_s
 
-        
+
         # SPEC-009: Baseline FSM state
         self.baseline_state_path = os.fspath(baseline_state_path) if baseline_state_path else None
         self.min_baseline_samples = min_baseline_samples
         self.baseline_duration_hours = baseline_duration_hours
         self._baseline_state = BaselineState.NOT_STARTED
-        
+
         self.baseline_n = 0
         self.baseline_mean = 0.0
         self.baseline_m2 = 0.0
         self._last_save_time = 0.0
         self._lock = threading.Lock()
-        
+
         self.dynamic_threshold = 0.40
         self.baseline_started_utc = 0.0
 
@@ -96,7 +96,7 @@ class CoherenceScorer:
                 with open(self.baseline_state_path, encoding="utf-8") as f:
                     data = json.load(f)
                     persisted = data.get("baseline_state", "NOT_STARTED")
-                    
+
                     if persisted == BaselineState.LOCKED.value:
                         self._baseline_state = BaselineState.LOCKED
                         self.dynamic_threshold = data.get("threshold", 0.40)
@@ -136,7 +136,7 @@ class CoherenceScorer:
             # Preserve accumulated samples and start time across restarts.
             logger.debug("SPEC-009: Baseline already LEARNING; preserving progress")
             return
-        
+
         with self._lock:
             self._baseline_state = BaselineState.LEARNING
             self.baseline_started_utc = started_utc or time.time()
@@ -146,7 +146,7 @@ class CoherenceScorer:
         self._save_baseline_state()
 
 
-    
+
     def update_baseline(self, r_local: float) -> None:
         if self._baseline_state == BaselineState.LEARNING:
             with self._lock:
@@ -155,7 +155,7 @@ class CoherenceScorer:
                 self.baseline_mean += delta / self.baseline_n
                 delta2 = r_local - self.baseline_mean
                 self.baseline_m2 += delta * delta2
-                
+
                 now = time.time()
                 if now - self._last_save_time >= 5.0:
                     self._save_baseline_state()
@@ -180,7 +180,7 @@ class CoherenceScorer:
         temp_path = f"{self.baseline_state_path}.{os.getpid()}.tmp"
         try:
             with open(temp_path, "w", encoding="utf-8") as f:
-                
+
                 json.dump(
                     {
                         "baseline_state": self._baseline_state.value,
@@ -256,7 +256,7 @@ class CoherenceScorer:
             self._save_baseline_state()
             return self.dynamic_threshold
 
-        
+
         if self.baseline_n < 2:
             self.dynamic_threshold = 0.40
             self._save_baseline_state()

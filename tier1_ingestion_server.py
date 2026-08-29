@@ -26,6 +26,7 @@ Environment variables (shared key material with mobile node .env):
 """
 
 from __future__ import annotations
+import threading
 
 import asyncio
 import base64
@@ -100,7 +101,7 @@ _node_last_registered: dict[str, float] = {}
 _NODE_REGISTRY_INTERVAL = 30.0
 
 
-import threading
+
 
 _node_registry_lock = threading.Lock()
 
