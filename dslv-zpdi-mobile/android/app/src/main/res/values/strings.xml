@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">DSLV-ZPDI</string>
-    <string name="title_activity_main">DSLV-ZPDI</string>
-    <string name="package_name">labs.dynogator.dslvzpdi</string>
-    <string name="custom_url_scheme">labs.dynogator.dslvzpdi</string>
-</resources>

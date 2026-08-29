@@ -1,0 +1,64 @@
+plugins {
+    id "com.android.application"
+}
+
+def keystorePass = System.getenv("DSLV_KEYSTORE_PASS") ?: "DynoGatorLabs-DSLV-ZPDI-1988"
+
+android {
+    namespace "labs.dynogator.dslvzpdi"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "labs.dynogator.dslvzpdi"
+        minSdk 29
+        targetSdk 34
+        versionCode 580
+        versionName "5.8.0"
+        resValue "string", "app_version", "5.8.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("../keystore/dynogator.jks")
+            storePassword keystorePass
+            keyAlias "dynogator"
+            keyPassword keystorePass
+            enableV1Signing false
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+        debug {
+            signingConfig signingConfigs.release
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packaging {
+        resources {
+            excludes += ["META-INF/LICENSE", "META-INF/LICENSE.txt", "META-INF/NOTICE"]
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+}

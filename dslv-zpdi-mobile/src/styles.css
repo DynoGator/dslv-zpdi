@@ -1,0 +1,239 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-background: #0a0c0f;
+  --color-foreground: #eceef1;
+  --color-card: #13171c;
+  --color-elevated: #1a1f26;
+  --color-muted: #8d949e;
+  --color-subtle: #6b7380;
+  --color-primary: #8eb4ad;
+  --color-primary-foreground: #0a0c0f;
+  --color-accent: #c8ccd2;
+  --color-accent-foreground: #0a0c0f;
+  --color-ok: #7fae96;
+  --color-warn: #b89a6a;
+  --color-danger: #c07a74;
+  --color-hot: #d4524a;
+  --color-hot-foreground: #0a0c0f;
+  --color-border: #2a313a;
+  --color-ring: #d4524a;
+  --color-grid: #1c222a;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-border: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-border-hover: 0 0 0 1px rgba(255, 255, 255, 0.13);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100dvh;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    touch-action: manipulation;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+}
+
+/* GPU compositor pulse (Immortalis on Tensor G4). Opacity only — no layout. */
+:is(
+  button,
+  [role="button"],
+  [role="switch"],
+  [role="slider"],
+  input,
+  select,
+  textarea,
+  [data-hot]
+):not(:disabled):not([data-static]):not([type="hidden"]) {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-hotzones="on"]
+  :is(
+    button,
+    [role="button"],
+    [role="switch"],
+    [role="slider"],
+    input,
+    select,
+    textarea,
+    [data-hot]
+  ):not(:disabled):not([data-static]):not([type="hidden"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1.5px var(--color-hot);
+  opacity: 0.28;
+  animation: hot-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes hot-pulse {
+  0%,
+  100% {
+    opacity: 0.16;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html[data-hotzones="on"]
+    :is(
+      button,
+      [role="button"],
+      [role="switch"],
+      [role="slider"],
+      input,
+      select,
+      textarea,
+      [data-hot]
+    ):not(:disabled):not([data-static]):not([type="hidden"])::after {
+    opacity: 0.55;
+    animation: none !important;
+  }
+}
+
+.app-grid {
+  background-image:
+    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: -1px -1px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
+.rf-scope {
+  contain: paint;
+}
+
+.menu-enter {
+  transform-origin: top left;
+  animation: menu-open 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes menu-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 44px;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 999px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7.5px;
+  border-radius: 999px;
+  background: var(--color-hot);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-hot) 22%, transparent);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 999px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-hot);
+}
+
+html[data-hotzones="off"] input[type="range"]::-webkit-slider-thumb {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 18%, transparent);
+}
+
+html[data-hotzones="off"] input[type="range"]::-moz-range-thumb {
+  background: var(--color-accent);
+}
