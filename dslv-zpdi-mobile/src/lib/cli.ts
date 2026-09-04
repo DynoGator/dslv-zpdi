@@ -1,4 +1,5 @@
 import { RELEASE } from "./release-meta";
+import { useApp } from "./store";
 import { PRESETS, type DemodMode, type SdrConfig, type Telemetry, type UsbState, type PipelineNative } from "./types";
 import { nativeHost, isNativeApk, nativeJson } from "./native";
 
@@ -265,6 +266,8 @@ export function runCli(line: string, ctx: CliContext): CliResult {
       case "capture":
         ctx.capture();
         return ok("capture sealed");
+      case "scan":
+        return scanner(ctx, argv.slice(1));
       case "sdr":
         return sdr(ctx, argv.slice(1));
       case "pipeline":
@@ -535,5 +538,29 @@ export function saveScripts(docs: ScriptDoc[]) {
         /* ignore */
       }
     }
+  }
+}
+
+function scanner(ctx: CliContext, argv: string[]): string {
+  const [cmd] = argv;
+  const store = useApp.getState();
+  switch (cmd) {
+    case "start":
+      store.scannerStart();
+      return ok("scanner started");
+    case "stop":
+      store.scannerStop();
+      return ok("scanner stopped");
+    case "next":
+    case "skip":
+      store.scannerNext();
+      return ok("scanner skipped");
+    case "hold":
+      store.scannerHold();
+      return ok("scanner held");
+    case "status":
+      return ok(`Scanner state: ${store.scannerState}, Channel: ${store.scannerIndex}`);
+    default:
+      return err("Usage: scan <start|stop|next|hold|status>");
   }
 }

@@ -46,8 +46,8 @@ function loadSettings(): Settings {
 
 function defaultSettings(): Settings {
   return {
-    mode: isNativeApk() ? "standalone" : "simulated",
-    nodeUrl: "http://10.42.0.1:8080",
+    mode: "live",
+    nodeUrl: "http://10.219.125.69:8080",
     c2Token: "",
     operatorUnlocked: false,
     hotZones: true,
@@ -62,7 +62,14 @@ function saveSettings(s: Settings) {
   }
 }
 
+import { ScannerState, SCAN_BANKS } from "./scanner";
 export interface AppState {
+  scannerState: ScannerState;
+  scannerIndex: number;
+  scannerStart: () => void;
+  scannerStop: () => void;
+  scannerNext: () => void;
+  scannerHold: () => void;
   view: ViewId;
   mode: LinkMode;
   nodeUrl: string;
@@ -179,6 +186,7 @@ let lastTick = 0;
 let liveTimer = 0;
 let nativeTimer = 0;
 let scanTimer = 0;
+let uplinkTimer = 0;
 const scratch = new Float32Array(BINS);
 const usbFull = new Float32Array(BINS).fill(-110);
 
@@ -193,6 +201,52 @@ async function liveGetJson(url: string, token: string): Promise<unknown> {
   const res = await fetch(url, { signal: AbortSignal.timeout(2500), headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+/** Push live sensor telemetry to the Pi's node-receiver (/api/v1/ingest).
+ *  Called every ~5 s when mode === "live". This registers the Pixel as an
+ *  online node on the Alpha Pi dashboard (SPEC-014). */
+async function pushUplinkTelemetry(get: () => AppState) {
+  const { nodeUrl, mode, c2Token, tel } = get();
+  if (mode !== "live" || !nodeUrl) return;
+  const px = tel.pixel;
+  // Node receiver runs on port 5775; derive it from nodeUrl host
+  const receiverUrl = nodeUrl.replace(/:\d+/, ":5775");
+  const ingestUrl = `${receiverUrl.replace(/\/$/, "")}/api/v1/ingest`;
+  const body = {
+    node_id: "pixel-9-pro-xl",
+    hardware_tier: 2,
+    timestamp_utc: Date.now() / 1000,
+    schema_version: "3.5",
+    modality: "magnetometer",
+    sensor_id: "pixel-imu",
+    payload_uuid: `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`,
+    lat: px.lat,
+    lon: px.lon,
+    alt: px.alt,
+    gps_lock: tel.gpsLock,
+    magnetometer_ut: px.mag ?? null,
+    baro_hpa: px.baro ?? null,
+    heading_deg: px.heading ?? null,
+    trust_score: px.trustScore ?? 1.0,
+    clock_source: "internal",
+    timing_authority: "alpha-pi-tier1",
+    hal_mode: tel.halMode,
+  };
+  try {
+    if (isNativeApk()) {
+      nativeRequest("POST", ingestUrl, JSON.stringify(body), c2Token);
+    } else {
+      await fetch(ingestUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(c2Token ? { Authorization: `Bearer ${c2Token}` } : {}) },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(3000),
+      });
+    }
+  } catch {
+    // non-fatal — Pi may be temporarily unreachable
+  }
 }
 
 async function pullLive(get: () => AppState, set: (p: Partial<AppState>) => void) {
@@ -388,7 +442,7 @@ function pullNative(get: () => AppState, set: (p: Partial<AppState>) => void, sc
 export const useApp = create<AppState>((set, get) => ({
   view: "ops",
   mode: "simulated",
-  nodeUrl: "http://10.42.0.1:8080",
+  nodeUrl: "http://10.219.125.69:8080",
   c2Token: "",
   liveOk: false,
   liveError: null,
@@ -399,6 +453,12 @@ export const useApp = create<AppState>((set, get) => ({
   tel: seedTelemetry(),
   commands: [],
   captures: [],
+    scannerState: "IDLE",
+    scannerIndex: 0,
+    scannerStart: () => set({ scannerState: "SCANNING" }),
+    scannerStop: () => set({ scannerState: "IDLE" }),
+    scannerNext: () => { const i = (get().scannerIndex + 1) % SCAN_BANKS.length; set({ scannerIndex: i }); get().setCenterHz(SCAN_BANKS[i].hz); get().setDemod(SCAN_BANKS[i].demod); },
+    scannerHold: () => set({ scannerState: "HELD" }),
   usb: { ...DEFAULT_USB },
   pipe: { ...DEFAULT_PIPE },
 
@@ -454,6 +514,29 @@ export const useApp = create<AppState>((set, get) => ({
 
     const stats = spectrumStats(scratch, sdr);
     rfBus.push(scratch);
+    const sc = get().scannerState;
+
+    if (sc === "SCANNING") {
+
+      if (stats.peakDbm > sdr.floorDbm + (sdr.ceilDbm - sdr.floorDbm) * sdr.squelch) {
+
+        set({ scannerState: "LOCKED" });
+
+      } else {
+
+        get().scannerNext();
+
+      }
+
+    } else if (sc === "LOCKED") {
+
+      if (stats.peakDbm <= sdr.floorDbm + (sdr.ceilDbm - sdr.floorDbm) * sdr.squelch) {
+
+        set({ scannerState: "SCANNING" });
+
+      }
+
+    }
     const nextTel = tickTelemetry(tel, sdr, stats, dt);
     const pipe = get().pipe;
     if (pipe.running) {
@@ -479,6 +562,11 @@ export const useApp = create<AppState>((set, get) => ({
     if (mode === "live" && liveTimer > 2) {
       liveTimer = 0;
       void pullLive(get, set);
+    }
+    uplinkTimer += dt;
+    if (mode === "live" && uplinkTimer > 5) {
+      uplinkTimer = 0;
+      void pushUplinkTelemetry(get);
     }
   },
 

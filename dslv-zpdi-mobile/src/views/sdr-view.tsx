@@ -38,6 +38,11 @@ export function SdrView() {
   const sdr = useApp((s) => s.sdr);
   const tel = useApp((s) => s.tel);
   const usb = useApp((s) => s.usb);
+  const scannerState = useApp((s) => s.scannerState);
+  const scannerStart = useApp((s) => s.scannerStart);
+  const scannerStop = useApp((s) => s.scannerStop);
+  const scannerNext = useApp((s) => s.scannerNext);
+  const scannerHold = useApp((s) => s.scannerHold);
   const mode = useApp((s) => s.mode);
   const setCenterHz = useApp((s) => s.setCenterHz);
   const setSpanMode = useApp((s) => s.setSpanMode);
@@ -144,6 +149,12 @@ export function SdrView() {
         >
           {listening ? (squelched ? "Listening · squelched" : `Listening · ${sdr.demod}`) : `Listen · ${sdr.demod}`}
         </Button>
+        <div className="mb-3 grid grid-cols-4 gap-2">
+          <Button variant={scannerState === "SCANNING" ? "primary" : "outline"} size="sm" onClick={scannerStart}>Scan</Button>
+          <Button variant="outline" size="sm" onClick={scannerNext}>Skip</Button>
+          <Button variant={scannerState === "HELD" ? "primary" : "outline"} size="sm" onClick={scannerHold}>Hold</Button>
+          <Button variant="outline" size="sm" onClick={scannerStop}>Stop</Button>
+        </div>
 
         <div className="grid grid-cols-4 gap-2">
           {steps.map((hz) => (
