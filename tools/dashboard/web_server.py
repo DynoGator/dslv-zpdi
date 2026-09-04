@@ -40,11 +40,11 @@ logger = logging.getLogger("dslv-zpdi.webdash")
 _BUILTIN_NODES = [
     {
         "node_id": "pixel-9-pro-xl",
-        "ip": "10.128.24.165",
-        "probe_url": "http://10.128.24.165:5173/",
+        "ip": "10.219.125.153",
+        "probe_url": "http://10.219.125.153:8444/api/status",
         "platform": "GrapheneOS / Termux",
         "description": "Pixel 9 Pro XL — Tier 2 mobile node",
-        "dashboard_url": "http://10.128.24.165:5173/",
+        "dashboard_url": "http://10.219.125.153:8444/",
     },
 ]
 
@@ -290,6 +290,11 @@ async function refresh() {
     });
     nodeHtml += '<hr>'+row('Mobile T2', badge(m.online?'ONLINE':'OFFLINE', m.online, !m.online));
     if(m.trust_score!=null) nodeHtml+=row('Trust', Number(m.trust_score).toFixed(2), m.trust_score>=0.7?'ok':m.trust_score>=0.5?'warn':'bad');
+    if(m.gps && m.gps.lat != null) nodeHtml+=row('GPS', m.gps.lat.toFixed(5) + ', ' + m.gps.lon.toFixed(5), 'dim');
+    if(m.magnetometer_ut && m.magnetometer_ut.x != null) {
+      const magStr = m.magnetometer_ut.x.toFixed(1) + ', ' + m.magnetometer_ut.y.toFixed(1) + ', ' + m.magnetometer_ut.z.toFixed(1);
+      nodeHtml+=row('Mag (&mu;T)', magStr, 'dim');
+    }
     document.getElementById('c-nodes').innerHTML = nodeHtml;
 
     // Update SDR HW Status display (without overriding the whole card so we keep inputs)

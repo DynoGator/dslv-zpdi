@@ -248,9 +248,34 @@ def collect_mobile_telemetry(
                                         pass
                                 if node.get("online"):
                                     phone_has_sample = True
+                            # ── Handle Pixel native /api/status format (sensors nested) ──
+                            _sensors = data.get("sensors") if isinstance(data.get("sensors"), dict) else {}
+                            if _sensors:
+                                _ts = _sensors.get("timestampUtc") or _sensors.get("timestamp_utc")
+                                if _ts:
+                                    try:
+                                        telem["timestamp_utc"] = max(telem["timestamp_utc"], float(_ts))
+                                        phone_has_sample = True
+                                    except (TypeError, ValueError):
+                                        pass
+                                # Map Pixel sensor fields to expected telem fields
+                                if _sensors.get("lat") is not None:
+                                    telem["gps"]["lat"] = _sensors["lat"]
+                                    telem["gps"]["lon"] = _sensors.get("lon")
+                                    telem["gps"]["alt"] = _sensors.get("alt")
+                                _mag = _sensors.get("magUt")
+                                if isinstance(_mag, list) and len(_mag) == 3:
+                                    telem["magnetometer_ut"] = {"x": _mag[0], "y": _mag[1], "z": _mag[2]}
+                                if _sensors.get("cameraHash"):
+                                    telem["camera_frame_hash"] = _sensors["cameraHash"]
+                                if _sensors.get("trustScore") is not None:
+                                    telem["trust_score"] = float(_sensors["trustScore"])
+                                    telem["trust_flags"].append("SENSORS")
+                                phone_has_sample = True
+
                             if data.get("magnetometer_ut") or data.get("gps") or data.get("gps_fix"):
                                 _extract_sample_fields(data, telem)
-                                ts = data.get("timestamp_utc") or data.get("ts_utc")
+                                ts = data.get("timestamp_utc") or data.get("ts_utc") or data.get("timestampUtc")
                                 if ts:
                                     try:
                                         telem["timestamp_utc"] = max(

@@ -37,14 +37,24 @@ class MobilePanel:
         mag_str = "—"
         if mag is not None:
             try:
-                mag_str = f"{sum(float(v) * float(v) for v in mag) ** 0.5:.1f} µT"
-            except (TypeError, ValueError):
+                if isinstance(mag, dict):
+                    vals = [mag.get('x', 0), mag.get('y', 0), mag.get('z', 0)]
+                else:
+                    vals = mag
+                mag_str = f"{sum(float(v) * float(v) for v in vals) ** 0.5:.1f} µT"
+            except (TypeError, ValueError, AttributeError):
                 mag_str = "—"
 
         gps = t.get("gps", {})
-        fix = gps.get("accuracy")
-        fix_style = "bright_green" if fix and fix <= 10 else "bright_yellow" if fix and fix <= 50 else "bright_red"
-        fix_str = f"{fix:.1f}m" if fix else "NO FIX"
+        lat = gps.get("lat")
+        lon = gps.get("lon")
+        if lat is not None and lon is not None:
+            fix_str = f"{lat:.3f}, {lon:.3f}"
+            fix_style = "bright_green"
+        else:
+            fix = gps.get("accuracy")
+            fix_style = "bright_green" if fix and fix <= 10 else "bright_yellow" if fix and fix <= 50 else "bright_red"
+            fix_str = f"{fix:.1f}m" if fix else "NO FIX"
 
         cam = t.get("camera_frame_hash", "")
         cam_str = cam[-6:] if cam else "—"
