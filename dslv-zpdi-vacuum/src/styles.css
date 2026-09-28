@@ -1,0 +1,183 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-background: #0a0c0f;
+  --color-foreground: #eceef1;
+  --color-card: #13171c;
+  --color-elevated: #1a1f26;
+  --color-muted: #8d949e;
+  --color-subtle: #6b7380;
+  --color-primary: #8eb4ad;
+  --color-primary-foreground: #0a0c0f;
+  --color-accent: #c8ccd2;
+  --color-ok: #7fae96;
+  --color-warn: #b89a6a;
+  --color-hot: #d4524a;
+  --color-hot-foreground: #0a0c0f;
+  --color-border: #2a313a;
+  --color-grid: #1c222a;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  html,
+  body {
+    min-height: 100dvh;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    touch-action: manipulation;
+    overflow-x: hidden;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  a[href] {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: 1rem;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.app-grid {
+  background-color: var(--color-background);
+  background-image:
+    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.plate-scrim {
+  background: linear-gradient(to top, var(--color-background) 0%, transparent 58%);
+}
+
+.field,
+.select {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  padding: 0.7rem 0.85rem;
+}
+
+.field:disabled,
+.select:disabled {
+  opacity: 0.55;
+}
+
+.textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+
+.btn-hot {
+  background: var(--color-hot);
+  color: var(--color-hot-foreground);
+}
+
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.shell-nav {
+  padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
+}
+
+.shell-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
