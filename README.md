@@ -3,7 +3,7 @@
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
 **Revision:** Rev 5.4.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
 **Date:** 2026-08-06
-**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF (legacy/optional) moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
+**Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF remains Tier-1 under host_timestamp + GPSDO + adequate compute, simulator validation passing, hardware qualification pending physical verification gates.
 
 ---
 
@@ -11,7 +11,7 @@
 
 DSLV-ZPDI is a multi-modal Signals Intelligence (SIGINT) network that translates anomalous multi-spectrum phenomena into institutional-grade, GPS-disciplined HDF5 telemetry.
 
-**Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing (GPSDO/PlutoSDRplus). This achieves hardware-level ADC phase coherence by injecting an atomic-level 10 MHz reference directly into the SDR front-end — making USB jitter irrelevant to sample timing.
+**Phase 2A RF Metrology Pivot:** The architecture transitions from IT Network Timing (PTP/i210-T1) to RF Metrology Timing. For the adc_ext_ref coherence class, this achieves hardware-level ADC phase coherence by injecting a reference directly into the SDR front-end — making USB jitter irrelevant to sample timing. Other Tier-1 nodes use host_timestamp coherence.
 
 ---
 
@@ -92,28 +92,30 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 ## Hardware Stack (Phase 2A Primary)
 
-| Component           | Model                         | Purpose                                                          |
-|---------------------|-------------------------------|------------------------------------------------------------------|
-| Tier 1 Compute      | Raspberry Pi 5 (16 GB)        | FFT processing, HDF5 storage, hotspot AP, pipeline anchor        |
-| Mobile Node         | Pixel 9 Pro XL (GrapheneOS)   | Remote swarm telemetry over PiRepo Wi-Fi (10.42.0.x)            |
-| Display             | 10" Lenovo HDMI touchscreen (800×480)              | On-device Rich TUI dashboard                                     |
-| SDR                 | HamGeek PlutoSDR+ (AD9361)    | RF ingestion, 70 MHz – 6 GHz, dual TRX, external CLKIN     |
-| Legacy SDR          | PlutoSDRplus                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, optional) |
-| Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
-| Antenna             | Great Scott Gadgets ANT500    | 75 MHz – 1 GHz coverage                                         |
-| RF Interconnect     | SMA Male-to-Male (50 Ω)       | GPSDO Output → PlutoSDR+ EXT_REF_CLK (≤ 1 ft)                  |
-| Future: Radon Sensor| EcoSense RadonEye Pro         | Radon ingestion via SPEC-015 (staging endpoint live, promotion pending) |
+The reference stack for Phase 2A is the **topdog** node. 
+Other nodes exist with different coherence classes (see `config/nodes.yaml`).
 
-### Physical Wiring Protocol
+### Node Table
 
-1. **RF Phase Lock (ADC slave):** SMA cable · LBE-1421 `Out2` (10 MHz) → PlutoSDR+ `EXT_REF_CLK`
-   Hardware ADC is now phase-locked to GPS constellation. USB jitter is irrelevant.
-2. **OS Timestamping (heartbeat):** Jumper · LBE-1421 `1 PPS` → Pi 5 GPIO 8 (physical pin 24).
-   Bridge ground between GPSDO and Pi. No level-shifter needed — LBE-1421 outputs 3.3 V CMOS natively.
-3. **Power & Telemetry:** USB-C · LBE-1421 → Pi 5 (powers GPSDO; exposes virtual serial `/dev/ttyACM0` for NMEA)
-4. **SDR Data:** USB/Ethernet · PlutoSDR+ → Pi 5 USB 3.0 (IQ data transfer — timing separate from USB jitter)
+| Node ID | Role | Compute | Front-End | Clock Authority | Coherence |
+|---|---|---|---|---|---|
+| **topdog** | alpha | Pi 5 16GB, Argon Neo | HamGeek PlutoSDR+ (AD9363) | LBE-1421 GPSDO | adc_ext_ref |
+| **ravenpi** | tier1_contributor | Pi 5 8GB | HackRF One (amp blown) | LBE-1421 GPSDO | host_timestamp |
+| **cm5-poe** | alpha_capable | Pi CM5 8GB | HackRF One r10 | LBE-1421 GPSDO | host_timestamp |
+| **pixel9** | mobile_contributor | Pixel 9 Pro XL | HackRF One r10 | None | none |
 
----
+### Per-Node Wiring
+
+**topdog (Reference Stack):**
+- **RF Phase Lock (ADC slave):** LBE-1421 `Out2` → 15M/EXCLK port on SDR. Hardware ADC is phase-locked. (Frequency is configured per-node).
+- **OS Timestamping:** LBE-1421 `Out1` (1 PPS) → Pi GPIO + ground on Adafruit cyberdeck HAT breakout (currently assumed GPIO 8 for dtoverlay).
+- **Power & Telemetry:** LBE power/JTAG → Pi USB 2.0.
+- **SDR Data & Power:** SDR debug USB → Pi USB 3.0; SDR Ethernet → Pi Ethernet; SDR OTG → UPS 5 V rail. SDR PPS port is empty.
+- **RF Input:** 4x Great Scott Gadgets ANT500.
+
+**ravenpi / cm5-poe:**
+- **OS Timestamping:** LBE-1421 `Out1` (1 PPS) → Pi GPIO. (host_timestamp coherence).
+- **SDR Data:** USB to HackRF. HackRF One stock has no EXT_REF_CLK, thus no LBE Out2 connection.
 
 ## Installation & Deployment
 
@@ -323,7 +325,7 @@ python -m dashboard --headless         # Run without TUI (logging only)
 
 > **Note (v5.0.0):** PlutoSDRplus real-SDR mode is **ON by default**. The dashboard sets
 > `DSLV_DASHBOARD_REAL_SDR=1` at startup. Use `--no-real-sdr` to start in simulated mode.
-> The amp (`a` key) is locked out — PlutoSDRplus amp is blown, parts on order.
+> The amp (`a` key) is locked out on node `ravenpi` — HackRF amp is blown, parts on order.
 
 **Web dashboard** (read-only, auto-refresh, accessible from any device on the PiRepo LAN):
 ```
@@ -489,9 +491,9 @@ The active SDR backend (PlutoSDR+ / PlutoSDRplus legacy) applies its own gain mo
 
 | Control | Range        | Steps                        | Effect                             |
 |---------|-------------|------------------------------|------------------------------------|
-| LNA     | 0–40 dB     | 0, 8, 16, 24, 32, 40        | RF front-end amplification (PlutoSDRplus legacy) |
-| VGA     | 0–62 dB     | 0, 8, 16, 24, 32, 40, 48, 56, 62 | Baseband (IF) gain (PlutoSDRplus legacy) |
-| AMP     | on/off      | —                            | PlutoSDRplus internal +14 dB pre-amp (use with care — can saturate) |
+| LNA     | 0–40 dB     | 0, 8, 16, 24, 32, 40        | RF front-end amplification (HackRF model) |
+| VGA     | 0–62 dB     | 0, 8, 16, 24, 32, 40, 48, 56, 62 | Baseband (IF) gain (HackRF model) |
+| AMP     | on/off      | —                            | HackRF internal +14 dB pre-amp (use with care — can saturate) |
 
 Changing any gain value immediately restarts the underlying sweep subprocess. There is a brief `SDR-WAIT` transition (~1–2 rows) while the new sweep starts.
 
@@ -794,7 +796,7 @@ python -m dashboard
 ### Waterfall is stuck on `SIM` even after pressing `r`
 
 - PlutoSDR+ is not reachable at `ip:192.168.2.1`. Verify the network link and run `iio_info -u ip:192.168.2.1`.
-- Legacy HackRF (legacy/optional) only: run `hackrf_info` — if it fails, check USB connection.
+- Legacy HackRF only: run `hackrf_info` — if it fails, check USB connection.
 - If the SDR is detected but sweep fails, check the error label in the waterfall title bar.
 
 ### Pipeline running in SIMULATOR when I expect HARDWARE
@@ -963,8 +965,7 @@ By locking the PlutoSDR+ ADC directly to the GPS constellation via 10 MHz `EXT_R
 ## Glossary
 
 - **PlutoSDR+**: The primary HamGeek AD9363 unit.
-- **PlutoSDRplus (legacy)**: The legacy optional unit with a blown amplifier.
-- **HackRF (legacy/optional)**: Legacy optional SDR hardware.
+- **HackRF One (ravenpi)**: The legacy optional unit with a blown amplifier.
 
 ## Operations Dashboard (TUI)
 

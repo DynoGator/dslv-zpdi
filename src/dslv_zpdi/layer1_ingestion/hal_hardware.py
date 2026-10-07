@@ -662,7 +662,7 @@ class HardwareHAL(BaseHAL):
         try:
             plutosdrplus_device = pyPlutoSDRplus.PlutoSDRplus()
 
-            # AMP LOCKOUT — PlutoSDRplus 1 front-end amp is blown; parts on order.
+            # AMP LOCKOUT — applies to node_id ravenpi, fault rf_amp_blown.
             try:
                 plutosdrplus_device.set_amp_enable(0)
             except Exception:

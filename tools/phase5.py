@@ -66,7 +66,7 @@ glossary = """
 
 - **PlutoSDR+**: The primary HamGeek AD9363 unit.
 - **PlutoSDRplus (legacy)**: The legacy optional unit with a blown amplifier.
-- **HackRF (legacy/optional)**: Legacy optional SDR hardware.
+- **HackRF**: Legacy optional SDR hardware.
 """
 if "## Glossary" not in readme:
     readme += glossary
@@ -90,7 +90,7 @@ for filepath in glob.glob(os.path.join(repo_root, "**/*.md"), recursive=True):
 
     new_content = content
     # Standardize HackRF
-    new_content = re.sub(r"(?i)\bHackRF\b(?!\s*\(legacy/optional\))", "HackRF (legacy/optional)", new_content)
+    new_content = re.sub(r"(?i)\bHackRF\b(?!\s*\(legacy/optional\))", "HackRF", new_content)
     # We will assume PlutoSDR+ and PlutoSDRplus are already somewhat correct but let's ensure they are clear.
 
     if new_content != content:

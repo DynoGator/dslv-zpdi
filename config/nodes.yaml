@@ -1,0 +1,62 @@
+# Hardware Identity and Node Capabilities
+# Defines coherence classes: adc_ext_ref | host_timestamp | none
+
+# SCHEMA COMMENTS:
+# ad936x_ext_refclk / Tezuka refclk MUST equal the programmed LBE-1421 Out2 frequency.
+# The EXCLK jumper must take the onboard oscillator out of the loop.
+# Do NOT hardcode 10e6 or 40e6. Frequency is a per-node config field with NO silent default.
+
+nodes:
+  topdog:
+    role: alpha
+    reference_front_end: true
+    compute: Raspberry Pi 5 16 GB, Argon Neo top half (active cooler), boot from SD
+    breakout: Adafruit cyberdeck HAT (audio module + speakers, and the 1PPS + GND landing for the Pi GPIO)
+    carrier: custom Crow-Pi project box
+    power: SupTronics X-1202 (1S4P, terminal cell voltage 4.23 V, input 6–18 V). 4x Sony VTC6 18650. Feed: 12.6 V 5 A barrel. Star ground.
+    ui: 10" Lenovo HDMI + webcam/touch. Split cable: 5 V and shared ground from UPS; data + split ground to Pi USB 2.0 (keep Pi USB power ceiling). Rii wireless touchpad keyboard dongle.
+    front_end: HamGeek Pluto+ (AD9363-class)
+    firmware: F5OEO Tezuka
+    wiring:
+      - SDR debug USB -> Pi USB 3.0
+      - SDR Ethernet -> Pi Ethernet
+      - SDR OTG -> UPS 5 V rail
+      - SDR PPS port: EMPTY
+      - LBE-1421 Out2 -> 15M/EXCLK port on SDR
+      - LBE-1421 Out1 (1PPS) -> Pi GPIO + ground
+      - LBE power/JTAG -> Pi USB 2.0
+    rf: 4x Great Scott Gadgets ANT500
+    coherence: adc_ext_ref
+    faults: []
+    ad936x_ext_refclk: null # NO SILENT DEFAULT. Must be explicitly provided if used.
+
+  ravenpi:
+    role: tier1_contributor
+    compute: Raspberry Pi 5 8 GB in a clamshell cyberdeck
+    power: Geekworm X-1103 UPS, 2 packs of 1S2P VTC6 18650
+    ui: Waveshare 5" multitouch DSI, Rii wireless touch keypad
+    front_end: Great Scott Gadgets HackRF One
+    rf: 1x ANT500
+    clock: Leo Bodnar LBE-1421
+    coherence: host_timestamp
+    faults:
+      - rf_amp_blown
+
+  cm5-poe:
+    role: alpha_capable
+    compute: Raspberry Pi Compute Module 5, 8 GB RAM, 32 GB eMMC, carrier POE BOX 2 DEV
+    ui: 7" multitouch DSI
+    power: Waveshare 3S UPS
+    front_end: HackRF One r10
+    rf: 1x ANT500
+    clock: Leo Bodnar LBE-1421
+    coherence: host_timestamp
+    faults: []
+
+  pixel9:
+    role: mobile_contributor
+    compute: Pixel 9 Pro XL, GrapheneOS, Termux
+    front_end: HackRF One r10, no PortaPack, externally powered OTG dongle (not phone VBUS)
+    clock: none
+    coherence: none
+    faults: []

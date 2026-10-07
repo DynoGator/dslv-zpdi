@@ -677,6 +677,12 @@ class WaterfallPanel:
         self.modulation = mods[(i + 1) % len(mods)]
 
     def toggle_amp(self):
+        import os
+        node_id = os.environ.get("DSLV_NODE_ID", "")
+        if self._active_real == "pluto":
+            return
+        if self._active_real == "hackrf" and node_id == "ravenpi":
+            return
         self.amp_enabled = not self.amp_enabled
         self._restart_stream_if_running()
 
@@ -1053,13 +1059,15 @@ class WaterfallPanel:
             err_suffix = f" · err: {_esc(err)}" if (self._want_real and err) else ""
             gain_info = f" · floor {self.dbm_floor:.0f} ceil {self.dbm_ceil:.0f}"
             unit = "dBFS" if self._active_real == "pluto" else "dBm"
-            gain_suffix = (
-                f" · lna {self.lna_gain}dB vga {self.vga_gain}dB AMP-LOCK"
-                if self._active_real == "hackrf"
-                else f" · gain {self.lna_gain}dB"
-                if self._active_real == "pluto"
-                else ""
-            )
+            import os
+            node_id = os.environ.get("DSLV_NODE_ID", "")
+            if self._active_real == "hackrf":
+                amp_str = "AMP-LOCK" if node_id == "ravenpi" else f"amp {'on' if self.amp_enabled else 'off'}"
+                gain_suffix = f" · lna {self.lna_gain}dB vga {self.vga_gain}dB {amp_str}"
+            elif self._active_real == "pluto":
+                gain_suffix = f" · gain {self.lna_gain}dB"
+            else:
+                gain_suffix = ""
             sweeps = stream.sweeps() if stream else 0
             sweep_suffix = f" · sweeps {sweeps}" if self._want_real else ""
             title = (

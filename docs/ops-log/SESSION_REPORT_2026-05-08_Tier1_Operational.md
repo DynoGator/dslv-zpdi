@@ -69,7 +69,7 @@ are on order to replace it.
 **Fixes applied (defense-in-depth):**
 1. **`waterfall.py`** — `toggle_amp()` is now a hard no-op. `amp_enabled` stays `False`
    regardless of key presses. Waterfall title now shows `AMP-LOCK` instead of `amp ON/off`.
-2. **`app.py`** — Pressing `a` shows `WARN: AMP LOCKED OUT — PlutoSDRplus 1 amp blown, parts on order`
+2. **`app.py`** — Pressing `a` shows `WARN: AMP LOCKED OUT — ravenpi HackRF amp blown, parts on order`
    in the notifications panel instead of toggling.
 3. **`hal_hardware.py`** — `_ingest_pyPlutoSDRplus()` now calls `PlutoSDRplus_device.set_amp_enable(0)`
    (wrapped in try/except for API compatibility) before every SDR ingest, ensuring amp is

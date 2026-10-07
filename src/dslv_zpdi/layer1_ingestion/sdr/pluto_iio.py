@@ -70,6 +70,21 @@ class PlutoIioBackend(SdrBackend):
         self._transport_errors = 0
         self._short_read_count = 0
         self._lost_context_count = 0
+
+        # Check for missing ad936x_ext_refclk on topdog path
+        import os
+        import yaml
+        node_id = os.environ.get("DSLV_NODE_ID", "topdog")
+        if node_id == "topdog":
+            try:
+                with open("config/nodes.yaml", "r") as f:
+                    nodes_cfg = yaml.safe_load(f)
+                    n_cfg = nodes_cfg.get("nodes", {}).get("topdog", {})
+                    if n_cfg.get("ad936x_ext_refclk") is None:
+                        logger.warning("topdog missing ad936x_ext_refclk in nodes.yaml")
+            except Exception:
+                pass
+
         self._open()
 
     @property
