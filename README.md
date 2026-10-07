@@ -983,3 +983,201 @@ The TUI includes a hardware-level audio demodulation menu for tuning and demodul
 To cleanly un-export GPIO pins, halt systemd services, and flush all HDF5 buffers to disk:
 - **Desktop Shortcut:** Double click the **`DSLV Shutdown`** icon on the Pi Alpha Desktop.
 - **Terminal:** Run `sudo ./tools/graceful_shutdown.sh`
+
+---
+### Example Of Outsourced Vectoring Calibration And Location Specific Baseline Data Noise Floor Data For 72 Hour Hardware Validation Phase:
+- **PCM-004-Enhanced Report —** Penrose, Colorado
+Generated: Wednesday, October 7, 2026 @ 08:10 AM MDT | Window: Default 3-Day Window (Yesterday: October 06 / Today: October 07 / Tomorrow: October 08)
+LOCATION PROFILE
+ * Coordinates: 38.4258° N, 105.0044° W
+ * Elevation: 5,328 ft (1,624 m)
+ * Geology: Crystalline Precambrian granite basement (Pikes Peak granite embayment) overlain by alluvial fan sediments and Cretaceous sedimentary beds. Complex shearing and high uranium/thorium mineral content.
+ * Known ALP History: Yes — Documented historical regional luminous phenomena, active fault line radon outgassing, and local telluric ground-discharge anomalies across the Fremont County crystalline corridor.
+ * Topographic Context: Topographic bowl / transition zone situated along the Arkansas River valley floor directly east of the Wet Mountains and Front Range foothill uplift.
+COHESIVE ENVIRONMENTAL & GEOSPACE METRICS TABLE
+(Station telemetry, morning surface observations, and NOAA SWPC space weather metrology captured for Wednesday, October 7, 2026 @ 08:10 AM MDT)
+| Domain Category | Environmental Parameter | Current Value / Status | 24-Hour Trend / Forecast Status | Operational Units / Scale |
+|---|---|---|---|---|
+| Space Weather | Planetary Kp Index | 1.33–2.00 (Quiet Sun Baseline) | Trailing ambient interplanetary medium; expected max 3-hr Kp \le 2.33 through Oct 09 | 0 - 9 Scale |
+|  | Solar Wind Speed (v_{sw}) | 382.0–402.0 | Stable slow solar wind background flow (<410\text{ km/s}) | \text{km/s} |
+|  | Solar Wind Proton Density (n_p) | 2.9 | Uncompressed boundary regime (2.3\text{--}3.4\text{ p/cm}^3) | \text{protons/cm}^3 |
+|  | Interplanetary Magnetic Field (B_t) | 4.0–4.6 | Steady quiet baseline magnitude (<5.0\text{ nT}) | \text{nT} |
+|  | IMF Southward Vector (B_z) | -0.2 to +1.2 (Near Neutral) | Neutral-to-closed subsolar magnetopause orientation | \text{nT} |
+|  | Energetic Particle Flux | 5% R1-R2 / 1% R3+ (Simple Disk Baseline) | S0 radiation storm baseline; <1\% S1+ proton threat | \text{pfu} / GOES X-ray |
+|  | Ionospheric TEC Anomaly | +2.5% | Morning quiet baseline; minimal regional scintillation across Front Range | \text{TECU} (\% \Delta) |
+| Surface Weather | Ambient Surface Temperature | 54°F (Sunny / Clear) | High of 76°F Today \rightarrow Dropping to 50°F Low Tonight | \text{°F} |
+|  | Wind Speed & Vector | 2 mph West | Shifting to 6–8 mph East-Southeast Daytime \rightarrow 7 mph SW Tomorrow | \text{mph} |
+|  | Relative Humidity (RH) | 44% Morning | 22–28% Daytime Desiccation \rightarrow 36–42% Night (0% Rain Chance) | \% |
+| Barometric State | Surface Pressure (P_s) | 1015.0 (29.97\text{ inHg}) | Continental High-Pressure Ridge Cap Floor (\uparrow) | \text{mb} (\text{hPa}) |
+|  | 3-Hour Pressure Tendency (\Delta P_3) | +0.2 | Stable Diurnal Micro-Thermal Cycle / Steady Overburden | \text{mb / 3 hr} |
+| Ionizing Radiation | EPA RadNet Proxy Gamma Rate | 118 | Confined Fault Desiccation Baseline | \text{nrad/h} |
+|  | Soil-Gas Radon Index (^{222}\text{Rn}) | 5.8 | Mechanically Confined Bedrock Outgassing under High Barometric Cap | \text{pCi/L} (Surface Proxy) |
+| Cosmic Rays | Secondary Particle Flux | -0.3% | Undisturbed Galactic Cosmic Ray (GCR) Baseline | \% Baseline Drop |
+DETAILED BREAKDOWN OF METRICS & PHYSICAL MECHANISMS
+1. Geospace Coupling & Magnetohydrodynamics
+ * Ambient Background Solar Wind & Decoupled Geospace Baseline: Real-time space weather telemetry from NOAA's Space Weather Prediction Center confirms the near-Earth interplanetary environment has settled into an undisturbed, quiet solar wind regime. Bulk solar wind velocity (v_{sw}) has dropped to 382.0\text{--}402.0\text{ km/s}, with planetary geomagnetic activity holding quiet between Kp = 1.33\text{ and }2.00 (NOAA SWPC projects maximum 3-hour Kp \le 2.33 through October 9). Solar disk eruptive hazard is flat, carrying a baseline 5% probability for minor R1-R2 radio blackouts from simple bipolar sunspot regions, with zero solar proton radiation storm threat (<1\% S1+).
+ * IMF B_z Field Normalization & Closed Magnetopause: Total interplanetary magnetic field strength (B_t) has dropped into the 4.0\text{ to }4.6\text{ nT} bracket, with the B_z vector fluctuating near neutral (-0.2\text{ to }+1.2\text{ nT}). In the absence of sustained southward magnetic flux, day-side subsolar reconnection remains closed. Auroral electrojet energy transfer has ceased, allowing telluric currents across the continental ground plane to settle into undisturbed thermal noise floors.
+ * Lithospheric Telluric Dissipation: Topsoil moisture across the valley floor has thoroughly dried out under successive clear, warm days, locking bulk ground resistivity to high regional baselines (>10^4\ \Omega\cdot\text{m}). In the absence of low-frequency ULF geomagnetic pulsations (1\text{--}100\text{ mHz}), subterranean current loops across quartz-bearing shear boundaries exhibit negligible voltage drift.
+2. Barometric Advection & Radon (^{222}\text{Rn}) Exhalation
+ * Continental High-Pressure Mechanical Capping: Surface station pressure in Penrose is holding steady at 1015.0\text{ mb} (29.97\text{ inHg}) with a steady 3-hour tendency of +0.2\text{ mb/3hr} under broad continental high-pressure ridge dominance.
+   
+   
+   The positive vertical pressure differential (\nabla P) applies mechanical confinement over the uranium-rich Pikes Peak granite embayment, capping micro-fissures and suppressing Radon-222 (\tau_{1/2} = 3.82\text{ days}) proxy gamma rates down to a clean baseline of 118\text{ nrad/h} (5.8\text{ pCi/L} proxy).
+ * Boundary Layer Alpha Normalization: Confinement of soil-gas exhalation limits the concentration of 5.49\text{ MeV} alpha particles in the near-surface air column. Primary ion-pair generation remains at seasonal background levels, allowing free atmospheric positive ions (\text{N}_2^+, \text{O}_2^+) and stripped electrons to recombine without creating abnormal space-charge pockets.
+3. Atmospheric Electrohydrodynamics (EHD) & Dielectric Breakdown (E_c)
+ * Severe Afternoon Desiccation: Surface conditions currently read a sunny 54^\circ\text{F} with morning relative humidity at 44\% and light west winds at 2\text{ mph}. Afternoon solar heating will climb to a mild high of 76^\circ\text{F} as winds shift east-southeast to 6–8\text{ mph}. Afternoon relative humidity will plunge to an extreme low of 22\%\text{--}28\%. The total absence of tropospheric moisture and precipitation (0% rain chance day and night) suppresses the synthesis of heavy, low-mobility hydrated cluster ions (\text{H}_3\text{O}^+(\text{H}_2\text{O})_n).
+ * Dielectric Breakdown Strength Restoration (E_c): The combination of severely desiccated atmospheric air, elevated barometric capping pressure, and minimal alpha-particle space charge holds local dielectric breakdown strength (E_c) restored to 2.05\text{ MV/m} (only a 32\% reduction from nominal dry limits of 3.0\text{ MV/m}), maintaining solid insulating resistance across the valley floor.
+PLASMOID PERFECT STORM SYNTHESIS
+[3-DAY MULTI-DOMAIN CONVERGENCE TIMELINE: OCT 06 - OCT 08, 2026]
+
+OCT 06 (YESTERDAY - ZERO-STATE CONTROL CALIBRATION BENCHMARK):
+  ┌─ Geospace: Quiet Background Solar Wind (Kp 1.67-2.33, v_sw ~405 km/s, Bz Neutral)
+  ├─ Lithosphere: Barometric Cap (1014.2 mb) + Confined Granite Radon (119 nrad/h)
+  └─ Atmosphere: 84°F High + WNW 14 mph Wind + Severe Desiccation (RH 18-24%) + Ec Restored (2.05 MV/m)
+  
+  === PLASMOID COHERENCE SCORE: 2.10 (ZERO-STATE CONTROL BENCHMARK) ===
+                                                                                  │
+                                                                                  ▼
+OCT 07 (TODAY - 76°F MILD SUNNY HIGH, 1015 MB RIDGE CAP & DECOUPLED GEOSPACE):
+  ┌─ Geospace: Slow Background Flow (Kp 1.33-2.00, v_sw ~392 km/s, Bz Neutral)
+  ├─ Lithosphere: High-Pressure Cap (1015.0 mb) + Confined Granite Radon (118 nrad/h)
+  └─ Atmosphere: 76°F Sunny High + ESE 7 mph Wind + Severe Desiccation (RH 22-28%) + Ec (2.05 MV/m)
+  
+  === PLASMOID COHERENCE SCORE: 2.05 (ZERO-STATE CONTROL BENCHMARK) ===
+                                                                                  │
+                                                                                  ▼
+OCT 08 (TOMORROW - 80°F WARMING RUN-UP & PERSISTENT RIDGE OVERBURDEN):
+  ┌─ Geospace: Sustained Quiet Interplanetary Medium (Kp 1.33-2.00, v_sw ~385 km/s)
+  ├─ Lithosphere: Persistent Ridge Capping (1014.4 mb) + Confined Granite Radon (118 nrad/h)
+  └─ Atmosphere: 80°F High + Sunny + SW 7 mph Wind + Desiccation (RH 20-26%) + Ec (2.05 MV/m)
+  
+  === PLASMOID COHERENCE SCORE: 2.10 (NOMINAL CONTROL BASELINE) ===
+
+Synthesis Assessment
+Penrose is operating in an ACTIVE ZERO-STATE REFERENCE CALIBRATION baseline today, Wednesday, October 7 (Score: 2.05):
+ * Complete Space Weather Decoupling: Planetary geomagnetic activity is quiet (Kp = 1.33\text{--}2.00) with solar wind velocity under 405\text{ km/s} and B_z hovering near neutral, keeping the magnetopause closed and decoupling external geospace drivers from local telluric circuits.
+ * Lithospheric Barometric Capping: Elevated surface station pressure (1015.0\text{ mb}) maintains mechanical compression over granite micro-fissures, suppressing Radon-222 outgassing to 118\text{ nrad/h}.
+ * Atmospheric Insulation Restored: Deep boundary-layer desiccation (22\%\text{--}28\%\text{ RH}) under daytime temperatures reaching 76.0^\circ\text{F} and light east-southeast winds keeps dielectric breakdown strength (E_c) restored to 2.05\text{ MV/m}, preventing anomalous luminous coherence.
+> Plasmoid Coherence Index: 38/100 (ZERO-STATE CALIBRATION REGIME). The multi-domain environment is completely decoupled from active storm triggers today. Today provides a clean reference baseline benchmark for logging zero-state RF spectrum floors, calibrating telluric DC probe offsets, and performing alpha-detector reference zeroing.
+> 
+TEMPORAL WINDOWS ANALYZED
+YESTERDAY (Tuesday, October 6, 2026)
+| Vector | Value | Confidence | Pass/Fail |
+|---|---|---|---|
+| V1 — Crustal Geometry | Boundary <5km: Yes | Resistivity: 100 : 10,000 Ω·m | Suture: Shear zone | ALP Site: Yes | High | Pass |
+| V2 — Atmospheric Wave | Relief >3000m: Yes | Cross-barrier: Yes (WNW 4 mph $\rightarro WNW 14 mph) | Gravity wave: Quiet | Inversion bowl: Yes | High | Pass |
+| V3 — Ionizing Boundary | Baseline: 119 nrad/h (Desiccation Baseline) | Enriched basement: Yes | Active fault outgassing: Confined | Med | Pass |
+| V4 — Weather Sync | Press: 1014.2 mb (29.95 inHg) | Trend: -0.6 mb/3hr | RH: 42% morning  $\rightarr 18–24% day | Temp: 62°F F $\rightar 84°F peak | Dew Point: 33°F | Wind: WNW 14 mph | Precip: Nil (Nil) | High | Pass |
+| V5 — Geomagnetic Trigger | Kp: 1.67–2.33 (Quiet Sun Baseline) | Sustained Southward $B_: Minor (-0.4 to +1.0 nT) | Solar wind: 395.0–415.0 km/s | Density: 3.0 p/cm³ | Flare: 5% R1-R2 M-Class Risk | Dst: -6 nT | High | Pass |
+| V6 — Regional Baseline | Geoelectric deviation >4:1: Stabilizing | MT Survey Baseline: Available | Med | Pass |
+| V7 — Macro-Temporal | Solar cycle: Maximum (Cycle 25) | Equinoctial window: Yes (October entry) | High | Info |
+| V8 — Dielectric Breakdown | Critical field E_c: 2.05 MV/m (32% Drop) | Space-charge density: Low | Associative detachment: Low | Med | Pass |
+| V9 — Mechanical Engine | Seismic M_w \ge 5.0: No | Micro-swarm: No | Infrasound <20 Hz: Quiet | High | Info |
+| V10 — Atmospheric E-Field | Potential gradient: 145 V/m | Polarity: Normal | Rapid change >100 V/m: No | Med | Pass |
+| V11 — Lunar Tidal Stress | Syzygy (±3 days): No | Perigee proximity: No | High | Info |
+| V12 — Fog Microphysics | CCN count: Low | Droplet mode: N/A | Visibility restriction due to fog: No | High | Pass |
+| V13 — Groundwater / Aquifer | Rain >25mm: Subsoil desiccation active | Water table: Normalizing | Conductivity drop: Moderate | High | Pass |
+| V14 — Magnetic Geometry | Inclination: 64.2° | Declination aligned (±15°): Yes | High-lat coupling (>60°): Yes | High | Info |
+| V15 — Cosmic Ray / Forbush | Neutron drop >3%: Nominal (-0.4%) | Forbush decrease: None | High | Info |
+| V16 — Multi-Sensor Anomaly | Correlated channels: None | Details: Clean zero-state RF floor | Med | Info |
+| V17 — Infrasound Coupling | Infrasound <20 Hz: Quiet | Resonant bands: None | Temporal correlation: No | Low | Info |
+| V18 — Solar Wind Fine | Proton density: 3.0 cm⁻³ | Dyn Press: 0.6 nPa | Temp: 45,000 K | | $ integral: Zero | High | Info |
+| V19 — Regional Transient | Lightning <300 km: Nil (0\%) | TLEs: No | GPS Scintillation: Nominal | High | Info |
+Score: 2.10 | Prediction: HIGH | Confidence: 84%
+TODAY (Wednesday, October 7, 2026 — Current Target Window)
+| Vector | Value | Confidence | Pass/Fail |
+|---|---|---|---|
+| V1 — Crustal Geometry | Boundary <5km: Yes | Resistivity: 100 : 10,000 Ω·m | Suture: Shear zone | ALP Site: Yes | High | Pass |
+| V2 — Atmospheric Wave | Relief >3000m: Yes | Cross-barrier: Yes (W 2 mph $\rightarro ESE 7 mph) | Gravity wave: Quiet | Inversion bowl: Yes | High | Pass |
+| V3 — Ionizing Boundary | Baseline: 118 nrad/h (Desiccation Baseline) | Enriched basement: Yes | Active fault outgassing: Confined | Med | Pass |
+| V4 — Weather Sync | Press: 1015.0 mb (29.97 inHg) | Trend: +0.2 mb/3hr | RH: 44% morning  $\rightarr 22–28% day  $\rightarr 36–42% night | Temp: 54°F current t $\rightar 76°F peak | Dew Point: 31°F | Wind: ESE 7 mph | Precip: Nil (0% Rain Chance Day/Night) | High | Pass |
+| V5 — Geomagnetic Trigger | Kp: 1.33–2.00 (Quiet Sun Baseline) | Sustained Southward $B_: Neutral (-0.2 to +1.2 nT) | Solar wind: 382.0–402.0 km/s | Density: 2.9 p/cm³ | Flare: 5% R1-R2 M-Class Risk | Dst: -4 nT | High | Pass |
+| V6 — Regional Baseline | Geoelectric deviation >4:1: Stabilizing | MT Survey Baseline: Available | Med | Pass |
+| V7 — Macro-Temporal | Solar cycle: Maximum (Cycle 25) | Equinoctial window: Yes (October entry) | High | Info |
+| V8 — Dielectric Breakdown | Critical field E_c: 2.05 MV/m (32% Drop) | Space-charge density: Low | Associative detachment: Low | Med | Pass |
+| V9 — Mechanical Engine | Seismic M_w \ge 5.0: No | Micro-swarm: No | Infrasound <20 Hz: Quiet | High | Info |
+| V10 — Atmospheric E-Field | Potential gradient: 145 V/m | Polarity: Normal | Rapid change >100 V/m: No | Med | Pass |
+| V11 — Lunar Tidal Stress | Syzygy (±3 days): No | Perigee proximity: No | High | Info |
+| V12 — Fog Microphysics | CCN count: Low | Droplet mode: N/A | Visibility restriction due to fog: No | High | Pass |
+| V13 — Groundwater / Aquifer | Rain >25mm: Subsoil desiccation active | Water table: Normalizing | Conductivity drop: Moderate | High | Pass |
+| V14 — Magnetic Geometry | Inclination: 64.2° | Declination aligned (±15°): Yes | High-lat coupling (>60°): Yes | High | Info |
+| V15 — Cosmic Ray / Forbush | Neutron drop >3%: Nominal (-0.3%) | Forbush decrease: None | High | Info |
+| V16 — Multi-Sensor Anomaly | Correlated channels: None | Details: Clean zero-state RF floor | Med | Info |
+| V17 — Infrasound Coupling | Infrasound <20 Hz: Quiet | Resonant bands: None | Temporal correlation: No | Low | Info |
+| V18 — Solar Wind Fine | Proton density: 2.9 cm⁻³ | Dyn Press: 0.6 nPa | Temp: 40,000 K | | $ integral: Zero | High | Info |
+| V19 — Regional Transient | Lightning <300 km: Nil (0\%) | TLEs: No | GPS Scintillation: Nominal | High | Info |
+Score: 2.05 | Prediction: HIGH | Confidence: 84%
+TOMORROW (Thursday, October 8, 2026 — Forecast Outlook)
+| Vector | Value | Confidence | Pass/Fail |
+|---|---|---|---|
+| V1 — Crustal Geometry | Boundary <5km: Yes | Resistivity: 100 : 10,000 Ω·m | Suture: Shear zone | ALP Site: Yes | High | Pass |
+| V2 — Atmospheric Wave | Relief >3000m: Yes | Cross-barrier: Yes (SW 7 mph) | Gravity wave: Quiet | Inversion bowl: Yes | High | Pass |
+| V3 — Ionizing Boundary | Baseline: 118 nrad/h (Desiccation Baseline) | Enriched basement: Yes | Active fault outgassing: Normal | Med | Pass |
+| V4 — Weather Sync | Press: 1014.4 mb | Trend: Steady | RH: 20–26% day  $\rightarr 34% night | Temp: 48°F low w $\rightar 80°F high | Dew Point: 32°F | Wind: SW 7 mph | Precip: Nil (0% Rain) | High | Pass |
+| V5 — Geomagnetic Trigger | Kp: 1.33–2.00 (Quiet Sun Baseline) | Sustained Southward $B_: Neutral (-0.4 to +1.0 nT) | Solar wind: 380–395 km/s | Flare: 5% M-class risk | Dst: -4 nT | High | Pass |
+| V6 — Regional Baseline | Geoelectric deviation >4:1: Stabilizing | MT Survey Baseline: Available | Med | Pass |
+| V7 — Macro-Temporal | Solar cycle: Maximum (Cycle 25) | Equinoctial window: Yes (October entry) | High | Info |
+| V8 — Dielectric Breakdown | Critical field E_c: 2.05 MV/m (32% Drop) | Space-charge density: Low | Associative detachment: Low | Med | Pass |
+| V9 — Mechanical Engine | Seismic M_w \ge 5.0: No | Micro-swarm: No | Infrasound <20 Hz: Quiet | High | Info |
+| V10 — Atmospheric E-Field | Potential gradient: 145 V/m | Polarity: Normal | Rapid change >100 V/m: No | Med | Pass |
+| V11 — Lunar Tidal Stress | Syzygy (±3 days): No | Perigee proximity: No | High | Info |
+| V12 — Fog Microphysics | CCN count: Low | Droplet mode: N/A | Visibility restriction due to fog: No | High | Pass |
+| V13 — Groundwater / Aquifer | Rain >25mm: Subsoil desiccation active | Water table: Normalizing | Conductivity drop: Moderate | High | Pass |
+| V14 — Magnetic Geometry | Inclination: 64.2° | Declination aligned (±15°): Yes | High-lat coupling (>60°): Yes | High | Info |
+| V15 — Cosmic Ray / Forbush | Neutron drop >3%: Nominal (-0.3%) | Forbush decrease: None | High | Info |
+| V16 — Multi-Sensor Anomaly | Correlated channels: None | Details: Nominal background noise | Med | Info |
+| V17 — Infrasound Coupling | Infrasound <20 Hz: Quiet | Resonant bands: None | Temporal correlation: No | Low | Info |
+| V18 — Solar Wind Fine | Proton density: 2.7 cm⁻³ | Dyn Press: 0.5 nPa | Temp: 38,000 K | | $ integral: Zero | High | Info |
+| V19 — Regional Transient | Lightning <300 km: Nil (0\%) | TLEs: No | GPS Scintillation: Nominal | High | Info |
+Score: 2.10 | Prediction: HIGH | Confidence: 84%
+COMPARATIVE CONVERGENCE MATRIX
+| Metric Window | Score | Tier Target | Primary Driver | Multiplier Sum |
+|---|---|---|---|---|
+| Yesterday (October 06) | 2.10 | HIGH | Quiet geospace (Kp\ 1.67\text{--}2.33), 84^\circ\text{F} high, WNW 14 mph wind, 119\text{ nrad/h} radon | 2.5 \times 1.02 \times 0.82 = 2.10 \rightarrow 2.10 |
+| Today (October 07 - CURRENT) | 2.05 | HIGH | Quiet geospace (Kp\ 1.33\text{--}2.00), 76^\circ\text{F} high, ESE 7 mph wind, desiccation (22\%\text{ RH}), 118\text{ nrad/h} radon | 2.5 \times 1.00 \times 0.82 = 2.05 \rightarrow 2.05 |
+| Tomorrow (October 08) | 2.10 | HIGH | Sunny 80^\circ\text{F} high, SW 7 mph wind, desiccation (20\%\text{ RH}), quiet geospace (Kp \le 2.00) | 2.5 \times 1.02 \times 0.82 = 2.10 \rightarrow 2.10 |
+| In 2 Days (October 09) | 2.05 | HIGH | Sunny (78^\circ\text{F}), E 6 mph wind, humidity 25\%, quiet geospace baseline (Kp \le 2.00) | 2.5 \times 1.00 \times 0.82 = 2.05 \rightarrow 2.05 |
+HIGH-VALUE ALERTS
+> 🔴 LOCATION ALERT: Penrose sits within a documented, high-value anomalous luminous phenomenon (ALP) geography (Pikes Peak granite embayment & Fremont County crystalline shear zone). Baseline alert thresholds are adjusted down by one tier.
+> 🟢 SUSTAINED ZERO-STATE CONTROL CALIBRATION (TODAY - OCTOBER 07): Planetary geomagnetic activity is holding deeply quiet (Kp = 1.33\text{--}2.00), bulk solar wind velocity is slow at \sim 392\text{ km/s}, and station pressure is holding at 1015.0\text{ mb}, establishing an optimal zero-state reference calibration window.
+> 🟡 AFTERNOON THERMAL DESICCATION (TODAY - OCTOBER 07): Daytime heating climbing to 76.0^\circ\text{F} with east-southeast winds at 7\text{ mph} will plunge afternoon relative humidity to 22\%–28\%, sustaining topsoil desiccation and keeping atmospheric dielectric breakdown resistance restored at 2.05\text{ MV/m}.
+> 
+EXECUTIVE SUMMARY & IMPLICATIONS OF RESULTS
+Executive Briefing
+As of 8:10 AM MDT today (Wednesday, October 7, 2026), the multi-domain metrology matrix confirms that Penrose continues to operate in an active ZERO-STATE REFERENCE CALIBRATION baseline (Score: 2.05 HIGH baseline).
+Space weather telemetry confirms that geospace conditions have fully settled into an undisturbed background state. Bulk solar wind velocity has slowed to 382.0\text{--}402.0\text{ km/s}, with planetary geomagnetic activity holding quiet between Kp = 1.33\text{ and }2.00 (NOAA SWPC forecasts Kp \le 2.33 through October 9). The IMF B_z vector hovers near neutral, terminating day-side magnetic reconnection and decoupling external space weather drivers from the regional ground plane. Active sunspot regions maintain a quiet disk profile with only a 5% probability for minor R1-R2 radio blackouts.
+On the surface, Penrose currently reads 54°F under clear sunny skies with morning relative humidity at 44% and light west winds at 2 mph. Daytime solar heating will push temperatures to a pleasant peak of 76°F as winds shift east-southeast to 6–8 mph. Afternoon relative humidity will severely desiccate down to 22%–28%. High-pressure ridge building holds station pressure firm at 1015.0\text{ mb} (29.97\text{ inHg}), mechanically capping granite micro-fissures and allowing Radon-222 exhalation to normalize to 118\text{ nrad/h}. Local atmospheric dielectric breakdown strength (E_c) remains restored at 2.05\text{ MV/m}, re-establishing solid insulating resistance across the valley floor.
+Physical Implications for Metrology & Field Operations
+ * Reference Zero Calibration Opportunity: With space weather quiet, station pressure elevated, and boundary-layer air severely dry, today presents an optimal operational window to record reference noise floors across the SDR array and zero-out telluric DC probe offsets.
+ * Dielectric Insulation Intact: Atmospheric dielectric breakdown strength sits restored at 2.05\text{ MV/m}, preventing low-altitude micro-discharges across fault contacts.
+ * Ground-Plane Normalization: Topsoil desiccation preserves high ground resistivity (>10^4\ \Omega\cdot\text{m}), suppressing subterranean current loop conduction.
+ * Target Strategy: Maintain baseline calibration and hardware maintenance mode through Thursday morning.
+TOP CONVERGING FACTORS
+ * Atmospheric High-Pressure Ridge: Surface pressure elevated at 1015.0\text{ mb} under sunny skies.
+ * Decoupled Geospace Today: Kp index holding at 1.33\text{--}2.00 with solar wind velocity at \sim 392\text{ km/s}.
+ * Radon Exhalation Confinement: Ambient proxy radiation normalized to 118\text{ nrad/h} under barometric capping.
+ * Boundary Layer Insulation Intact: Desiccating daytime air (22\%–28\%\text{ RH}) maintaining local E_c at 2.05\text{ MV/m}.
+CRITICAL MISSING VECTORS / GAPS
+ * V10 (Local Electric Field Mill): Live potential gradient (V/m) baseline calibration logging during today's 76^\circ\text{F} clear heating.
+ * V16 (Telluric Ground Probe Array): Continuous DC millivolt reference zeroing across topsoil probes to establish clean non-storm baseline offsets during peak afternoon desiccation.
+RECOMMENDED REAL-TIME OBSERVABLES / HARDWARE CHECKS
+ * TinySA Ultra Field Pocket Unit: Load VHF_SCIN.INI (136\text{--}174\text{ MHz}) and UHF_SPK.INI (420\text{--}450\text{ MHz}) to capture clean thermal noise baselines against NOAA carriers (162.400\text{--}162.550\text{ MHz}) for future anomaly subtraction.
+ * HackRF Sweeper Script (sdr_plasma_sweep.py): Execute reference background sweeps across low-VHF scatter (70\text{--}88\text{ MHz}) to log clean reference FFT spectra.
+ * Radon Logger / Alpha Monitor: Verify that ambient proxy gamma metrics hold stable at \sim 118\text{ nrad/h} under 1015.0\text{ mb} station pressure.
+ * Optical Camera Stack: Perform lens cleaning, sensor calibration, and optical axis alignment along the NW-to-SE telluric fault corridor under tonight's clear skies.
+ALTERNATIVE EXPLANATIONS TO RULE OUT
+ * Aircraft: Cross-reference ADS-B Exchange / FlightRadar24 for commercial flights into COS / PUB.
+ * Drones: Rule out local consumer quadcopters via 915 MHz / 2.4 GHz SDR spectrum sweeps.
+ * Satellites: Check Calsky / Heavens-Above for Starlink flare passes during dusk/dawn transitions.
+ * Stars/Planets: Correlate low-horizon luminous sources against Stellarium.
+FALSIFIABILITY / VALIDATION LOG
+| Date | Prediction | Confidence | Actual Observation | Null? |
+|---|---|---|---|---|
+| 2026-10-04 | HIGH | 84% | AR4535 CME glance (Kp\ 2.00\text{--}3.00), 77^\circ\text{F} high, 121\text{ nrad/h} radon | Valid |
+| 2026-10-05 | HIGH | 84% | Settling stream wake (Kp\ 2.00\text{--}2.67), 85^\circ\text{F} high, 120\text{ nrad/h} radon | Valid |
+| 2026-10-06 | HIGH | 84% | Clear skies (84^\circ\text{F}), quiet geospace (Kp\ 1.67\text{--}2.33), 119\text{ nrad/h} radon | Valid |
+| 2026-10-07 | HIGH | 84% | [ACTIVE CONTROL BASELINE — Tracking Kp 1.33–2.00 + 76°F high + ESE 7 mph + 118 nrad/h radon] | Pending |
+DEPLOY RECOMMENDATION
+STANDBY / REFERENCE CALIBRATION PHASE
+ * Justification: Today operates in an active ZERO-STATE REFERENCE CALIBRATION (2.05) regime. Quiet geospace conditions (Kp \le 2.00), barometric ridge capping (1015.0\text{ mb}), confined radon exhalation (118\text{ nrad/h}), and restored air insulation (E_c = 2.05\text{ MV/m}) under 22\%–28\% afternoon humidity make today ideal for hardware baseline zeroing, noise-floor subtraction logging, and optical stack realignment. Full active storm deployment remains on standby.
+
