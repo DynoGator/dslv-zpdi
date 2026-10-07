@@ -37,21 +37,13 @@ def main():
     parser.add_argument("--apply", action="store_true", help="Apply the installation (requires root)")
     args = parser.parse_args()
 
-    nodes = {}
-    current_node = None
     try:
         with open("config/nodes.yaml", "r") as f:
-            for line in f:
-                if line.startswith("  ") and not line.startswith("    ") and line.strip().endswith(":"):
-                    current_node = line.strip()[:-1]
-                    nodes[current_node] = {"coherence": "none", "faults": []}
-                elif current_node and line.strip().startswith("coherence:"):
-                    nodes[current_node]["coherence"] = line.split(":", 1)[1].strip()
-                elif current_node and "rf_amp_blown" in line:
-                    nodes[current_node]["faults"].append("rf_amp_blown")
+            config = yaml.safe_load(f)
+        nodes = config.get("nodes", {})
     except Exception as e:
-        print(f"Error reading config/nodes.yaml manually: {e}")
-        # we don't exit so it can still succeed dry-run
+        print(f"Error reading config/nodes.yaml: {e}")
+        sys.exit(1)
 
     model = get_pi_model()
     hackrf = has_hackrf()
