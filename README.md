@@ -127,10 +127,8 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 
 **Core hardware (Tier 1 Anchor)**
 Hardware assignments and identities are strictly defined in `config/nodes.yaml`.
-- `topdog` node: Raspberry Pi 5 (16 GB) or compatible (see Hardware Agnosticism section)
-- HamGeek Pluto+ SDR. LBE-1421 Out2 drives SDR 15M/EXCLK (frequency unset)
+- `topdog` node: Pi 5 16 GB, HamGeek Pluto+ (AD9363-class), 4× ANT500, LBE-1421 Out2 → 15M/EXCLK, frequency unset.
 - Leo Bodnar LBE-1421 GPSDO (USB-C, NMEA, 3.3 V CMOS)
-- 4× Great Scott Gadgets ANT500 antennas
 - SMA Male-to-Male 50 Ω coax, ≤ 1 ft
 - Female-to-female jumper wire (2.54 mm pitch) for PPS
 - GPS antenna with clear sky view
