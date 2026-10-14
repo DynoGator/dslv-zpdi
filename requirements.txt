@@ -91,7 +91,7 @@ urllib3==2.7.0
     # via requests
 websockets==16.1.1
     # via dslv-zpdi (pyproject.toml)
-werkzeug==3.1.8
+werkzeug==3.1.9
     # via flask
 xyzservices==2026.3.0
     # via folium
