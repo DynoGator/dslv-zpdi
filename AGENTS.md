@@ -97,7 +97,7 @@ This executes: `pip check`, `check_version_sync.py`, `orphan_checker.py`, `repo_
 ## Project Purpose
 
 DSLV-ZPDI is a SPEC-driven Python project for GPS-disciplined, multi-modal field
-telemetry. The current Rev 5.0.0 codebase pivots Tier-1 RF ingestion to a
+telemetry. The current Rev 5.4.0 codebase pivots Tier-1 RF ingestion to a
 PlutoSDR+ class SDR with LBE-1421 timing evidence, a composed HAL, Kuramoto
 coherence processing, and tamper-evident HDF5 persistence.
 
@@ -141,10 +141,10 @@ group, not in `requirements.txt`.
 Verified local notes identify this current Tier-1 profile:
 
 - Raspberry Pi 5 anchor.
-- HamGeek PlutoSDR+ 1 GB / AD9363 at `ip:192.168.3.80`.
+- HamGeek PlutoSDR+ 1 GB / AD9363 (IIO phy `ad9361-phy`). Default URI `ip:192.168.2.1`; field deployments override it with `DSLV_SDR_URI` (for example `ip:192.168.3.80`).
 - Leo Bodnar LBE-1421 GPSDO.
 - LBE-1421 10 MHz Out2 to PlutoSDR+ CLKIN.
-- LBE-1421 1 PPS Out1 to Pi GPIO 8 (physical pin 18).
+- LBE-1421 1 PPS Out1 to Pi GPIO 8 (BCM GPIO 8, physical pin 24).
 - Pixel 9 Pro XL GrapheneOS as the Tier-2 mobile node.
 
 Do not mark physical hardware validation as passing unless it was actually run

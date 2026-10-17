@@ -97,7 +97,7 @@ All modules reference a SPEC-ID in their docstring. `tools/orphan_checker.py` en
 | Tier 1 Compute      | Raspberry Pi 5 (16 GB)        | FFT processing, HDF5 storage, hotspot AP, pipeline anchor        |
 | Mobile Node         | Pixel 9 Pro XL (GrapheneOS)   | Remote swarm telemetry over PiRepo Wi-Fi (10.42.0.x)            |
 | Display             | 10" Lenovo HDMI touchscreen (800×480)              | On-device Rich TUI dashboard                                     |
-| SDR                 | HamGeek PlutoSDR+ (AD9361)    | RF ingestion, 70 MHz – 6 GHz, dual TRX, external CLKIN     |
+| SDR                 | HamGeek PlutoSDR+ (AD9363)    | RF ingestion, 70 MHz – 6 GHz, dual TRX, external CLKIN     |
 | Legacy SDR          | PlutoSDRplus                    | RF ingestion, 20 MHz BW, external CLKIN (amp blown, optional) |
 | Clock Authority     | Leo Bodnar LBE-1421 GPSDO     | 10 MHz reference + 1 PPS, USB-C, NMEA, 3.3 V CMOS              |
 | Antenna             | Great Scott Gadgets ANT500    | 75 MHz – 1 GHz coverage                                         |
