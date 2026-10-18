@@ -1,9 +1,5 @@
 # Changelog
 
-## [5.3.4] — Dashboard & System Hardening Fixes (2026-08-26)
-
-### Added
-- **Audio Dependencies**: Added `alsa-utils` and `pulseaudio-utils` to the Tier 1 installer `BASE_PACKAGES` to ensure `demod_app.py` has a functional `aplay` or `paplay` backend for audio output on fresh installs.
 ## [5.4.0] - 2026-08-26
 ### Added
 - **Tier 1 Node Supervisor:** Engineered \`dslv_launch_supervisor.sh\`, a robust startup orchestrator that sequentially initializes and verifies the state of the Pi Alpha systemd service chain before attempting to launch the TUI dashboard.
@@ -18,12 +14,18 @@
 - Extraneous logging warnings regarding missing \`PlutoSDRplus-tools\`.
 - \`dslv-zpdi-tier1.service\` ghost systemd unit from launch targets.
 
+
+## [5.3.4] — Dashboard & System Hardening Fixes (2026-08-26)
+
+### Added
+- **Audio Dependencies**: Added `alsa-utils` and `pulseaudio-utils` to the Tier 1 installer `BASE_PACKAGES` to ensure `demod_app.py` has a functional `aplay` or `paplay` backend for audio output on fresh installs.
 - **Service Boot Delays**: Increased startup delays in `launch_project.sh` to allow background services to fully initialize before the UI launches.
 
 ### Fixed
 - **Dashboard Dual-Launch Bug**: Fixed a bug in `launch_project.sh` where both a standalone waterfall window and an integrated dashboard window were spawning concurrently. It now strictly enforces a unified single-window layout.
 - **Real SDR TUI Crash & WAIT State**: Re-wrote the `PlutoSDRplusSweepStream` in `waterfall.py` to directly instantiate and manage `PlutoIioBackend` via Python rather than relying on a non-existent `PlutoSDRplus_sweep` C++ binary, eliminating the eternal "WAIT" state and preventing TUI crashes.
 - **Firewall SSH Lockout**: Patched `nftables-dslv-zpdi.rules` to correctly scope the rate limit (5/minute) exclusively to `ct state new` packets. The previous rule inadvertently rate-limited all established SSH traffic, which bricked active SSH handshakes.
+
 
 ## [5.3.3] — Tier 1 Installer Reliability & Hardware Support (2026-08-25)
 

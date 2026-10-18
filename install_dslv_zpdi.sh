@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # DSLV-ZPDI Unified Installer / Validator / Hardening
-# Revision: 5.0.0-PLUTO-LBE1421
+# Revision: 5.4.0-PLUTO-LBE1421
 # OS Support: Raspberry Pi OS Bookworm (Deb 12) & Trixie (Deb 13)
 # Date: 2026-06-16
 #
@@ -24,7 +24,7 @@
 
 set -Eeuo pipefail
 
-SCRIPT_REV="Rev 5.2.0"
+SCRIPT_REV="Rev 5.4.0"
 REPO_URL="${DSLV_REPO_URL:-https://github.com/DynoGator/dslv-zpdi.git}"
 INSTALL_DIR="${DSLV_INSTALL_DIR:-$(pwd)}"
 RUN_TIER1_AUDIT=0
