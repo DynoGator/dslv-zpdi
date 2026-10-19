@@ -4,7 +4,7 @@ import pytest
 
 smbus2 = pytest.importorskip("smbus2", reason="smbus2 not available (hardware-only dependency)")
 
-from dslv_zpdi.layer1_ingestion.x1202_ups import X1202UpsMonitor
+from dslv_zpdi.layer1_ingestion.x1202_ups import X1202UpsMonitor  # noqa: E402
 
 
 @patch("smbus2.SMBus")

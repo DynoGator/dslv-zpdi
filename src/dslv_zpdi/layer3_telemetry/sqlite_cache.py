@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 class SQLiteCache:
+    """SPEC-011 | Latest-state WAL cache written by the production pipeline loop."""
+
     def __init__(self, path: Path | None = None) -> None:
         if path is None:
             path_str = os.environ.get("ZPDI_SQLITE_PATH", "./data/zpdi_cache.db")

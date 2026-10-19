@@ -4,9 +4,9 @@ Top-level integration: Tier-1 HAL -> Coherence -> HDF5 persistence.
 """
 
 from __future__ import annotations
-import json
 
 import argparse
+import json
 import logging
 import queue
 import signal
@@ -184,6 +184,7 @@ def main():
     state = PipelineState()
 
     def _sig_handler(signum, _frame):
+        """SPEC-011 | Signal handler: request graceful pipeline drain."""
         logger.info(f"Shutdown signal {signum} received — draining pipeline.")
         state.running = False
 
