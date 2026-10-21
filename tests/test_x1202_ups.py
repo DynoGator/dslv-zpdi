@@ -19,6 +19,7 @@ def test_ups_initialization_absent(mock_smbus):
 
     ups.close()
 
+
 @patch("smbus2.SMBus")
 @patch("dslv_zpdi.layer1_ingestion.x1202_ups.Path")
 def test_ups_sample_happy_path(mock_path, mock_smbus_cls):

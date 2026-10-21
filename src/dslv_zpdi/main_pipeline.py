@@ -72,9 +72,6 @@ def _ingest_loop(hal, args, state, ingest_q):
             time.sleep(0.1)
 
 
-
-
-
 def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter, sqlite_cache):
     """SPEC-011.2 | Processing consumer thread."""
     hw_tick = 0
@@ -91,6 +88,7 @@ def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter, sqlite
                 # We need to serialize payload to json.
                 # IngestionPayload is a dataclass.
                 import dataclasses
+
                 payload_dict = dataclasses.asdict(payload)
                 # Ensure raw_value/samples etc are JSON serializable if needed
                 payload_json = json.dumps(payload_dict, default=str)
@@ -117,10 +115,7 @@ def _process_loop(hal, monitor, writer, ingest_q, state, health_reporter, sqlite
                 "ticks": state.tick,
                 "baseline": bl,
                 "stats": writer.get_stats(),
-                "pipeline": {
-                    "active": state.running,
-                    "timing_healthy": monitor.healthy
-                }
+                "pipeline": {"active": state.running, "timing_healthy": monitor.healthy},
             }
             if decision.packet:
                 update_data["coherence"] = {
@@ -194,10 +189,17 @@ def main():
     # SPEC-014 | Initialize dashboard health reporter early to show WAIT state
     health_reporter = HealthReporter(interval_sec=2.0)
     health_reporter.start()
-    health_reporter.update({
-        "sdr": {"reachable": False, "status": "WAITING_FOR_HARDWARE", "mode": "UNKNOWN", "center_hz": 0},
-        "pipeline": {"active": False, "timing_healthy": False}
-    })
+    health_reporter.update(
+        {
+            "sdr": {
+                "reachable": False,
+                "status": "WAITING_FOR_HARDWARE",
+                "mode": "UNKNOWN",
+                "center_hz": 0,
+            },
+            "pipeline": {"active": False, "timing_healthy": False},
+        }
+    )
 
     # Retry loop for SDR initialization to prevent crash-loops on warm reboots
     hal = None
@@ -213,7 +215,6 @@ def main():
     if not state.running or hal is None:
         health_reporter.stop()
         sys.exit(0)
-
 
     writer_kwargs: dict = {}
     if args.output:

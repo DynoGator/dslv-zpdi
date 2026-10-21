@@ -272,7 +272,7 @@ class HDF5Writer:
         self.current_file.attrs["file_version"] = FILE_VERSION
         self.current_file.attrs["created_utc"] = time.time()
         self.event_count = 0
-        if not hasattr(self, '_previous_chain_hash') or self._previous_chain_hash is None:
+        if not hasattr(self, "_previous_chain_hash") or self._previous_chain_hash is None:
             self._previous_chain_hash = self._genesis_hash()
         self._event_chain_hashes = []
 
@@ -407,7 +407,9 @@ class HDF5Writer:
         computed_checksum = hashlib.blake2b(binary_payload, digest_size=32).hexdigest()
 
         if stored_checksum != computed_checksum:
-            logger.error("SPEC-010 VIOLATION: Memory corruption detected for %s", packet.payload_uuid)
+            logger.error(
+                "SPEC-010 VIOLATION: Memory corruption detected for %s", packet.payload_uuid
+            )
             self.stats["checksum_invalid"] += 1
             return False
         return True

@@ -20,11 +20,15 @@ def _load_baseline_config() -> dict:
     """SPEC-009 — Load baseline learning parameters from environment."""
     cfg: dict = {}
     try:
-        cfg["baseline_duration_hours"] = float(os.getenv("DSLV_BASELINE_HOURS", str(BASELINE_DURATION_HOURS)))
+        cfg["baseline_duration_hours"] = float(
+            os.getenv("DSLV_BASELINE_HOURS", str(BASELINE_DURATION_HOURS))
+        )
     except ValueError:
         cfg["baseline_duration_hours"] = float(BASELINE_DURATION_HOURS)
     try:
-        cfg["min_baseline_samples"] = int(os.getenv("DSLV_MIN_BASELINE_SAMPLES", str(MIN_BASELINE_SAMPLES)))
+        cfg["min_baseline_samples"] = int(
+            os.getenv("DSLV_MIN_BASELINE_SAMPLES", str(MIN_BASELINE_SAMPLES))
+        )
     except ValueError:
         cfg["min_baseline_samples"] = int(MIN_BASELINE_SAMPLES)
     try:

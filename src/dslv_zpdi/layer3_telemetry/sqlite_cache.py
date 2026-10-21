@@ -2,6 +2,7 @@
 Lightweight WAL-mode SQLite cache for latest state.
 Used by the web server to fetch the most recent telemetry.
 """
+
 import os
 import sqlite3
 import time

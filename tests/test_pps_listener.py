@@ -15,6 +15,7 @@ def test_pps_listener():
         mock_os.open.return_value = 3
 
         seq = [1]
+
         def mock_read(fd, size):
             seq[0] += 1
             return f"1234567890.500000000#{seq[0]}\n".encode()
@@ -23,12 +24,13 @@ def test_pps_listener():
 
         listener = PpsListener(device="/dev/pps0")
         listener.start()
-        time.sleep(0.15) # Wait for polling thread (10Hz)
+        time.sleep(0.15)  # Wait for polling thread (10Hz)
         listener.stop()
 
         snap = listener.snapshot()
         assert snap["device"] == "/dev/pps0"
         assert snap["last_edge_mono_ns"] > 0
+
 
 def test_pps_listener_no_device():
     with patch("dslv_zpdi.layer1_ingestion.timing.pps_listener.os") as mock_os:
