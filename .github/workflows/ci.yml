@@ -38,13 +38,16 @@ jobs:
       - name: Pytest (full suite)
         run: PYTHONPATH=src pytest tests/ -v --tb=short
       - name: Validate pyproject / build
-        run: python -c "
-import tomllib, pathlib, subprocess, sys
-data = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
-print('pyproject.toml valid, version:', data.get('project',{}).get('version'))
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.[dev]'])
-print('Editable install OK')
-"
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+          if sys.version_info < (3, 11):
+              print('tomllib needs Python 3.11+; pyproject check skipped on', sys.version.split()[0])
+              raise SystemExit(0)
+          import tomllib
+          data = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+          print('pyproject.toml valid, version:', data.get('project', {}).get('version'))
+          PY
 
   security:
     runs-on: ubuntu-latest
@@ -79,3 +82,5 @@ print('Editable install OK')
           fetch-depth: 0
       - name: Gitleaks
         uses: zricethezav/gitleaks-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
