@@ -157,7 +157,7 @@ pygments==2.20.0
     #   -c requirements.txt
     #   pytest
     #   rich
-pylint==4.0.6
+pylint==4.0.9
     # via dslv-zpdi (pyproject.toml)
 pyserial==3.5
     # via
