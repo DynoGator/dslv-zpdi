@@ -25,7 +25,7 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 | Category | Required Component | Part / Variant | Qty | Role |
 | :--- | :--- | :--- | :--- | :--- |
 | Compute | Raspberry Pi 5 | PI5-16GB | 1 | Primary Logic & I/O |
-| SDR (RF Eye) | HamGeek PlutoSDR+ | AD9361 / 1 GB | 1 | RF Ingestion (External 10 MHz CLKIN) |
+| SDR (RF Eye) | HamGeek PlutoSDR+ | AD9363 / 1 GB | 1 | RF Ingestion (External 10 MHz CLKIN) |
 | Legacy SDR | PlutoSDRplus | Great Scott Gadgets | 0-1 | Optional / legacy reference floor |
 | Clock Authority | GPSDO | Leo Bodnar LBE-1421 | 1 | 10 MHz + 1 PPS (Out2/Out1) |
 | SDR Antenna | Wideband Antenna | ANT500 | 1 | 75 MHz - 1 GHz Coverage |
@@ -35,7 +35,7 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 | Storage | Industrial microSD | VIOFO 128GB | 1 | HDF5 Persistence |
 | Cooling | Active Cooling | RPi 5 Active Cooler | 1 | Mandatory for sustained 10 MHz IQ |
 | Power | USB-C Power | RPi 27W Power Supply | 1 | Required for Pi 5 + peripherals |
-| Networking | USB/Ethernet | Pi 5 USB 3.0 / GigE | 1 | PlutoSDR+ data link (ip:192.168.3.80) |
+| Networking | USB/Ethernet | Pi 5 USB 3.0 / GigE | 1 | PlutoSDR+ data link (default `ip:192.168.2.1`; field override via `DSLV_SDR_URI`, e.g. `ip:192.168.3.80`) |
 
 ---
 
@@ -54,7 +54,7 @@ For the Phase 2A Tier 1 anchor build, we have transitioned to **RF Metrology** t
 
 **Step 1.** Install the Raspberry Pi 5 Active Cooler.
 **Step 2.** **RF Phase Lock (ADC Slave):** Connect SMA cable from LBE-1421 `Out2` port (configured to 10,000,000 Hz) to the PlutoSDR+ `EXT_REF_CLK` port. Use a 50 Ohm terminator if cable length exceeds 1 foot.
-**Step 3.** **OS Timestamping (Heartbeat):** Connect jumper from LBE-1421 `Out1` (configured to 1 PPS mode) to Pi 5 **GPIO 8** (Physical Pin 12). Bridge ground between LBE-1421 and Pi 5.
+**Step 3.** **OS Timestamping (Heartbeat):** Connect jumper from LBE-1421 `Out1` (configured to 1 PPS mode) to Pi 5 **GPIO 8** (Physical Pin 24). Bridge ground between LBE-1421 and Pi 5.
 **Step 4.** **Power & Telemetry:** Connect LBE-1421 via USB-C to Pi 5. This provides power (250mA draw) and enables NMEA telemetry on `/dev/ttyACM0`.
 **Step 5.** Connect PlutoSDR+ to Pi 5 via USB 3.0 or Ethernet and configure the host interface for the `192.168.3.0/24` subnet (Pluto at `192.168.3.80`). Connect antennas to respective ports.
 
