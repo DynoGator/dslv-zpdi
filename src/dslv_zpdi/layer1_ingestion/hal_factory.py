@@ -118,7 +118,6 @@ def get_tier1_hal(
     if simulator or profile.trust.allow_simulator_fallback:
         simulator = True
 
-
     # SDR backend
     sdr_cfg = profile.sdr
     backend_name = sdr_cfg.backend
@@ -136,7 +135,6 @@ def get_tier1_hal(
             expected_iio_phy=sdr_cfg.expected_iio_phy,
         )
     elif backend_name == "auto":
-
         try:
             sdr_backend = PlutoIioBackend(
                 uri=sdr_cfg.uri,
