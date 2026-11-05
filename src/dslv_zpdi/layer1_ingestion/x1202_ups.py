@@ -151,6 +151,7 @@ class X1202UpsMonitor:
                 Path("/sys/class/gpio/export").write_text(str(gpio), encoding="utf-8")
                 # Wait for udev to set group write permissions
                 import time
+
                 time.sleep(0.2)
             self._gpio_path(gpio, "direction").write_text(direction, encoding="utf-8")
             self._gpio_exported.add(gpio)
