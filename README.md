@@ -2,7 +2,7 @@
 
 **Project Phase:** Phase 2B (Radon Validation Metrology Stack — Tier 2) with Tier-1 hardware pivot
 **Revision:** Rev 5.4.0 — Phase 2A/2B: Capability-based Tier-1 RF metrology pivot to PlutoSDR+ class hardware (HamGeek AD9363), LBE-1421 GPSDO timing authority, composed HAL, and tamper-evident HDF5 manifests
-**Date:** 2026-08-06
+**Date:** 2026-08-26
 **Status:** Beta — PlutoSDR+ backend implemented, composed HAL and timing authority decoupled, HackRF (legacy/optional) moved to optional legacy status, simulator validation passing, hardware qualification pending physical verification gates.
 
 ---
