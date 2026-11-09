@@ -49,3 +49,6 @@ tools/dash_out.txt
 .venv/
 venv/
 .vscode/
+
+# Gradle caches
+.gradle/
