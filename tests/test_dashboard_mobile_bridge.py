@@ -17,6 +17,7 @@ try:
         coerce_magnetometer,
         collect_mobile_telemetry,
     )
+
     _DASHBOARD_AVAILABLE = True
 except ImportError as _exc:
     _DASHBOARD_AVAILABLE = False
@@ -26,7 +27,6 @@ pytestmark = pytest.mark.skipif(
     not _DASHBOARD_AVAILABLE,
     reason=_SKIP_REASON if not _DASHBOARD_AVAILABLE else "",
 )
-
 
 
 class MockPanel:
@@ -56,7 +56,9 @@ def test_mobile_bridge_fetch_telemetry_local_registry(tmp_path):
 
     reg_file = tmp_path / "node_registry.jsonl"
     now = time.time()
-    reg_file.write_text(json.dumps({"node_id": "dslv-zpdi/mobile-tier2", "last_seen_utc": now}) + "\n")
+    reg_file.write_text(
+        json.dumps({"node_id": "dslv-zpdi/mobile-tier2", "last_seen_utc": now}) + "\n"
+    )
     bridge.registry_path = reg_file
     bridge.secondary_log_path = tmp_path / "tier1_secondary.jsonl"
 

@@ -73,7 +73,6 @@ class CoherenceScorer:
         self.global_events: list[dict[str, Any]] = []
         self.event_cooldown_s = event_cooldown_s
 
-
         # SPEC-009: Baseline FSM state
         self.baseline_state_path = os.fspath(baseline_state_path) if baseline_state_path else None
         self.min_baseline_samples = min_baseline_samples
@@ -88,7 +87,6 @@ class CoherenceScorer:
 
         self.dynamic_threshold = 0.40
         self.baseline_started_utc = 0.0
-
 
         # Load persisted baseline state
         if self.baseline_state_path and os.path.exists(self.baseline_state_path):
@@ -107,7 +105,6 @@ class CoherenceScorer:
                         self.baseline_m2 = data.get("m2", 0.0)
                         self.baseline_started_utc = data.get("started_utc", 0.0)
                     else:
-
                         self._baseline_state = BaselineState.NOT_STARTED
             except (json.JSONDecodeError, OSError, KeyError):
                 pass
@@ -130,7 +127,9 @@ class CoherenceScorer:
         if self._baseline_state == BaselineState.LOCKED:
             # Baseline is already LOCKED (loaded from persisted state on startup).
             # This is the normal, expected boot path — not an error.
-            logger.debug("SPEC-009: Baseline already LOCKED from persisted state; skipping re-learn")
+            logger.debug(
+                "SPEC-009: Baseline already LOCKED from persisted state; skipping re-learn"
+            )
             return
         if self._baseline_state == BaselineState.LEARNING:
             # Preserve accumulated samples and start time across restarts.
@@ -144,8 +143,6 @@ class CoherenceScorer:
             self.baseline_mean = 0.0
             self.baseline_m2 = 0.0
         self._save_baseline_state()
-
-
 
     def update_baseline(self, r_local: float) -> None:
         if self._baseline_state == BaselineState.LEARNING:
@@ -171,7 +168,6 @@ class CoherenceScorer:
                 "started_utc": self.baseline_started_utc,
             }
 
-
     def _save_baseline_state(self) -> None:
         """SPEC-009.1 — Atomic baseline persistence with write verification."""
         if not self.baseline_state_path:
@@ -180,7 +176,6 @@ class CoherenceScorer:
         temp_path = f"{self.baseline_state_path}.{os.getpid()}.tmp"
         try:
             with open(temp_path, "w", encoding="utf-8") as f:
-
                 json.dump(
                     {
                         "baseline_state": self._baseline_state.value,
@@ -256,7 +251,6 @@ class CoherenceScorer:
             self._save_baseline_state()
             return self.dynamic_threshold
 
-
         if self.baseline_n < 2:
             self.dynamic_threshold = 0.40
             self._save_baseline_state()
@@ -265,6 +259,7 @@ class CoherenceScorer:
         mean_r = self.baseline_mean
         variance = self.baseline_m2 / self.baseline_n
         import math
+
         std_r = math.sqrt(variance)
 
         self.dynamic_threshold = float(mean_r + (3.0 * std_r))

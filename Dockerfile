@@ -6,7 +6,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libhackrf-dev \
     soapysdr-module-hackrf \
-    soapysdr-module-plutosdr \
     libiio-dev \
     libad9361-dev \
     libusb-1.0-0-dev \
