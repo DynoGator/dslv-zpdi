@@ -63,6 +63,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=3.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-timeout>=2.2.0",
     "black>=22.0.0",
     "pylint>=2.12.0",
     "mypy>=1.0.0",
@@ -84,6 +85,8 @@ testpaths = ["tests"]
 pythonpath = ["src", "tools"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
+# Fail a hung test instead of letting CI stall until the runner kills the job.
+timeout = 300
 markers = [
     "asyncio: mark a coroutine test to run under the asyncio event loop",
     "hardware: requires physical hardware",
