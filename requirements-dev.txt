@@ -12,7 +12,7 @@ ast-serialize==0.6.0
     # via mypy
 astroid==4.0.4
     # via pylint
-black==26.5.1
+black==26.10.1
     # via dslv-zpdi (pyproject.toml)
 bleak==3.0.2
     # via
