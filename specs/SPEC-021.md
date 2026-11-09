@@ -1,45 +1,78 @@
-# SPEC-021 — Dashboard Phase 2B Panel Extensions
+# SPEC-021 — Public Atlas (tamper-evident map uplink)
 
-**Status:** ACTIVE
-**Layer:** Operator-Facing TUI
+**Status:** Draft  
+**Revision:** 1.0  
+**Date:** 2026-09-15  
+**Depends on:** SPEC-007 DualStreamRouter, SPEC-004 Tiering, HDF5 tamper-evidence
 
-## Overview
+---
 
-Extended the existing Rich-based Live TUI dashboard with three new panels while preserving the glitch/plasma terminal aesthetic, snarky NOTE puns, and all existing panels.
+## Intent
 
-## New Panels
+The public face of DSLV-ZPDI is a map. Pins are visits that produced
+institutional-grade metrology. Rings are points of interest for future
+measurement. Nothing else belongs on the pin layer.
 
-### RADON (`tools/dashboard/panels/radon.py`)
-**SPEC-021.1** — Live pCi/L, transport (BLE/HTTP/SIM), device serial tail, sample age, and quality. Color-coded: green for good quality, yellow for suspect, red for poor.
+This spec is the GitHub-level contract for what may leave a node and appear
+on Atlas. The website is a viewer. The node is the authority.
 
-### MOBILE / Tier 2 (`tools/dashboard/panels/mobile.py`)
-**SPEC-021.2** — Pixel link status, magnetometer magnitude, GPS fix accuracy, last camera-frame hash tail, trust score. Color-coded trust score.
+## Qualification — map pin (Alpha)
 
-### BCI / Validation (`tools/dashboard/panels/bci.py`)
-**SPEC-021.3** — Current χ, pilot-threshold state, review-flag status. Red when flagged, green when clear, yellow when approaching threshold.
+A capture may be **mapped** if and only if all of the following are true:
 
-## Layout Integration
+| Gate | Requirement |
+|------|-------------|
+| Tier | `alpha` (Tier-1). Pixel / USB IQ / RTL-SDR never qualify. |
+| Format | HDF5 (`.h5`) with SHA-256 sidecar + HMAC-SHA256. |
+| Clock | GPSDO-disciplined. LBE-1421 10 MHz → SDR `EXT_REF_CLK` and 1 PPS on GPIO. |
+| Packet state | `PRIMARY_ACCEPTED` (SPEC-007 DualStreamRouter). |
+| HMAC | `hmac_ok = true` |
+| GNSS | 3D GPS lock |
+| PPS | jitter ≤ 5000 ns |
 
-- **Compact mode:** New panels join `status_row_b` alongside anomaly, weather, and storm.
-- **Wide mode:** New panels join the `space` row alongside weather and storm.
-- All panels are optional and controlled by `dashboard.toml` `[dashboard.panels]` flags (`radon`, `mobile`, `bci`).
+Packet state machine (unchanged from SPEC-007):
 
-## New Humor Lines
+```
+RAW_CAPTURED → ASSEMBLED → TIME_TRUSTED → CAL_TRUSTED
+  → CORE_PROCESSED → PRIMARY_CANDIDATE → PRIMARY_ACCEPTED
+                                         ↖ SECONDARY_QUARANTINED
+```
 
-Added to `tools/dashboard/humor.py`:
-- "SNIFFING NOBLE GASES — POLITELY"
-- "DARCY'S LAW IS PUMPING"
-- "RD200P WHISPERING OVER BLE"
-- "WAITING FOR RADON TO MAKE A MOVE (IT'S SHY)"
-- "BAROMETRIC PRESSURE IS THE REAL MAIN CHARACTER"
-- "CALCULATING DARCY PUMP STRENGTH WITH FEELINGS"
-- "RADON-222: RELIABLE, RADIOACTIVE, AND RUDE ABOUT IT"
-- "PLOT TWIST: THE BASEMENT IS THE ANOMALY"
-- "NOBLE GAS DETECTED — OFFERING IT TEA"
-- "ALPHA DECAY IS JUST MICROSCOPE AGGRESSION"
-- "Bq/m³ OR BREATHE-CUBED? YOU DECIDE"
+`SECONDARY_QUARANTINED` is never a pin.
 
-## Kill Conditions
-- Regressing existing SYS / PIPE / HW / ANOM / WX / STORM / WF / LOG / NOTE panels → rejected
-- Removing or altering existing humor lines → rejected
-- Changing the color palette or terminal aesthetic → rejected
+## Passive uplink policy (default OFF)
+
+The node does not push. Atlas does not pull. Uplink is operator opt-in,
+off by default, and encouraged in the UI without coercion.
+
+Even with opt-in, a qualifying capture is published only when:
+
+1. **Idle** — the acquisition pipeline is not running. Premium data waits.
+2. **Unmetered** — no uplink on cellular, save-data, or unknown-metered
+   links. Fail closed if the link cannot be shown to be unmetered on a
+   field node. (Desktop browsers without Network Information API may
+   assume unmetered and must label that assumption.)
+3. **Dwell** — passive. One file per idle window, not a burst.
+
+Lower-tier data is **never** auto-uploaded.
+
+## Correlated lower-tier overlay
+
+An operator (or a requestor) may optionally load Tier-2 / SECONDARY at a
+site that already has attested Alpha HDF5, when the secondary capture
+overlaps the Alpha window (±6 h). This is a view flag, not a promotion.
+It does not change DualStreamRouter state.
+
+A site with only SECONDARY (e.g. Pixel GNSS, no GPSDO) stays a POI ring.
+
+## Privacy
+
+Location is a field site, not a person. Opt-in is per node operator.
+Atlas rows are scientific: site, capture, hashes, RF/radon/E-field/Kp
+metrics. No names, emails, or device identifiers beyond node IDs.
+
+## Implementation
+
+- Python: `src/dslv_zpdi/layer3_telemetry/atlas_uplink.py`
+- Tests: `tests/test_atlas_uplink.py`
+- Public map: DSLV-ZPDI Atlas landing page
