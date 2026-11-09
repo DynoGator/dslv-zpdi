@@ -44,6 +44,35 @@ def _plutosdrplus_hardware_accessible() -> bool:
 _PLUTOSDRPLUS_HARDWARE_ACCESSIBLE = _plutosdrplus_hardware_accessible()
 
 
+@pytest.fixture(autouse=True)
+def _stop_hal_timing_threads(monkeypatch):
+    """SPEC-005A.HAL — Stop the PPS/NMEA threads HardwareHAL() starts.
+
+    HardwareHAL.__init__ starts PpsListener and NmeaStream daemon threads
+    before SDR initialization. Most tests here expect the constructor to
+    raise, so there is no instance to shut down and the threads would keep
+    running for the rest of the session. Track every listener created through
+    hal_hardware and stop it on teardown.
+    """
+    created = []
+
+    class _TrackedPpsListener(hal_hw_module.PpsListener):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            created.append(self)
+
+    class _TrackedNmeaStream(hal_hw_module.NmeaStream):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            created.append(self)
+
+    monkeypatch.setattr(hal_hw_module, "PpsListener", _TrackedPpsListener)
+    monkeypatch.setattr(hal_hw_module, "NmeaStream", _TrackedNmeaStream)
+    yield
+    for listener in created:
+        listener.stop()
+
+
 class TestSoapySDRFailurePaths:
     def test_no_devices_found_raises_driver_unavailable(self):
         mock_soapy = mock.MagicMock()

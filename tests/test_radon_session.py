@@ -8,10 +8,35 @@ from pathlib import Path
 
 import pytest
 
+from dslv_zpdi.layer1_ingestion import radoneye_ingestor
 from dslv_zpdi.orchestrator.radon_session import (
     RadonSessionOrchestrator,
     SessionConfig,
 )
+
+
+@pytest.fixture
+def offline_radon_transports(monkeypatch):
+    """SPEC-020.6 — Make RadonEye BLE and HTTP transports fail fast without I/O.
+
+    In simulator mode the ingestor still tries BLE (bleak scan) and HTTP
+    (urlopen to 192.168.4.1) before falling back to the simulator. Stub both
+    so the async loop tests are hermetic and never depend on host Bluetooth
+    or network reachability.
+    """
+    calls = {"ble": 0, "http": 0}
+
+    async def _ble_unavailable(self):
+        calls["ble"] += 1
+        raise ConnectionError("BLE disabled in tests")
+
+    def _http_unavailable(self):
+        calls["http"] += 1
+        raise ConnectionError("HTTP disabled in tests")
+
+    monkeypatch.setattr(radoneye_ingestor.RadonEyeBleTransport, "read", _ble_unavailable)
+    monkeypatch.setattr(radoneye_ingestor.RadonEyeHttpTransport, "read", _http_unavailable)
+    return calls
 
 
 class TestSessionLifecycle:
@@ -97,6 +122,7 @@ class TestSessionLifecycle:
             assert orch2.resume() is False
 
 
+@pytest.mark.usefixtures("offline_radon_transports")
 class TestSessionAsyncLoop:
     @pytest.mark.asyncio
     async def test_short_run_finalizes(self):
